@@ -31,12 +31,12 @@ echo [3/4] Устанавливаю сборочные зависимости...
 python -m pip install -r requirements_build.txt
 
 echo [4/4] Собираю один EXE через PyInstaller...
-python -m PyInstaller --noconfirm --clean build\diary_filler_onefile.spec
+python -m PyInstaller --noconfirm --clean --onefile --windowed --name ZapolnitelDnevnikov --collect-all docx --collect-all lxml src\zapolnitel_dnevnikov_app.py
 
 if exist dist\ZapolnitelDnevnikov.exe (
   echo.
   echo ГОТОВО: dist\ZapolnitelDnevnikov.exe
-  echo Это файл можно отдавать пользователям. Он запускается без Python/pip.
+  echo Этот файл можно отдавать пользователям. Он запускается без Python/pip.
 ) else (
   echo.
   echo [ОШИБКА] EXE не найден. Смотри вывод выше.

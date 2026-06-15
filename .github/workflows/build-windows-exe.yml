@@ -1,4 +1,4 @@
-name: Build Windows Portable App
+name: Build Windows EXE
 
 on:
   workflow_dispatch:
@@ -6,22 +6,11 @@ on:
     branches: [ main ]
 
 jobs:
-  build-windows-portable:
+  build-windows-exe:
     runs-on: windows-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Unpack project ZIP
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = "Stop"
-          Expand-Archive -Path "diary_filler_github_actions_ready_v10.zip" -DestinationPath "_unpacked" -Force
-          $app = Get-ChildItem -Path "_unpacked" -Recurse -Filter "zapolnitel_dnevnikov_app.py" | Select-Object -First 1
-          if (-not $app) { throw "zapolnitel_dnevnikov_app.py not found inside ZIP" }
-          $projectRoot = $app.Directory.Parent.FullName
-          "PROJECT_ROOT=$projectRoot" | Out-File -FilePath $env:GITHUB_ENV -Append
-          Write-Host "PROJECT_ROOT=$projectRoot"
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -32,52 +21,28 @@ jobs:
         shell: pwsh
         run: |
           python -m pip install --upgrade pip
-          pip install -r "$env:PROJECT_ROOT\requirements_build.txt"
+          pip install -r requirements_build.txt
 
-      - name: Build portable folder
+      - name: Build one-file Windows app
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
-          $appPath = "$env:PROJECT_ROOT\src\zapolnitel_dnevnikov_app.py"
-          $iconPath = "$env:PROJECT_ROOT\assets\app_icon.ico"
+          $appPath = "src\zapolnitel_dnevnikov_app.py"
           if (-not (Test-Path $appPath)) { throw "Application file not found: $appPath" }
 
-          Set-Location "$env:PROJECT_ROOT"
+          pyinstaller `
+            --noconfirm `
+            --clean `
+            --onefile `
+            --windowed `
+            --name "ZapolnitelDnevnikov" `
+            --collect-all docx `
+            --collect-all lxml `
+            $appPath
 
-          $args = @(
-            "--noconfirm",
-            "--clean",
-            "--onedir",
-            "--windowed",
-            "--name", "ZapolnitelDnevnikov",
-            "--collect-all", "PySide6",
-            "--collect-all", "docx",
-            "--collect-all", "lxml"
-          )
-
-          if (Test-Path $iconPath) {
-            $args += @("--icon", $iconPath)
-          }
-
-          $args += $appPath
-          pyinstaller @args
-
-      - name: Prepare portable artifact
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = "Stop"
-          $builtDir = "$env:PROJECT_ROOT\dist\ZapolnitelDnevnikov"
-          if (-not (Test-Path "$builtDir\ZapolnitelDnevnikov.exe")) {
-            throw "Built portable app not found: $builtDir"
-          }
-
-          $releaseDir = Join-Path $env:GITHUB_WORKSPACE "release"
-          New-Item -ItemType Directory -Force $releaseDir | Out-Null
-          Copy-Item $builtDir "$releaseDir\ZapolnitelDnevnikov_Portable" -Recurse -Force
-
-      - name: Upload portable app
+      - name: Upload EXE artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ZapolnitelDnevnikov-Windows-Portable
-          path: release/*
+          name: ZapolnitelDnevnikov-Windows-EXE
+          path: dist/ZapolnitelDnevnikov.exe
           retention-days: 30
