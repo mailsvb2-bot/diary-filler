@@ -1,0 +1,59 @@
+﻿name: Build Windows EXE
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-windows-exe:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Unpack project ZIP
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          Expand-Archive -Path "diary_filler_github_actions_ready_v10.zip" -DestinationPath "_unpacked" -Force
+          $app = Get-ChildItem -Path "_unpacked" -Recurse -Filter "zapolnitel_dnevnikov_app.py" | Select-Object -First 1
+          if (-not $app) { throw "zapolnitel_dnevnikov_app.py not found inside ZIP" }
+          $projectRoot = $app.Directory.Parent.FullName
+          "PROJECT_ROOT=$projectRoot" | Out-File -FilePath $env:GITHUB_ENV -Append
+          Write-Host "PROJECT_ROOT=$projectRoot"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install build dependencies
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r "$env:PROJECT_ROOT\requirements_build.txt"
+
+      - name: Build portable EXE
+        shell: pwsh
+        run: |
+          pyinstaller --noconfirm "$env:PROJECT_ROOT\build\diary_filler_onefile.spec"
+
+      - name: Prepare artifact
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force release
+          Copy-Item dist/ZapolnitelDnevnikov.exe release/ZapolnitelDnevnikov.exe
+          if (Test-Path "$env:PROJECT_ROOT\docs\README_ДЛЯ_ПОЛЬЗОВАТЕЛЯ.txt") {
+            Copy-Item "$env:PROJECT_ROOT\docs\README_ДЛЯ_ПОЛЬЗОВАТЕЛЯ.txt" release/README_ДЛЯ_ПОЛЬЗОВАТЕЛЯ.txt
+          }
+          if (Test-Path "$env:PROJECT_ROOT\docs\EULA_ДИСКЛЕЙМЕР.txt") {
+            Copy-Item "$env:PROJECT_ROOT\docs\EULA_ДИСКЛЕЙМЕР.txt" release/EULA_ДИСКЛЕЙМЕР.txt
+          }
+
+      - name: Upload ready EXE
+        uses: actions/upload-artifact@v4
+        with:
+          name: ZapolnitelDnevnikov-Windows-EXE
+          path: release/*
+          retention-days: 30
