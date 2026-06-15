@@ -37,13 +37,15 @@ jobs:
       - name: Build portable EXE
         shell: pwsh
         run: |
-          pyinstaller --noconfirm "$env:PROJECT_ROOT\build\diary_filler_onefile.spec"
+          Set-Location "$env:PROJECT_ROOT"
+          pyinstaller --noconfirm "build\diary_filler_onefile.spec"
 
       - name: Prepare artifact
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force release
-          Copy-Item dist/ZapolnitelDnevnikov.exe release/ZapolnitelDnevnikov.exe
+          $releaseDir = Join-Path $env:GITHUB_WORKSPACE "release"
+          New-Item -ItemType Directory -Force $releaseDir
+          Copy-Item "$env:PROJECT_ROOT\dist\ZapolnitelDnevnikov.exe" "$releaseDir\ZapolnitelDnevnikov.exe"
 
       - name: Upload ready EXE
         uses: actions/upload-artifact@v4
