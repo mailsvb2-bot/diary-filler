@@ -1,4 +1,4 @@
-﻿name: Build Windows EXE
+name: Build Windows EXE
 
 on:
   workflow_dispatch:
@@ -44,12 +44,6 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force release
           Copy-Item dist/ZapolnitelDnevnikov.exe release/ZapolnitelDnevnikov.exe
-          if (Test-Path "$env:PROJECT_ROOT\docs\README_ДЛЯ_ПОЛЬЗОВАТЕЛЯ.txt") {
-            Copy-Item "$env:PROJECT_ROOT\docs\README_ДЛЯ_ПОЛЬЗОВАТЕЛЯ.txt" release/README_ДЛЯ_ПОЛЬЗОВАТЕЛЯ.txt
-          }
-          if (Test-Path "$env:PROJECT_ROOT\docs\EULA_ДИСКЛЕЙМЕР.txt") {
-            Copy-Item "$env:PROJECT_ROOT\docs\EULA_ДИСКЛЕЙМЕР.txt" release/EULA_ДИСКЛЕЙМЕР.txt
-          }
 
       - name: Upload ready EXE
         uses: actions/upload-artifact@v4
