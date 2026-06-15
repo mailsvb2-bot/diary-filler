@@ -52,40 +52,59 @@ jobs:
             throw "Application file not found: $appPath"
           }
 
-          if (-not (Test-Path $iconPath)) {
-            throw "Icon file not found: $iconPath"
-          }
-
           Set-Location "$env:PROJECT_ROOT"
 
-          $pyinstallerArgs = @(
+          $releaseArgs = @(
             "--noconfirm",
             "--clean",
             "--onefile",
             "--windowed",
             "--name", "ZapolnitelDnevnikov",
-            "--icon", $iconPath,
             "--collect-all", "PySide6",
             "--collect-all", "docx",
-            "--collect-all", "lxml",
-            $appPath
+            "--collect-all", "lxml"
           )
+          if (Test-Path $iconPath) {
+            $releaseArgs += @("--icon", $iconPath)
+          }
+          $releaseArgs += $appPath
+          pyinstaller @releaseArgs
 
-          pyinstaller @pyinstallerArgs
+          $debugArgs = @(
+            "--noconfirm",
+            "--clean",
+            "--onefile",
+            "--console",
+            "--name", "ZapolnitelDnevnikov_DEBUG",
+            "--collect-all", "PySide6",
+            "--collect-all", "docx",
+            "--collect-all", "lxml"
+          )
+          if (Test-Path $iconPath) {
+            $debugArgs += @("--icon", $iconPath)
+          }
+          $debugArgs += $appPath
+          pyinstaller @debugArgs
 
       - name: Prepare artifact
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
 
-          $exePath = "$env:PROJECT_ROOT\dist\ZapolnitelDnevnikov.exe"
-          if (-not (Test-Path $exePath)) {
-            throw "Built EXE not found: $exePath"
+          $releaseExe = "$env:PROJECT_ROOT\dist\ZapolnitelDnevnikov.exe"
+          $debugExe = "$env:PROJECT_ROOT\dist\ZapolnitelDnevnikov_DEBUG.exe"
+
+          if (-not (Test-Path $releaseExe)) {
+            throw "Built release EXE not found: $releaseExe"
+          }
+          if (-not (Test-Path $debugExe)) {
+            throw "Built debug EXE not found: $debugExe"
           }
 
           $releaseDir = Join-Path $env:GITHUB_WORKSPACE "release"
           New-Item -ItemType Directory -Force $releaseDir | Out-Null
-          Copy-Item $exePath "$releaseDir\ZapolnitelDnevnikov.exe"
+          Copy-Item $releaseExe "$releaseDir\ZapolnitelDnevnikov.exe"
+          Copy-Item $debugExe "$releaseDir\ZapolnitelDnevnikov_DEBUG.exe"
 
       - name: Upload ready EXE
         uses: actions/upload-artifact@v4
