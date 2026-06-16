@@ -23,11 +23,16 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements_build.txt
 
+      - name: Run smoke test
+        shell: pwsh
+        run: |
+          python smoke_test_combined.py
+
       - name: Build one-file Windows app
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
-          $appPath = "src\zapolnitel_dnevnikov_app.py"
+          $appPath = "src\main.py"
           if (-not (Test-Path $appPath)) { throw "Application file not found: $appPath" }
 
           pyinstaller `
@@ -35,14 +40,16 @@ jobs:
             --clean `
             --onefile `
             --windowed `
-            --name "ZapolnitelDnevnikov" `
+            --name "MedicalDiaryAutofill" `
             --collect-all docx `
             --collect-all lxml `
+            --hidden-import win32api `
+            --hidden-import win32print `
             $appPath
 
       - name: Upload EXE artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ZapolnitelDnevnikov-Windows-EXE
-          path: dist/ZapolnitelDnevnikov.exe
+          name: MedicalDiaryAutofill-Windows-EXE
+          path: dist/MedicalDiaryAutofill.exe
           retention-days: 30

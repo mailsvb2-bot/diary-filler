@@ -4,15 +4,14 @@ setlocal EnableExtensions
 cd /d "%~dp0"
 
 echo ============================================================
-echo  Сборка Заполнителя дневников в один .EXE
+echo  Сборка медицинского автозаполнителя в один .EXE
 echo  Пользователю Python и зависимости ставить не нужно.
 echo ============================================================
 echo.
 
 where python >nul 2>nul
 if errorlevel 1 (
-  echo [ОШИБКА] Python не найден. Для сборки на компьютере разработчика нужен Python.
-  echo Конечным пользователям Python будет не нужен.
+  echo [ОШИБКА] Python не найден. Для сборки нужен Python на компьютере разработчика.
   pause
   exit /b 1
 )
@@ -31,11 +30,11 @@ echo [3/4] Устанавливаю сборочные зависимости...
 python -m pip install -r requirements_build.txt
 
 echo [4/4] Собираю один EXE через PyInstaller...
-python -m PyInstaller --noconfirm --clean --onefile --windowed --name ZapolnitelDnevnikov --collect-all docx --collect-all lxml src\zapolnitel_dnevnikov_app.py
+python -m PyInstaller --noconfirm --clean --onefile --windowed --name MedicalDiaryAutofill --collect-all docx --collect-all lxml --hidden-import win32api --hidden-import win32print src\main.py
 
-if exist dist\ZapolnitelDnevnikov.exe (
+if exist dist\MedicalDiaryAutofill.exe (
   echo.
-  echo ГОТОВО: dist\ZapolnitelDnevnikov.exe
+  echo ГОТОВО: dist\MedicalDiaryAutofill.exe
   echo Этот файл можно отдавать пользователям. Он запускается без Python/pip.
 ) else (
   echo.
