@@ -1,0 +1,14 @@
+# Keep repository text files stable on Windows and silence LF->CRLF warnings.
+*.py text eol=lf
+*.md text eol=lf
+*.txt text eol=lf
+*.toml text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.bat text eol=crlf
+*.vbs text eol=crlf
+*.pyw text eol=lf
+*.docx binary
+*.docm binary
+*.exe binary
+*.zip binary

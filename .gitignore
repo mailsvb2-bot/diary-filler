@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+.venv_build/
+.venv_runtime/
+
+# Build artifacts
+build/
+dist/
+*.spec
+
+# Local/generated outputs
+test_run*/
+*_run*/
+ОТЧЁТ_*.txt
+*.log
+
+# Local settings/cache
+settings.json
+.cache/
+.pytest_cache/
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+release/
+.ruff_cache/
