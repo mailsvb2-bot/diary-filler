@@ -9,12 +9,23 @@ from diary_text_parser import normalize_text
 
 
 def cell_int(text: str) -> int | None:
+    """Parse a calendar day number (1..31)."""
     value = normalize_text(text)
     match = re.fullmatch(r"0*(\d{1,2})", value)
     if not match:
         return None
     result = int(match.group(1))
     return result if 1 <= result <= 31 else None
+
+
+def hospitalization_day_int(text: str) -> int | None:
+    """Parse an ordinal hospitalization day without the calendar-day 31 limit."""
+    value = normalize_text(text)
+    match = re.fullmatch(r"0*(\d{1,4})", value)
+    if not match:
+        return None
+    result = int(match.group(1))
+    return result if 1 <= result <= 3660 else None
 
 def is_holiday_skip_date(day: int | None, month: int) -> bool:
     """Return True for rows dated 01.01-09.01 and 01.05-09.05."""
