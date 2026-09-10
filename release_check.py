@@ -32,6 +32,7 @@ REQUIRED_FILES = [
     "prod_audit.py",
     "dnd_contract_check.py",
     "performance_check.py",
+    "safety_integrity_check.py",
     ".github/workflows/windows-build.yml",
     ".gitattributes",
 ]
@@ -319,6 +320,9 @@ def main() -> None:
 
     _print_step("Drag-and-drop contract")
     _assert_dnd_contract()
+
+    _print_step("Safety integrity regressions")
+    _run([sys.executable, "safety_integrity_check.py"], timeout=120)
 
     _print_step("Smoke tests")
     # smoke_test.py is the canonical executable entrypoint and delegates to the
