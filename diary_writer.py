@@ -13,6 +13,7 @@ from diary_writer_apply import apply_diary_entries
 from diary_writer_entries import (
     build_dated_entries,
     collect_data_entries,
+    ensure_daily_hospitalization_rows,
     find_final_entry_index,
     mark_skip_flags,
 )
@@ -36,6 +37,11 @@ def fill_diary_file(
 ) -> FillResult:
     """Fill diary tables in one DOCX template and return a stable summary."""
     doc = Document(str(path))
+    ensure_daily_hospitalization_rows(
+        doc,
+        admission_date_value=admission_date_value,
+        discharge_date=discharge_date,
+    )
     data_entries = collect_data_entries(doc)
     dated_entries = build_dated_entries(
         data_entries,
