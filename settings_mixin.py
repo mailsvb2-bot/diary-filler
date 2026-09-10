@@ -8,6 +8,14 @@ from pathlib import Path
 from app_config import *
 
 
+_PERSISTENT_FOLDER_KEYS = {
+    DIR_DIARY_TEXTS,
+    DIR_DIARY_TEMPLATES,
+    DIR_NUMBERED_DIARY_TEMPLATES,
+}
+_SESSION_ONLY_FOLDER_KEYS = {DIR_OUTPUT, DIR_PRIMARY_DOCUMENTS, DIR_EPI}
+
+
 class SettingsMixin:
     def _get_settings_path(self) -> Path:
         base = os.environ.get("APPDATA")
@@ -17,8 +25,8 @@ class SettingsMixin:
     def _quarantine_broken_settings(self, details: Exception | str) -> None:
         """Сохранить битый settings.json рядом, чтобы новый запуск не падал.
 
-        В settings.json хранятся только технические удобства: последние папки
-        диалогов и выбранный принтер. Данные пациентов туда не пишутся. Если
+        В settings.json хранятся только технические удобства: переиспользуемые
+        папки текстов/шаблонов дневников и выбранный принтер. Данные пациентов туда не пишутся. Если
         файл оказался повреждён из-за аварийного завершения Windows/диска,
         программа стартует с пустыми настройками и оставляет копию для разбора.
         """
@@ -42,7 +50,20 @@ class SettingsMixin:
             if self._settings_path.exists():
                 data = json.loads(self._settings_path.read_text(encoding="utf-8"))
                 if isinstance(data, dict):
-                    return data
+                    safe: dict = {}
+                    folders_raw = data.get("folders")
+                    if isinstance(folders_raw, dict):
+                        folders = {
+                            str(key).strip(): str(value).strip()
+                            for key, value in folders_raw.items()
+                            if str(key).strip() in _PERSISTENT_FOLDER_KEYS and str(value).strip()
+                        }
+                        if folders:
+                            safe["folders"] = folders
+                    printer = str(data.get("printer", "")).strip()
+                    if printer:
+                        safe["printer"] = printer
+                    return safe
                 # JSON может быть синтаксически валидным, но иметь неверный
                 # тип (например, список после ручной правки). Такой файл тоже
                 # изолируем, иначе программа будет стартовать с пустыми
@@ -59,8 +80,8 @@ class SettingsMixin:
 
         Production-контракт: история пациентов, диагнозы, даты лечения, пути
         созданных документов и содержимое медицинских файлов никогда не
-        сохраняются в settings.json. На диск уходят только папки диалогов и
-        выбранный принтер.
+        сохраняются в settings.json. На диск уходят только переиспользуемые
+        папки текстов/шаблонов дневников и выбранный принтер.
         """
         payload: dict = {}
         folders_raw = self._settings.get("folders")
@@ -69,8 +90,11 @@ class SettingsMixin:
             for key, value in folders_raw.items():
                 key_text = str(key).strip()
                 value_text = str(value).strip()
-                if key_text and value_text:
+                if key_text in _PERSISTENT_FOLDER_KEYS and value_text:
                     folders[key_text] = value_text
+                elif key_text in _SESSION_ONLY_FOLDER_KEYS:
+                    # Preserve legacy settings schema without persisting the path itself.
+                    folders[key_text] = ""
         if folders:
             payload["folders"] = folders
         printer = str(self._settings.get("printer", "")).strip()
@@ -103,8 +127,15 @@ class SettingsMixin:
             self._settings["folders"] = folders
         return folders
 
+    def _session_folders(self) -> dict:
+        folders = getattr(self, "_session_dialog_folders", None)
+        if not isinstance(folders, dict):
+            folders = {}
+            self._session_dialog_folders = folders
+        return folders
+
     def _get_saved_directory(self, key: str) -> str:
-        value = str(self._settings_folders().get(key, "")).strip()
+        value = str(self._session_folders().get(key) or self._settings_folders().get(key, "")).strip()
         if not value:
             return ""
         try:
@@ -137,9 +168,14 @@ class SettingsMixin:
             path = Path(selected_path).expanduser()
             folder = path if selected_is_dir else path.parent
             if folder.exists() and folder.is_dir():
-                self._settings_folders()[key] = str(folder)
+                self._session_folders()[key] = str(folder)
+                if key in _PERSISTENT_FOLDER_KEYS:
+                    self._settings_folders()[key] = str(folder)
+                else:
+                    # Primary/EPI/output folders can contain a patient's FIO or
+                    # history number in their directory name. Keep them session-only.
+                    self._settings_folders().pop(key, None)
                 self._save_settings()
         except Exception:
             # Память папок — удобство, не критичная функция.
             pass
-
