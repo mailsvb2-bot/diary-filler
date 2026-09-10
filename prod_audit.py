@@ -301,6 +301,8 @@ def _assert_discharge_date_contract() -> None:
     from diary_filler import parse_full_date
     if parse_date("10052026").strftime("%d.%m.%Y") != "10.05.2026":
         _fail("medical compact date parser is broken")
+    if parse_date("090926").strftime("%d.%m.%Y") != "09.09.2026":
+        _fail("medical DDMMYY compact date parser is broken")
     if parse_date("1126").strftime("%d.%m.%Y") != "01.01.2026":
         _fail("medical short compact date parser is broken")
     if parse_full_date("100526").strftime("%d.%m.%Y") != "10.05.2026":

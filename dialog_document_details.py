@@ -77,6 +77,7 @@ class DialogDocumentDetailsMixin:
             )
             entry = tk.Entry(frame, textvariable=var, width=width, bg=FIELD, fg=TEXT, insertbackground=TEXT, relief="flat")
             entry.grid(row=row + 1, column=0, sticky="ew", pady=(0, 10))
+            self._bind_date_entry_normalization(entry, var, label_text)
             row += 2
             entries.append(entry)
             return entry

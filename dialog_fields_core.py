@@ -98,6 +98,9 @@ def _build_field_row(
     )
     entry.grid(row=idx, column=1, sticky="ew", padx=(12, 0), ipady=6, pady=6)
     entry.bind("<Control-KeyPress>", app._entry_control_shortcut, add="+")
+    bind_date = getattr(app, "_bind_date_entry_normalization", None)
+    if callable(bind_date):
+        bind_date(entry, var, label)
     return entry, var
 
 
