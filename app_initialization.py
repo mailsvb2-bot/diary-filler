@@ -213,7 +213,7 @@ class AppInitializationMixin:
         self.keep_signature_var = tk.BooleanVar(value=True)
         self.fill_months_var = tk.BooleanVar(value=True)
         self.force_final_diary_var = tk.BooleanVar(value=True)
-        self.remove_holiday_rows_var = tk.BooleanVar(value=True)
+        self.remove_holiday_rows_var = tk.BooleanVar(value=False)
         self.open_result_folder_var = tk.BooleanVar(value=True)
 
     def _init_runtime_visual_state(self) -> None:
