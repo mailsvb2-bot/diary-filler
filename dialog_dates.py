@@ -16,7 +16,36 @@ class DialogDatesMixin:
         parsed = parse_date(value)
         return parsed.strftime(DATE_FMT) if parsed else (value or "").strip()
 
+    @staticmethod
+    def _is_date_input_label(label: str) -> bool:
+        """Return True for UI fields that accept a full calendar date."""
+        low = (label or "").strip().lower().replace("ё", "е")
+        return "дата" in low or "с какого числа" in low
 
+    def _normalize_date_entry_var(self, variable) -> str:
+        """Normalize a date entry after typing without forcing separators.
+
+        The doctor may type ``090926`` (or ``09092026``); on Enter/focus loss
+        the visible field becomes ``09.09.2026``. Invalid/partial input is left
+        unchanged so creation-time validation can explain the error.
+        """
+        raw = variable.get().strip() if variable is not None else ""
+        if not raw:
+            return ""
+        normalized = self._normalize_date_for_ui(raw)
+        if normalized != raw:
+            try:
+                self._set_ui_var(variable, normalized)
+            except Exception:
+                variable.set(normalized)
+        return normalized
+
+    def _bind_date_entry_normalization(self, entry, variable, label: str) -> None:
+        """Attach compact-date normalization to one date-like Tk entry."""
+        if not self._is_date_input_label(label):
+            return
+        entry.bind("<FocusOut>", lambda _event: self._normalize_date_entry_var(variable), add="+")
+        entry.bind("<Return>", lambda _event: self._normalize_date_entry_var(variable), add="+")
 
     def _normalize_required_date_for_ui(self, value: str, label: str) -> str | None:
         """Normalize a required user-entered date or warn and reject it.

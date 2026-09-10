@@ -219,6 +219,7 @@ class DialogExpertMixin:
             )
             entry.grid(row=idx, column=1, sticky="ew", padx=(12, 0), ipady=6, pady=6)
             entry.bind("<Control-KeyPress>", self._entry_control_shortcut, add="+")
+            self._bind_date_entry_normalization(entry, var, label)
             vars_.append(var)
             entries.append(entry)
         body.grid_columnconfigure(1, weight=1)
@@ -242,7 +243,7 @@ class DialogExpertMixin:
             if not sick_from:
                 problems.append("укажите дату начала больничного")
             elif not parse_date(sick_from):
-                problems.append("дата больничного должна быть в формате ДД.ММ.ГГГГ или ДД.ММ.ГГ")
+                problems.append("дата больничного: можно ввести 090926 или 09.09.2026")
             if not org:
                 problems.append("укажите организацию")
             if not position:

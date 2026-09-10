@@ -89,6 +89,8 @@ class UiFieldsMixin:
         is_date = any(word in label.lower() for word in ("дата", "месяц", "год"))
         entry_canvas = self._rounded_entry_canvas(box, variable, height=self._px(48, 28), calendar=is_date, font=self._font(13))
         entry_canvas.grid(row=1, column=0, sticky="ew", pady=(self._px(4, 1), 0))
+        if self._is_date_input_label(label):
+            self._bind_date_entry_normalization(entry_canvas.entry, variable, label)  # type: ignore[attr-defined]
         if variable is getattr(self, "discharge_date_var", None):
             entry_canvas.entry.bind("<FocusOut>", self._on_discharge_date_field_commit, add="+")  # type: ignore[attr-defined]
             entry_canvas.entry.bind("<Return>", self._on_discharge_date_field_commit, add="+")  # type: ignore[attr-defined]
