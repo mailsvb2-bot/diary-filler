@@ -6,7 +6,9 @@
 from __future__ import annotations
 
 import copy
+import os
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import Dict, List, Optional, Sequence, Tuple
 
 from medical_constants import DOCUMENT_LABELS, DOCUMENT_ORDER, OUTPUT_SUFFIXES
@@ -208,7 +210,7 @@ class MedicalDocumentService:
             data.vk_protocol_number = self._require_text(data.vk_protocol_number, "номер протокола ВК на МСЭ")
             data.vk_protocol_date = self._normalize_required_date(data.vk_protocol_date, "Дата протокола ВК на МСЭ")
             self._ensure_date_not_before_admission(data.admission_date, data.vk_protocol_date, "Дата протокола ВК на МСЭ")
-            data.vk_mse_work_org = (data.vk_mse_work_org or data.work_org or "не работает").strip()
+            data.vk_mse_work_org = (data.vk_mse_work_org or data.work_org).strip()
             data.vk_mse_position = (data.vk_mse_position or data.position).strip()
 
         if "sick_leave_vk" in selected_set:
@@ -219,7 +221,7 @@ class MedicalDocumentService:
             self._ensure_date_not_before_admission(data.admission_date, data.sick_leave_vk_protocol_date, "Дата протокола ВК больничного")
             data.sick_leave_vk_commission_date = self._normalize_required_date(data.sick_leave_vk_commission_date, "Дата проведения комиссии ВК больничного")
             self._ensure_date_not_before_admission(data.admission_date, data.sick_leave_vk_commission_date, "Дата проведения комиссии ВК больничного")
-            data.sick_leave_vk_work_org = (data.sick_leave_vk_work_org or data.work_org or "не работает").strip()
+            data.sick_leave_vk_work_org = (data.sick_leave_vk_work_org or data.work_org).strip()
             data.sick_leave_vk_position = (data.sick_leave_vk_position or data.position).strip()
             data.sick_leave_vk_work_position = data.sick_leave_vk_work_position or ", ".join(
                 part for part in [data.sick_leave_vk_work_org, data.sick_leave_vk_position] if part
@@ -275,11 +277,31 @@ class MedicalDocumentService:
         output_path_root = self._resolve_output_dir(output_dir, primary_path.parent)
         stem = safe_filename(data.output_fio or data.fio or primary_path.stem)
 
-        created: List[Path] = []
-        for kind in selected:
-            template_path = template_paths[kind]
-            suffix = OUTPUT_SUFFIXES[kind]
-            output_path = available_path(output_path_root / f"{stem} {suffix}.docx")
-            self.renderer.render(kind, template_path, output_path, data)
-            created.append(output_path)
+        # Render the complete selected set into a same-volume staging directory.
+        # A renderer failure must not leave a half-created patient комплект in
+        # the visible result folder. Only after every DOCX is valid do we commit.
+        staged: list[tuple[Path, str]] = []
+        with TemporaryDirectory(prefix=".medical-autofill-", dir=str(output_path_root)) as tmp_dir:
+            tmp_root = Path(tmp_dir)
+            for index, kind in enumerate(selected, start=1):
+                template_path = template_paths[kind]
+                suffix = OUTPUT_SUFFIXES[kind]
+                staged_path = tmp_root / f"{index:02d}.docx"
+                self.renderer.render(kind, template_path, staged_path, data)
+                staged.append((staged_path, suffix))
+
+            created: List[Path] = []
+            try:
+                for staged_path, suffix in staged:
+                    output_path = available_path(output_path_root / f"{stem} {suffix}.docx")
+                    os.replace(staged_path, output_path)
+                    created.append(output_path)
+            except Exception:
+                # Best-effort rollback of files committed by this call only.
+                for output_path in reversed(created):
+                    try:
+                        output_path.unlink()
+                    except OSError:
+                        pass
+                raise
         return created, data
