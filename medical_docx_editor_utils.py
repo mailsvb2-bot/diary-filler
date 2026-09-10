@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Iterable, Sequence
+import re
+from typing import Callable, Iterable, Sequence
 
 from docx.document import Document as DocxDocument
 from docx.oxml import OxmlElement
@@ -27,12 +28,70 @@ def paragraph_matches_marker(normalized_paragraph_text: str, marker: str) -> boo
     return False
 
 def set_paragraph_text(paragraph: Paragraph, text: str) -> None:
-    try:
-        paragraph.clear()
-    except AttributeError:
-        for run in list(paragraph.runs):
-            run._element.getparent().remove(run._element)
+    """Replace paragraph text while retaining the first run's direct formatting.
+
+    Callers that only replace a substring should prefer
+    ``replace_paragraph_regex_preserving_runs`` so unaffected runs/styles stay
+    byte-for-byte represented in the document model.
+    """
+    if paragraph.runs:
+        first = paragraph.runs[0]
+        first.text = text
+        for run in paragraph.runs[1:]:
+            run.text = ""
+        return
     paragraph.add_run(text)
+
+
+def replace_paragraph_regex_preserving_runs(
+    paragraph: Paragraph,
+    pattern: str | re.Pattern[str],
+    replacement: str | Callable[[re.Match[str]], str],
+    *,
+    flags: int = 0,
+) -> int:
+    """Regex-replace paragraph text without flattening unaffected Word runs.
+
+    Replacements are applied from right to left.  Text inserted for a match
+    inherits the direct formatting of the run where the match begins; all
+    unaffected runs keep their original formatting.
+    """
+    runs = list(paragraph.runs)
+    if not runs:
+        return 0
+    full_text = "".join(run.text for run in runs)
+    regex = re.compile(pattern, flags) if isinstance(pattern, str) else pattern
+    matches = list(regex.finditer(full_text))
+    if not matches:
+        return 0
+
+    spans: list[tuple[int, int]] = []
+    cursor = 0
+    for run in runs:
+        end = cursor + len(run.text)
+        spans.append((cursor, end))
+        cursor = end
+
+    for match in reversed(matches):
+        start, end = match.span()
+        if start == end:
+            continue
+        first_idx = next((i for i, (_a, b) in enumerate(spans) if b > start), len(runs) - 1)
+        last_idx = next((i for i, (a, _b) in enumerate(spans) if a >= end), len(runs)) - 1
+        last_idx = max(first_idx, last_idx)
+        first_start, _first_end = spans[first_idx]
+        last_start, _last_end = spans[last_idx]
+        before = runs[first_idx].text[: max(0, start - first_start)]
+        after = runs[last_idx].text[max(0, end - last_start):]
+        repl_text = replacement(match) if callable(replacement) else match.expand(replacement)
+        if first_idx == last_idx:
+            runs[first_idx].text = before + repl_text + after
+        else:
+            runs[first_idx].text = before + repl_text
+            for idx in range(first_idx + 1, last_idx):
+                runs[idx].text = ""
+            runs[last_idx].text = after
+    return len(matches)
 
 def insert_paragraph_after(paragraph: Paragraph, text: str = "") -> Paragraph:
     new_p = OxmlElement("w:p")

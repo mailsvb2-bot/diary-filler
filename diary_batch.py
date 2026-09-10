@@ -11,6 +11,7 @@ import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import Iterable, Sequence
 
 from docx import Document
@@ -99,7 +100,7 @@ def fill_diary_batch(
     keep_signature: bool = True,
     fill_months: bool = True,
     force_final_diary: bool = True,
-    remove_holiday_rows: bool = True,
+    remove_holiday_rows: bool = False,
     open_result_folder: bool = False,
     write_report: bool = False,
 ) -> DiaryBatchResult:
@@ -121,8 +122,9 @@ def fill_diary_batch(
     patient_filename = safe_filename_part(patient_name)
     gender_name = safe_filename_part(gender_source_name or patient_name)
     patient_gender = detect_gender_from_patient_name(gender_name)
-    if patient_gender is None:
-        raise ValueError("Введите ФИО так, чтобы первым словом была фамилия пациента. Например: Иванов И.И. или Петрова А.А.")
+    # Не угадываем род по неоднозначной фамилии. При None дневник создаётся с
+    # исходной формулировкой текста; это безопаснее, чем молча менять мужской/
+    # женский род неверно. Полный ФИО с отчеством по-прежнему определяется.
 
     statuses = read_statuses_from_files(status_file_paths)
     if status_files and not statuses:
@@ -153,60 +155,89 @@ def fill_diary_batch(
     total_holidays = 0
     total_after_discharge = 0
 
-    for n, src_path in enumerate(diary_file_paths, start=1):
-        out_name = make_diary_output_name(patient_filename, file_index=n, total_files=len(diary_file_paths))
-        dst = available_path(result_dir / out_name)
-        shutil.copy2(src_path, dst)
-        effective_start_idx = 0 if reset_each_file else idx
-        result = fill_diary_file(
-            dst,
-            statuses,
-            start_idx=effective_start_idx,
-            repeat_statuses=repeat_statuses,
-            keep_signature=keep_signature,
-            fill_months=fill_months,
-            start_month=start_month,
-            start_year=start_year,
-            admission_date_value=admission_date_value,
-            discharge_date=discharge_date_value,
-            force_final_diary=force_final_diary,
-            remove_holiday_rows=remove_holiday_rows,
-            patient_gender=patient_gender,
-        )
-        if not reset_each_file:
-            idx = result.next_status_index
-        created_files.append(dst)
-        total_filled += result.filled_rows
-        total_detected += result.detected_rows
-        total_months += result.month_cells_filled
-        total_final += result.final_rows_filled
-        total_gender += result.gender_replacements
-        total_holidays += result.removed_holiday_rows
-        total_after_discharge += result.removed_after_discharge_rows
-        lines.append(
-            f"{src_path.name}: строк найдено {result.detected_rows}; дневников заполнено {result.filled_rows}; "
-            f"месяц/год {result.month_cells_filled}; финальных записей {result.final_rows_filled}; "
-            f"замен пола {result.gender_replacements}; удалено праздников {result.removed_holiday_rows}; "
-            f"удалено после выписки {result.removed_after_discharge_rows}"
-        )
+    # Fill every diary in an isolated same-volume staging directory. A broken
+    # template or writer error cannot leave an empty/half-filled patient DOCX.
+    staged_outputs: list[tuple[Path, str]] = []
+    staged_report: Path | None = None
+    report_name = "ОТЧЁТ_дневники.txt"
+    with TemporaryDirectory(prefix=".diary-autofill-", dir=str(result_dir)) as tmp_dir:
+        tmp_root = Path(tmp_dir)
+        for n, src_path in enumerate(diary_file_paths, start=1):
+            out_name = make_diary_output_name(patient_filename, file_index=n, total_files=len(diary_file_paths))
+            staged_path = tmp_root / f"{n:02d}.docx"
+            shutil.copy2(src_path, staged_path)
+            effective_start_idx = 0 if reset_each_file else idx
+            result = fill_diary_file(
+                staged_path,
+                statuses,
+                start_idx=effective_start_idx,
+                repeat_statuses=repeat_statuses,
+                keep_signature=keep_signature,
+                fill_months=fill_months,
+                start_month=start_month,
+                start_year=start_year,
+                admission_date_value=admission_date_value,
+                discharge_date=discharge_date_value,
+                force_final_diary=force_final_diary,
+                remove_holiday_rows=remove_holiday_rows,
+                patient_gender=patient_gender,
+            )
+            if not reset_each_file:
+                idx = result.next_status_index
+            staged_outputs.append((staged_path, out_name))
+            total_filled += result.filled_rows
+            total_detected += result.detected_rows
+            total_months += result.month_cells_filled
+            total_final += result.final_rows_filled
+            total_gender += result.gender_replacements
+            total_holidays += result.removed_holiday_rows
+            total_after_discharge += result.removed_after_discharge_rows
+            lines.append(
+                f"{src_path.name}: строк найдено {result.detected_rows}; дневников заполнено {result.filled_rows}; "
+                f"месяц/год {result.month_cells_filled}; финальных записей {result.final_rows_filled}; "
+                f"замен пола {result.gender_replacements}; удалено праздников {result.removed_holiday_rows}; "
+                f"удалено после выписки {result.removed_after_discharge_rows}"
+            )
 
-    lines.extend(
-        [
-            "",
-            f"Файлов обработано: {len(created_files)}/{len(diary_file_paths)}",
-            f"Дневников заполнено: {total_filled}",
-            f"Строк дневников найдено: {total_detected}",
-            f"Дат месяц/год заполнено: {total_months}",
-            f"Финальных записей: {total_final}",
-            f"Грамматических замен по полу: {total_gender}",
-            f"Удалено праздничных строк: {total_holidays}",
-            f"Удалено строк после выписки: {total_after_discharge}",
-        ]
-    )
-    report_path: Path | None = None
-    if write_report:
-        report_path = available_path(result_dir / "ОТЧЁТ_дневники.txt")
-        report_path.write_text("\n".join(lines), encoding="utf-8")
+        lines.extend(
+            [
+                "",
+                f"Файлов обработано: {len(staged_outputs)}/{len(diary_file_paths)}",
+                f"Дневников заполнено: {total_filled}",
+                f"Строк дневников найдено: {total_detected}",
+                f"Дат месяц/год заполнено: {total_months}",
+                f"Финальных записей: {total_final}",
+                f"Грамматических замен по полу: {total_gender}",
+                f"Удалено праздничных строк: {total_holidays}",
+                f"Удалено строк после выписки: {total_after_discharge}",
+            ]
+        )
+        if write_report:
+            staged_report = tmp_root / report_name
+            staged_report.write_text("\n".join(lines), encoding="utf-8")
+
+        report_path: Path | None = None
+        try:
+            for staged_path, out_name in staged_outputs:
+                final_path = available_path(result_dir / out_name)
+                os.replace(staged_path, final_path)
+                created_files.append(final_path)
+            if staged_report is not None:
+                report_path = available_path(result_dir / report_name)
+                os.replace(staged_report, report_path)
+        except Exception:
+            for output_path in reversed(created_files):
+                try:
+                    output_path.unlink()
+                except OSError:
+                    pass
+            if report_path is not None:
+                try:
+                    report_path.unlink()
+                except OSError:
+                    pass
+            raise
+
     if open_result_folder:
         open_folder(result_dir)
 

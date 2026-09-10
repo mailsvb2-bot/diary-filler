@@ -7,24 +7,58 @@ from __future__ import annotations
 
 import re
 
-from diary_constants import GENDER_WORD_PAIRS, RUSSIAN_VOWELS
+from diary_constants import GENDER_WORD_PAIRS
 from diary_text_parser import normalize_text
 
-def detect_gender_from_patient_name(patient_name: str) -> str | None:
-    """Detect patient gender by the first word of the entered full name.
+def _name_token(value: str) -> str:
+    return re.sub(r"[^A-Za-zА-Яа-яЁё-]+", "", value).strip("-")
 
-    Matches the GitHub diary-filler workflow for Russian surnames:
-    surname ending with a vowel -> female, otherwise male.
+
+def detect_gender_from_patient_name(patient_name: str) -> str | None:
+    """Conservatively infer Russian grammatical gender from a patient name.
+
+    Prefer a full patronymic, then strongly gendered surname endings and only
+    then an unabbreviated given name.  Indeclinable/ambiguous surnames such as
+    ``Шевченко`` with initials return ``None`` instead of silently becoming
+    female just because the surname ends with a vowel.
     """
     value = normalize_text(patient_name)
     if not value:
         return None
-    surname = re.sub(r"[^A-Za-zА-Яа-яЁё-]+", "", value.split()[0]).strip("-")
-    if not surname:
+    tokens = [_name_token(part) for part in value.split()]
+    tokens = [part for part in tokens if part]
+    if not tokens:
         return None
-    last = surname[-1].lower()
-    return "female" if last in RUSSIAN_VOWELS else "male"
 
+    lowered = [part.lower().replace("ё", "е") for part in tokens]
+
+    # Patronymics are the strongest signal when a full FIO is available.
+    for token in lowered[1:]:
+        if token.endswith(("овна", "евна", "ична", "инична")):
+            return "female"
+        if token.endswith(("ович", "евич", "ич")):
+            return "male"
+
+    surname = lowered[0]
+    if surname.endswith(("ова", "ева", "ина", "ына", "ская", "цкая", "ая", "яя")):
+        return "female"
+    if surname.endswith(("ов", "ев", "ин", "ын", "ский", "цкий", "ой", "ый", "ий")):
+        return "male"
+
+    # Initials carry no gender information.  A full given name can resolve many
+    # indeclinable surnames without pretending that every vowel-ending surname
+    # is feminine.
+    if len(lowered) >= 2 and len(lowered[1]) > 2:
+        given = lowered[1]
+        male_a_ya_names = {"илья", "никита", "кузьма", "фома", "лука", "данила", "савва"}
+        if given in male_a_ya_names:
+            return "male"
+        if given.endswith(("а", "я")):
+            return "female"
+        if given.endswith(("й", "н", "р", "м", "л", "в", "д", "т", "с", "г", "к", "п")):
+            return "male"
+
+    return None
 
 def gender_label(gender: str | None) -> str:
     if gender == "male":

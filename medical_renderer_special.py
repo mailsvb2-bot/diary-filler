@@ -47,12 +47,12 @@ class MedicalRendererSpecialMixin:
 
         editor.replace_all_matching_paragraphs(["Ф.И.О", "Ф.И.О:"], f"Ф.И.О: {data.fio}")
         editor.replace_all_matching_paragraphs(["Год рождения"], f"Год рождения: {data.birth}")
-        editor.replace_all_matching_paragraphs(["Проживает"], f"Проживает: {data.registered or 'Н. Новгород'}")
+        editor.replace_all_matching_paragraphs(["Проживает"], f"Проживает: {data.registered}".rstrip())
         vk_work_parts = [
             (data.vk_mse_work_org or data.work_org).strip(),
             (data.vk_mse_position or data.position).strip(),
         ]
-        vk_work_line = ", ".join(part for part in vk_work_parts if part) or "не работает"
+        vk_work_line = ", ".join(part for part in vk_work_parts if part)
         editor.replace_all_matching_paragraphs(["Место работы"], f"Место работы: {vk_work_line}")
         editor.replace_all_matching_paragraphs(["Диагноз"], f"Диагноз: {sanitize_diagnosis(data.diagnosis)}")
 
@@ -84,12 +84,12 @@ class MedicalRendererSpecialMixin:
 
         work_position = data.sick_leave_vk_work_position or ", ".join(
             part for part in [data.sick_leave_vk_work_org, data.sick_leave_vk_position] if part
-        ).strip(", ") or ", ".join(part for part in [data.work_org, data.position] if part).strip(", ") or "не работает"
+        ).strip(", ") or ", ".join(part for part in [data.work_org, data.position] if part).strip(", ")
         treatment_line = treatment_period_text(data.admission_date, data.sick_leave_vk_commission_date or data.sick_leave_vk_date)
 
         editor.replace_all_matching_paragraphs(["Ф.И.О", "Ф.И.О:"], f"Ф.И.О: {data.fio}")
         editor.replace_all_matching_paragraphs(["Год рождения"], f"Год рождения: {data.birth}")
-        editor.replace_all_matching_paragraphs(["Проживает"], f"Проживает: {data.registered or 'Н. Новгород'}")
+        editor.replace_all_matching_paragraphs(["Проживает"], f"Проживает: {data.registered}".rstrip())
         editor.replace_all_matching_paragraphs(["Место работы"], f"Место работы, должность: {work_position}")
         editor.replace_all_matching_paragraphs(["Находится на лечении"], treatment_line)
         editor.replace_all_matching_paragraphs(["Диагноз"], f"Диагноз: {sanitize_diagnosis(data.diagnosis)}")
@@ -132,7 +132,7 @@ class MedicalRendererSpecialMixin:
             )
         if data.psych_account:
             editor.replace_first_matching_paragraph(["На учёте", "На учете"], f"На учёте у психиатров {data.psych_account}.")
-        editor.replace_block(["Жалобы"], "Жалобы:", data.complaints or "не предъявляет", RVK_MARKERS, allow_empty=True)
+        editor.replace_block(["Жалобы"], "Жалобы:", data.complaints, RVK_MARKERS, allow_empty=True)
         editor.replace_block(["Анамнез жизни"], "Анамнез жизни:", data.life_anamnesis, RVK_MARKERS)
         editor.replace_block(["Анамнез заболевания"], "Анамнез заболевания:", data.disease_anamnesis, RVK_MARKERS)
         editor.replace_block(["Психический статус"], "Психический статус:", data.mental_status, RVK_MARKERS)

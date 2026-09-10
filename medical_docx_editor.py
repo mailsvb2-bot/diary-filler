@@ -11,6 +11,7 @@ from medical_docx_editor_utils import (
     paragraph_matches_marker,
     remove_exact_paragraphs,
     remove_paragraph,
+    replace_paragraph_regex_preserving_runs,
     set_paragraph_text,
 )
 
@@ -23,6 +24,7 @@ __all__ = [
     "DocxBlockEditor",
     "paragraph_matches_marker",
     "set_paragraph_text",
+    "replace_paragraph_regex_preserving_runs",
     "insert_paragraph_after",
     "remove_paragraph",
     "remove_exact_paragraphs",
