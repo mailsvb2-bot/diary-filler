@@ -19,8 +19,14 @@ except Exception:  # pragma: no cover - защитный fallback для авт�
     def adapt_text_to_patient_gender(text: str, _gender: str | None) -> tuple[str, int]:
         return text, 0
 
+from diary_constants import GENDER_WORD_PAIRS
 from medical_constants import TARGET_MEDICAL_FACILITY
-from medical_docx_editor import iter_all_paragraphs, remove_epi_mentions_from_document, set_paragraph_text
+from medical_docx_editor import (
+    iter_all_paragraphs,
+    remove_epi_mentions_from_document,
+    replace_paragraph_regex_preserving_runs,
+    set_paragraph_text,
+)
 from medical_models import PatientData
 from medical_text_utils import normalize_match
 
@@ -36,6 +42,14 @@ GENDER_ADAPTED_PATIENT_FIELDS = (
     "psych_account",
     "epi_text",
 )
+
+
+def _preserve_case_for_document(source: str, target: str) -> str:
+    if source.isupper():
+        return target.upper()
+    if source[:1].isupper():
+        return target[:1].upper() + target[1:]
+    return target
 
 
 def patient_gender(data: PatientData) -> str | None:
@@ -83,9 +97,20 @@ def adapt_document_to_patient_gender(doc: DocxDocument, data: PatientData) -> No
         # Клинические описания вокруг этих строк уже адаптированы на уровне данных.
         if "диагноз" in normalize_match(original):
             continue
-        updated, changed = adapt_text_to_patient_gender(original, gender)
-        if changed and updated != original:
-            set_paragraph_text(paragraph, updated)
+        # Apply the same pair rules directly to runs so a local gender change
+        # does not flatten bold/italic/underlined fragments elsewhere in the paragraph.
+        pairs = sorted(GENDER_WORD_PAIRS, key=lambda pair: max(len(pair[0]), len(pair[1])), reverse=True)
+        for male, female in pairs:
+            source, target = (female, male) if gender == "male" else (male, female)
+            pattern = re.compile(
+                rf"(?<![A-Za-zА-Яа-яЁё]){re.escape(source)}(?![A-Za-zА-Яа-яЁё])",
+                re.IGNORECASE,
+            )
+            replace_paragraph_regex_preserving_runs(
+                paragraph,
+                pattern,
+                lambda match, target=target: _preserve_case_for_document(match.group(0), target),
+            )
 
 
 
@@ -106,7 +131,6 @@ def normalize_facility_references_in_document(doc: DocxDocument) -> None:
         if normalized.startswith("направляется на лечение") or normalized.startswith("направляется в гбуз"):
             set_paragraph_text(paragraph, f"Направляется в {target}")
             continue
-        updated = original
         replacements = [
             (r"ГБУЗ\s*НО\s*ПБ\s*№\s*2", target),
             (r"ГБУЗНО\s*«?Психиатрическая\s+больница\s*№\s*2»?(?:\s*г\.\s*Н\.\s*Новгорода)?", target),
@@ -114,11 +138,7 @@ def normalize_facility_references_in_document(doc: DocxDocument) -> None:
             (r"отделени[ея]\s*№\s*3", target),
         ]
         for pattern, replacement in replacements:
-            updated = re.sub(pattern, replacement, updated, flags=re.IGNORECASE)
-        updated = re.sub(rf"в\s+{re.escape(target)}", f"в {target}", updated, flags=re.IGNORECASE)
-        updated = re.sub(r"\s+", " ", updated).strip()
-        if updated != original:
-            set_paragraph_text(paragraph, updated)
+            replace_paragraph_regex_preserving_runs(paragraph, pattern, replacement, flags=re.IGNORECASE)
 
 
 def finalize_medical_document(doc: DocxDocument, data: PatientData) -> None:

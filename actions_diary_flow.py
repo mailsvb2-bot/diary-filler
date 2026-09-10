@@ -62,7 +62,8 @@ class ActionsDiaryFlowMixin:
             keep_signature=self.keep_signature_var.get(),
             fill_months=self.fill_months_var.get(),
             force_final_diary=self.force_final_diary_var.get(),
-            remove_holiday_rows=self.remove_holiday_rows_var.get(),
+            # Holiday row removal is never implicit in the normal UI flow.
+            remove_holiday_rows=False,
             open_result_folder=False,
             write_report=self._diagnostic_reports_enabled(),
         )

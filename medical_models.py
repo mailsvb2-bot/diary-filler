@@ -104,10 +104,12 @@ class PatientData:
 
     def missing_recommended_fields(self) -> List[str]:
         checks = [
+            ("адрес регистрации", self.registered),
             ("жалобы", self.complaints),
             ("анамнез жизни", self.life_anamnesis),
             ("анамнез заболевания", self.disease_anamnesis),
             ("психический статус", self.mental_status),
+            ("эпидемиологический анамнез", self.epidemiology),
             ("диагноз", self.diagnosis),
             ("план лечения", self.treatment_plan),
         ]

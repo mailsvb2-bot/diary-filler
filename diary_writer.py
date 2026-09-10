@@ -31,7 +31,7 @@ def fill_diary_file(
     admission_date_value: date | None = None,
     discharge_date: date | None = None,
     force_final_diary: bool = True,
-    remove_holiday_rows: bool = True,
+    remove_holiday_rows: bool = False,
     patient_gender: str | None = None,
 ) -> FillResult:
     """Fill diary tables in one DOCX template and return a stable summary."""

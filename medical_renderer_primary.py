@@ -75,7 +75,7 @@ class MedicalRendererPrimaryMixin:
                 f"данных клинических исследований установлен диагноз: {diagnosis}"
             )
         editor.replace_block(["На основании данных", "Диагноз"], "", diagnosis_sentence, PRIMARY_MARKERS)
-        editor.replace_block(["Эпидемиологический анамнез"], "Эпидемиологический анамнез:", data.epidemiology, PRIMARY_MARKERS)
+        editor.replace_block(["Эпидемиологический анамнез"], "Эпидемиологический анамнез:", data.epidemiology, PRIMARY_MARKERS, allow_empty=True)
         put_expert_anamnesis(
             editor,
             data,
@@ -100,7 +100,10 @@ class MedicalRendererPrimaryMixin:
         header = f"{header_date}      Выписной эпикриз № {data.case_number}".rstrip()
         editor.replace_first_matching_paragraph(["Дата, время"], header)
         birth_text = format_birth_for_person_line(data.birth)
-        person_line = f"{data.fio}, {birth_text}, зарегистрирован по адресу: {data.registered or 'Н. Новгород'}".strip(" ,")
+        person_parts = [data.fio, birth_text]
+        if data.registered:
+            person_parts.append(f"зарегистрирован по адресу: {data.registered}")
+        person_line = ", ".join(part for part in person_parts if part).strip(" ,")
         editor.replace_first_matching_paragraph(["г.р.,", "зарегистрирован по адресу"], person_line)
         period = f"Находился на лечении в ГБУЗ НО «НКЦПЗ» диспансер №2 с {data.admission_date} по {data.discharge_date}".strip()
         editor.replace_first_matching_paragraph(["Находился на лечении"], period)

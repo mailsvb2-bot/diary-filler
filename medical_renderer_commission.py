@@ -48,7 +48,10 @@ class MedicalRendererCommissionMixin:
             editor.replace_first_matching_regex(r"Совместный\s+осмотр", header)
 
         birth_text = format_birth_for_person_line(data.birth)
-        person_line = f"{data.fio}, {birth_text}, зарегистрирован по адресу: {data.registered or 'Н. Новгород'}".strip(" ,")
+        person_parts = [data.fio, birth_text]
+        if data.registered:
+            person_parts.append(f"зарегистрирован по адресу: {data.registered}")
+        person_line = ", ".join(part for part in person_parts if part).strip(" ,")
         editor.replace_first_matching_paragraph(["г.р.,", "зарегистрирован по адресу"], person_line)
         put_expert_anamnesis(editor, data, COMMISSION_MARKERS, ["В 3 отделение КДП поступает"], include_sick_leave_number=False, include_return_to_work=False)
         editor.replace_block(["В 3 отделение КДП поступает"], "В 3 отделение КДП поступает", data.admission, COMMISSION_MARKERS)
@@ -87,7 +90,7 @@ class MedicalRendererCommissionMixin:
             )
         editor.replace_block(["На основании данных", "Диагноз"], "", diagnosis_sentence, COMMISSION_MARKERS)
         editor.replace_block(["Лечение"], "Лечение:", data.treatment_plan, COMMISSION_MARKERS)
-        editor.replace_block(["Эпидемиологический анамнез"], "Эпидемиологический анамнез:", data.epidemiology, COMMISSION_MARKERS)
+        editor.replace_block(["Эпидемиологический анамнез"], "Эпидемиологический анамнез:", data.epidemiology, COMMISSION_MARKERS, allow_empty=True)
         finalize_medical_document(doc, data)
         doc.save(str(output_path))
 
@@ -133,7 +136,7 @@ class MedicalRendererCommissionMixin:
                 f"данных клинических исследований был выставлен диагноз: {diagnosis}"
             )
         editor.replace_block(["На основании данных", "Диагноз"], "", diagnosis_sentence, PRIMARY_MARKERS)
-        editor.replace_block(["Эпидемиологический анамнез"], "Эпидемиологический анамнез:", data.epidemiology, PRIMARY_MARKERS)
+        editor.replace_block(["Эпидемиологический анамнез"], "Эпидемиологический анамнез:", data.epidemiology, PRIMARY_MARKERS, allow_empty=True)
         # Финальная фраза должна быть строго такой по пользовательскому требованию.
         target_referral_line = f"В связи с психическим состоянием, направляется на лечение в {TARGET_MEDICAL_FACILITY}"
         referral_done = False
