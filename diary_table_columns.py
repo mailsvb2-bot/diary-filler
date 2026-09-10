@@ -15,7 +15,7 @@ from docx.shared import Pt
 from diary_constants import HOLIDAY_SKIP_END_DAY, HOLIDAY_SKIP_MONTHS, HOLIDAY_SKIP_START_DAY, STATUS_FONT_SIZE_PT, STRUCTURAL_DIARY_PREFIXES
 from diary_dates import add_month, format_month_year, parse_month_year, safe_row_date
 from diary_text_parser import is_signature_paragraph_text, normalize_text, remove_examinee_words
-from diary_table_numbers import cell_int
+from diary_table_numbers import cell_int, hospitalization_day_int
 
 def is_data_row(row, day_col: int | None = None, hospitalization_day_col: int | None = None) -> bool:
     """Return True for diary data rows.
@@ -29,7 +29,7 @@ def is_data_row(row, day_col: int | None = None, hospitalization_day_col: int | 
         return False
     if day_col is not None and len(row.cells) > day_col and cell_int(row.cells[day_col].text) is not None:
         return True
-    if hospitalization_day_col is not None and len(row.cells) > hospitalization_day_col and cell_int(row.cells[hospitalization_day_col].text) is not None:
+    if hospitalization_day_col is not None and len(row.cells) > hospitalization_day_col and hospitalization_day_int(row.cells[hospitalization_day_col].text) is not None:
         return True
     first = normalize_text(row.cells[0].text)
     return bool(re.fullmatch(r"\d+", first))
