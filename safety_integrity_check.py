@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import shutil
+from datetime import date, timedelta
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -178,6 +179,38 @@ def _test_diary_transaction(tmp: Path) -> None:
         diary_batch_module.fill_diary_file = original
 
 
+def _test_daily_diary_coverage(tmp: Path) -> None:
+    statuses = tmp / "daily-texts.docx"
+    template = tmp / "daily-sparse.docx"
+    _make_statuses(statuses)
+    _make_diary_template(template, (2, 3, 4, 7, 11))
+
+    result = fill_diary_batch(
+        status_files=[statuses],
+        diary_files=[template],
+        output_dir=tmp / "daily-out",
+        patient_name="Иванов Иван Иванович",
+        admission_value="01.01.2026",
+        discharge_value="10.02.2026",
+        force_final_diary=True,
+        open_result_folder=False,
+    )
+
+    table = Document(result.created_files[0]).tables[0]
+    data_rows = table.rows[1:]
+    hospitalization_days = [int(row.cells[0].text.strip()) for row in data_rows]
+    actual_dates = [f"{row.cells[1].text.strip()}.{row.cells[2].text.strip()}" for row in data_rows]
+
+    assert hospitalization_days == list(range(2, 42)), hospitalization_days
+    expected_dates = []
+    current = date(2026, 1, 2)
+    while current <= date(2026, 2, 10):
+        expected_dates.append(current.strftime("%d.%m.%Y"))
+        current += timedelta(days=1)
+    assert actual_dates == expected_dates, actual_dates
+    assert hospitalization_days[-1] > 31, hospitalization_days[-1]
+
+
 class _SettingsHarness(SettingsMixin):
     pass
 
@@ -225,6 +258,7 @@ def main() -> None:
     with TemporaryDirectory(prefix="medical-autofill-safety-") as temp_dir:
         tmp = Path(temp_dir)
         _test_holiday_default_is_safe(tmp)
+        _test_daily_diary_coverage(tmp)
         _test_medical_transaction(tmp)
         _test_diary_transaction(tmp)
         _test_settings_privacy(tmp)
