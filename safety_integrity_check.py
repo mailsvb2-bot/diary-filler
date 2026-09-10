@@ -149,7 +149,7 @@ def _test_diary_transaction(tmp: Path) -> None:
     original = diary_batch_module.fill_diary_file
     calls = {"count": 0}
 
-    def fail_second(path, statuses_texts, **kwargs):
+    def fail_second(path, status_texts, **kwargs):
         calls["count"] += 1
         if calls["count"] == 2:
             raise RuntimeError("synthetic diary writer failure")
