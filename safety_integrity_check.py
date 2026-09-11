@@ -89,6 +89,34 @@ def _test_common_diary_gender_agreement() -> None:
         assert expected in adapted, adapted
 
 
+def _test_text_diary_signature_fallbacks(tmp: Path) -> None:
+    doctor_only = tmp / "doctor-only-dates.docx"
+    doc = Document()
+    table = doc.add_table(rows=2, cols=4)
+    for index, header in enumerate(("День госпитализации", "Число", "Месяц/Год", "Дневник наблюдения")):
+        table.rows[0].cells[index].text = header
+    table.rows[1].cells[0].text = "2"
+    table.rows[1].cells[3].text = "Лечащий врач Балаганин С.В."
+    doc.save(doctor_only)
+    assert diary_batch_module._signature_lines_from_diary_sources([doctor_only]) == (
+        "Лечащий врач Балаганин С.В.",
+        "Зав. отделением ____________________",
+    )
+
+    head_only = tmp / "head-only-dates.docx"
+    doc = Document()
+    table = doc.add_table(rows=2, cols=4)
+    for index, header in enumerate(("День госпитализации", "Число", "Месяц/Год", "Дневник наблюдения")):
+        table.rows[0].cells[index].text = header
+    table.rows[1].cells[0].text = "2"
+    table.rows[1].cells[3].text = "Заведующий отделением Можарова Е.А."
+    doc.save(head_only)
+    assert diary_batch_module._signature_lines_from_diary_sources([head_only]) == (
+        "Лечащий врач ____________________",
+        "Заведующий отделением Можарова Е.А.",
+    )
+
+
 def _test_text_diary_user_route(tmp: Path) -> None:
     statuses = tmp / "text-route-texts.docx"
     template = tmp / "text-route-dates.docx"
@@ -350,6 +378,7 @@ def main() -> None:
     with TemporaryDirectory(prefix="medical-autofill-safety-") as temp_dir:
         tmp = Path(temp_dir)
         _test_holiday_default_is_safe(tmp)
+        _test_text_diary_signature_fallbacks(tmp)
         _test_text_diary_user_route(tmp)
         _test_daily_diary_coverage(tmp)
         _test_medical_transaction(tmp)
