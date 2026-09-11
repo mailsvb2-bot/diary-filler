@@ -21,7 +21,7 @@ from diary_dates import parse_admission_month_year, parse_full_date, parse_optio
 from diary_constants import FINAL_DIARY_TEXT
 from shared_gender import adapt_text_to_patient_gender, detect_gender_from_patient_name
 from diary_models import DiaryBatchResult
-from diary_paths import available_path, make_diary_output_name, safe_filename_part
+from shared_paths import available_path, make_diary_output_name, safe_filename_part
 from diary_table import (
     cell_int,
     detect_first_month_year_from_docx,
