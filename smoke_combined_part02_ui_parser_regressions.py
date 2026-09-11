@@ -326,13 +326,13 @@ assert normalize_prompt_field_values(
 # Texts/Dates folders may remain so the next patient's files can be auto-picked.
 patient_switch = _main_module.CombinedMedicalDiaryApp.__new__(_main_module.CombinedMedicalDiaryApp)
 for name in (
-    "assigned_treatment_var", "case_number_var", "expert_work_status_var",
+    "assigned_treatment_var", "case_number_var", "admission_occurrence_var", "expert_work_status_var",
     "expert_work_org_var", "expert_position_var", "expert_sick_leave_needed_var",
     "expert_sick_leave_from_var", "expert_sick_leave_number_var",
     "vk_mse_work_org_var", "vk_mse_position_var", "sick_leave_vk_work_org_var",
     "sick_leave_vk_position_var", "sick_leave_vk_work_position_var",
     "patient_name_var", "admission_date_var", "discharge_date_var", "diagnosis_var",
-    "rvk_act_number_var", "rvk_military_commissariat_var", "rvk_work_position_var",
+    "admission_occurrence_var", "rvk_act_number_var", "rvk_military_commissariat_var", "rvk_work_position_var",
     "vk_date_var", "vk_protocol_number_var", "vk_protocol_date_var",
     "sick_leave_vk_date_var", "sick_leave_vk_protocol_number_var",
     "sick_leave_vk_protocol_date_var", "sick_leave_vk_commission_date_var",
@@ -384,7 +384,7 @@ assert patient_switch._last_protocol_date == ""
 # the doctor remain intact; isolation is activated only on an actual patient switch.
 first_primary = _main_module.CombinedMedicalDiaryApp.__new__(_main_module.CombinedMedicalDiaryApp)
 for name in (
-    "assigned_treatment_var", "case_number_var", "expert_work_status_var",
+    "assigned_treatment_var", "case_number_var", "admission_occurrence_var", "expert_work_status_var",
     "expert_work_org_var", "expert_position_var", "expert_sick_leave_needed_var",
     "expert_sick_leave_from_var", "expert_sick_leave_number_var",
     "vk_mse_work_org_var", "vk_mse_position_var", "sick_leave_vk_work_org_var",
