@@ -297,8 +297,41 @@ def _assert_discharge_date_contract() -> None:
         if snippet not in source:
             _fail(f"Discharge-date popup contract misses: {snippet}")
 
+    medical_date_source = _read("medical_formatting.py")
+    diary_date_source = _read("diary_dates.py")
+    shared_date_source = _read("shared_dates.py")
+    for module_name, module_source in (
+        ("medical_formatting.py", medical_date_source),
+        ("diary_dates.py", diary_date_source),
+    ):
+        if "from shared_dates import parse_date_value" not in module_source:
+            _fail(f"{module_name} bypasses the canonical shared date parser")
+        for duplicate in ("def _parse_compact_date_digits", "def _candidate_date", "def _two_digit_year_to_full"):
+            if duplicate in module_source:
+                _fail(f"{module_name} duplicates canonical date logic: {duplicate}")
+    for required_shared_symbol in (
+        "def parse_date_value",
+        "def _parse_compact_date_digits",
+        "MIN_CLINICAL_YEAR = 1900",
+        "MAX_CLINICAL_YEAR = 2200",
+    ):
+        if required_shared_symbol not in shared_date_source:
+            _fail(f"shared date parser contract misses: {required_shared_symbol}")
+
+    from shared_dates import parse_date_value
     from medical_documents import parse_date
     from diary_filler import parse_full_date
+    for raw, expected in {
+        "090926": "09.09.2026",
+        "09092026": "09.09.2026",
+        "1126": "01.01.2026",
+        "10526": "01.05.2026",
+        "3112026": "31.01.2026",
+    }.items():
+        parsed_shared = parse_date_value(raw)
+        if parsed_shared is None or parsed_shared.strftime("%d.%m.%Y") != expected:
+            _fail(f"canonical shared date parser is broken for {raw}")
+
     if parse_date("10052026").strftime("%d.%m.%Y") != "10.05.2026":
         _fail("medical compact date parser is broken")
     if parse_date("090926").strftime("%d.%m.%Y") != "09.09.2026":
