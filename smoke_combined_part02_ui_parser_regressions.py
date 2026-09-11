@@ -282,6 +282,25 @@ finally:
     _date_contract_messagebox.showwarning = _original_date_showwarning
 
 
+# --- Generic popup compact-date submit regression ---
+# Mouse-clicking OK must normalize compact dates even when the entry never
+# received Return/FocusOut. This is the exact path that previously still made
+# the doctor type dots manually in popup windows.
+from dialog_fields_core import normalize_prompt_field_values
+popup_date_submit = _main_module.CombinedMedicalDiaryApp.__new__(_main_module.CombinedMedicalDiaryApp)
+popup_date_submit._is_date_input_label = _main_module.CombinedMedicalDiaryApp._is_date_input_label.__get__(popup_date_submit, _main_module.CombinedMedicalDiaryApp)
+popup_date_submit._normalize_date_for_ui = _main_module.CombinedMedicalDiaryApp._normalize_date_for_ui.__get__(popup_date_submit, _main_module.CombinedMedicalDiaryApp)
+normalized_popup_values = normalize_prompt_field_values(
+    popup_date_submit,
+    [("Дата выписки", ""), ("От / дата протокола / Дата протокола", ""), ("Лечение", "")],
+    ["090926", "09092026", "без изменений"],
+)
+assert normalized_popup_values == ["09.09.2026", "09.09.2026", "без изменений"], normalized_popup_values
+assert normalize_prompt_field_values(
+    popup_date_submit, [("Дата комиссии", "")], ["99.99.26"]
+) == ["99.99.26"], "invalid input must remain available for the normal validator warning"
+
+
 # --- Patient switch isolation regression ---
 # Switching from one primary file to another must never reuse patient-specific
 # EPI/commission/VK/RVK values or manually selected diary inputs. Reusable

@@ -7,6 +7,23 @@ from dialog_fields_linking import attach_linked_field_mirroring
 from dialog_fields_popup import DialogDiagnosisPopup
 
 
+def normalize_prompt_field_values(app, rows: list[tuple[str, str]], values: list[str]) -> list[str]:
+    """Normalize compact date fields at the popup submit boundary.
+
+    This is intentionally independent of focus/key events: ``090926`` must be
+    accepted when the doctor types it and immediately clicks the mouse on OK.
+    """
+    result = list(values)
+    is_date_label = getattr(app, "_is_date_input_label", None)
+    normalize_date = getattr(app, "_normalize_date_for_ui", None)
+    if not callable(is_date_label) or not callable(normalize_date):
+        return result
+    for index, ((label, _initial), value) in enumerate(zip(rows, result)):
+        if is_date_label(label) and value:
+            result[index] = normalize_date(value)
+    return result
+
+
 def prompt_fields_dialog(
     self,
     *,
@@ -50,7 +67,11 @@ def prompt_fields_dialog(
 
     def ok() -> None:
         nonlocal result
-        values = [entry.get().strip() for entry in entries]
+        raw_values = [entry.get().strip() for entry in entries]
+        values = normalize_prompt_field_values(self, rows, raw_values)
+        for index, (raw, normalized) in enumerate(zip(raw_values, values)):
+            if normalized != raw:
+                entry_vars[index].set(normalized)
         if not all(values):
             error_label.config(text="Заполните все поля.")
             return
