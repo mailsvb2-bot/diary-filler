@@ -75,6 +75,42 @@ assert "Пациентка была спокойна" in diary_text2
 assert "не предъявляла" in diary_text2
 assert result_filename_male.created_files[0].name.startswith("Иванов Иван Иванович")
 
+# --- Production text diaries: clinical entries come from diagnosis template; discharge is universal ---
+from diary_service import DiaryService
+contract_texts = OUT / "F20 Параноидная шизофрения.docx"
+contract_doc = Document()
+contract_doc.add_paragraph("TEMPLATE_STATUS_ONE пациент пришел спокойно.")
+contract_doc.add_paragraph("TEMPLATE_STATUS_TWO пациент оставался спокоен.")
+contract_doc.add_paragraph("TEMPLATE_STATUS_THREE пациент сохранял спокойствие.")
+contract_doc.save(contract_texts)
+contract_dates = OUT / "contract_dates.docx"
+contract_dates_doc = Document()
+contract_dates_table = contract_dates_doc.add_table(rows=1, cols=4)
+for i, h in enumerate(("День госпитализации", "Число", "Месяц/Год", "Дневник наблюдения")):
+    contract_dates_table.rows[0].cells[i].text = h
+for hospital_day in (1, 2, 3, 7):
+    row = contract_dates_table.add_row()
+    row.cells[0].text = str(hospital_day)
+    row.cells[3].text = "Лечащий врач Балаганин С.В.\nЗав.отделением Можарова Е.А."
+contract_dates_doc.save(contract_dates)
+contract_result = DiaryService().create_text_diaries(
+    status_files=[contract_texts],
+    diary_files=[contract_dates],
+    output_dir=OUT / "diagnosis_template_contract",
+    patient_name="Иванова Анна Сергеевна",
+    gender_source_name="Иванова Анна Сергеевна",
+    admission_value="10.06.2026",
+    discharge_value="13.06.2026",
+)
+contract_output = Document(contract_result.created_files[0])
+contract_lines = [p.text for p in contract_output.paragraphs if p.text.strip()]
+contract_joined = "\n".join(contract_lines)
+assert "TEMPLATE_STATUS_ONE пациентка пришла спокойно." in contract_joined, contract_joined
+assert "TEMPLATE_STATUS_TWO пациентка оставалась спокойна." in contract_joined, contract_joined
+assert "13.06.26 Состояние улучшилось." in contract_joined, contract_joined
+assert "TEMPLATE_STATUS_THREE" not in contract_joined, contract_joined
+assert contract_result.final_rows_filled == 1
+
 
 # --- Admission date regression: title date is admission, FIO-near date is birth ---
 title_date_doc = OUT / "title_date_primary.docx"
@@ -361,6 +397,32 @@ for expected_name, diagnosis in real_names.items():
     assert matched.name == expected_name, (diagnosis, matched.name)
 assert normalize_diary_diagnosis_name("дневники ВЭ легкая депрессия с датами.docx") == "легкая депрессия"
 assert normalize_diary_diagnosis_name("F70.0 Легкая умственная отсталость") == "легкая умственная отсталость"
+
+# A merely related diagnosis must never be auto-selected when the requested
+# diagnosis/name relation is absent. The doctor should be asked for the correct
+# template instead of silently getting another clinical condition.
+wrong_only_dir = OUT / "только похожие диагнозы"
+wrong_only_dir.mkdir(parents=True, exist_ok=True)
+for filename in (
+    "Тяжелая депрессия.docx",
+    "Смешанное тревожное и депрессивное расстройство.docx",
+    "Органическая депрессия.docx",
+):
+    Document().save(wrong_only_dir / filename)
+assert find_diary_text_file_for_diagnosis(
+    wrong_only_dir, "F32.0 Легкий депрессивный эпизод"
+) is None
+assert find_diary_text_file_for_diagnosis(
+    wrong_only_dir, "F06.6 Органическое эмоционально лабильное расстройство"
+) is None
+
+# Direct filename relation beats any semantic fallback.
+direct_dir = OUT / "прямое совпадение диагноза"
+direct_dir.mkdir(parents=True, exist_ok=True)
+for filename in ("Шизофрения.docx", "Шизофрения с астенией.docx", "Органическое расстройство.docx"):
+    Document().save(direct_dir / filename)
+direct_match = find_diary_text_file_for_diagnosis(direct_dir, "F20 Шизофрения")
+assert direct_match is not None and direct_match.name == "Шизофрения.docx", direct_match
 
 # --- UI defaults and service-line regression ---
 source_all = "\n".join(

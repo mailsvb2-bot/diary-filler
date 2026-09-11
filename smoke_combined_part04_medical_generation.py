@@ -38,6 +38,35 @@ assert "Находится на лечении с 10.06.2026 (9 дней)" in co
 assert "От 16.06.2026 г." in combined_text
 assert "ЭПИ тестовая информация" in combined_text
 
+# ЭПИ must stay in its own block and never overwrite laboratory/analysis rows.
+# This locks the exact user regression where unrelated text appeared around analyses.
+lab_prefixes = (
+    "ОАК", "ОАМ", "RW", "HCV", "HBsAg", "ВИЧ", "Биохимия крови",
+    "Глюкоза крови", "Кал на яйца глист", "Флюорография", "ЭКГ", "ЭЭГ",
+)
+for generated in created:
+    if not any(key in generated.name for key in ("Выписной", "Совместный", "РВК")):
+        continue
+    generated_doc = Document(generated)
+    visible_paragraphs = [p.text.strip() for p in generated_doc.paragraphs if p.text.strip()]
+    for table in generated_doc.tables:
+        for row in table.rows:
+            seen_cells = set()
+            for cell in row.cells:
+                cell_id = id(cell._tc)
+                if cell_id in seen_cells:
+                    continue
+                seen_cells.add(cell_id)
+                visible_paragraphs.extend(p.text.strip() for p in cell.paragraphs if p.text.strip())
+    epi_sentinel_hits = [text for text in visible_paragraphs if "EPI_PLACEMENT_SENTINEL_7F31" in text]
+    assert len(epi_sentinel_hits) == 1, (generated.name, epi_sentinel_hits)
+    assert epi_sentinel_hits[0].startswith("ЭПИ"), (generated.name, epi_sentinel_hits[0])
+    contaminated_labs = [
+        text for text in visible_paragraphs
+        if text.startswith(lab_prefixes) and "EPI_PLACEMENT_SENTINEL_7F31" in text
+    ]
+    assert not contaminated_labs, (generated.name, contaminated_labs)
+
 # --- Referral hospitalization phrase must be preserved when source clinical text contains it ---
 phrase_data = service.parse_navigation(nav)
 phrase_data.admission = "Целесообразна госпитализация пациентки в 3 отделение КДП"

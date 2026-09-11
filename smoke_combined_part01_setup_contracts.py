@@ -37,7 +37,7 @@ nav_doc.save(nav)
 
 epi = OUT / "ЭПИ.docx"
 epi_doc = Document()
-epi_doc.add_paragraph("ЭПИ: ЭПИ тестовая информация.")
+epi_doc.add_paragraph("ЭПИ: ЭПИ тестовая информация. EPI_PLACEMENT_SENTINEL_7F31")
 epi_doc.save(epi)
 
 
