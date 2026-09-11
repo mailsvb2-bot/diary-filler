@@ -511,6 +511,23 @@ def _assert_diary_service_boundary() -> None:
     if "def create_text_diaries" not in batch:
         _fail("Canonical paragraph diary entry point is missing from diary_batch.py")
 
+    # Importing the production DiaryService must not eagerly load the legacy
+    # table writer. Keep only the narrow date-source helpers at module scope;
+    # the old writer remains available through the lazy compatibility proxy.
+    batch_tree = ast.parse(batch, filename="diary_batch.py")
+    top_level_from = {
+        node.module
+        for node in batch_tree.body
+        if isinstance(node, ast.ImportFrom) and node.module
+    }
+    forbidden = sorted({"diary_writer", "diary_table"} & top_level_from)
+    if forbidden:
+        _fail("production diary batch eagerly imports legacy modules: " + ", ".join(forbidden))
+    if "from diary_table_columns import" not in batch or "from diary_table_numbers import" not in batch:
+        _fail("production date-source reader lost its narrow table helper imports")
+    if "def fill_diary_file(*args, **kwargs)" not in batch or "legacy_fill_diary_file" not in batch:
+        _fail("legacy fill_diary_file compatibility proxy is missing")
+
 def _assert_atomic_generation_contract() -> None:
     """Keep selected medical + diary output on one staged commit boundary."""
     orchestrator = _read("actions_creation_orchestrator.py")
