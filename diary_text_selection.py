@@ -238,6 +238,58 @@ def diary_diagnosis_match_score(diagnosis: str, filename: str) -> int:
     return max(0, score)
 
 
+
+def _direct_diagnosis_name_rank(diagnosis: str, filename: str) -> int:
+    """Prefer an actual diagnosis/name relation over any semantic fallback."""
+    diag = normalize_diary_diagnosis_name(diagnosis)
+    name = normalize_diary_diagnosis_name(filename)
+    if not diag or not name:
+        return 0
+    if diag == name:
+        return 2
+    if diag in name or name in diag:
+        return 1
+    return 0
+
+
+def _depression_severity(value: str) -> str:
+    norm = normalize_diary_diagnosis_name(value)
+    stems = {_stem_russian_word(word) for word in norm.split()}
+    if any(stem.startswith("легк") for stem in stems):
+        return "mild"
+    if any(stem.startswith("умерен") for stem in stems):
+        return "moderate"
+    if any(stem.startswith(("тяжел", "тяжёл")) for stem in stems):
+        return "severe"
+    return ""
+
+
+def _safe_legacy_diagnosis_fallback(diagnosis: str, filename: str, score: int) -> bool:
+    """Allow only controlled legacy aliases when no direct filename match exists.
+
+    Old physician folders contain names such as ``олигофрены`` and
+    ``легкая органика``. They remain supported, but a merely related diagnosis
+    (for example severe depression for a mild depressive episode) must never be
+    selected automatically.
+    """
+    if score < 75:
+        return False
+    family_keys = {"oligophrenia", "asthenia", "psychopathy", "depression", "organic", "healthy", "observation"}
+    diag_family = _semantic_keys(diagnosis) & family_keys
+    name_family = _semantic_keys(filename) & family_keys
+    # Semantic fallback is reserved only for explicitly supported legacy aliases.
+    # Ordinary diagnoses (for example two different schizophrenia subtypes)
+    # must have a direct filename relation and may not match by generic words.
+    if not diag_family or not name_family or diag_family != name_family:
+        return False
+    if "depression" in diag_family:
+        diag_severity = _depression_severity(diagnosis)
+        name_severity = _depression_severity(filename)
+        if diag_severity or name_severity:
+            if diag_severity != name_severity:
+                return False
+    return True
+
 def iter_diary_text_docx_files(folder: str | Path, *, max_depth: int = 2) -> list[Path]:
     try:
         root = Path(folder).expanduser()
@@ -278,24 +330,32 @@ def iter_diary_text_docx_files(folder: str | Path, *, max_depth: int = 2) -> lis
 
 
 def find_diary_text_file_for_diagnosis(folder: str | Path, diagnosis: str) -> Path | None:
-    """Find the best diary-text DOCX whose filename matches the parsed diagnosis."""
+    """Find the diagnosis-owned diary text DOCX without guessing a neighbour diagnosis.
+
+    Exact/substring filename relations always win. Semantic aliases exist only
+    for known legacy physician filenames and are rejected when their clinical
+    family or depressive severity contradicts the requested diagnosis.
+    """
     diagnosis_norm = normalize_diary_diagnosis_name(diagnosis)
     if not diagnosis_norm:
         return None
     diagnosis_keys = _semantic_keys(diagnosis)
-    candidates: list[tuple[int, int, int, str, Path]] = []
+    candidates: list[tuple[int, int, int, int, str, Path]] = []
     for path in iter_diary_text_docx_files(folder):
         score = diary_diagnosis_match_score(diagnosis, path.stem)
         if score <= 0:
+            continue
+        direct_rank = _direct_diagnosis_name_rank(diagnosis, path.stem)
+        if direct_rank == 0 and not _safe_legacy_diagnosis_fallback(diagnosis, path.stem, score):
             continue
         name_norm = normalize_diary_diagnosis_name(path.stem)
         name_keys = _semantic_keys(name_norm)
         length_gap = abs(len(name_norm) - len(diagnosis_norm))
         extra_specificity_penalty = len((name_keys - diagnosis_keys) & _SPECIFIC_DIARY_KEYS) * 20
-        candidates.append((-score, extra_specificity_penalty, length_gap, path.name.lower(), path))
+        candidates.append((-direct_rank, -score, extra_specificity_penalty, length_gap, path.name.lower(), path))
     if not candidates:
         return None
-    return sorted(candidates)[0][4]
+    return sorted(candidates)[0][5]
 
 
 def folder_has_diary_text_candidates(folder: str | Path) -> bool:

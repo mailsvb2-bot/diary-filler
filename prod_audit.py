@@ -598,6 +598,56 @@ def _assert_diary_service_boundary() -> None:
     if "def fill_diary_file(*args, **kwargs)" not in batch or "legacy_fill_diary_file" not in batch:
         _fail("legacy fill_diary_file compatibility proxy is missing")
 
+def _assert_diagnosis_diary_text_contract() -> None:
+    """Ordinary diaries come from diagnosis template; discharge text is universal."""
+    batch = _read("diary_batch.py")
+    constants = _read("diary_constants.py")
+    selection = _read("diary_text_selection.py")
+
+    if "from diary_constants import FINAL_DIARY_TEXT" not in batch:
+        _fail("production diary route lost the universal final-discharge diary text")
+    if "adapt_text_to_patient_gender(FINAL_DIARY_TEXT" not in batch:
+        _fail("final discharge diary is no longer generated from FINAL_DIARY_TEXT")
+    if "Состояние улучшилось." not in constants or "На текущую дату оформлена выписка" not in constants:
+        _fail("canonical universal final diary text was changed or removed")
+
+    for required in (
+        "def _direct_diagnosis_name_rank",
+        "def _safe_legacy_diagnosis_fallback",
+        "if direct_rank == 0 and not _safe_legacy_diagnosis_fallback",
+    ):
+        if required not in selection:
+            _fail(f"diagnosis-owned diary selection guard is missing: {required}")
+
+    from diary_text_selection import (
+        _direct_diagnosis_name_rank,
+        _safe_legacy_diagnosis_fallback,
+        diary_diagnosis_match_score,
+    )
+
+    if _direct_diagnosis_name_rank("F20 Шизофрения", "Шизофрения") != 2:
+        _fail("exact diagnosis filename relation no longer has top priority")
+    unsafe_cases = (
+        ("F32.0 Легкий депрессивный эпизод", "Тяжелая депрессия"),
+        ("F06.6 Органическое эмоционально лабильное расстройство", "Органическая депрессия"),
+        ("F20.2 Кататоническая шизофрения", "Параноидная шизофрения"),
+    )
+    for diagnosis, filename in unsafe_cases:
+        score = diary_diagnosis_match_score(diagnosis, filename)
+        if _safe_legacy_diagnosis_fallback(diagnosis, filename, score):
+            _fail(f"related but wrong diagnosis may be auto-selected: {diagnosis} -> {filename}")
+
+    legacy_cases = (
+        ("F70.0 Легкая умственная отсталость", "дневники ВЭ олигофрены"),
+        ("F32.0 Легкий депрессивный эпизод", "дневники ВЭ легкая депрессия с датами"),
+        ("F06.6 Органическое эмоционально лабильное расстройство", "дневники ВЭ легкая органика"),
+    )
+    for diagnosis, filename in legacy_cases:
+        score = diary_diagnosis_match_score(diagnosis, filename)
+        if not _safe_legacy_diagnosis_fallback(diagnosis, filename, score):
+            _fail(f"known physician legacy diagnosis filename stopped matching: {diagnosis} -> {filename}")
+
+
 def _assert_generation_patient_snapshot_contract() -> None:
     """One create action must use one canonical PatientData snapshot."""
     orchestrator = _read("actions_creation_orchestrator.py")
@@ -828,6 +878,7 @@ def main() -> None:
     _assert_discharge_date_contract()
     _assert_patient_session_reset_contract()
     _assert_diary_service_boundary()
+    _assert_diagnosis_diary_text_contract()
     _assert_shared_gender_contract()
     _assert_shared_paths_contract()
     _assert_generation_patient_snapshot_contract()
