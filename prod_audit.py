@@ -437,6 +437,25 @@ def _assert_shared_gender_contract() -> None:
     if adapt_text_to_patient_gender(sample, "female") != legacy_adapt(sample, "female"):
         _fail("legacy gender facade diverges from canonical shared gender adaptation")
 
+
+def _assert_diary_service_boundary() -> None:
+    """Keep the production GUI on the paragraph diary architecture only."""
+    actions = _read("actions_diary_flow.py")
+    service = _read("diary_service.py")
+    batch = _read("diary_batch.py")
+
+    if "from diary_service import DiaryService" not in actions or "DiaryService().create_text_diaries" not in actions:
+        _fail("GUI diary flow bypasses the production DiaryService")
+    for forbidden in ("fill_diary_batch", "text_output"):
+        if forbidden in actions:
+            _fail(f"GUI diary flow still selects legacy architecture through: {forbidden}")
+    if "class DiaryService" not in service or "def create_text_diaries" not in service:
+        _fail("Production DiaryService contract is missing")
+    if "text_output" in service or "from diary_batch import fill_diary_batch" in service:
+        _fail("Production DiaryService is coupled back to the legacy boolean/table facade")
+    if "def create_text_diaries" not in batch:
+        _fail("Canonical paragraph diary entry point is missing from diary_batch.py")
+
 def _assert_dialog_runtime_globals_contract() -> None:
     """Catch Tkinter callback NameError regressions in dialog methods.
 
@@ -611,6 +630,7 @@ def main() -> None:
     _assert_release_zip_excludes_generated_runs()
     _assert_dnd_contract()
     _assert_discharge_date_contract()
+    _assert_diary_service_boundary()
     _assert_shared_gender_contract()
     _assert_dialog_runtime_globals_contract()
     _assert_treatment_popup_contract()

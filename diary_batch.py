@@ -434,6 +434,64 @@ def _fill_text_diary_batch(
     )
 
 
+def create_text_diaries(
+    *,
+    status_files: Sequence[str | Path],
+    diary_files: Sequence[str | Path],
+    output_dir: str | Path | None,
+    patient_name: str,
+    admission_value: str,
+    gender_source_name: str | None = None,
+    discharge_value: str = "",
+    repeat_statuses: bool = True,
+    force_final_diary: bool = True,
+    write_report: bool = False,
+) -> DiaryBatchResult:
+    """Production text-diary entry point.
+
+    This API intentionally exposes only options that affect the paragraph-based
+    production route. Legacy table-fill switches remain on ``fill_diary_batch``
+    for backward compatibility and cannot steer the GUI into the table engine.
+    """
+    if not diary_files:
+        raise ValueError("Сначала выберите файлы-таблицы дневников, которые нужно заполнить.")
+    diary_file_paths = _existing_docx_files(diary_files, "таблица дневников")
+    status_file_paths = _existing_docx_files(status_files, "тексты дневников") if status_files else []
+
+    # Preserve the historical validation boundary before requiring a full date.
+    parse_admission_month_year(admission_value)
+    try:
+        admission_date_value = parse_full_date(admission_value)
+    except ValueError:
+        admission_date_value = None
+    discharge_date_value = parse_optional_discharge_date(discharge_value)
+    if admission_date_value is not None and discharge_date_value is not None and discharge_date_value < admission_date_value:
+        raise ValueError("Дата выписки не может быть раньше даты поступления.")
+
+    patient_filename = safe_filename_part(patient_name)
+    gender_name = safe_filename_part(gender_source_name or patient_name)
+    patient_gender = detect_gender_from_patient_name(gender_name)
+    statuses = read_statuses_from_files(status_file_paths, preserve_duplicates=True)
+    if status_files and not statuses:
+        raise ValueError("В выбранных файлах с текстами дневников не найдено подходящих текстов.")
+
+    result_dir = _resolve_output_dir(output_dir, diary_file_paths[0].parent)
+    return _fill_text_diary_batch(
+        diary_file_paths=diary_file_paths,
+        statuses=statuses,
+        result_dir=result_dir,
+        patient_filename=patient_filename,
+        admission_date_value=admission_date_value,
+        discharge_date_value=discharge_date_value,
+        repeat_statuses=repeat_statuses,
+        force_final_diary=force_final_diary,
+        patient_gender=patient_gender,
+        write_report=write_report,
+        admission_value=admission_value,
+        discharge_value=discharge_value,
+    )
+
+
 def fill_diary_batch(
     *,
     status_files: Sequence[str | Path],
@@ -453,6 +511,20 @@ def fill_diary_batch(
     write_report: bool = False,
     text_output: bool = False,
 ) -> DiaryBatchResult:
+    if text_output:
+        return create_text_diaries(
+            status_files=status_files,
+            diary_files=diary_files,
+            output_dir=output_dir,
+            patient_name=patient_name,
+            admission_value=admission_value,
+            gender_source_name=gender_source_name,
+            discharge_value=discharge_value,
+            repeat_statuses=repeat_statuses,
+            force_final_diary=force_final_diary,
+            write_report=write_report,
+        )
+
     if not diary_files:
         raise ValueError("Сначала выберите файлы-таблицы дневников, которые нужно заполнить.")
     diary_file_paths = _existing_docx_files(diary_files, "таблица дневников")
@@ -475,28 +547,12 @@ def fill_diary_batch(
     # исходной формулировкой текста; это безопаснее, чем молча менять мужской/
     # женский род неверно. Полный ФИО с отчеством по-прежнему определяется.
 
-    statuses = read_statuses_from_files(status_file_paths, preserve_duplicates=text_output)
+    statuses = read_statuses_from_files(status_file_paths, preserve_duplicates=False)
     if status_files and not statuses:
         raise ValueError("В выбранных файлах с текстами дневников не найдено подходящих текстов.")
 
     first_dir = diary_file_paths[0].parent
     result_dir = _resolve_output_dir(output_dir, first_dir)
-
-    if text_output:
-        return _fill_text_diary_batch(
-            diary_file_paths=diary_file_paths,
-            statuses=statuses,
-            result_dir=result_dir,
-            patient_filename=patient_filename,
-            admission_date_value=admission_date_value,
-            discharge_date_value=discharge_date_value,
-            repeat_statuses=repeat_statuses,
-            force_final_diary=force_final_diary,
-            patient_gender=patient_gender,
-            write_report=write_report,
-            admission_value=admission_value,
-            discharge_value=discharge_value,
-        )
 
     idx = 0
     created_files: list[Path] = []

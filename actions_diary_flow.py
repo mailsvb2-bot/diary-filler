@@ -7,8 +7,7 @@ from medical_constants import DOCUMENT_ORDER
 class ActionsDiaryFlowMixin:
     def _create_diaries_impl(self):
         # Для дневников дата поступления берётся строго из заголовка
-        # первичного документа/направления. Это значение затем передаётся в
-        # старый fill_diary_batch как обычная строка даты; diary_filler.py не меняем.
+        # первичного документа/направления и передаётся в единый production DiaryService.
         diary_admission_value = self._sync_admission_date_from_title(force=True)
         if self.navigation_path_var.get().strip() and not diary_admission_value:
             raise ValueError(
@@ -46,8 +45,8 @@ class ActionsDiaryFlowMixin:
                 "В первичном документе должна быть строка или имя файла вида: 12.01.2026 Первичный осмотр."
             )
         out_dir = str(self._result_output_dir())
-        from diary_batch import fill_diary_batch
-        result = fill_diary_batch(
+        from diary_service import DiaryService
+        result = DiaryService().create_text_diaries(
             status_files=self.status_files,
             diary_files=self.diary_files,
             output_dir=out_dir,
@@ -58,16 +57,8 @@ class ActionsDiaryFlowMixin:
             gender_source_name=source_patient_fio or diary_patient_name,
             discharge_value=self.discharge_date_var.get().strip(),
             repeat_statuses=self.repeat_statuses_var.get(),
-            reset_each_file=self.reset_each_file_var.get(),
-            keep_signature=self.keep_signature_var.get(),
-            fill_months=self.fill_months_var.get(),
             force_final_diary=self.force_final_diary_var.get(),
-            remove_holiday_rows=self.remove_holiday_rows_var.get(),
-            open_result_folder=False,
             write_report=self._diagnostic_reports_enabled(),
-            # User-facing diaries follow the proven Dokkomplekt Dates + Texts
-            # route: generated DOCX contains paragraphs, never the source table.
-            text_output=True,
         )
         self._log("\n✅ Дневники заполнены:\n")
         for path in result.created_files:
