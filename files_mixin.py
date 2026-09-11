@@ -340,10 +340,18 @@ class FilesMixin:
                     add_folder(child)
         return result
 
-    def _auto_select_diary_text_by_diagnosis(self, *, ask_folder: bool = False) -> bool:
-        diagnosis = self.diagnosis_var.get().strip()
-        if not diagnosis and getattr(self, "data", None) is not None:
-            diagnosis = getattr(self.data, "diagnosis", "") or ""
+    def _auto_select_diary_text_by_diagnosis(
+        self,
+        *,
+        ask_folder: bool = False,
+        diagnosis_override: str | None = None,
+    ) -> bool:
+        if diagnosis_override is None:
+            diagnosis = self.diagnosis_var.get().strip()
+            if not diagnosis and getattr(self, "data", None) is not None:
+                diagnosis = getattr(self.data, "diagnosis", "") or ""
+        else:
+            diagnosis = str(diagnosis_override).strip()
         if not diagnosis:
             return False
         # Ручной выбор нескольких файлов врачом сохраняем. Автоподбор может

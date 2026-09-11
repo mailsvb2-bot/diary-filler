@@ -127,7 +127,13 @@ class DiaryTemplateSelectionMixin:
             self._set_ui_var(self.admission_date_var, title_date)
         return title_date
 
-    def _admission_datetime_for_diary_template(self) -> datetime | None:
+    def _admission_datetime_for_diary_template(
+        self,
+        admission_value_override: str | None = None,
+    ) -> datetime | None:
+        if admission_value_override is not None:
+            override = str(admission_value_override).strip()
+            return parse_date(override)
         # Для автоподбора шаблона дневников дата должна идти из самого
         # первичного документа/направления, а не из случайно заполненного UI-поля.
         # Это защищает от ситуации, когда в UI попала дата рождения пациента.
@@ -165,7 +171,12 @@ class DiaryTemplateSelectionMixin:
         add(admission_dt + timedelta(days=1), "первому дню дневника")
         return result
 
-    def _auto_select_numbered_diary_template(self, *, ask_folder: bool = False) -> bool:
+    def _auto_select_numbered_diary_template(
+        self,
+        *,
+        ask_folder: bool = False,
+        admission_value_override: str | None = None,
+    ) -> bool:
         """Автоматически выбрать один шаблон 01–31 по дате госпитализации.
 
         Главный контракт: 02.04.2026 → 02 / 02.docx / 2 / 2.docx.
@@ -174,7 +185,7 @@ class DiaryTemplateSelectionMixin:
         """
         if self.diary_files and not getattr(self, "_diary_files_auto_selected", False):
             return True
-        admission_dt = self._admission_datetime_for_diary_template()
+        admission_dt = self._admission_datetime_for_diary_template(admission_value_override)
         if not admission_dt:
             return False
 

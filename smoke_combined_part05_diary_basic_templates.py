@@ -162,6 +162,26 @@ app.service = None
 assert app._auto_select_numbered_diary_template(ask_folder=False) is True
 assert Path(app.diary_files[0]).name == "12.docx"
 
+# Snapshot admission override must beat a conflicting live admission date.
+Document().save(numbered_dir / "31.docx")
+app.diary_files = []
+app._diary_files_auto_selected = False
+app.diary_template_dir = str(numbered_dir)
+app.admission_date_var.set("31.01.2026")
+assert app._auto_select_numbered_diary_template(
+    ask_folder=False,
+    admission_value_override="12.01.2026",
+) is True
+assert Path(app.diary_files[0]).name == "12.docx"
+# An explicitly empty snapshot admission must not fall back to the conflicting live UI.
+app.diary_files = []
+app._diary_files_auto_selected = False
+assert app._auto_select_numbered_diary_template(
+    ask_folder=False,
+    admission_value_override="",
+) is False
+assert app.diary_files == []
+
 # --- Auto-search must use a nearby folder named exactly "шаблоны дневников" ---
 auto_near_dir = OUT / "auto_named_folder"
 auto_near_dir.mkdir(parents=True, exist_ok=True)
@@ -302,6 +322,24 @@ app3.data = None
 assert app3._auto_select_diary_text_by_diagnosis(ask_folder=False) is True
 assert Path(app3.status_files[0]).name == "Смешанное тревожное и депрессивное расстройство.docx"
 assert app3._diary_text_files_auto_selected is True
+
+# Snapshot override must beat a conflicting live diagnosis during generation.
+app3.status_files = []
+app3._diary_text_files_auto_selected = False
+app3.diagnosis_var.set("F06.6 Органическое эмоционально лабильное расстройство")
+assert app3._auto_select_diary_text_by_diagnosis(
+    ask_folder=False,
+    diagnosis_override="F41.2 Смешанное тревожное и депрессивное расстройство",
+) is True
+assert Path(app3.status_files[0]).name == "Смешанное тревожное и депрессивное расстройство.docx"
+# An explicitly empty snapshot diagnosis must not fall back to the conflicting live UI.
+app3.status_files = []
+app3._diary_text_files_auto_selected = False
+assert app3._auto_select_diary_text_by_diagnosis(
+    ask_folder=False,
+    diagnosis_override="",
+) is False
+assert app3.status_files == []
 
 
 # --- Real diary-text filenames from physician folders ---
