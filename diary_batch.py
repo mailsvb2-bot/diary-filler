@@ -22,16 +22,15 @@ from diary_constants import FINAL_DIARY_TEXT
 from shared_gender import adapt_text_to_patient_gender, detect_gender_from_patient_name
 from diary_models import DiaryBatchResult
 from shared_paths import available_path, make_diary_output_name, safe_filename_part
-from diary_table import (
-    cell_int,
-    detect_first_month_year_from_docx,
-    find_day_column,
-    find_hospitalization_day_column,
-    find_month_year_column,
-    hospitalization_day_int,
-)
+from diary_table_columns import find_day_column, find_hospitalization_day_column, find_month_year_column
+from diary_table_numbers import cell_int, hospitalization_day_int
 from diary_text_parser import clean_status_text, extract_statuses_from_docx, is_signature_paragraph_text, remove_examinee_words
-from diary_writer import fill_diary_file
+
+
+def fill_diary_file(*args, **kwargs):
+    """Compatibility proxy that loads the legacy table writer on demand."""
+    from diary_writer import fill_diary_file as legacy_fill_diary_file
+    return legacy_fill_diary_file(*args, **kwargs)
 
 def _existing_docx_files(paths: Iterable[str | Path], label: str) -> list[Path]:
     result: list[Path] = []
