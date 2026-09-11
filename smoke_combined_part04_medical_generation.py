@@ -1,3 +1,4 @@
+from docx.shared import RGBColor
 created, data = service.create_documents(
     navigation_path=nav,
     output_dir=OUT / "medical_with_epi",
@@ -13,9 +14,24 @@ for created_path in created:
 assert any(path.name == "Иванова Ирина Ивановна Выписной эпикриз.docx" for path in created), [p.name for p in created]
 combined_text = "\n".join(extract_docx_text(path) for path in created)
 assert "F99.9 Тестовый диагноз из UI" in combined_text
-discharge_text = extract_docx_text(next(path for path in created if "Выписной" in path.name))
+discharge_path = next(path for path in created if "Выписной" in path.name)
+rvk_path = next(path for path in created if "РВК" in path.name)
+discharge_text = extract_docx_text(discharge_path)
+rvk_text = extract_docx_text(rvk_path)
 primary_text = extract_docx_text(next(path for path in created if "Первичный" in path.name))
 assert "На основании данных" in discharge_text and "F99.9 Тестовый диагноз из UI" in discharge_text, discharge_text
+assert "В 3 отделение КДП поступает повторно добровольно" in discharge_text, discharge_text
+assert "В 3 отделение КДП поступает повторно добровольно" in rvk_text, rvk_text
+# The bundled discharge placeholder is red, but final clinical text must be explicitly black.
+discharge_doc = Document(discharge_path)
+period_paragraph = next(
+    paragraph for paragraph in discharge_doc.paragraphs
+    if paragraph.text.startswith("Находилась на лечении в ГБУЗ НО")
+)
+period_runs = [run for run in period_paragraph.runs if run.text]
+assert period_runs and all(run.font.color.rgb == RGBColor(0, 0, 0) for run in period_runs), [
+    (run.text, run.font.color.rgb) for run in period_runs
+]
 assert "Экспертный анамнез: Работает в ООО Завод, в должности инженер." in primary_text, primary_text
 primary_expert_pos = primary_text.index("Экспертный анамнез: Работает в ООО Завод, в должности инженер.")
 assert primary_expert_pos > primary_text.index("Эпидемиологический анамнез"), primary_text
@@ -126,6 +142,7 @@ for path in created:
 manual_no_epi = service.parse_navigation(nav)
 manual_no_epi.discharge_date = "11.06.2026"
 manual_no_epi.diagnosis = "F88 Диагноз без дополнительного исследования"
+manual_no_epi.admission_occurrence = "первично"
 manual_no_epi.rvk_act_number = "88-Б"
 manual_no_epi.rvk_military_commissariat = "Советского района"
 manual_no_epi.rvk_work_position = "не работает"
@@ -248,6 +265,7 @@ def _build_contract_app(*, primary_path: Path, output_dir: Path, selected: tuple
     app.discharge_date_var = _ContractVar("")
     app.diagnosis_var = _ContractVar("")
     app.case_number_var = _ContractVar("")
+    app.admission_occurrence_var = _ContractVar("")
     app.assigned_treatment_var = _ContractVar("")
     app.epi_path_var = _ContractVar("")
     app.strict_mode_var = _ContractVar(False)
@@ -330,6 +348,7 @@ try:
         popup_values={
             "Номер истории болезни": "К-900",
             "Лечение": "терапия из пользовательского popup",
+            "Поступает в 3 отделение КДП (первично/повторно)": "первично",
             "Дата выписки": "11062026",
         },
     )
@@ -340,6 +359,7 @@ try:
     assert [label for label, _default in contract_popup_calls[0][1]] == [
         "Номер истории болезни",
         "Лечение",
+        "Поступает в 3 отделение КДП (первично/повторно)",
         "Дата выписки",
     ]
 
@@ -355,6 +375,7 @@ try:
     assert "План лечения: терапия из пользовательского popup" in contract_primary_text, contract_primary_text
     assert "Выписной эпикриз № К-900" in contract_discharge_text, contract_discharge_text
     assert "по 11.06.2026" in contract_discharge_text, contract_discharge_text
+    assert "В 3 отделение КДП поступает первично добровольно" in contract_discharge_text, contract_discharge_text
     assert "Лечение: терапия из пользовательского popup" in contract_discharge_text, contract_discharge_text
     assert "F41.2 Смешанное тревожное и депрессивное расстройство" in contract_discharge_text, contract_discharge_text
     assert contract_app._opened_output_folders == [contract_dir / "created"], contract_app._opened_output_folders
@@ -378,6 +399,7 @@ try:
         popup_values={
             "Номер истории болезни": "К-901",
             "Лечение": "терапия для rollback",
+            "Поступает в 3 отделение КДП (первично/повторно)": "повторно",
             "Дата выписки": "11062026",
         },
     )

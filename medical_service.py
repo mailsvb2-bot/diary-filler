@@ -14,7 +14,7 @@ from typing import Dict, List, Optional, Sequence, Tuple
 from medical_constants import DOCUMENT_LABELS, DOCUMENT_ORDER, OUTPUT_SUFFIXES
 from medical_docx_reader import extract_docx_text
 from medical_formatting import available_path, parse_date, safe_filename, strip_leading_epi_label
-from medical_models import PatientData
+from medical_models import PatientData, normalize_admission_occurrence
 from medical_parser import MedicalTextParser
 from medical_paths import bundled_template_path
 from medical_renderer import MedicalDocumentRenderer
@@ -198,6 +198,9 @@ class MedicalDocumentService:
         if {"discharge", "rvk"} & selected_set:
             data.discharge_date = self._normalize_required_date(data.discharge_date, "Дата выписки")
             self._ensure_discharge_not_before_admission(data.admission_date, data.discharge_date)
+            data.admission_occurrence = normalize_admission_occurrence(data.admission_occurrence)
+            if not data.admission_occurrence:
+                raise ValueError("Укажите, пациент поступает первично или повторно.")
 
         if "commission" in selected_set:
             data.commission_date = self._normalize_required_date(data.commission_date, "Дата совместного осмотра")

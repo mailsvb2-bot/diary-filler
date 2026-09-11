@@ -119,6 +119,27 @@ assert common_logic.assigned_treatment_var.get() == "терапия"
 assert common_logic.diagnosis_var.get() == "F41.2 тест"
 assert common_logic.discharge_date_var.get() == "11.06.2026"
 
+# Discharge popup owns the explicit episode-occurrence fact. It must ask even
+# when every other discharge requirement is already complete, and store the
+# canonical value in both session state and PatientData.
+occurrence_logic = _main_module.CombinedMedicalDiaryApp.__new__(_main_module.CombinedMedicalDiaryApp)
+occurrence_logic.admission_occurrence_var = _FakeVar("")
+occurrence_logic.data = PatientData()
+occurrence_logic._hospitalization_details_missing = lambda: False
+occurrence_logic._manual_treatment_missing = lambda: False
+occurrence_logic._selected_outputs_require_discharge_date = lambda: False
+occurrence_logic._should_prompt_discharge_sick_leave_number = lambda: False
+occurrence_logic._case_number_missing = lambda: False
+occurrence_logic._current_admission_occurrence = _main_module.CombinedMedicalDiaryApp._current_admission_occurrence.__get__(occurrence_logic, _main_module.CombinedMedicalDiaryApp)
+occurrence_logic._store_admission_occurrence_value = _main_module.CombinedMedicalDiaryApp._store_admission_occurrence_value.__get__(occurrence_logic, _main_module.CombinedMedicalDiaryApp)
+occurrence_calls = []
+occurrence_logic._prompt_fields = lambda title, rows, width=72: occurrence_calls.append((title, rows)) or ["повторно"]
+occurrence_logic._prompt_discharge_output_requirements = _main_module.CombinedMedicalDiaryApp._prompt_discharge_output_requirements.__get__(occurrence_logic, _main_module.CombinedMedicalDiaryApp)
+assert occurrence_logic._prompt_discharge_output_requirements() is True
+assert [label for label, _default in occurrence_calls[0][1]] == ["Поступает в 3 отделение КДП (первично/повторно)"]
+assert occurrence_logic.admission_occurrence_var.get() == "повторно"
+assert occurrence_logic.data.admission_occurrence == "повторно"
+
 # Hospitalization referral popup must not request discharge date unless the
 # selected outputs actually need it.
 referral_logic = _main_module.CombinedMedicalDiaryApp.__new__(_main_module.CombinedMedicalDiaryApp)

@@ -11,6 +11,35 @@ from typing import Dict, List
 
 from medical_constants import DATE_FMT
 
+
+ADMISSION_OCCURRENCE_OPTIONS = ("первично", "повторно")
+
+
+def normalize_admission_occurrence(value: str) -> str:
+    """Return the canonical episode occurrence selected by the doctor."""
+    normalized = " ".join(str(value or "").strip().lower().replace("ё", "е").split())
+    return normalized if normalized in ADMISSION_OCCURRENCE_OPTIONS else ""
+
+
+def strip_admission_occurrence_prefix(value: str) -> str:
+    """Remove a legacy leading occurrence token from the clinical admission tail.
+
+    ``admission_occurrence`` is an explicit doctor-confirmed fact. The free-text
+    ``admission`` field must not carry a second copy of ``первично/повторно``.
+    """
+    text = " ".join(str(value or "").strip().split())
+    lowered = text.lower().replace("ё", "е")
+    for option in ADMISSION_OCCURRENCE_OPTIONS:
+        if lowered == option:
+            return ""
+        if lowered.startswith(option):
+            boundary = len(option)
+            if len(lowered) > boundary and not lowered[boundary].isalpha():
+                return text[boundary:].lstrip(" ,.;:–—-")
+            if len(lowered) > boundary and lowered[boundary].isspace():
+                return text[boundary:].strip()
+    return text
+
 @dataclass
 class PatientData:
     case_number: str = ""
@@ -35,6 +64,8 @@ class PatientData:
     disability: str = ""
     rvk_referral: str = ""
     admission: str = ""
+    # How the patient enters this hospitalization episode; explicitly confirmed in popup.
+    admission_occurrence: str = ""  # первично / повторно
 
     complaints: str = ""
     life_anamnesis: str = ""

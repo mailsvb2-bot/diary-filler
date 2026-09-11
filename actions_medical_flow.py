@@ -13,7 +13,7 @@ from medical_parser_sanitize import sanitize_diagnosis
 def _format_preview_lazy(data) -> str:
     from medical_preview import format_preview
     return format_preview(data)
-from medical_models import PatientData
+from medical_models import PatientData, normalize_admission_occurrence
 
 
 class ActionsMedicalFlowMixin:
@@ -86,6 +86,7 @@ class ActionsMedicalFlowMixin:
         elif data.expert_sick_leave_needed == "нет":
             data.sick_leave = "не нужен"
 
+        data.admission_occurrence = normalize_admission_occurrence(self.admission_occurrence_var.get())
         data.rvk_act_number = self.rvk_act_number_var.get().strip()
         data.rvk_military_commissariat = self.rvk_military_commissariat_var.get().strip()
         data.rvk_work_position = self.rvk_work_position_var.get().strip()

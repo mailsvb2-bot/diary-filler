@@ -20,6 +20,7 @@ from diary_text_selection import (
 PATIENT_SESSION_ALWAYS_VAR_DEFAULTS = (
     ("assigned_treatment_var", ""),
     ("case_number_var", ""),
+    ("admission_occurrence_var", ""),
     ("expert_work_status_var", ""),
     ("expert_work_org_var", ""),
     ("expert_position_var", ""),

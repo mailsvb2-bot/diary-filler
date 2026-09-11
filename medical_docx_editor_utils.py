@@ -7,6 +7,7 @@ from docx.document import Document as DocxDocument
 from docx.oxml import OxmlElement
 from docx.table import _Cell
 from docx.text.paragraph import Paragraph
+from docx.shared import RGBColor
 
 from medical_text_utils import normalize_match
 
@@ -26,6 +27,12 @@ def paragraph_matches_marker(normalized_paragraph_text: str, marker: str) -> boo
     if marker == "зарегистрирован по адресу" and " зарегистрирован по адресу" in text:
         return True
     return False
+
+def set_paragraph_font_color(paragraph: Paragraph, color: RGBColor) -> None:
+    """Set an explicit final font color on every run of one output paragraph."""
+    for run in paragraph.runs:
+        run.font.color.rgb = color
+
 
 def set_paragraph_text(paragraph: Paragraph, text: str) -> None:
     """Replace paragraph text while retaining the first run's direct formatting.

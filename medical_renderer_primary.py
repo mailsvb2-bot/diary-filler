@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from docx import Document
+from docx.shared import RGBColor
 
 from medical_constants import TARGET_MEDICAL_FACILITY
 from medical_docx_editor import (
@@ -10,6 +11,7 @@ from medical_docx_editor import (
     iter_all_paragraphs,
     remove_exact_paragraphs,
     set_paragraph_text,
+    set_paragraph_font_color,
 )
 from medical_expert import put_expert_anamnesis
 from medical_formatting import (
@@ -107,10 +109,16 @@ class MedicalRendererPrimaryMixin:
         editor.replace_first_matching_paragraph(["г.р.,", "зарегистрирован по адресу"], person_line)
         period = f"Находился на лечении в ГБУЗ НО «НКЦПЗ» диспансер №2 с {data.admission_date} по {data.discharge_date}".strip()
         editor.replace_first_matching_paragraph(["Находился на лечении"], period)
+        period_index = editor.find_paragraph_index(["Находился на лечении"])
+        if period_index is not None:
+            # The bundled template placeholder is red. The final medical text is
+            # explicitly black and must not inherit placeholder formatting.
+            set_paragraph_font_color(editor.paragraphs[period_index], RGBColor(0x00, 0x00, 0x00))
 
         put_expert_anamnesis(editor, data, DISCHARGE_MARKERS, ["В 3 отделение КДП поступает"])
 
-        editor.replace_block(["В 3 отделение КДП поступает"], "В 3 отделение КДП поступает", data.admission, DISCHARGE_MARKERS)
+        admission_label = f"В 3 отделение КДП поступает {data.admission_occurrence}".strip()
+        editor.replace_block(["В 3 отделение КДП поступает"], admission_label, data.admission, DISCHARGE_MARKERS, allow_empty=True)
         editor.replace_block(["Жалобы при поступлении", "Жалобы"], "Жалобы при поступлении:", data.complaints, DISCHARGE_MARKERS)
         editor.replace_block(["Анамнез жизни"], "Анамнез жизни:", data.life_anamnesis, DISCHARGE_MARKERS)
         editor.replace_block(["Анамнез заболевания"], "Анамнез заболевания:", data.disease_anamnesis, DISCHARGE_MARKERS)
