@@ -379,6 +379,64 @@ def _assert_discharge_date_contract() -> None:
 
 
 
+
+def _assert_shared_gender_contract() -> None:
+    """Keep patient-gender logic domain-neutral and single-sourced."""
+    shared = _read("shared_gender.py")
+    medical = _read("medical_gender.py")
+    diary_facade = _read("diary_gender.py")
+    diary_constants = _read("diary_constants.py")
+    diary_batch = _read("diary_batch.py")
+    diary_writer_apply = _read("diary_writer_apply.py")
+
+    for required in (
+        "GENDER_WORD_PAIRS: tuple[tuple[str, str], ...]",
+        "def detect_gender_from_patient_name",
+        "def adapt_text_to_patient_gender",
+        "def convert_text_gender",
+    ):
+        if required not in shared:
+            _fail(f"shared gender contract misses: {required}")
+
+    if "from diary_filler" in medical or "from diary_constants" in medical:
+        _fail("medical gender layer depends on the diary domain")
+    if "from shared_gender import" not in medical:
+        _fail("medical gender layer bypasses the canonical shared gender core")
+
+    if "GENDER_WORD_PAIRS: tuple" in diary_constants:
+        _fail("diary_constants.py duplicates the canonical gender word pairs")
+    if "from shared_gender import GENDER_WORD_PAIRS" not in diary_constants:
+        _fail("diary_constants.py must only re-export canonical gender word pairs")
+    if "from shared_gender import" not in diary_facade:
+        _fail("diary_gender.py is not a compatibility facade over shared_gender")
+    for duplicate in ("def detect_gender_from_patient_name", "def adapt_text_to_patient_gender"):
+        if duplicate in diary_facade:
+            _fail(f"diary_gender.py duplicates canonical gender logic: {duplicate}")
+    for name, source in (("diary_batch.py", diary_batch), ("diary_writer_apply.py", diary_writer_apply)):
+        if "from shared_gender import" not in source:
+            _fail(f"{name} bypasses the canonical shared gender core")
+
+    from shared_gender import GENDER_WORD_PAIRS, adapt_text_to_patient_gender, detect_gender_from_patient_name
+    from diary_gender import adapt_text_to_patient_gender as legacy_adapt
+    from diary_gender import detect_gender_from_patient_name as legacy_detect
+
+    if len(GENDER_WORD_PAIRS) < 190:
+        _fail("canonical gender vocabulary unexpectedly lost known clinical pairs")
+    for fio, expected in (
+        ("Иванов И.И.", "male"),
+        ("Иванова И.И.", "female"),
+        ("Шевченко Алексей Сергеевич", "male"),
+        ("Шевченко Анна Сергеевна", "female"),
+        ("Шевченко А.А.", None),
+    ):
+        if detect_gender_from_patient_name(fio) != expected:
+            _fail(f"canonical gender detection is broken for {fio}")
+        if legacy_detect(fio) != expected:
+            _fail(f"legacy gender facade diverges for {fio}")
+    sample = "Пациент пришёл самостоятельно, был вялым и несобранным."
+    if adapt_text_to_patient_gender(sample, "female") != legacy_adapt(sample, "female"):
+        _fail("legacy gender facade diverges from canonical shared gender adaptation")
+
 def _assert_dialog_runtime_globals_contract() -> None:
     """Catch Tkinter callback NameError regressions in dialog methods.
 
@@ -553,6 +611,7 @@ def main() -> None:
     _assert_release_zip_excludes_generated_runs()
     _assert_dnd_contract()
     _assert_discharge_date_contract()
+    _assert_shared_gender_contract()
     _assert_dialog_runtime_globals_contract()
     _assert_treatment_popup_contract()
     _assert_audit_hardening_contract()

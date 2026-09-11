@@ -7,7 +7,7 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 
 from diary_constants import FINAL_DIARY_TEXT
 from diary_dates import format_month_year
-from diary_gender import adapt_text_to_patient_gender
+from shared_gender import adapt_text_to_patient_gender
 from diary_table import fill_diary_text_cell, fill_text_cell, remove_row
 from diary_text_parser import clean_status_text, remove_examinee_words
 from diary_writer_entries import DatedEntry, DiaryEntry
