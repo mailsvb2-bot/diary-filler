@@ -23,23 +23,44 @@ class DialogDatesMixin:
         return "дата" in low or "с какого числа" in low
 
     @staticmethod
-    def _format_date_input_live(value: str) -> str:
-        """Insert date separators while the doctor types a compact date.
+    def _compact_date_can_continue(digits: str) -> bool:
+        """Return True when more digits can still form a supported compact date."""
+        if not digits.isdigit() or len(digits) >= 8:
+            return False
+        remaining = 8 - len(digits)
+        # We only call this for six/seven digit input, so at most 110 cheap
+        # parser probes are needed. This preserves legacy 7-digit forms such as
+        # 1012026 instead of prematurely turning their six-digit prefix into
+        # an unrelated DD.MM.YY value.
+        for extra_len in range(1, remaining + 1):
+            for suffix in range(10 ** extra_len):
+                candidate = digits + f"{suffix:0{extra_len}d}"
+                if parse_date(candidate):
+                    return True
+        return False
 
-        Four digits are deliberately left untouched because ``1126`` is a
-        supported short form meaning ``01.01.2026``. From the fifth digit on,
-        DDMMYY/DDMMYYYY input is unambiguous and can safely be shown with dots.
-        The full four-digit year is still normalized on Enter/focus loss/OK.
+    @staticmethod
+    def _format_date_input_live(value: str) -> str:
+        """Insert separators only when compact input is safe to finalize live.
+
+        The parser intentionally supports 4/5/6/7/8-digit compact dates. A
+        six-digit value can therefore be the prefix of a valid seven/eight
+        digit date. We mask only completed, unambiguous input and leave partial
+        legacy forms untouched until Enter/focus loss/OK normalization.
         """
         raw = (value or "").strip()
-        if not raw:
-            return ""
-        if any(not (char.isdigit() or char in ".-/") for char in raw):
+        if not raw or not raw.isdigit():
             return raw
-        digits = "".join(char for char in raw if char.isdigit())
-        if len(digits) <= 4 or len(digits) > 8:
+        if len(raw) not in {6, 7, 8}:
             return raw
-        return f"{digits[:2]}.{digits[2:4]}.{digits[4:]}"
+        parsed = parse_date(raw)
+        if not parsed:
+            return raw
+        if len(raw) < 8 and DialogDatesMixin._compact_date_can_continue(raw):
+            return raw
+        if len(raw) == 6:
+            return parsed.strftime("%d.%m.%y")
+        return parsed.strftime(DATE_FMT)
 
     def _normalize_date_entry_var(self, variable) -> str:
         """Normalize a date entry after typing without forcing separators.
