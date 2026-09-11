@@ -13,6 +13,7 @@ from typing import Optional
 from medical_constants import DATE_FMT
 from medical_text_utils import normalize_text
 from shared_dates import parse_date_value
+from shared_paths import resolve_available_path, sanitize_filename
 
 def format_date_with_russian_year_suffix(value: str) -> str:
     """Return UI date text with exactly one trailing " г." for document headers."""
@@ -188,34 +189,16 @@ def parse_date(value: str) -> Optional[datetime]:
     return datetime(parsed.year, parsed.month, parsed.day)
 
 def safe_filename(value: str) -> str:
-    value = normalize_text(value) or "Пациент"
-    # Windows запрещает эти символы в имени файла. Заменяем их пробелами,
-    # а не подчёркиваниями: итоговые документы должны сохраняться как
-    # «Сидоров Иван Михайлович Выписной эпикриз.docx».
-    value = re.sub(r'[\\/:*?"<>|\x00-\x1f]+', " ", value)
-    value = re.sub(r"\s+", " ", value)
-    value = value.strip(". ")[:80].rstrip(". ") or "Пациент"
-    reserved = {"CON", "PRN", "AUX", "NUL", *(f"COM{i}" for i in range(1, 10)), *(f"LPT{i}" for i in range(1, 10))}
-    # Windows treats device names as reserved even when an extension is present
-    # (for example ``CON.txt`` / ``LPT1.docx``). Protect both exact names and
-    # dotted variants before appending document suffixes.
-    stem_for_reserved_check = value.split(".", 1)[0].upper()
-    if stem_for_reserved_check in reserved:
-        value = f"{value}_"
-    return value
+    return sanitize_filename(
+        value,
+        normalizer=normalize_text,
+        max_length=80,
+        default="Пациент",
+    )
 
 
 def available_path(path: Path) -> Path:
-    if not path.exists():
-        return path
-    base = path.with_suffix("")
-    ext = path.suffix
-    for counter in range(2, 10000):
-        candidate = Path(f"{base} ({counter}){ext}")
-        if not candidate.exists():
-            return candidate
-    raise RuntimeError(f"Не удалось подобрать имя файла для {path}")
-
+    return resolve_available_path(path, style="paren")
 
 def strip_leading_epi_label(text: str) -> str:
     """Убирает дублирующую метку из ЭПИ-файла: «ЭПИ: ...» -> «...»."""

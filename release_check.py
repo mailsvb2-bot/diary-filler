@@ -22,6 +22,7 @@ REQUIRED_FILES = [
     "diary_service.py",
     "shared_dates.py",
     "shared_gender.py",
+    "shared_paths.py",
     "printer_support.py",
     "icd10_f.py",
     "embedded_templates.py",

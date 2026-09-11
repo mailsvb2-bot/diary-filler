@@ -73,6 +73,7 @@ FORBIDDEN_DUST_FILES = {
     "app_state_diaries.py",
     "app_state_runtime.py",
     "app_window_bootstrap.py",
+    "diary_paths.py",
 }
 
 # Old iteration reports are useful during a chat, but they are release noise in
@@ -439,6 +440,59 @@ def _assert_shared_gender_contract() -> None:
         _fail("legacy gender facade diverges from canonical shared gender adaptation")
 
 
+
+def _assert_shared_paths_contract() -> None:
+    """Keep filename sanitation and collision handling on one shared core."""
+    shared = _read("shared_paths.py")
+    medical = _read("medical_formatting.py")
+    diary_batch = _read("diary_batch.py")
+    diary_facade = _read("diary_filler.py")
+
+    for required in (
+        "def sanitize_filename",
+        "def resolve_available_path",
+        "def safe_filename_part",
+        "def make_diary_output_name",
+    ):
+        if required not in shared:
+            _fail(f"shared path contract misses: {required}")
+    if "from shared_paths import resolve_available_path, sanitize_filename" not in medical:
+        _fail("medical filename/path policy bypasses shared_paths")
+    for duplicate in ("for counter in range(2, 10000)", "for idx in range(2, 10000)"):
+        if duplicate in medical:
+            _fail("medical_formatting.py duplicates shared collision logic")
+    if "from shared_paths import" not in diary_batch:
+        _fail("diary batch bypasses shared_paths")
+    if "from shared_paths import *" not in diary_facade:
+        _fail("diary public facade must re-export shared path helpers")
+    if (ROOT / "diary_paths.py").exists():
+        _fail("legacy diary_paths.py reintroduced a second path architecture")
+
+    from medical_formatting import available_path as medical_available_path, safe_filename
+    from shared_paths import available_path as diary_available_path, safe_filename_part
+    import tempfile
+
+    if safe_filename("CON.txt") != "CON.txt_":
+        _fail("medical reserved-name sanitation changed")
+    try:
+        safe_filename_part("")
+    except ValueError as exc:
+        if str(exc) != "Введите ФИО пациента":
+            _fail("diary empty-name policy changed")
+    else:
+        _fail("diary empty-name policy must reject blank FIO")
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        root = Path(tmp_dir)
+        medical_base = root / "medical.docx"
+        diary_base = root / "diary.docx"
+        medical_base.write_text("x", encoding="utf-8")
+        diary_base.write_text("x", encoding="utf-8")
+        if medical_available_path(medical_base).name != "medical (2).docx":
+            _fail("medical collision suffix changed")
+        if diary_available_path(diary_base).name != "diary_2.docx":
+            _fail("diary collision suffix changed")
+
+
 def _assert_diary_service_boundary() -> None:
     """Keep the production GUI on the paragraph diary architecture only."""
     actions = _read("actions_diary_flow.py")
@@ -633,6 +687,7 @@ def main() -> None:
     _assert_discharge_date_contract()
     _assert_diary_service_boundary()
     _assert_shared_gender_contract()
+    _assert_shared_paths_contract()
     _assert_dialog_runtime_globals_contract()
     _assert_treatment_popup_contract()
     _assert_audit_hardening_contract()
