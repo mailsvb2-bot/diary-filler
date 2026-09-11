@@ -312,9 +312,13 @@ def _assert_discharge_date_contract() -> None:
 
     from dialog_dates import DialogDatesMixin
     live_cases = {
-        "09092": "09.09.2",
+        "09092": "09092",
         "090926": "09.09.26",
+        "090920": "090920",  # may still become 09092026
+        "0909202": "0909202",
         "09092026": "09.09.2026",
+        "101202": "101202",  # prefix of legacy 1012026 -> 01.01.2026
+        "1012026": "01.01.2026",
         "1126": "1126",
         "09.09.2026": "09.09.2026",
     }
@@ -322,6 +326,20 @@ def _assert_discharge_date_contract() -> None:
         actual = DialogDatesMixin._format_date_input_live(raw)
         if actual != expected:
             _fail(f"live popup date mask is broken for {raw}: {actual!r} != {expected!r}")
+
+    for compact, expected in {
+        "090926": "09.09.2026",
+        "09092026": "09.09.2026",
+        "1012026": "01.01.2026",
+        "1092026": "01.09.2026",
+    }.items():
+        visible = ""
+        for char in compact:
+            visible += char
+            visible = DialogDatesMixin._format_date_input_live(visible)
+        parsed = parse_date(visible)
+        if not parsed or parsed.strftime("%d.%m.%Y") != expected:
+            _fail(f"live popup date mask corrupts typed {compact}: visible={visible!r}")
     if '<KeyRelease>' not in _read("dialog_dates.py"):
         _fail("popup date fields do not apply the live date mask while typing")
 
