@@ -10,16 +10,7 @@ import re
 
 from docx.document import Document as DocxDocument
 
-try:
-    from diary_filler import adapt_text_to_patient_gender, detect_gender_from_patient_name
-except Exception:  # pragma: no cover - защитный fallback для автономного использования модуля
-    def detect_gender_from_patient_name(_patient_name: str) -> str | None:
-        return None
-
-    def adapt_text_to_patient_gender(text: str, _gender: str | None) -> tuple[str, int]:
-        return text, 0
-
-from diary_constants import GENDER_WORD_PAIRS
+from shared_gender import GENDER_WORD_PAIRS, adapt_text_to_patient_gender, detect_gender_from_patient_name
 from medical_constants import TARGET_MEDICAL_FACILITY
 from medical_docx_editor import (
     iter_all_paragraphs,

@@ -19,7 +19,7 @@ from docx import Document
 
 from diary_dates import parse_admission_month_year, parse_full_date, parse_optional_discharge_date
 from diary_constants import FINAL_DIARY_TEXT
-from diary_gender import adapt_text_to_patient_gender, detect_gender_from_patient_name
+from shared_gender import adapt_text_to_patient_gender, detect_gender_from_patient_name
 from diary_models import DiaryBatchResult
 from diary_paths import available_path, make_diary_output_name, safe_filename_part
 from diary_table import (
