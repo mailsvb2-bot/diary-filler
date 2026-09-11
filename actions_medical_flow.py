@@ -106,7 +106,13 @@ class ActionsMedicalFlowMixin:
         data.commission_number = self.commission_number_var.get().strip()
         return data
 
-    def _create_medical_documents_impl(self, selected_docs: List[str]) -> List[Path]:
+    def _create_medical_documents_impl(
+        self,
+        selected_docs: List[str],
+        *,
+        output_dir_override: Path | None = None,
+        log_created: bool = True,
+    ) -> List[Path]:
         navigation = self.navigation_path_var.get().strip()
         if not navigation or not Path(navigation).exists():
             raise ValueError("Выберите первичный документ: направление на госпитализацию или первичный осмотр.")
@@ -116,7 +122,7 @@ class ActionsMedicalFlowMixin:
         if discharge:
             discharge = self._normalize_date_for_ui(discharge)
             self._set_ui_var(self.discharge_date_var, discharge)
-        out_dir = str(self._result_output_dir())
+        out_dir = str(output_dir_override if output_dir_override is not None else self._result_output_dir())
         data = self._medical_override_data(navigation)
         missing = data.missing_critical_fields()
         if missing:
@@ -134,9 +140,10 @@ class ActionsMedicalFlowMixin:
             override_data=data,
         )
         self._set_preview(_format_preview_lazy(used_data))
-        self._log("\n✅ Созданы медицинские документы:\n")
-        for path in created:
-            self._log(f"- {path}\n")
+        if log_created:
+            self._log("\n✅ Созданы медицинские документы:\n")
+            for path in created:
+                self._log(f"- {path}\n")
         return list(created)
 
     def create_medical_documents(self) -> None:

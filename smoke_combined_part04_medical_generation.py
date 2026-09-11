@@ -252,7 +252,7 @@ def _build_contract_app(*, primary_path: Path, output_dir: Path, selected: tuple
     app.sick_leave_vk_work_position_var = _ContractVar("")
 
     app.output_vars = {kind: _ContractVar(kind in selected) for kind in DOCUMENT_ORDER}
-    app.output_vars[DIARY_KIND] = _ContractVar(False)
+    app.output_vars[DIARY_KIND] = _ContractVar(DIARY_KIND in selected)
 
     popup_calls: list[tuple[str, list[tuple[str, str]]]] = []
 
@@ -330,6 +330,36 @@ try:
     assert "F41.2 Смешанное тревожное и депрессивное расстройство" in contract_discharge_text, contract_discharge_text
     assert contract_app._opened_output_folders == [contract_dir / "created"], contract_app._opened_output_folders
     assert not any(event[0] in {"info", "warning", "error", "askyesno"} for event in _contract_messagebox_events), _contract_messagebox_events
+
+    # Whole-set transaction: medical generation may succeed internally, but if
+    # diaries then fail the final user folder must receive none of that staged
+    # medical output. This locks the top-level all-or-nothing user contract.
+    _contract_messagebox_events.clear()
+    rollback_dir = OUT / "user_contract_atomic_rollback"
+    if rollback_dir.exists():
+        shutil.rmtree(rollback_dir)
+    rollback_dir.mkdir(parents=True, exist_ok=True)
+    rollback_primary = rollback_dir / "Первичный_без_лечения.docx"
+    _make_user_contract_primary(rollback_primary)
+    rollback_output = rollback_dir / "created"
+    rollback_app, rollback_popup_calls = _build_contract_app(
+        primary_path=rollback_primary,
+        output_dir=rollback_output,
+        selected=("primary", "discharge", DIARY_KIND),
+        popup_values={
+            "Номер истории болезни": "К-901",
+            "Лечение": "терапия для rollback",
+            "Дата выписки": "11062026",
+        },
+    )
+    rollback_app._create_diaries_impl = lambda **kwargs: (_ for _ in ()).throw(RuntimeError("synthetic diary failure"))
+    rollback_app.create_selected_outputs(print_after=False)
+    assert len(rollback_popup_calls) == 1, rollback_popup_calls
+    assert rollback_output.exists(), rollback_output
+    assert not list(rollback_output.glob("*.docx")), list(rollback_output.glob("*.docx"))
+    assert not list(rollback_output.glob(".medical-autofill-set-*")), list(rollback_output.iterdir())
+    assert ("error", "Комплект не создан") in _contract_messagebox_events, _contract_messagebox_events
+    assert rollback_app._opened_output_folders == [], rollback_app._opened_output_folders
 
     _contract_messagebox_events.clear()
     cancel_dir = OUT / "user_contract_cancelled_popup"
