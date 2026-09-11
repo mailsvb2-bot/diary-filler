@@ -6,10 +6,11 @@
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import subprocess
 import sys
-from datetime import datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Iterable, Sequence
@@ -17,11 +18,19 @@ from typing import Iterable, Sequence
 from docx import Document
 
 from diary_dates import parse_admission_month_year, parse_full_date, parse_optional_discharge_date
-from diary_gender import detect_gender_from_patient_name
+from diary_constants import FINAL_DIARY_TEXT
+from diary_gender import adapt_text_to_patient_gender, detect_gender_from_patient_name
 from diary_models import DiaryBatchResult
 from diary_paths import available_path, make_diary_output_name, safe_filename_part
-from diary_table import detect_first_month_year_from_docx
-from diary_text_parser import extract_statuses_from_docx
+from diary_table import (
+    cell_int,
+    detect_first_month_year_from_docx,
+    find_day_column,
+    find_hospitalization_day_column,
+    find_month_year_column,
+    hospitalization_day_int,
+)
+from diary_text_parser import clean_status_text, extract_statuses_from_docx, is_signature_paragraph_text, remove_examinee_words
 from diary_writer import fill_diary_file
 
 def _existing_docx_files(paths: Iterable[str | Path], label: str) -> list[Path]:
@@ -54,14 +63,18 @@ def _resolve_output_dir(output_dir: str | Path | None, fallback_dir: Path) -> Pa
     return result
 
 
-def read_statuses_from_files(paths: Iterable[str | Path]) -> list[str]:
+def read_statuses_from_files(
+    paths: Iterable[str | Path],
+    *,
+    preserve_duplicates: bool = False,
+) -> list[str]:
     statuses: list[str] = []
     seen: set[str] = set()
     for path in _existing_docx_files(paths, "тексты дневников"):
-        for status in extract_statuses_from_docx(path):
+        for status in extract_statuses_from_docx(path, deduplicate=not preserve_duplicates):
             status = status.strip()
             key = " ".join(status.lower().replace("ё", "е").split())
-            if key not in seen:
+            if preserve_duplicates or key not in seen:
                 statuses.append(status)
                 seen.add(key)
     return statuses
@@ -86,6 +99,279 @@ def open_folder(path: str | Path) -> bool:
         return False
 
 
+
+
+def _two_digit_year(year: int) -> int:
+    return year + (2000 if year < 70 else 1900) if year < 100 else year
+
+
+def _full_dates_in_text(text: str) -> list[date]:
+    result: list[date] = []
+    for match in re.finditer(r"(?<!\d)([0-3]?\d)[./-]([01]?\d)[./-](20\d{2}|\d{2})(?!\d)", text or ""):
+        try:
+            result.append(date(_two_digit_year(int(match.group(3))), int(match.group(2)), int(match.group(1))))
+        except ValueError:
+            continue
+    return result
+
+
+def _text_diary_dates_from_sources(
+    paths: Sequence[Path],
+    *,
+    admission_date_value: date,
+    discharge_date_value: date | None,
+) -> tuple[date, ...]:
+    """Read the doctor-selected «Даты» source without copying its table layout.
+
+    Prefer explicit calendar dates. Legacy 01-31 templates that only contain a
+    hospitalization-day column remain supported: day 2 means admission + 1 day.
+    This preserves the user's date plan while the generated document itself is
+    text-only, matching the proven Dokkomplekt diary route.
+    """
+    explicit: set[date] = set()
+    hospitalization_offsets: set[int] = set()
+
+    def accept(candidate: date) -> None:
+        if candidate <= admission_date_value:
+            return
+        if discharge_date_value is not None and candidate > discharge_date_value:
+            return
+        explicit.add(candidate)
+
+    for path in paths:
+        doc = Document(str(path))
+        for paragraph in doc.paragraphs:
+            for candidate in _full_dates_in_text(paragraph.text):
+                accept(candidate)
+        for table in doc.tables:
+            day_col = find_day_column(table)
+            month_year_col = find_month_year_column(table)
+            hospitalization_col = find_hospitalization_day_column(table)
+            for row in table.rows:
+                if hospitalization_col is not None and len(row.cells) > hospitalization_col:
+                    hospital_day = hospitalization_day_int(row.cells[hospitalization_col].text)
+                    if hospital_day is not None and hospital_day >= 2:
+                        hospitalization_offsets.add(hospital_day - 1)
+
+                if day_col is None or month_year_col is None:
+                    continue
+                if len(row.cells) <= max(day_col, month_year_col):
+                    continue
+                day_value = cell_int(row.cells[day_col].text)
+                month_year = re.fullmatch(
+                    r"\s*(\d{1,2})\s*[./-]\s*(\d{2,4})\s*",
+                    row.cells[month_year_col].text or "",
+                )
+                if day_value is None or month_year is None:
+                    continue
+                try:
+                    candidate = date(
+                        _two_digit_year(int(month_year.group(2))),
+                        int(month_year.group(1)),
+                        int(day_value),
+                    )
+                except ValueError:
+                    continue
+                accept(candidate)
+
+    if explicit:
+        return tuple(sorted(explicit))
+
+    fallback_dates: list[date] = []
+    for offset in sorted(hospitalization_offsets):
+        candidate = admission_date_value + timedelta(days=offset)
+        if discharge_date_value is not None and candidate > discharge_date_value:
+            continue
+        fallback_dates.append(candidate)
+    return tuple(fallback_dates)
+
+
+def _signature_lines_from_diary_sources(paths: Sequence[Path]) -> tuple[str, ...]:
+    """Preserve doctor-owned signature wording when converting a table to text."""
+    found: list[str] = []
+    seen: set[str] = set()
+
+    def add(text: str) -> None:
+        for line in str(text or "").splitlines():
+            value = " ".join(line.split()).strip()
+            key = value.lower().replace("ё", "е")
+            if value and is_signature_paragraph_text(value) and key not in seen:
+                seen.add(key)
+                found.append(value)
+
+    for path in paths:
+        doc = Document(str(path))
+        for paragraph in doc.paragraphs:
+            add(paragraph.text)
+        for table in doc.tables:
+            seen_cells: set[int] = set()
+            for row in table.rows:
+                for cell in row.cells:
+                    cell_id = id(cell._tc)
+                    if cell_id in seen_cells:
+                        continue
+                    seen_cells.add(cell_id)
+                    for paragraph in cell.paragraphs:
+                        add(paragraph.text)
+    if found:
+        return tuple(found[:2])
+    return ("Лечащий врач ____________________", "Зав. отделением ____________________")
+
+
+def _build_text_diary_entries(
+    statuses: Sequence[str],
+    dates: Sequence[date],
+    *,
+    discharge_date_value: date | None,
+    force_final_diary: bool,
+    repeat_statuses: bool,
+    patient_gender: str | None,
+) -> tuple[list[tuple[date, str]], int, int]:
+    planned = tuple(sorted(dict.fromkeys(dates)))
+    final_date: date | None = None
+    if force_final_diary:
+        if discharge_date_value is not None:
+            final_date = discharge_date_value
+            planned = tuple(item for item in planned if item < final_date)
+        elif planned:
+            final_date = planned[-1]
+            planned = planned[:-1]
+
+    entries: list[tuple[date, str]] = []
+    status_index = 0
+    gender_replacements = 0
+    for item_date in planned:
+        if not statuses:
+            break
+        if status_index >= len(statuses):
+            if not repeat_statuses:
+                break
+            status_index = 0
+        status = statuses[status_index]
+        status_index += 1
+        adapted, changed = adapt_text_to_patient_gender(status, patient_gender)
+        gender_replacements += changed
+        cleaned = remove_examinee_words(clean_status_text(adapted))
+        entries.append((item_date, cleaned))
+
+    final_rows = 0
+    if final_date is not None:
+        adapted, changed = adapt_text_to_patient_gender(FINAL_DIARY_TEXT, patient_gender)
+        gender_replacements += changed
+        entries.append((final_date, remove_examinee_words(clean_status_text(adapted))))
+        final_rows = 1
+    return entries, final_rows, gender_replacements
+
+
+def _write_text_diary_docx(path: Path, entries: Sequence[tuple[date, str]], signatures: Sequence[str]) -> None:
+    doc = Document()
+    for item_date, text in entries:
+        if doc.paragraphs:
+            doc.add_paragraph("")
+        doc.add_paragraph(f"{item_date:%d.%m.%y} {text}".rstrip())
+        for signature in signatures:
+            doc.add_paragraph(signature)
+    doc.save(str(path))
+
+
+def _fill_text_diary_batch(
+    *,
+    diary_file_paths: Sequence[Path],
+    statuses: Sequence[str],
+    result_dir: Path,
+    patient_filename: str,
+    admission_date_value: date | None,
+    discharge_date_value: date | None,
+    repeat_statuses: bool,
+    force_final_diary: bool,
+    patient_gender: str | None,
+    write_report: bool,
+    admission_value: str,
+    discharge_value: str,
+) -> DiaryBatchResult:
+    if admission_date_value is None:
+        raise ValueError("Для текстовых дневников нужна полная дата поступления.")
+    dates = _text_diary_dates_from_sources(
+        diary_file_paths,
+        admission_date_value=admission_date_value,
+        discharge_date_value=discharge_date_value,
+    )
+    if not dates and not (force_final_diary and discharge_date_value is not None):
+        raise ValueError(
+            "В выбранном источнике «Даты» не найдено дат дневников после поступления. "
+            "Проверьте файл 01–31 или выберите другой источник дат."
+        )
+    signatures = _signature_lines_from_diary_sources(diary_file_paths)
+    entries, final_rows, gender_replacements = _build_text_diary_entries(
+        statuses,
+        dates,
+        discharge_date_value=discharge_date_value,
+        force_final_diary=force_final_diary,
+        repeat_statuses=repeat_statuses,
+        patient_gender=patient_gender,
+    )
+    if not entries:
+        raise ValueError("Не удалось сформировать ни одной записи дневника по выбранным датам и текстам.")
+
+    created_files: list[Path] = []
+    report_path: Path | None = None
+    out_name = make_diary_output_name(patient_filename, file_index=1, total_files=1)
+    report_name = "ОТЧЁТ_дневники.txt"
+    with TemporaryDirectory(prefix=".diary-autofill-", dir=str(result_dir)) as tmp_dir:
+        tmp_root = Path(tmp_dir)
+        staged_doc = tmp_root / "diary.docx"
+        _write_text_diary_docx(staged_doc, entries, signatures)
+        staged_report: Path | None = None
+        if write_report:
+            staged_report = tmp_root / report_name
+            staged_report.write_text(
+                "\n".join(
+                    [
+                        "ОТЧЁТ: текстовые дневники",
+                        f"Дата запуска: {datetime.now():%d.%m.%Y %H:%M:%S}",
+                        f"Поступление: {admission_value}",
+                        f"Выписка: {discharge_value or 'не указана'}",
+                        f"Дат из источника «Даты»: {len(dates)}",
+                        f"Создано записей: {len(entries)}",
+                        f"Финальных записей: {final_rows}",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+        try:
+            final_path = available_path(result_dir / out_name)
+            os.replace(staged_doc, final_path)
+            created_files.append(final_path)
+            if staged_report is not None:
+                report_path = available_path(result_dir / report_name)
+                os.replace(staged_report, report_path)
+        except Exception:
+            for output_path in reversed(created_files):
+                try:
+                    output_path.unlink()
+                except OSError:
+                    pass
+            if report_path is not None:
+                try:
+                    report_path.unlink()
+                except OSError:
+                    pass
+            raise
+
+    return DiaryBatchResult(
+        created_files=created_files,
+        report_path=report_path,
+        processed_files=1,
+        filled_rows=len(entries),
+        detected_rows=len(dates),
+        month_cells_filled=0,
+        final_rows_filled=final_rows,
+        gender_replacements=gender_replacements,
+        removed_holiday_rows=0,
+        removed_after_discharge_rows=0,
+    )
+
+
 def fill_diary_batch(
     *,
     status_files: Sequence[str | Path],
@@ -103,6 +389,7 @@ def fill_diary_batch(
     remove_holiday_rows: bool = False,
     open_result_folder: bool = False,
     write_report: bool = False,
+    text_output: bool = False,
 ) -> DiaryBatchResult:
     if not diary_files:
         raise ValueError("Сначала выберите файлы-таблицы дневников, которые нужно заполнить.")
@@ -126,12 +413,28 @@ def fill_diary_batch(
     # исходной формулировкой текста; это безопаснее, чем молча менять мужской/
     # женский род неверно. Полный ФИО с отчеством по-прежнему определяется.
 
-    statuses = read_statuses_from_files(status_file_paths)
+    statuses = read_statuses_from_files(status_file_paths, preserve_duplicates=text_output)
     if status_files and not statuses:
         raise ValueError("В выбранных файлах с текстами дневников не найдено подходящих текстов.")
 
     first_dir = diary_file_paths[0].parent
     result_dir = _resolve_output_dir(output_dir, first_dir)
+
+    if text_output:
+        return _fill_text_diary_batch(
+            diary_file_paths=diary_file_paths,
+            statuses=statuses,
+            result_dir=result_dir,
+            patient_filename=patient_filename,
+            admission_date_value=admission_date_value,
+            discharge_date_value=discharge_date_value,
+            repeat_statuses=repeat_statuses,
+            force_final_diary=force_final_diary,
+            patient_gender=patient_gender,
+            write_report=write_report,
+            admission_value=admission_value,
+            discharge_value=discharge_value,
+        )
 
     idx = 0
     created_files: list[Path] = []

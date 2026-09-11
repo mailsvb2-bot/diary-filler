@@ -85,7 +85,7 @@ def looks_like_status(text: str) -> bool:
     return True
 
 
-def extract_statuses_from_docx(path: str | Path) -> list[str]:
+def extract_statuses_from_docx(path: str | Path, *, deduplicate: bool = True) -> list[str]:
     doc = Document(str(path))
     statuses: list[str] = []
     seen_statuses: set[str] = set()
@@ -93,9 +93,10 @@ def extract_statuses_from_docx(path: str | Path) -> list[str]:
     def add_candidate(text: str) -> None:
         cleaned = clean_status_text(text)
         key = cleaned.lower().replace("ё", "е")
-        if looks_like_status(cleaned) and key not in seen_statuses:
+        if looks_like_status(cleaned) and (not deduplicate or key not in seen_statuses):
             statuses.append(cleaned)
-            seen_statuses.add(key)
+            if deduplicate:
+                seen_statuses.add(key)
 
     for paragraph in doc.paragraphs:
         add_candidate(paragraph.text)
