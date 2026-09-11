@@ -13,6 +13,74 @@ from diary_text_selection import (
 )
 
 
+# Canonical patient-session reset contract.  Keep the two phases explicit:
+# values in ALWAYS belong to the currently loaded primary document and must be
+# cleared before every parse; SWITCH_ONLY values may be preselected before the
+# first patient, but must never leak from patient N to patient N+1.
+PATIENT_SESSION_ALWAYS_VAR_DEFAULTS = (
+    ("assigned_treatment_var", ""),
+    ("case_number_var", ""),
+    ("expert_work_status_var", ""),
+    ("expert_work_org_var", ""),
+    ("expert_position_var", ""),
+    ("expert_sick_leave_needed_var", "нет"),
+    ("expert_sick_leave_from_var", ""),
+    ("expert_sick_leave_number_var", ""),
+    ("vk_mse_work_org_var", ""),
+    ("vk_mse_position_var", ""),
+    ("sick_leave_vk_work_org_var", ""),
+    ("sick_leave_vk_position_var", ""),
+    ("sick_leave_vk_work_position_var", ""),
+)
+
+PATIENT_SESSION_TRACKED_UI_VAR_DEFAULTS = (
+    ("patient_name_var", ""),
+    ("admission_date_var", ""),
+    ("discharge_date_var", ""),
+    ("diagnosis_var", ""),
+)
+
+PATIENT_SESSION_SWITCH_ONLY_VAR_DEFAULTS = (
+    ("rvk_act_number_var", ""),
+    ("rvk_military_commissariat_var", ""),
+    ("rvk_work_position_var", ""),
+    ("vk_date_var", ""),
+    ("vk_protocol_number_var", ""),
+    ("vk_protocol_date_var", ""),
+    ("sick_leave_vk_date_var", ""),
+    ("sick_leave_vk_protocol_number_var", ""),
+    ("sick_leave_vk_protocol_date_var", ""),
+    ("sick_leave_vk_commission_date_var", ""),
+    ("commission_date_var", ""),
+    ("commission_number_var", ""),
+    ("epi_path_var", ""),
+)
+
+PATIENT_SESSION_ALWAYS_ATTR_DEFAULTS = (
+    ("_primary_work_org_default", ""),
+    ("_primary_work_position_default", ""),
+    ("_work_details_manually_edited", False),
+    ("_manual_patient_name", False),
+    ("_manual_admission_date", False),
+    ("_manual_discharge_date", False),
+    ("_manual_diagnosis", False),
+    ("_popup_diagnosis_override", ""),
+    ("_popup_discharge_date_override", ""),
+)
+
+PATIENT_SESSION_SWITCH_ONLY_ATTR_DEFAULTS = (
+    ("_last_committee_date", ""),
+    ("_last_protocol_date", ""),
+    ("_diary_text_files_auto_selected", False),
+    ("_diary_files_auto_selected", False),
+)
+
+PATIENT_SESSION_SWITCH_ONLY_LIST_ATTRS = (
+    "status_files",
+    "diary_files",
+)
+
+
 class FilesMixin:
     def _mark_manual_output_dir(self) -> None:
         if self._suspend_output_dir_tracking:
@@ -60,70 +128,40 @@ class FilesMixin:
             "Направление на госпитализацию" if selected_type == "hospitalization_referral" else "Первичный осмотр"
         )
 
+    def _apply_patient_session_defaults(self, *, clear_patient_inputs: bool) -> None:
+        """Apply the canonical patient-session reset registry."""
+        var_defaults = list(PATIENT_SESSION_ALWAYS_VAR_DEFAULTS)
+        attr_defaults = list(PATIENT_SESSION_ALWAYS_ATTR_DEFAULTS)
+        if clear_patient_inputs:
+            var_defaults.extend(PATIENT_SESSION_SWITCH_ONLY_VAR_DEFAULTS)
+            attr_defaults.extend(PATIENT_SESSION_SWITCH_ONLY_ATTR_DEFAULTS)
+        for name, default in var_defaults:
+            getattr(self, name).set(default)
+        for name, default in PATIENT_SESSION_TRACKED_UI_VAR_DEFAULTS:
+            self._set_ui_var(getattr(self, name), default)
+        for name, default in attr_defaults:
+            setattr(self, name, default)
+        if clear_patient_inputs:
+            for name in PATIENT_SESSION_SWITCH_ONLY_LIST_ATTRS:
+                setattr(self, name, [])
+        self.data = PatientData()
+
     def _reset_primary_document_runtime_state(self, *, clear_patient_inputs: bool = False) -> None:
         """Сбросить данные прошлого пациента перед новым первичным файлом.
 
         ``clear_patient_inputs`` включается только при фактической смене одного
-        первичного файла на другой.  Это сохраняет удобный сценарий, когда ЭПИ/
+        первичного файла на другой. Это сохраняет удобный сценарий, когда ЭПИ/
         Тексты/Даты выбраны до первого первичного документа, но не позволяет
         перенести их или реквизиты ВК/комиссий в следующего пациента.
         """
-        self.assigned_treatment_var.set("")
-        self.case_number_var.set("")
-        self.expert_work_status_var.set("")
-        self.expert_work_org_var.set("")
-        self.expert_position_var.set("")
-        self.expert_sick_leave_needed_var.set("нет")
-        self.expert_sick_leave_from_var.set("")
-        self.expert_sick_leave_number_var.set("")
-        self.vk_mse_work_org_var.set("")
-        self.vk_mse_position_var.set("")
-        self.sick_leave_vk_work_org_var.set("")
-        self.sick_leave_vk_position_var.set("")
-        self.sick_leave_vk_work_position_var.set("")
+        self._apply_patient_session_defaults(clear_patient_inputs=clear_patient_inputs)
         if clear_patient_inputs:
-            # Документ-специфичные реквизиты принадлежат конкретному пациенту.
-            # Если их не очистить, orchestrator увидит непустые поля и может не
-            # открыть popup для следующего пациента, тихо переиспользовав старые
-            # даты/номера/военкомат/ЭПИ.
-            for variable in (
-                self.rvk_act_number_var,
-                self.rvk_military_commissariat_var,
-                self.rvk_work_position_var,
-                self.vk_date_var,
-                self.vk_protocol_number_var,
-                self.vk_protocol_date_var,
-                self.sick_leave_vk_date_var,
-                self.sick_leave_vk_protocol_number_var,
-                self.sick_leave_vk_protocol_date_var,
-                self.sick_leave_vk_commission_date_var,
-                self.commission_date_var,
-                self.commission_number_var,
-                self.epi_path_var,
-            ):
-                variable.set("")
-            self._last_committee_date = ""
-            self._last_protocol_date = ""
-            # Переиспользуемые папки оставляем, а выбранные для предыдущего
-            # пациента файлы очищаем. Ни один DOCX пациента №1 не должен стать
-            # входом пациента №2. Автоподбор ниже заново выберет файлы по
-            # диагнозу и дате нового первичного документа.
-            self.status_files = []
-            self.diary_files = []
-            self._diary_text_files_auto_selected = False
-            self._diary_files_auto_selected = False
+            # Выбранные DOCX уже очищены единым state-контрактом; здесь только
+            # синхронизируем подписи кнопок с сохранёнными переиспользуемыми папками.
             self._update_diary_text_label(success=bool(getattr(self, "diary_texts_dir", "")))
             self._update_diary_template_label(success=bool(getattr(self, "diary_template_dir", "")))
-        self._primary_work_org_default = ""
-        self._primary_work_position_default = ""
-        self._work_details_manually_edited = False
+
         self._update_expert_sick_leave_display()
-        self._manual_patient_name = False
-        self._manual_admission_date = False
-        self._manual_discharge_date = False
-        self._manual_diagnosis = False
-        self._popup_diagnosis_override = ""
-        self._popup_discharge_date_override = ""
         # Сбрасываем только автоматически выбранные файлы прошлого пациента.
         # Папки оставляем: по новому диагнозу/дате программа подберёт новые
         # тексты дневников и новый 01–31-шаблон.
@@ -136,10 +174,6 @@ class FilesMixin:
             self._diary_files_auto_selected = False
             self._update_diary_template_label(success=bool(getattr(self, "diary_template_dir", "")))
         elif getattr(self, "diary_template_dir", ""):
-            # Если врач ранее выбрал папку «Даты» с шаблонами 01–31, при загрузке
-            # нового первичного документа старый конкретный файл (например 10.docx)
-            # нельзя оставлять в UI. Оставляем папку, очищаем файл и ниже после
-            # reparse выбираем новый шаблон по дате поступления нового пациента.
             try:
                 if self._folder_contains_numbered_diary_templates(self.diary_template_dir):
                     self.diary_files = []
@@ -147,15 +181,10 @@ class FilesMixin:
                     self._update_diary_template_label(success=True)
             except Exception:
                 pass
-        self._set_ui_var(self.patient_name_var, "")
-        self._set_ui_var(self.admission_date_var, "")
-        self._set_ui_var(self.discharge_date_var, "")
-        self._set_ui_var(self.diagnosis_var, "")
         if hasattr(self, "_set_primary_drop_empty"):
             self._set_primary_drop_empty()
         elif hasattr(self, "primary_selected_status_var"):
             self.primary_selected_status_var.set(" ")
-        self.data = PatientData()
 
     def _primary_type_from_parsed_data(data: PatientData) -> str:
         kind = (data.input_document_kind or "").lower().replace("ё", "е")

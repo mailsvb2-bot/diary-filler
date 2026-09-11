@@ -493,6 +493,65 @@ def _assert_shared_paths_contract() -> None:
             _fail("diary collision suffix changed")
 
 
+def _assert_patient_session_reset_contract() -> None:
+    """Keep all patient-scoped reset decisions in one canonical registry."""
+    source = _read("files_mixin.py")
+    tree = ast.parse(source, filename="files_mixin.py")
+
+    def literal(name: str):
+        for node in tree.body:
+            if isinstance(node, ast.Assign):
+                if any(isinstance(target, ast.Name) and target.id == name for target in node.targets):
+                    return ast.literal_eval(node.value)
+        _fail(f"patient-session reset registry is missing: {name}")
+
+    always_vars = dict(literal("PATIENT_SESSION_ALWAYS_VAR_DEFAULTS"))
+    tracked_vars = dict(literal("PATIENT_SESSION_TRACKED_UI_VAR_DEFAULTS"))
+    switch_vars = dict(literal("PATIENT_SESSION_SWITCH_ONLY_VAR_DEFAULTS"))
+    switch_attrs = dict(literal("PATIENT_SESSION_SWITCH_ONLY_ATTR_DEFAULTS"))
+    switch_lists = set(literal("PATIENT_SESSION_SWITCH_ONLY_LIST_ATTRS"))
+
+    required_always = {
+        "assigned_treatment_var", "case_number_var",
+        "expert_work_status_var", "expert_work_org_var", "expert_position_var",
+        "expert_sick_leave_needed_var", "expert_sick_leave_from_var", "expert_sick_leave_number_var",
+        "vk_mse_work_org_var", "vk_mse_position_var",
+        "sick_leave_vk_work_org_var", "sick_leave_vk_position_var", "sick_leave_vk_work_position_var",
+    }
+    required_tracked = {"patient_name_var", "admission_date_var", "discharge_date_var", "diagnosis_var"}
+    required_switch = {
+        "rvk_act_number_var", "rvk_military_commissariat_var", "rvk_work_position_var",
+        "vk_date_var", "vk_protocol_number_var", "vk_protocol_date_var",
+        "sick_leave_vk_date_var", "sick_leave_vk_protocol_number_var",
+        "sick_leave_vk_protocol_date_var", "sick_leave_vk_commission_date_var",
+        "commission_date_var", "commission_number_var", "epi_path_var",
+    }
+    for label, required, actual in (
+        ("always", required_always, set(always_vars)),
+        ("tracked", required_tracked, set(tracked_vars)),
+        ("switch", required_switch, set(switch_vars)),
+    ):
+        missing = sorted(required - actual)
+        if missing:
+            _fail(f"patient-session {label} registry misses: " + ", ".join(missing))
+    if {"status_files", "diary_files"} - switch_lists:
+        _fail("patient-session switch registry must own selected diary inputs")
+    if {"_diary_text_files_auto_selected", "_diary_files_auto_selected"} - set(switch_attrs):
+        _fail("patient-session switch registry must own diary auto-selection flags")
+
+    if "def _apply_patient_session_defaults" not in source:
+        _fail("canonical patient-session reset boundary is missing")
+    if "self._apply_patient_session_defaults(clear_patient_inputs=clear_patient_inputs)" not in source:
+        _fail("primary-document reset bypasses the canonical patient-session boundary")
+    if "self.data = PatientData()" not in source or "PATIENT_SESSION_TRACKED_UI_VAR_DEFAULTS" not in source:
+        _fail("patient model or tracked UI fields are outside the canonical reset boundary")
+
+    reset_section = source.split("def _reset_primary_document_runtime_state", 1)[1].split("def _primary_type_from_parsed_data", 1)[0]
+    for name in required_always | required_tracked | required_switch:
+        if f"self.{name}.set(" in reset_section:
+            _fail(f"patient field reset escaped the canonical registry: {name}")
+
+
 def _assert_diary_service_boundary() -> None:
     """Keep the production GUI on the paragraph diary architecture only."""
     actions = _read("actions_diary_flow.py")
@@ -730,6 +789,7 @@ def main() -> None:
     _assert_release_zip_excludes_generated_runs()
     _assert_dnd_contract()
     _assert_discharge_date_contract()
+    _assert_patient_session_reset_contract()
     _assert_diary_service_boundary()
     _assert_shared_gender_contract()
     _assert_shared_paths_contract()
