@@ -735,7 +735,7 @@ def _assert_audit_hardening_contract() -> None:
         (templates, "template_path = bundled_template_path(kind)", "template check must not call bundled_template_path twice per kind"),
         (orchestrator, "_select_default_printer_sync", "print flow must not rely on asynchronous refresh_printers before printing"),
         (app_init, "_printer_refresh_in_progress", "printer discovery needs a concurrency guard"),
-        (actions_diary, "_auto_select_diary_text_by_diagnosis(ask_folder=False)", "diary creation must retry diagnosis-based diary text autoselect before warning"),
+        (actions_diary, "_auto_select_diary_text_by_diagnosis(", "diary creation must retry diagnosis-based diary text autoselect before warning"),
         (_read("diary_text_selection.py"), "_COMMON_DIARY_NAME_WORDS", "diary text matching must ignore technical filename words like дневники/ВЭ"),
         (_read("diary_text_selection.py"), "oligophrenia", "diary text matching must bridge F70/умственная отсталость to олигофрены filenames"),
         (_read("window_mixin.py"), "Нижняя служебная строка убрана", "bottom service/status line must stay hidden"),
