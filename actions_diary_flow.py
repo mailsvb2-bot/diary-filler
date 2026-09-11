@@ -27,11 +27,21 @@ class ActionsDiaryFlowMixin:
                 "В первичном документе должна быть строка или имя файла вида: 12.01.2026 Первичный осмотр."
             )
         if not self.diary_files or getattr(self, "_diary_files_auto_selected", False):
-            self._auto_select_numbered_diary_template(ask_folder=True)
+            self._auto_select_numbered_diary_template(
+                ask_folder=True,
+                admission_value_override=(
+                    patient_data_snapshot.admission_date if patient_data_snapshot is not None else None
+                ),
+            )
         if not self.diary_files:
             raise ValueError("Выберите папку «шаблоны дневников» через кнопку «Шаблоны дневников»/«Папка».")
         if not self.status_files:
-            self._auto_select_diary_text_by_diagnosis(ask_folder=False)
+            self._auto_select_diary_text_by_diagnosis(
+                ask_folder=False,
+                diagnosis_override=(
+                    patient_data_snapshot.diagnosis if patient_data_snapshot is not None else None
+                ),
+            )
         if not self.status_files:
             self.choose_status_files()
         if not self.status_files:

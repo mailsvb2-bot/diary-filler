@@ -607,6 +607,10 @@ def _assert_generation_patient_snapshot_contract() -> None:
         _fail("medical route may mutate the shared patient snapshot")
     if "patient_data_snapshot.output_fio" not in diary or "patient_data_snapshot.discharge_date" not in diary:
         _fail("diary route does not consume canonical patient identity/dates from the snapshot")
+    if "diagnosis_override=(" not in diary or "patient_data_snapshot.diagnosis" not in diary:
+        _fail("diary text autoselect is not driven by the canonical patient snapshot")
+    if "admission_value_override=(" not in diary or "patient_data_snapshot.admission_date" not in diary:
+        _fail("diary date-template autoselect is not driven by the canonical patient snapshot")
 
 
 def _assert_atomic_generation_contract() -> None:
