@@ -22,6 +22,25 @@ class DialogDatesMixin:
         low = (label or "").strip().lower().replace("ё", "е")
         return "дата" in low or "с какого числа" in low
 
+    @staticmethod
+    def _format_date_input_live(value: str) -> str:
+        """Insert date separators while the doctor types a compact date.
+
+        Four digits are deliberately left untouched because ``1126`` is a
+        supported short form meaning ``01.01.2026``. From the fifth digit on,
+        DDMMYY/DDMMYYYY input is unambiguous and can safely be shown with dots.
+        The full four-digit year is still normalized on Enter/focus loss/OK.
+        """
+        raw = (value or "").strip()
+        if not raw:
+            return ""
+        if any(not (char.isdigit() or char in ".-/") for char in raw):
+            return raw
+        digits = "".join(char for char in raw if char.isdigit())
+        if len(digits) <= 4 or len(digits) > 8:
+            return raw
+        return f"{digits[:2]}.{digits[2:4]}.{digits[4:]}"
+
     def _normalize_date_entry_var(self, variable) -> str:
         """Normalize a date entry after typing without forcing separators.
 
@@ -41,9 +60,32 @@ class DialogDatesMixin:
         return normalized
 
     def _bind_date_entry_normalization(self, entry, variable, label: str) -> None:
-        """Attach compact-date normalization to one date-like Tk entry."""
+        """Attach live compact-date masking and final normalization."""
         if not self._is_date_input_label(label):
             return
+
+        def live_mask(event=None) -> None:
+            # Navigation/modifier keys must never rewrite the field.
+            if getattr(event, "keysym", "") in {
+                "Left", "Right", "Up", "Down", "Home", "End", "Tab",
+                "Shift_L", "Shift_R", "Control_L", "Control_R",
+                "Alt_L", "Alt_R", "Escape", "Return",
+            }:
+                return
+            raw = variable.get() if variable is not None else ""
+            masked = self._format_date_input_live(raw)
+            if masked == raw:
+                return
+            try:
+                self._set_ui_var(variable, masked)
+            except Exception:
+                variable.set(masked)
+            try:
+                entry.icursor("end")
+            except Exception:
+                pass
+
+        entry.bind("<KeyRelease>", live_mask, add="+")
         entry.bind("<FocusOut>", lambda _event: self._normalize_date_entry_var(variable), add="+")
         entry.bind("<Return>", lambda _event: self._normalize_date_entry_var(variable), add="+")
 
