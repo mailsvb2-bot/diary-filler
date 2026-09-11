@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import re
 import shutil
 from datetime import date, timedelta
 from pathlib import Path
@@ -157,15 +158,28 @@ def _test_text_diary_user_route(tmp: Path) -> None:
     rendered = Document(result.created_files[0])
     assert rendered.tables == [], "user-facing diary output must be text-only"
     text = "\n".join(paragraph.text for paragraph in rendered.paragraphs)
+    expected_prefixes = tuple(f"{day:02d}.01.26" for day in range(2, 10))
+    diary_lines = [
+        paragraph.text.strip()
+        for paragraph in rendered.paragraphs
+        if re.match(r"^\d{2}\.\d{2}\.\d{2}\s", paragraph.text.strip())
+    ]
+    assert tuple(line.split()[0] for line in diary_lines) == expected_prefixes, diary_lines
     assert "02.01.26 Пациентка спокойна" in text, text
+    assert "03.01.26 Пациентка спокойна" in text, text
+    assert "04.01.26 Пациентка спокойна" in text, text
     assert "05.01.26 Пациентка спокойна" in text, text
+    assert "06.01.26 Пациентка спокойна" in text, text
+    assert "07.01.26 Пациентка спокойна" in text, text
+    assert "08.01.26 Пациентка спокойна" in text, text
     assert "09.01.26 Состояние улучшилось" in text, text
     assert "12.01.26" not in text, text
+    assert result.detected_rows == 8, result.detected_rows
     assert "Лечащий врач Балаганин С.В." in text, text
     assert "Зав.отделением Можарова Е.А." in text, text
     lines = [paragraph.text.strip() for paragraph in rendered.paragraphs if paragraph.text.strip()]
     nonempty_paragraphs = [paragraph for paragraph in rendered.paragraphs if paragraph.text.strip()]
-    for prefix in ("02.01.26", "05.01.26", "09.01.26"):
+    for prefix in expected_prefixes:
         index = next(i for i, line in enumerate(lines) if line.startswith(prefix))
         assert lines[index + 1:index + 3] == [
             "Лечащий врач Балаганин С.В.",
@@ -328,6 +342,34 @@ def _test_daily_diary_coverage(tmp: Path) -> None:
         current += timedelta(days=1)
     assert actual_dates == expected_dates, actual_dates
     assert hospitalization_days[-1] > 31, hospitalization_days[-1]
+
+    # The actual GUI now uses the text route.  A sparse 01–31 source must still
+    # produce one diary for every calendar day through discharge, including
+    # stays longer than 31 days.  This locks the original real-user regression.
+    text_result = fill_diary_batch(
+        status_files=[statuses],
+        diary_files=[template],
+        output_dir=tmp / "daily-text-out",
+        patient_name="Иванов Иван Иванович",
+        admission_value="01.01.2026",
+        discharge_value="10.02.2026",
+        force_final_diary=True,
+        text_output=True,
+        open_result_folder=False,
+    )
+    text_doc = Document(text_result.created_files[0])
+    assert text_doc.tables == [], "GUI text diary must never restore the source table"
+    text_dates = [
+        paragraph.text.strip().split()[0]
+        for paragraph in text_doc.paragraphs
+        if re.match(r"^\d{2}\.\d{2}\.\d{2}\s", paragraph.text.strip())
+    ]
+    expected_text_dates = [item.strftime("%d.%m.%y") for item in (
+        date(2026, 1, 2) + timedelta(days=offset) for offset in range(40)
+    )]
+    assert text_dates == expected_text_dates, text_dates
+    assert text_result.filled_rows == 40, text_result.filled_rows
+    assert text_result.final_rows_filled == 1, text_result.final_rows_filled
 
 
 class _SettingsHarness(SettingsMixin):
