@@ -136,12 +136,18 @@ def _test_text_diary_user_route(tmp: Path) -> None:
     assert "Лечащий врач Балаганин С.В." in text, text
     assert "Зав.отделением Можарова Е.А." in text, text
     lines = [paragraph.text.strip() for paragraph in rendered.paragraphs if paragraph.text.strip()]
+    nonempty_paragraphs = [paragraph for paragraph in rendered.paragraphs if paragraph.text.strip()]
     for prefix in ("02.01.26", "05.01.26", "09.01.26"):
         index = next(i for i, line in enumerate(lines) if line.startswith(prefix))
         assert lines[index + 1:index + 3] == [
             "Лечащий врач Балаганин С.В.",
             "Зав.отделением Можарова Е.А.",
         ], lines[index:index + 3]
+        entry_paragraph = next(paragraph for paragraph in nonempty_paragraphs if paragraph.text.startswith(prefix))
+        doctor_paragraph = nonempty_paragraphs[nonempty_paragraphs.index(entry_paragraph) + 1]
+        assert entry_paragraph.paragraph_format.keep_together is True
+        assert entry_paragraph.paragraph_format.keep_with_next is True
+        assert doctor_paragraph.paragraph_format.keep_with_next is True
     assert len(Document(template).tables) == 1, "doctor-owned Dates source must not be modified"
     assert result.final_rows_filled == 1
     action_source = (ROOT / "actions_diary_flow.py").read_text(encoding="utf-8")
