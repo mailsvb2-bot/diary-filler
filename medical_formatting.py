@@ -12,6 +12,7 @@ from typing import Optional
 
 from medical_constants import DATE_FMT
 from medical_text_utils import normalize_text
+from shared_dates import parse_date_value
 
 def format_date_with_russian_year_suffix(value: str) -> str:
     """Return UI date text with exactly one trailing " г." for document headers."""
@@ -180,85 +181,11 @@ def treatment_period_text(admission_date: str, commission_date: str) -> str:
     return "Находится на лечении с (всего дней)"
 
 
-def _two_digit_year_to_full(year: int) -> int:
-    return year + (2000 if year < 70 else 1900) if year < 100 else year
-
-
-def _candidate_date(year: int, month: int, day: int) -> Optional[datetime]:
-    year = _two_digit_year_to_full(year)
-    # Medical document dates are patient/episode dates, not arbitrary calendar
-    # values. Keeping the same sane bounds as the diary parser prevents a typo
-    # like 01.01.3026 or 01.01.1800 from silently entering generated DOCX.
-    if year < 1900 or year > 2200:
-        return None
-    try:
-        return datetime(year, month, day)
-    except ValueError:
-        return None
-
-
-def _parse_compact_date_digits(digits: str) -> Optional[datetime]:
-    """Parse date digits typed without separators.
-
-    Supported examples:
-    - 10052026 -> 10.05.2026
-    - 100526   -> 10.05.2026
-    - 1126     -> 01.01.2026
-
-    The 4/5/7 digit modes intentionally support missing leading zeroes in
-    day/month fields (``1`` means ``01``) without treating a bare year like
-    ``2026`` as a date.
-    """
-    if not re.fullmatch(r"\d{4,8}", digits or ""):
-        return None
-
-    def make(d_len: int, m_len: int, y_len: int) -> Optional[datetime]:
-        if d_len + m_len + y_len != len(digits):
-            return None
-        day = int(digits[:d_len])
-        month = int(digits[d_len:d_len + m_len])
-        year = int(digits[d_len + m_len:])
-        return _candidate_date(year, month, day)
-
-    ordered_patterns: list[tuple[int, int, int]] = []
-    if len(digits) == 8:
-        ordered_patterns = [(2, 2, 4)]
-    elif len(digits) == 6:
-        ordered_patterns = [(2, 2, 2)]
-    elif len(digits) == 4:
-        # 1126 -> 01.01.2026. Avoid false-positive bare years: 2026 has
-        # month 0 and therefore fails validation.
-        ordered_patterns = [(1, 1, 2)]
-    elif len(digits) == 5:
-        # Prefer 1/05/26 for 10526, but 31/1/26 for 31126.
-        ordered_patterns = [(2, 1, 2), (1, 2, 2)] if int(digits[:2]) > 12 else [(1, 2, 2), (2, 1, 2)]
-    elif len(digits) == 7:
-        # Prefer 1/05/2026 for 1052026, but 31/1/2026 for 3112026.
-        ordered_patterns = [(2, 1, 4), (1, 2, 4)] if int(digits[:2]) > 12 else [(1, 2, 4), (2, 1, 4)]
-
-    for pattern in ordered_patterns:
-        parsed = make(*pattern)
-        if parsed:
-            return parsed
-    return None
-
 def parse_date(value: str) -> Optional[datetime]:
-    value = normalize_text(value)
-    value = re.sub(r"\s*(?:г\.?|год)\s*$", "", value, flags=re.IGNORECASE).strip()
-    if not value:
+    parsed = parse_date_value(normalize_text(value))
+    if parsed is None:
         return None
-
-    match = re.fullmatch(r"(\d{1,2})\s*[./-]\s*(\d{1,2})\s*[./-]\s*(\d{2}|\d{4})", value)
-    if match:
-        day = int(match.group(1))
-        month = int(match.group(2))
-        year = int(match.group(3))
-        return _candidate_date(year, month, day)
-
-    # Врач часто вводит дату без разделителей: 10052026, 100526 или
-    # совсем коротко 1126 (= 01.01.2026).
-    return _parse_compact_date_digits(value)
-
+    return datetime(parsed.year, parsed.month, parsed.day)
 
 def safe_filename(value: str) -> str:
     value = normalize_text(value) or "Пациент"

@@ -19,6 +19,7 @@ REQUIRED_FILES = [
     "main.py",
     "medical_documents.py",
     "diary_filler.py",
+    "shared_dates.py",
     "printer_support.py",
     "icd10_f.py",
     "embedded_templates.py",
