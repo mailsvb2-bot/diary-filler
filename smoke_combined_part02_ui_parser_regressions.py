@@ -282,6 +282,112 @@ finally:
     _date_contract_messagebox.showwarning = _original_date_showwarning
 
 
+# --- Patient switch isolation regression ---
+# Switching from one primary file to another must never reuse patient-specific
+# EPI/commission/VK/RVK values or manually selected diary inputs. Reusable
+# Texts/Dates folders may remain so the next patient's files can be auto-picked.
+patient_switch = _main_module.CombinedMedicalDiaryApp.__new__(_main_module.CombinedMedicalDiaryApp)
+for name in (
+    "assigned_treatment_var", "case_number_var", "expert_work_status_var",
+    "expert_work_org_var", "expert_position_var", "expert_sick_leave_needed_var",
+    "expert_sick_leave_from_var", "expert_sick_leave_number_var",
+    "vk_mse_work_org_var", "vk_mse_position_var", "sick_leave_vk_work_org_var",
+    "sick_leave_vk_position_var", "sick_leave_vk_work_position_var",
+    "patient_name_var", "admission_date_var", "discharge_date_var", "diagnosis_var",
+    "rvk_act_number_var", "rvk_military_commissariat_var", "rvk_work_position_var",
+    "vk_date_var", "vk_protocol_number_var", "vk_protocol_date_var",
+    "sick_leave_vk_date_var", "sick_leave_vk_protocol_number_var",
+    "sick_leave_vk_protocol_date_var", "sick_leave_vk_commission_date_var",
+    "commission_date_var", "commission_number_var", "epi_path_var",
+):
+    setattr(patient_switch, name, _FakeVar("OLD"))
+patient_switch.expert_sick_leave_needed_var.set("да")
+patient_switch.status_files = ["old-patient-texts.docx"]
+patient_switch.diary_files = ["old-patient-dates.docx"]
+patient_switch.diary_texts_dir = "reusable-texts-folder"
+patient_switch.diary_template_dir = "reusable-dates-folder"
+patient_switch._diary_text_files_auto_selected = False
+patient_switch._diary_files_auto_selected = False
+patient_switch._primary_work_org_default = "OLD ORG"
+patient_switch._primary_work_position_default = "OLD POSITION"
+patient_switch._work_details_manually_edited = True
+patient_switch._manual_patient_name = True
+patient_switch._manual_admission_date = True
+patient_switch._manual_discharge_date = True
+patient_switch._manual_diagnosis = True
+patient_switch._popup_diagnosis_override = "OLD DIAGNOSIS"
+patient_switch._popup_discharge_date_override = "09.09.2026"
+patient_switch._last_committee_date = "08.09.2026"
+patient_switch._last_protocol_date = "08.09.2026"
+patient_switch.data = PatientData(fio="OLD PATIENT")
+patient_switch._update_expert_sick_leave_display = lambda: None
+patient_switch._update_diary_text_label = lambda **kwargs: None
+patient_switch._update_diary_template_label = lambda **kwargs: None
+patient_switch._folder_contains_numbered_diary_templates = lambda _folder: False
+patient_switch._set_ui_var = lambda var, value: var.set(value)
+patient_switch._set_primary_drop_empty = lambda: None
+patient_switch._reset_primary_document_runtime_state(clear_patient_inputs=True)
+for name in (
+    "rvk_act_number_var", "rvk_military_commissariat_var", "rvk_work_position_var",
+    "vk_date_var", "vk_protocol_number_var", "vk_protocol_date_var",
+    "sick_leave_vk_date_var", "sick_leave_vk_protocol_number_var",
+    "sick_leave_vk_protocol_date_var", "sick_leave_vk_commission_date_var",
+    "commission_date_var", "commission_number_var", "epi_path_var",
+):
+    assert getattr(patient_switch, name).get() == "", (name, getattr(patient_switch, name).get())
+assert patient_switch.status_files == []
+assert patient_switch.diary_files == []
+assert patient_switch.diary_texts_dir == "reusable-texts-folder"
+assert patient_switch.diary_template_dir == "reusable-dates-folder"
+assert patient_switch._last_committee_date == ""
+assert patient_switch._last_protocol_date == ""
+
+# Before the first primary is chosen, supporting inputs selected intentionally by
+# the doctor remain intact; isolation is activated only on an actual patient switch.
+first_primary = _main_module.CombinedMedicalDiaryApp.__new__(_main_module.CombinedMedicalDiaryApp)
+for name in (
+    "assigned_treatment_var", "case_number_var", "expert_work_status_var",
+    "expert_work_org_var", "expert_position_var", "expert_sick_leave_needed_var",
+    "expert_sick_leave_from_var", "expert_sick_leave_number_var",
+    "vk_mse_work_org_var", "vk_mse_position_var", "sick_leave_vk_work_org_var",
+    "sick_leave_vk_position_var", "sick_leave_vk_work_position_var",
+    "patient_name_var", "admission_date_var", "discharge_date_var", "diagnosis_var",
+    "rvk_act_number_var", "rvk_military_commissariat_var", "rvk_work_position_var",
+    "vk_date_var", "vk_protocol_number_var", "vk_protocol_date_var",
+    "sick_leave_vk_date_var", "sick_leave_vk_protocol_number_var",
+    "sick_leave_vk_protocol_date_var", "sick_leave_vk_commission_date_var",
+    "commission_date_var", "commission_number_var", "epi_path_var",
+):
+    setattr(first_primary, name, _FakeVar(""))
+first_primary.epi_path_var.set("preselected-epi.docx")
+first_primary.status_files = ["preselected-texts.docx"]
+first_primary.diary_files = ["preselected-dates.docx"]
+first_primary.diary_texts_dir = "reusable-texts-folder"
+first_primary.diary_template_dir = ""
+first_primary._diary_text_files_auto_selected = False
+first_primary._diary_files_auto_selected = False
+first_primary._primary_work_org_default = ""
+first_primary._primary_work_position_default = ""
+first_primary._work_details_manually_edited = False
+first_primary._manual_patient_name = False
+first_primary._manual_admission_date = False
+first_primary._manual_discharge_date = False
+first_primary._manual_diagnosis = False
+first_primary._popup_diagnosis_override = ""
+first_primary._popup_discharge_date_override = ""
+first_primary._last_committee_date = ""
+first_primary._last_protocol_date = ""
+first_primary.data = PatientData()
+first_primary._update_expert_sick_leave_display = lambda: None
+first_primary._update_diary_text_label = lambda **kwargs: None
+first_primary._update_diary_template_label = lambda **kwargs: None
+first_primary._set_ui_var = lambda var, value: var.set(value)
+first_primary._set_primary_drop_empty = lambda: None
+first_primary._reset_primary_document_runtime_state(clear_patient_inputs=False)
+assert first_primary.epi_path_var.get() == "preselected-epi.docx"
+assert first_primary.status_files == ["preselected-texts.docx"]
+assert first_primary.diary_files == ["preselected-dates.docx"]
+
 # --- Primary selected status layout regression ---
 layout_sources_text = Path("layout_sources.py").read_text(encoding="utf-8")
 files_mixin_text = Path("files_mixin.py").read_text(encoding="utf-8")

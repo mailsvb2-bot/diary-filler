@@ -60,8 +60,14 @@ class FilesMixin:
             "Направление на госпитализацию" if selected_type == "hospitalization_referral" else "Первичный осмотр"
         )
 
-    def _reset_primary_document_runtime_state(self) -> None:
-        """Сбросить данные прошлого пациента перед новым первичным файлом."""
+    def _reset_primary_document_runtime_state(self, *, clear_patient_inputs: bool = False) -> None:
+        """Сбросить данные прошлого пациента перед новым первичным файлом.
+
+        ``clear_patient_inputs`` включается только при фактической смене одного
+        первичного файла на другой.  Это сохраняет удобный сценарий, когда ЭПИ/
+        Тексты/Даты выбраны до первого первичного документа, но не позволяет
+        перенести их или реквизиты ВК/комиссий в следующего пациента.
+        """
         self.assigned_treatment_var.set("")
         self.case_number_var.set("")
         self.expert_work_status_var.set("")
@@ -75,6 +81,39 @@ class FilesMixin:
         self.sick_leave_vk_work_org_var.set("")
         self.sick_leave_vk_position_var.set("")
         self.sick_leave_vk_work_position_var.set("")
+        if clear_patient_inputs:
+            # Документ-специфичные реквизиты принадлежат конкретному пациенту.
+            # Если их не очистить, orchestrator увидит непустые поля и может не
+            # открыть popup для следующего пациента, тихо переиспользовав старые
+            # даты/номера/военкомат/ЭПИ.
+            for variable in (
+                self.rvk_act_number_var,
+                self.rvk_military_commissariat_var,
+                self.rvk_work_position_var,
+                self.vk_date_var,
+                self.vk_protocol_number_var,
+                self.vk_protocol_date_var,
+                self.sick_leave_vk_date_var,
+                self.sick_leave_vk_protocol_number_var,
+                self.sick_leave_vk_protocol_date_var,
+                self.sick_leave_vk_commission_date_var,
+                self.commission_date_var,
+                self.commission_number_var,
+                self.epi_path_var,
+            ):
+                variable.set("")
+            self._last_committee_date = ""
+            self._last_protocol_date = ""
+            # Переиспользуемые папки оставляем, а выбранные для предыдущего
+            # пациента файлы очищаем. Ни один DOCX пациента №1 не должен стать
+            # входом пациента №2. Автоподбор ниже заново выберет файлы по
+            # диагнозу и дате нового первичного документа.
+            self.status_files = []
+            self.diary_files = []
+            self._diary_text_files_auto_selected = False
+            self._diary_files_auto_selected = False
+            self._update_diary_text_label(success=bool(getattr(self, "diary_texts_dir", "")))
+            self._update_diary_template_label(success=bool(getattr(self, "diary_template_dir", "")))
         self._primary_work_org_default = ""
         self._primary_work_position_default = ""
         self._work_details_manually_edited = False
@@ -128,9 +167,17 @@ class FilesMixin:
         path = str(path)
         if not path or not Path(path).exists():
             return
+        previous_primary = self.navigation_path_var.get().strip()
+        try:
+            switching_primary = bool(
+                previous_primary
+                and Path(previous_primary).resolve() != Path(path).resolve()
+            )
+        except Exception:
+            switching_primary = bool(previous_primary and previous_primary != path)
         self.navigation_path_var.set(path)
         self._remember_dialog_directory(DIR_PRIMARY_DOCUMENTS, path)
-        self._reset_primary_document_runtime_state()
+        self._reset_primary_document_runtime_state(clear_patient_inputs=switching_primary)
         self._set_output_dir_from_primary_default(path)
 
         try:

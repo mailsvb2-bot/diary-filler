@@ -175,15 +175,26 @@ def _text_diary_dates_from_sources(
                 accept(candidate)
 
     if explicit:
-        return tuple(sorted(explicit))
+        source_dates = tuple(sorted(explicit))
+    else:
+        fallback_dates: list[date] = []
+        for offset in sorted(hospitalization_offsets):
+            candidate = admission_date_value + timedelta(days=offset)
+            if discharge_date_value is not None and candidate > discharge_date_value:
+                continue
+            fallback_dates.append(candidate)
+        source_dates = tuple(fallback_dates)
 
-    fallback_dates: list[date] = []
-    for offset in sorted(hospitalization_offsets):
-        candidate = admission_date_value + timedelta(days=offset)
-        if discharge_date_value is not None and candidate > discharge_date_value:
-            continue
-        fallback_dates.append(candidate)
-    return tuple(fallback_dates)
+    # User contract: inpatient diaries are daily.  The selected «Даты» DOCX is
+    # still the doctor-owned source that proves the diary schedule/signatures,
+    # but sparse milestone rows (2, 3, 4, 7, 11, ...) must never create gaps in
+    # the generated patient diary.  Once discharge is known, materialize every
+    # calendar day from D0+1 through discharge; _build_text_diary_entries turns
+    # the discharge day into exactly one final entry.
+    if source_dates and discharge_date_value is not None and discharge_date_value > admission_date_value:
+        day_count = (discharge_date_value - admission_date_value).days
+        return tuple(admission_date_value + timedelta(days=offset) for offset in range(1, day_count + 1))
+    return source_dates
 
 
 def _signature_lines_from_diary_sources(paths: Sequence[Path]) -> tuple[str, ...]:
@@ -320,7 +331,12 @@ def _fill_text_diary_batch(
         admission_date_value=admission_date_value,
         discharge_date_value=discharge_date_value,
     )
-    if not dates and not (force_final_diary and discharge_date_value is not None):
+    same_day_final = bool(
+        force_final_diary
+        and discharge_date_value is not None
+        and discharge_date_value == admission_date_value
+    )
+    if not dates and not same_day_final:
         raise ValueError(
             "В выбранном источнике «Даты» не найдено дат дневников после поступления. "
             "Проверьте файл 01–31 или выберите другой источник дат."
