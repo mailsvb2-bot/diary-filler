@@ -557,6 +557,17 @@ def _assert_diary_service_boundary() -> None:
     actions = _read("actions_diary_flow.py")
     service = _read("diary_service.py")
     batch = _read("diary_batch.py")
+    app_init = _read("app_initialization.py")
+
+    dead_legacy_state = (
+        "reset_each_file_var",
+        "keep_signature_var",
+        "fill_months_var",
+        "remove_holiday_rows_var",
+    )
+    leaked = [name for name in dead_legacy_state if name in app_init]
+    if leaked:
+        _fail("dead legacy diary UI state was reintroduced: " + ", ".join(leaked))
 
     if "from diary_service import DiaryService" not in actions or "DiaryService().create_text_diaries" not in actions:
         _fail("GUI diary flow bypasses the production DiaryService")
