@@ -338,9 +338,9 @@ class DiaryTemplateDiscoveryMixin:
 
     def _remember_numbered_diary_template_dir(self, folder: str | Path) -> None:
         self._remember_dialog_directory(DIR_NUMBERED_DIARY_TEMPLATES, str(folder), selected_is_dir=True)
-        # Старое поле "Шаблоны дневников" продолжает жить как раньше: мы
-        # просто запоминаем папку, из которой позже автоматически выберем
-        # один конкретный DOCX-файл и передадим его в прежний fill_diary_batch.
+        # Старое имя настройки сохраняем для совместимости: из этой папки
+        # production-путь автоматически выбирает конкретный 01–31 DOCX,
+        # который затем передаётся в DiaryService.
         self._remember_dialog_directory(DIR_DIARY_TEMPLATES, str(folder), selected_is_dir=True)
 
     def _candidate_numbered_diary_template_dirs(self) -> list[Path]:

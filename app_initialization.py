@@ -201,19 +201,15 @@ class AppInitializationMixin:
         self.diary_texts_dir: str = ""
         self._diary_text_files_auto_selected = False
         self.diary_files: List[str] = []
-        # Папка, выбранная кнопкой «Шаблоны дневников». Сама кнопка теперь
-        # выбирает именно папку 01–31, а не отдельный DOCX-файл. Конкретный
-        # шаблон затем автоматически подставляется в прежний fill_diary_batch.
+        # Папка, выбранная кнопкой «Шаблоны дневников». Сама кнопка выбирает
+        # папку 01–31, а production DiaryService получает автоматически
+        # подобранный для текущего пациента конкретный DOCX.
         self.diary_template_dir: str = ""
         # True only when the numbered 01–31 template was selected by the program.
         # Manual template selection by the doctor is still respected.
         self._diary_files_auto_selected = False
         self.repeat_statuses_var = tk.BooleanVar(value=True)
-        self.reset_each_file_var = tk.BooleanVar(value=True)
-        self.keep_signature_var = tk.BooleanVar(value=True)
-        self.fill_months_var = tk.BooleanVar(value=True)
         self.force_final_diary_var = tk.BooleanVar(value=True)
-        self.remove_holiday_rows_var = tk.BooleanVar(value=False)
         self.open_result_folder_var = tk.BooleanVar(value=True)
 
     def _init_runtime_visual_state(self) -> None:
