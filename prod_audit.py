@@ -338,7 +338,7 @@ def _assert_discharge_date_contract() -> None:
             visible += char
             visible = DialogDatesMixin._format_date_input_live(visible)
         parsed = parse_date(visible)
-        if not parsed or parsed.strftime(DATE_FMT) != expected:
+        if not parsed or parsed.strftime("%d.%m.%Y") != expected:
             _fail(f"live popup date mask corrupts typed {compact}: visible={visible!r}")
     if '<KeyRelease>' not in _read("dialog_dates.py"):
         _fail("popup date fields do not apply the live date mask while typing")
