@@ -185,16 +185,38 @@ def _text_diary_dates_from_sources(
             fallback_dates.append(candidate)
         source_dates = tuple(fallback_dates)
 
-    # User contract: inpatient diaries are daily.  The selected «Даты» DOCX is
-    # still the doctor-owned source that proves the diary schedule/signatures,
-    # but sparse milestone rows (2, 3, 4, 7, 11, ...) must never create gaps in
-    # the generated patient diary.  Once discharge is known, materialize every
-    # calendar day from D0+1 through discharge; _build_text_diary_entries turns
-    # the discharge day into exactly one final entry.
+    # Dokkomplekt_Universal medical diary contract: the normal clinical
+    # calendar is D0+1, D0+2, D0+3, D0+7, then twice weekly by alternating
+    # +3/+4 day steps.  Numbered 01-31 «Даты» files are compatibility/source
+    # material (including signatures), not a command to write every day.
+    # The discharge date is added separately as the single final diary entry.
     if source_dates and discharge_date_value is not None and discharge_date_value > admission_date_value:
-        day_count = (discharge_date_value - admission_date_value).days
-        return tuple(admission_date_value + timedelta(days=offset) for offset in range(1, day_count + 1))
+        max_offset = (discharge_date_value - admission_date_value).days
+        return tuple(
+            admission_date_value + timedelta(days=offset)
+            for offset in _clinical_diary_offsets(max_offset)
+        )
     return source_dates
+
+
+def _clinical_diary_offsets(max_offset: int) -> tuple[int, ...]:
+    """Return the proven Dokkomplekt clinical diary day offsets.
+
+    D0+1, D0+2, D0+3, D0+7, then twice weekly by alternating +3/+4
+    day steps.  The discharge entry is handled separately by the text diary
+    builder, so this function only plans regular clinical diary dates.
+    """
+    if max_offset < 1:
+        return ()
+    offsets = [1, 2, 3, 7]
+    current = 7
+    add_three = True
+    while current < max_offset:
+        current += 3 if add_three else 4
+        add_three = not add_three
+        if current <= max_offset:
+            offsets.append(current)
+    return tuple(offset for offset in offsets if offset <= max_offset)
 
 
 def _signature_lines_from_diary_sources(paths: Sequence[Path]) -> tuple[str, ...]:

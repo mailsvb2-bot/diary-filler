@@ -158,7 +158,9 @@ def _test_text_diary_user_route(tmp: Path) -> None:
     rendered = Document(result.created_files[0])
     assert rendered.tables == [], "user-facing diary output must be text-only"
     text = "\n".join(paragraph.text for paragraph in rendered.paragraphs)
-    expected_prefixes = tuple(f"{day:02d}.01.26" for day in range(2, 10))
+    # Proven Dokkomplekt clinical cadence: D0+1, +2, +3, +7, then
+    # alternating +3/+4 day steps; discharge is one separate final diary.
+    expected_prefixes = ("02.01.26", "03.01.26", "04.01.26", "08.01.26", "09.01.26")
     diary_lines = [
         paragraph.text.strip()
         for paragraph in rendered.paragraphs
@@ -168,13 +170,13 @@ def _test_text_diary_user_route(tmp: Path) -> None:
     assert "02.01.26 Пациентка спокойна" in text, text
     assert "03.01.26 Пациентка спокойна" in text, text
     assert "04.01.26 Пациентка спокойна" in text, text
-    assert "05.01.26 Пациентка спокойна" in text, text
-    assert "06.01.26 Пациентка спокойна" in text, text
-    assert "07.01.26 Пациентка спокойна" in text, text
     assert "08.01.26 Пациентка спокойна" in text, text
     assert "09.01.26 Состояние улучшилось" in text, text
+    for omitted in ("05.01.26", "06.01.26", "07.01.26"):
+        assert omitted not in text, (omitted, text)
     assert "12.01.26" not in text, text
-    assert result.detected_rows == 8, result.detected_rows
+    assert result.detected_rows == 4, result.detected_rows
+    assert result.filled_rows == 5, result.filled_rows
     assert "Лечащий врач Балаганин С.В." in text, text
     assert "Зав.отделением Можарова Е.А." in text, text
     lines = [paragraph.text.strip() for paragraph in rendered.paragraphs if paragraph.text.strip()]
@@ -343,13 +345,13 @@ def _test_daily_diary_coverage(tmp: Path) -> None:
     assert actual_dates == expected_dates, actual_dates
     assert hospitalization_days[-1] > 31, hospitalization_days[-1]
 
-    # The actual GUI now uses the text route.  A sparse 01–31 source must still
-    # produce one diary for every calendar day through discharge, including
-    # stays longer than 31 days.  This locks the original real-user regression.
+    # The actual GUI uses the text route and the proven Dokkomplekt clinical
+    # calendar, not a daily expansion.  This also locks cadence beyond day 31.
+    assert diary_batch_module._clinical_diary_offsets(21) == (1, 2, 3, 7, 10, 14, 17, 21)
     text_result = fill_diary_batch(
         status_files=[statuses],
         diary_files=[template],
-        output_dir=tmp / "daily-text-out",
+        output_dir=tmp / "clinical-text-out",
         patient_name="Иванов Иван Иванович",
         admission_value="01.01.2026",
         discharge_value="10.02.2026",
@@ -364,11 +366,14 @@ def _test_daily_diary_coverage(tmp: Path) -> None:
         for paragraph in text_doc.paragraphs
         if re.match(r"^\d{2}\.\d{2}\.\d{2}\s", paragraph.text.strip())
     ]
-    expected_text_dates = [item.strftime("%d.%m.%y") for item in (
-        date(2026, 1, 2) + timedelta(days=offset) for offset in range(40)
-    )]
+    expected_text_dates = [
+        "02.01.26", "03.01.26", "04.01.26", "08.01.26", "11.01.26",
+        "15.01.26", "18.01.26", "22.01.26", "25.01.26", "29.01.26",
+        "01.02.26", "05.02.26", "08.02.26", "10.02.26",
+    ]
     assert text_dates == expected_text_dates, text_dates
-    assert text_result.filled_rows == 40, text_result.filled_rows
+    assert text_result.detected_rows == 13, text_result.detected_rows
+    assert text_result.filled_rows == 14, text_result.filled_rows
     assert text_result.final_rows_filled == 1, text_result.final_rows_filled
 
 
