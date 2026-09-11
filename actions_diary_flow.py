@@ -24,7 +24,7 @@ class ActionsDiaryFlowMixin:
         if not self.status_files:
             self.choose_status_files()
         if not self.status_files:
-            raise ValueError("Выберите файл(ы) с текстами дневников. Шаблон 01–31 — это только таблица; тексты берутся из отдельного файла с дневниками.")
+            raise ValueError("Выберите файл(ы) «Тексты» для дневников. Источник «Даты» задаёт календарь, а тексты берутся отдельно.")
         diary_patient_name = self.patient_name_var.get().strip()
         source_patient_fio = ""
         if self.navigation_path_var.get().strip():
@@ -65,6 +65,9 @@ class ActionsDiaryFlowMixin:
             remove_holiday_rows=self.remove_holiday_rows_var.get(),
             open_result_folder=False,
             write_report=self._diagnostic_reports_enabled(),
+            # User-facing diaries follow the proven Dokkomplekt Dates + Texts
+            # route: generated DOCX contains paragraphs, never the source table.
+            text_output=True,
         )
         self._log("\n✅ Дневники заполнены:\n")
         for path in result.created_files:

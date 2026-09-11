@@ -12,7 +12,7 @@ from docx import Document
 import diary_batch as diary_batch_module
 from app_config import DIR_DIARY_TEXTS, DIR_PRIMARY_DOCUMENTS
 from diary_batch import fill_diary_batch
-from diary_gender import detect_gender_from_patient_name
+from diary_gender import adapt_text_to_patient_gender, detect_gender_from_patient_name
 from diary_models import FillResult
 from medical_gender import adapt_document_to_patient_gender, normalize_facility_references_in_document
 from medical_models import PatientData
@@ -61,6 +61,71 @@ def _make_statuses(path: Path) -> None:
     doc = Document()
     doc.add_paragraph("Пациент спокоен, жалоб не предъявляет, контакт доступен, сон достаточный.")
     doc.save(path)
+
+
+
+def _test_common_diary_gender_agreement() -> None:
+    source = (
+        "Остаётся вялым, подавленным, пассивным. "
+        "В отделении малозаметен, бездеятелен, замкнута. "
+        "Легко становится негативистичным, эмоционально монотонен, выхолощен, холоден."
+    )
+    adapted, changed = adapt_text_to_patient_gender(source, "female")
+    assert changed >= 9, (changed, adapted)
+    import re
+    for wrong in ("вялым", "подавленным", "пассивным", "малозаметен", "бездеятелен", "негативистичным", "монотонен", "выхолощен", "холоден"):
+        assert re.search(rf"(?<![А-Яа-яЁё]){re.escape(wrong)}(?![А-Яа-яЁё])", adapted) is None, adapted
+    for expected in ("вялой", "подавленной", "пассивной", "малозаметна", "бездеятельна", "негативистичной", "монотонна", "выхолощена", "холодна"):
+        assert expected in adapted, adapted
+
+
+def _test_text_diary_user_route(tmp: Path) -> None:
+    statuses = tmp / "text-route-texts.docx"
+    template = tmp / "text-route-dates.docx"
+    doc = Document()
+    repeated = "Пациент спокоен, контактен, жалоб активно не предъявляет, назначения выполняет."
+    doc.add_paragraph(repeated)
+    doc.add_paragraph(repeated)
+    doc.save(statuses)
+
+    doc = Document()
+    table = doc.add_table(rows=1, cols=4)
+    for index, header in enumerate(("День госпитализации", "Число", "Месяц/Год", "Дневник наблюдения")):
+        table.rows[0].cells[index].text = header
+    for hospital_day in (2, 5, 9, 12):
+        row = table.add_row()
+        row.cells[0].text = str(hospital_day)
+        row.cells[3].text = "Лечащий врач Балаганин С.В."
+    doc.save(template)
+
+    preserved = diary_batch_module.read_statuses_from_files([statuses], preserve_duplicates=True)
+    assert len(preserved) == 2, preserved
+
+    result = fill_diary_batch(
+        status_files=[statuses],
+        diary_files=[template],
+        output_dir=tmp / "text-route-out",
+        patient_name="Иванова Анна Сергеевна",
+        gender_source_name="Иванова Анна Сергеевна",
+        admission_value="01.01.2026",
+        discharge_value="09.01.2026",
+        force_final_diary=True,
+        repeat_statuses=True,
+        text_output=True,
+        open_result_folder=False,
+    )
+    rendered = Document(result.created_files[0])
+    assert rendered.tables == [], "user-facing diary output must be text-only"
+    text = "\n".join(paragraph.text for paragraph in rendered.paragraphs)
+    assert "02.01.26 Пациентка спокойна" in text, text
+    assert "05.01.26 Пациентка спокойна" in text, text
+    assert "09.01.26 Состояние улучшилось" in text, text
+    assert "12.01.26" not in text, text
+    assert "Лечащий врач Балаганин С.В." in text, text
+    assert len(Document(template).tables) == 1, "doctor-owned Dates source must not be modified"
+    assert result.final_rows_filled == 1
+    action_source = (ROOT / "actions_diary_flow.py").read_text(encoding="utf-8")
+    assert "text_output=True" in action_source, "GUI diary button must use the text route"
 
 
 def _test_holiday_default_is_safe(tmp: Path) -> None:
@@ -253,11 +318,13 @@ def _test_release_pins() -> None:
 def main() -> None:
     _test_missing_patient_facts()
     _test_conservative_gender()
+    _test_common_diary_gender_agreement()
     _test_run_formatting_preserved()
     _test_release_pins()
     with TemporaryDirectory(prefix="medical-autofill-safety-") as temp_dir:
         tmp = Path(temp_dir)
         _test_holiday_default_is_safe(tmp)
+        _test_text_diary_user_route(tmp)
         _test_daily_diary_coverage(tmp)
         _test_medical_transaction(tmp)
         _test_diary_transaction(tmp)
