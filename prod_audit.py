@@ -310,6 +310,21 @@ def _assert_discharge_date_contract() -> None:
     if parse_full_date("1126").strftime("%d.%m.%Y") != "01.01.2026":
         _fail("diary short compact date parser is broken")
 
+    from dialog_dates import DialogDatesMixin
+    live_cases = {
+        "09092": "09.09.2",
+        "090926": "09.09.26",
+        "09092026": "09.09.2026",
+        "1126": "1126",
+        "09.09.2026": "09.09.2026",
+    }
+    for raw, expected in live_cases.items():
+        actual = DialogDatesMixin._format_date_input_live(raw)
+        if actual != expected:
+            _fail(f"live popup date mask is broken for {raw}: {actual!r} != {expected!r}")
+    if '<KeyRelease>' not in _read("dialog_dates.py"):
+        _fail("popup date fields do not apply the live date mask while typing")
+
 
 
 
