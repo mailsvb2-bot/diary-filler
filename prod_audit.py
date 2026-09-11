@@ -58,6 +58,7 @@ FORBIDDEN_DUST_FILES = {
     "diary_template_finder.py",
     "diary_template_admission.py",
     "diary_template_auto_select.py",
+    "diary_templates_mixin.py",
     "window_build.py",
     "window_metrics.py",
     "window_style.py",

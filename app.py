@@ -8,7 +8,7 @@ from layout_mixin import LayoutMixin
 from dialogs_mixin import DialogsMixin
 from widgets_mixin import WidgetsMixin
 from files_mixin import FilesMixin
-from diary_templates_mixin import DiaryTemplateMixin
+from diary_template_selection import DiaryTemplateMixin
 from dnd_mixin import DragDropMixin
 from actions_mixin import ActionsMixin
 from app_initialization import AppInitializationMixin
