@@ -211,6 +211,26 @@ class ActionsCreationOrchestratorMixin:
         try:
             try:
                 final_output_dir = self._prepare_generation_output_dir()
+                try:
+                    generation_patient_data = self._capture_generation_patient_data(
+                        require_primary=bool(selected_medical),
+                    )
+                except Exception as exc:
+                    label = "Медицинские документы" if selected_medical else "Дневники"
+                    errors.append(f"{label}: {exc}")
+                    self._log(f"\n❌ Не удалось зафиксировать данные пациента для комплекта: {exc}\n")
+                    self._write_creation_report(
+                        selected_medical=selected_medical,
+                        selected_diaries=selected_diaries,
+                        created_medical=[],
+                        diary_result=None,
+                        errors=errors,
+                    )
+                    messagebox.showerror(
+                        f"{label} не созданы",
+                        f"Не удалось подготовить единый снимок данных пациента:\n\n{exc}",
+                    )
+                    return
                 with TemporaryDirectory(prefix=".medical-autofill-set-", dir=str(final_output_dir)) as temp_dir:
                     staging_dir = Path(temp_dir)
                     staged_medical: List[Path] = []
@@ -222,6 +242,7 @@ class ActionsCreationOrchestratorMixin:
                                 selected_medical,
                                 output_dir_override=staging_dir,
                                 log_created=False,
+                                patient_data_snapshot=generation_patient_data,
                             )
                         except Exception as exc:
                             errors.append(f"Медицинские документы: {exc}")
@@ -246,6 +267,7 @@ class ActionsCreationOrchestratorMixin:
                             staged_diary_result = self._create_diaries_impl(
                                 output_dir_override=staging_dir,
                                 log_created=False,
+                                patient_data_snapshot=generation_patient_data,
                             )
                         except Exception as exc:
                             errors.append(f"Дневники: {exc}")

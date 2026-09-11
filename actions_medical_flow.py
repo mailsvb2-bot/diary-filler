@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 from pathlib import Path
 from typing import List
 from tkinter import messagebox
@@ -106,24 +107,98 @@ class ActionsMedicalFlowMixin:
         data.commission_number = self.commission_number_var.get().strip()
         return data
 
+    def _capture_generation_patient_data(self, *, require_primary: bool) -> PatientData:
+        """Capture one canonical patient snapshot for a complete generation run.
+
+        Medical + diary output must not independently reread live Tk fields.
+        When medical documents are selected the primary document is mandatory and
+        failures preserve the existing hard boundary. Diary-only compatibility
+        may still work from the current card when no primary file is available.
+        """
+        navigation = self.navigation_path_var.get().strip()
+        navigation_exists = bool(navigation and Path(navigation).exists())
+        if require_primary and not navigation_exists:
+            raise ValueError("Выберите первичный документ: направление на госпитализацию или первичный осмотр.")
+
+        if require_primary:
+            discharge = self.discharge_date_var.get().strip()
+            if discharge and not parse_date(discharge):
+                raise ValueError(
+                    "Дата выписки должна быть в формате ДД.ММ.ГГГГ, ДД.ММ.ГГ, "
+                    "ДДММГГГГ, ДДММГГ или коротко ДМГГ."
+                )
+            if discharge:
+                self._set_ui_var(self.discharge_date_var, self._normalize_date_for_ui(discharge))
+
+        if navigation_exists:
+            try:
+                data = self._medical_override_data(navigation)
+            except Exception:
+                if require_primary:
+                    raise
+                data = copy.deepcopy(getattr(self, "data", PatientData()))
+        else:
+            data = copy.deepcopy(getattr(self, "data", PatientData()))
+
+        patient_name = self.patient_name_var.get().strip()
+        if not data.fio:
+            data.fio = patient_name
+        data.output_fio = patient_name or data.output_fio or data.fio
+
+        if navigation_exists:
+            title_date = self._sync_admission_date_from_title(force=True)
+        else:
+            title_date = ""
+        admission = title_date or self.admission_date_var.get().strip() or data.admission_date
+        if admission:
+            parsed_admission = parse_date(admission)
+            data.admission_date = parsed_admission.strftime("%d.%m.%Y") if parsed_admission else admission
+
+        discharge = (
+            self._popup_discharge_date_override.strip()
+            or self.discharge_date_var.get().strip()
+            or data.discharge_date
+        )
+        if discharge:
+            parsed_discharge = parse_date(discharge)
+            data.discharge_date = parsed_discharge.strftime("%d.%m.%Y") if parsed_discharge else discharge
+
+        diagnosis = (
+            self._popup_diagnosis_override.strip()
+            or self.diagnosis_var.get().strip()
+            or data.diagnosis
+        )
+        if diagnosis:
+            data.diagnosis = sanitize_diagnosis(diagnosis)
+        return copy.deepcopy(data)
+
     def _create_medical_documents_impl(
         self,
         selected_docs: List[str],
         *,
         output_dir_override: Path | None = None,
         log_created: bool = True,
+        patient_data_snapshot: PatientData | None = None,
     ) -> List[Path]:
         navigation = self.navigation_path_var.get().strip()
         if not navigation or not Path(navigation).exists():
             raise ValueError("Выберите первичный документ: направление на госпитализацию или первичный осмотр.")
-        discharge = self.discharge_date_var.get().strip()
-        if discharge and not parse_date(discharge):
-            raise ValueError("Дата выписки должна быть в формате ДД.ММ.ГГГГ, ДД.ММ.ГГ, ДДММГГГГ, ДДММГГ или коротко ДМГГ.")
-        if discharge:
-            discharge = self._normalize_date_for_ui(discharge)
-            self._set_ui_var(self.discharge_date_var, discharge)
+        if patient_data_snapshot is None:
+            discharge = self.discharge_date_var.get().strip()
+            if discharge and not parse_date(discharge):
+                raise ValueError("Дата выписки должна быть в формате ДД.ММ.ГГГГ, ДД.ММ.ГГ, ДДММГГГГ, ДДММГГ или коротко ДМГГ.")
+            if discharge:
+                discharge = self._normalize_date_for_ui(discharge)
+                self._set_ui_var(self.discharge_date_var, discharge)
+            data = self._medical_override_data(navigation)
+            epi_path = self.epi_path_var.get().strip() or None
+        else:
+            data = copy.deepcopy(patient_data_snapshot)
+            discharge = data.discharge_date
+            # EPI text is already frozen inside the canonical snapshot. Re-reading
+            # the live path here would break the one-snapshot generation contract.
+            epi_path = None
         out_dir = str(output_dir_override if output_dir_override is not None else self._result_output_dir())
-        data = self._medical_override_data(navigation)
         missing = data.missing_critical_fields()
         if missing:
             msg = "Не найдены критические поля: " + ", ".join(missing)
@@ -135,7 +210,7 @@ class ActionsMedicalFlowMixin:
             navigation_path=navigation,
             output_dir=out_dir,
             discharge_date=discharge,
-            epi_path=self.epi_path_var.get().strip() or None,
+            epi_path=epi_path,
             selected_docs=selected_docs,
             override_data=data,
         )
