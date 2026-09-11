@@ -8,6 +8,7 @@ from tkinter import filedialog, messagebox
 from app_config import *
 from medical_constants import DATE_FMT
 from medical_formatting import parse_date
+from diary_template_discovery import DiaryTemplateDiscoveryMixin
 
 
 class DiaryTemplateSelectionMixin:
@@ -229,3 +230,9 @@ class DiaryTemplateSelectionMixin:
                     ),
                 )
         return False
+
+
+class DiaryTemplateMixin(DiaryTemplateDiscoveryMixin, DiaryTemplateSelectionMixin):
+    """Combined template behavior kept without a one-class facade module."""
+
+    pass

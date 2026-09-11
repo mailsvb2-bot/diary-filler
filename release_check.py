@@ -19,6 +19,7 @@ REQUIRED_FILES = [
     "main.py",
     "medical_documents.py",
     "diary_filler.py",
+    "diary_service.py",
     "shared_dates.py",
     "shared_gender.py",
     "printer_support.py",

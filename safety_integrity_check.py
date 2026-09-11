@@ -13,6 +13,7 @@ from docx import Document
 import diary_batch as diary_batch_module
 from app_config import DIR_DIARY_TEXTS, DIR_PRIMARY_DOCUMENTS
 from diary_batch import fill_diary_batch
+from diary_service import DiaryService
 from diary_gender import adapt_text_to_patient_gender, detect_gender_from_patient_name
 from diary_models import FillResult
 from medical_gender import adapt_document_to_patient_gender, normalize_facility_references_in_document
@@ -142,7 +143,7 @@ def _test_text_diary_user_route(tmp: Path) -> None:
     preserved = diary_batch_module.read_statuses_from_files([statuses], preserve_duplicates=True)
     assert len(preserved) == 2, preserved
 
-    result = fill_diary_batch(
+    result = DiaryService().create_text_diaries(
         status_files=[statuses],
         diary_files=[template],
         output_dir=tmp / "text-route-out",
@@ -152,8 +153,6 @@ def _test_text_diary_user_route(tmp: Path) -> None:
         discharge_value="09.01.2026",
         force_final_diary=True,
         repeat_statuses=True,
-        text_output=True,
-        open_result_folder=False,
     )
     rendered = Document(result.created_files[0])
     assert rendered.tables == [], "user-facing diary output must be text-only"
@@ -195,7 +194,9 @@ def _test_text_diary_user_route(tmp: Path) -> None:
     assert len(Document(template).tables) == 1, "doctor-owned Dates source must not be modified"
     assert result.final_rows_filled == 1
     action_source = (ROOT / "actions_diary_flow.py").read_text(encoding="utf-8")
-    assert "text_output=True" in action_source, "GUI diary button must use the text route"
+    assert "DiaryService().create_text_diaries" in action_source, "GUI diary button must use the production DiaryService"
+    assert "fill_diary_batch" not in action_source, "GUI must not call the legacy batch facade"
+    assert "text_output" not in action_source, "GUI must not select diary architecture through a boolean flag"
 
 
 def _test_holiday_default_is_safe(tmp: Path) -> None:
@@ -348,7 +349,7 @@ def _test_daily_diary_coverage(tmp: Path) -> None:
     # The actual GUI uses the text route and the proven Dokkomplekt clinical
     # calendar, not a daily expansion.  This also locks cadence beyond day 31.
     assert diary_batch_module._clinical_diary_offsets(21) == (1, 2, 3, 7, 10, 14, 17, 21)
-    text_result = fill_diary_batch(
+    text_result = DiaryService().create_text_diaries(
         status_files=[statuses],
         diary_files=[template],
         output_dir=tmp / "clinical-text-out",
@@ -356,8 +357,6 @@ def _test_daily_diary_coverage(tmp: Path) -> None:
         admission_value="01.01.2026",
         discharge_value="10.02.2026",
         force_final_diary=True,
-        text_output=True,
-        open_result_folder=False,
     )
     text_doc = Document(text_result.created_files[0])
     assert text_doc.tables == [], "GUI text diary must never restore the source table"
