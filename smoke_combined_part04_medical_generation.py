@@ -352,8 +352,34 @@ try:
             "Дата выписки": "11062026",
         },
     )
-    rollback_app._create_diaries_impl = lambda **kwargs: (_ for _ in ()).throw(RuntimeError("synthetic diary failure"))
+    rollback_snapshot_ids = {}
+    _rollback_original_medical_impl = rollback_app._create_medical_documents_impl
+
+    def _rollback_recording_medical(*args, **kwargs):
+        snapshot = kwargs.get("patient_data_snapshot")
+        assert snapshot is not None
+        rollback_snapshot_ids["medical"] = id(snapshot)
+        result = _rollback_original_medical_impl(*args, **kwargs)
+        # Simulate a live UI mutation between the two generators. The diary
+        # route must still receive the immutable-per-run patient snapshot.
+        rollback_app.patient_name_var.set("Чужой Пациент Из UI")
+        rollback_app.discharge_date_var.set("01012099")
+        return result
+
+    def _rollback_failing_diary(**kwargs):
+        snapshot = kwargs.get("patient_data_snapshot")
+        assert snapshot is not None
+        rollback_snapshot_ids["diary"] = id(snapshot)
+        assert snapshot.output_fio == "Петров Пётр Петрович", snapshot
+        assert snapshot.discharge_date == "11.06.2026", snapshot
+        assert snapshot.output_fio != rollback_app.patient_name_var.get()
+        assert snapshot.discharge_date != rollback_app.discharge_date_var.get()
+        raise RuntimeError("synthetic diary failure")
+
+    rollback_app._create_medical_documents_impl = _rollback_recording_medical
+    rollback_app._create_diaries_impl = _rollback_failing_diary
     rollback_app.create_selected_outputs(print_after=False)
+    assert rollback_snapshot_ids["medical"] == rollback_snapshot_ids["diary"], rollback_snapshot_ids
     assert len(rollback_popup_calls) == 1, rollback_popup_calls
     assert rollback_output.exists(), rollback_output
     assert not list(rollback_output.glob("*.docx")), list(rollback_output.glob("*.docx"))

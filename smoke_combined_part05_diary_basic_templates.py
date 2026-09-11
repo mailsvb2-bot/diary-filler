@@ -100,6 +100,49 @@ class _Var:
     def set(self, value):
         self.value = value
 
+# --- One-generation PatientData snapshot must override live UI drift for diaries ---
+snapshot_dates = OUT / "snapshot_dates.docx"
+snapshot_dates_doc = Document()
+snapshot_table = snapshot_dates_doc.add_table(rows=1, cols=4)
+for i, h in enumerate(["День госпитализации", "Число", "Месяц/Год", "Дневник наблюдения"]):
+    snapshot_table.rows[0].cells[i].text = h
+for hospital_day in [2, 3, 4, 7]:
+    row = snapshot_table.add_row()
+    row.cells[0].text = str(hospital_day)
+    row.cells[3].text = "Лечащий врач Балаганин С.В.\nЗав.отделением Можарова Е.А."
+snapshot_dates_doc.save(snapshot_dates)
+
+snapshot_app = CombinedMedicalDiaryApp.__new__(CombinedMedicalDiaryApp)
+snapshot_app.navigation_path_var = _Var("")
+snapshot_app.patient_name_var = _Var("Чужое ФИО из живого UI")
+snapshot_app.admission_date_var = _Var("31.12.2099")
+snapshot_app.discharge_date_var = _Var("31.12.2099")
+snapshot_app.status_files = [str(source)]
+snapshot_app.diary_files = [str(snapshot_dates)]
+snapshot_app._diary_files_auto_selected = False
+snapshot_app.repeat_statuses_var = _Var(True)
+snapshot_app.force_final_diary_var = _Var(True)
+snapshot_app._diagnostic_reports_enabled = lambda: False
+snapshot_app._log = lambda _text: None
+snapshot_patient = PatientData(
+    fio="Иванова Ирина Ивановна",
+    output_fio="Снимок Пациента",
+    admission_date="10.06.2026",
+    discharge_date="17.06.2026",
+)
+snapshot_result = snapshot_app._create_diaries_impl(
+    output_dir_override=OUT / "snapshot_diary_output",
+    log_created=False,
+    patient_data_snapshot=snapshot_patient,
+)
+assert snapshot_result.created_files[0].name.startswith("Снимок Пациента"), snapshot_result.created_files[0]
+snapshot_doc = Document(snapshot_result.created_files[0])
+snapshot_text = "\n".join(paragraph.text for paragraph in snapshot_doc.paragraphs)
+for expected_date in ("11.06.26", "12.06.26", "13.06.26", "17.06.26"):
+    assert expected_date in snapshot_text, (expected_date, snapshot_text)
+assert "31.12.99" not in snapshot_text, snapshot_text
+assert "Чужое ФИО из живого UI" not in snapshot_result.created_files[0].name
+
 numbered_dir = OUT / "шаблоны дневников"
 numbered_dir.mkdir(parents=True, exist_ok=True)
 Document().save(numbered_dir / "12.docx")

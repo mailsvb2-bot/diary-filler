@@ -587,6 +587,28 @@ def _assert_diary_service_boundary() -> None:
     if "def fill_diary_file(*args, **kwargs)" not in batch or "legacy_fill_diary_file" not in batch:
         _fail("legacy fill_diary_file compatibility proxy is missing")
 
+def _assert_generation_patient_snapshot_contract() -> None:
+    """One create action must use one canonical PatientData snapshot."""
+    orchestrator = _read("actions_creation_orchestrator.py")
+    medical = _read("actions_medical_flow.py")
+    diary = _read("actions_diary_flow.py")
+
+    if "generation_patient_data = self._capture_generation_patient_data" not in orchestrator:
+        _fail("generation orchestrator does not capture canonical patient data once")
+    if orchestrator.count("patient_data_snapshot=generation_patient_data") != 2:
+        _fail("medical and diary routes must receive the same generation patient snapshot")
+    if "def _capture_generation_patient_data" not in medical:
+        _fail("canonical generation patient snapshot boundary is missing")
+    if "patient_data_snapshot: PatientData | None = None" not in medical:
+        _fail("medical generation lost snapshot-compatible boundary")
+    if "patient_data_snapshot: PatientData | None = None" not in diary:
+        _fail("diary generation lost snapshot-compatible boundary")
+    if "data = copy.deepcopy(patient_data_snapshot)" not in medical:
+        _fail("medical route may mutate the shared patient snapshot")
+    if "patient_data_snapshot.output_fio" not in diary or "patient_data_snapshot.discharge_date" not in diary:
+        _fail("diary route does not consume canonical patient identity/dates from the snapshot")
+
+
 def _assert_atomic_generation_contract() -> None:
     """Keep selected medical + diary output on one staged commit boundary."""
     orchestrator = _read("actions_creation_orchestrator.py")
@@ -793,6 +815,7 @@ def main() -> None:
     _assert_diary_service_boundary()
     _assert_shared_gender_contract()
     _assert_shared_paths_contract()
+    _assert_generation_patient_snapshot_contract()
     _assert_atomic_generation_contract()
     _assert_dialog_runtime_globals_contract()
     _assert_treatment_popup_contract()
