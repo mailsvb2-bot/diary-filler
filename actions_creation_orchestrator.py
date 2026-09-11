@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import List
 from tkinter import messagebox
 import os
@@ -60,6 +61,58 @@ class ActionsCreationOrchestratorMixin:
         else:
             folder = self._result_output_dir()
         return self._open_result_folder_silent(folder)
+
+    def _prepare_generation_output_dir(self) -> Path:
+        output_dir = Path(self._result_output_dir()).expanduser()
+        if output_dir.exists() and not output_dir.is_dir():
+            raise ValueError(f"Папка результата указывает на файл, а не на папку: {output_dir}")
+        output_dir.mkdir(parents=True, exist_ok=True)
+        return output_dir
+
+    def _commit_staged_generation(
+        self,
+        *,
+        final_output_dir: Path,
+        staged_medical: List[Path],
+        diary_result,
+    ):
+        """Commit one complete generated set or roll back files moved by this call."""
+        from shared_paths import resolve_available_path
+
+        committed: List[Path] = []
+        final_medical: List[Path] = []
+        final_diaries: List[Path] = []
+        final_diary_report: Path | None = None
+
+        def commit_one(staged_path: Path, *, style: str) -> Path:
+            staged_path = Path(staged_path)
+            if not staged_path.exists() or not staged_path.is_file():
+                raise FileNotFoundError(f"Не найден подготовленный файл комплекта: {staged_path}")
+            target = resolve_available_path(final_output_dir / staged_path.name, style=style)
+            os.replace(staged_path, target)
+            committed.append(target)
+            return target
+
+        try:
+            for staged_path in staged_medical:
+                final_medical.append(commit_one(Path(staged_path), style="paren"))
+            if diary_result is not None:
+                for staged_path in diary_result.created_files:
+                    final_diaries.append(commit_one(Path(staged_path), style="underscore"))
+                if diary_result.report_path is not None:
+                    final_diary_report = commit_one(Path(diary_result.report_path), style="underscore")
+        except Exception:
+            for path in reversed(committed):
+                try:
+                    path.unlink()
+                except OSError:
+                    pass
+            raise
+
+        if diary_result is not None:
+            diary_result.created_files = final_diaries
+            diary_result.report_path = final_diary_report
+        return final_medical, diary_result
 
     def create_selected_outputs(self, *, print_after: bool = False) -> None:
         selected_medical = self.selected_medical_docs()
@@ -156,46 +209,109 @@ class ActionsCreationOrchestratorMixin:
         errors: List[str] = []
 
         try:
-            if selected_medical:
-                try:
-                    created_medical = self._create_medical_documents_impl(selected_medical)
-                except Exception as exc:
-                    errors.append(f"Медицинские документы: {exc}")
-                    self._log(f"\n❌ Медицинские документы не созданы: {exc}\n")
-                    self._write_creation_report(
-                        selected_medical=selected_medical,
-                        selected_diaries=selected_diaries,
-                        created_medical=created_medical,
-                        diary_result=None,
-                        errors=errors,
-                    )
-                    messagebox.showerror(
-                        "Медицинские документы не созданы",
-                        "Вы отметили медицинские документы, но их создание остановилось с ошибкой:\n\n"
-                        f"{exc}\n\n"
-                        "Дневники после этого не запускались, чтобы не получилось частичное создание только одного типа документов.",
-                    )
-                    return
+            try:
+                final_output_dir = self._prepare_generation_output_dir()
+                with TemporaryDirectory(prefix=".medical-autofill-set-", dir=str(final_output_dir)) as temp_dir:
+                    staging_dir = Path(temp_dir)
+                    staged_medical: List[Path] = []
+                    staged_diary_result = None
 
-            if selected_diaries:
-                try:
-                    diary_result = self._create_diaries_impl()
-                except Exception as exc:
-                    errors.append(f"Дневники: {exc}")
-                    self._log(f"\n❌ Дневники: {exc}\n")
+                    if selected_medical:
+                        try:
+                            staged_medical = self._create_medical_documents_impl(
+                                selected_medical,
+                                output_dir_override=staging_dir,
+                                log_created=False,
+                            )
+                        except Exception as exc:
+                            errors.append(f"Медицинские документы: {exc}")
+                            self._log(f"\n❌ Медицинские документы не созданы: {exc}\n")
+                            self._write_creation_report(
+                                selected_medical=selected_medical,
+                                selected_diaries=selected_diaries,
+                                created_medical=[],
+                                diary_result=None,
+                                errors=errors,
+                            )
+                            messagebox.showerror(
+                                "Медицинские документы не созданы",
+                                "Вы отметили медицинские документы, но их создание остановилось с ошибкой:\n\n"
+                                f"{exc}\n\n"
+                                "Дневники после этого не запускались. Новые файлы комплекта не сохранены.",
+                            )
+                            return
+
+                    if selected_diaries:
+                        try:
+                            staged_diary_result = self._create_diaries_impl(
+                                output_dir_override=staging_dir,
+                                log_created=False,
+                            )
+                        except Exception as exc:
+                            errors.append(f"Дневники: {exc}")
+                            self._log(f"\n❌ Дневники: {exc}\n")
+
+                    if errors:
+                        self._write_creation_report(
+                            selected_medical=selected_medical,
+                            selected_diaries=selected_diaries,
+                            created_medical=[],
+                            diary_result=None,
+                            errors=errors,
+                        )
+                        messagebox.showerror(
+                            "Комплект не создан",
+                            "Создание выбранного комплекта остановилось с ошибкой:\n\n"
+                            + "\n".join(errors)
+                            + "\n\nНовые документы не сохранены; подготовленные файлы отменены целиком.",
+                        )
+                        return
+
+                    try:
+                        created_medical, diary_result = self._commit_staged_generation(
+                            final_output_dir=final_output_dir,
+                            staged_medical=staged_medical,
+                            diary_result=staged_diary_result,
+                        )
+                    except Exception as exc:
+                        errors.append(f"Сохранение комплекта: {exc}")
+                        self._log(f"\n❌ Комплект не сохранён: {exc}\n")
+                        self._write_creation_report(
+                            selected_medical=selected_medical,
+                            selected_diaries=selected_diaries,
+                            created_medical=[],
+                            diary_result=None,
+                            errors=errors,
+                        )
+                        messagebox.showerror(
+                            "Комплект не сохранён",
+                            f"Не удалось сохранить подготовленный комплект:\n\n{exc}\n\n"
+                            "Файлы, уже перенесённые этой попыткой, удалены.",
+                        )
+                        return
+            except Exception as exc:
+                errors.append(f"Папка результата: {exc}")
+                self._log(f"\n❌ Не удалось подготовить папку результата: {exc}\n")
+                messagebox.showerror("Комплект не создан", str(exc))
+                return
         finally:
             self._stop_progress()
 
-        if errors:
-            self._write_creation_report(
-                selected_medical=selected_medical,
-                selected_diaries=selected_diaries,
-                created_medical=created_medical,
-                diary_result=diary_result,
-                errors=errors,
+        if created_medical:
+            self._log("\n✅ Созданы медицинские документы:\n")
+            for path in created_medical:
+                self._log(f"- {path}\n")
+        if diary_result is not None:
+            self._log("\n✅ Дневники заполнены:\n")
+            for path in diary_result.created_files:
+                self._log(f"- {path}\n")
+            if diary_result.report_path is not None:
+                self._log(f"Отчёт: {diary_result.report_path}\n")
+            self._log(
+                f"Итого: файлов {diary_result.processed_files}, дневников {diary_result.filled_rows}, "
+                f"дат {diary_result.month_cells_filled}, финальных записей {diary_result.final_rows_filled}, "
+                f"удалено после выписки {diary_result.removed_after_discharge_rows}.\n"
             )
-            messagebox.showwarning("Готово с ошибками", "Часть задач не выполнена:\n\n" + "\n".join(errors))
-            return
 
         created_files: List[Path] = list(created_medical)
         if diary_result is not None:

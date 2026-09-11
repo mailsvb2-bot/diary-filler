@@ -511,6 +511,34 @@ def _assert_diary_service_boundary() -> None:
     if "def create_text_diaries" not in batch:
         _fail("Canonical paragraph diary entry point is missing from diary_batch.py")
 
+def _assert_atomic_generation_contract() -> None:
+    """Keep selected medical + diary output on one staged commit boundary."""
+    orchestrator = _read("actions_creation_orchestrator.py")
+    medical = _read("actions_medical_flow.py")
+    diary = _read("actions_diary_flow.py")
+
+    required_orchestrator = (
+        "TemporaryDirectory",
+        "def _commit_staged_generation",
+        "output_dir_override=staging_dir",
+        "staged_medical",
+        "staged_diary_result",
+        "os.replace(staged_path, target)",
+        "path.unlink()",
+    )
+    missing = [item for item in required_orchestrator if item not in orchestrator]
+    if missing:
+        _fail("atomic generation contract is incomplete: " + ", ".join(missing))
+    if "output_dir_override: Path | None = None" not in medical:
+        _fail("medical flow cannot render into the shared staging directory")
+    if "output_dir_override: Path | None = None" not in diary:
+        _fail("diary flow cannot render into the shared staging directory")
+    if "output_dir_override if output_dir_override is not None else self._result_output_dir()" not in medical:
+        _fail("medical output override is not wired to generation")
+    if "output_dir_override if output_dir_override is not None else self._result_output_dir()" not in diary:
+        _fail("diary output override is not wired to generation")
+
+
 def _assert_dialog_runtime_globals_contract() -> None:
     """Catch Tkinter callback NameError regressions in dialog methods.
 
@@ -688,6 +716,7 @@ def main() -> None:
     _assert_diary_service_boundary()
     _assert_shared_gender_contract()
     _assert_shared_paths_contract()
+    _assert_atomic_generation_contract()
     _assert_dialog_runtime_globals_contract()
     _assert_treatment_popup_contract()
     _assert_audit_hardening_contract()

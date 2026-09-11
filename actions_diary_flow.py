@@ -1,11 +1,18 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from app_config import *
 from medical_constants import DOCUMENT_ORDER
 
 
 class ActionsDiaryFlowMixin:
-    def _create_diaries_impl(self):
+    def _create_diaries_impl(
+        self,
+        *,
+        output_dir_override: Path | None = None,
+        log_created: bool = True,
+    ):
         # Для дневников дата поступления берётся строго из заголовка
         # первичного документа/направления и передаётся в единый production DiaryService.
         diary_admission_value = self._sync_admission_date_from_title(force=True)
@@ -44,7 +51,7 @@ class ActionsDiaryFlowMixin:
                 "Не удалось найти дату поступления рядом с названием документа. "
                 "В первичном документе должна быть строка или имя файла вида: 12.01.2026 Первичный осмотр."
             )
-        out_dir = str(self._result_output_dir())
+        out_dir = str(output_dir_override if output_dir_override is not None else self._result_output_dir())
         from diary_service import DiaryService
         result = DiaryService().create_text_diaries(
             status_files=self.status_files,
@@ -60,18 +67,17 @@ class ActionsDiaryFlowMixin:
             force_final_diary=self.force_final_diary_var.get(),
             write_report=self._diagnostic_reports_enabled(),
         )
-        self._log("\n✅ Дневники заполнены:\n")
-        for path in result.created_files:
-            self._log(f"- {path}\n")
-        if result.report_path is not None:
-            self._log(f"Отчёт: {result.report_path}\n")
-        else:
-            pass
-        self._log(
-            f"Итого: файлов {result.processed_files}, дневников {result.filled_rows}, "
-            f"дат {result.month_cells_filled}, финальных записей {result.final_rows_filled}, "
-            f"удалено после выписки {result.removed_after_discharge_rows}.\n"
-        )
+        if log_created:
+            self._log("\n✅ Дневники заполнены:\n")
+            for path in result.created_files:
+                self._log(f"- {path}\n")
+            if result.report_path is not None:
+                self._log(f"Отчёт: {result.report_path}\n")
+            self._log(
+                f"Итого: файлов {result.processed_files}, дневников {result.filled_rows}, "
+                f"дат {result.month_cells_filled}, финальных записей {result.final_rows_filled}, "
+                f"удалено после выписки {result.removed_after_discharge_rows}.\n"
+            )
         return result
 
     def create_diaries(self) -> None:
