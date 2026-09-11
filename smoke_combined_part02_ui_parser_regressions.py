@@ -288,8 +288,6 @@ finally:
 # the doctor type dots manually in popup windows.
 from dialog_fields_core import normalize_prompt_field_values
 popup_date_submit = _main_module.CombinedMedicalDiaryApp.__new__(_main_module.CombinedMedicalDiaryApp)
-popup_date_submit._is_date_input_label = _main_module.CombinedMedicalDiaryApp._is_date_input_label.__get__(popup_date_submit, _main_module.CombinedMedicalDiaryApp)
-popup_date_submit._normalize_date_for_ui = _main_module.CombinedMedicalDiaryApp._normalize_date_for_ui.__get__(popup_date_submit, _main_module.CombinedMedicalDiaryApp)
 normalized_popup_values = normalize_prompt_field_values(
     popup_date_submit,
     [("Дата выписки", ""), ("От / дата протокола / Дата протокола", ""), ("Лечение", "")],
