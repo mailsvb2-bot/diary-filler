@@ -273,9 +273,19 @@ def _write_text_diary_docx(path: Path, entries: Sequence[tuple[date, str]], sign
     for item_date, text in entries:
         if doc.paragraphs:
             doc.add_paragraph("")
-        doc.add_paragraph(f"{item_date:%d.%m.%y} {text}".rstrip())
-        for signature in signatures:
-            doc.add_paragraph(signature)
+        entry_paragraph = doc.add_paragraph(f"{item_date:%d.%m.%y} {text}".rstrip())
+        # Keep one clinical diary block together in Word/PDF. Without these
+        # flags the final department-head signature can become an orphan on a
+        # separate page even though the diary itself still fits on the previous
+        # page. Chaining keep-with-next through the first signature keeps the
+        # diary + signature block visually atomic.
+        entry_paragraph.paragraph_format.keep_together = True
+        if signatures:
+            entry_paragraph.paragraph_format.keep_with_next = True
+        for index, signature in enumerate(signatures):
+            signature_paragraph = doc.add_paragraph(signature)
+            if index < len(signatures) - 1:
+                signature_paragraph.paragraph_format.keep_with_next = True
     doc.save(str(path))
 
 
