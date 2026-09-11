@@ -106,6 +106,8 @@ def _test_text_diary_user_route(tmp: Path) -> None:
         row = table.add_row()
         row.cells[0].text = str(hospital_day)
         row.cells[3].text = "Лечащий врач Балаганин С.В."
+        if hospital_day == 5:
+            row.cells[3].text += "\nЗав.отделением Можарова Е.А."
     doc.save(template)
 
     preserved = diary_batch_module.read_statuses_from_files([statuses], preserve_duplicates=True)
@@ -132,6 +134,14 @@ def _test_text_diary_user_route(tmp: Path) -> None:
     assert "09.01.26 Состояние улучшилось" in text, text
     assert "12.01.26" not in text, text
     assert "Лечащий врач Балаганин С.В." in text, text
+    assert "Зав.отделением Можарова Е.А." in text, text
+    lines = [paragraph.text.strip() for paragraph in rendered.paragraphs if paragraph.text.strip()]
+    for prefix in ("02.01.26", "05.01.26", "09.01.26"):
+        index = next(i for i, line in enumerate(lines) if line.startswith(prefix))
+        assert lines[index + 1:index + 3] == [
+            "Лечащий врач Балаганин С.В.",
+            "Зав.отделением Можарова Е.А.",
+        ], lines[index:index + 3]
     assert len(Document(template).tables) == 1, "doctor-owned Dates source must not be modified"
     assert result.final_rows_filled == 1
     action_source = (ROOT / "actions_diary_flow.py").read_text(encoding="utf-8")
