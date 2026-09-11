@@ -218,8 +218,17 @@ def _signature_lines_from_diary_sources(paths: Sequence[Path]) -> tuple[str, ...
                     seen_cells.add(cell_id)
                     for paragraph in cell.paragraphs:
                         add(paragraph.text)
-    if found:
+    if len(found) >= 2:
         return tuple(found[:2])
+    if len(found) == 1:
+        only = found[0]
+        key = only.lower().replace("ё", "е")
+        # The text-diary contract always has two signature roles. Preserve the
+        # doctor-owned wording we did find, but never invent a missing person's
+        # name: supplement only the blank role line required for signing.
+        if ("зав" in key or "завед" in key) and "отдел" in key:
+            return ("Лечащий врач ____________________", only)
+        return (only, "Зав. отделением ____________________")
     return ("Лечащий врач ____________________", "Зав. отделением ____________________")
 
 
