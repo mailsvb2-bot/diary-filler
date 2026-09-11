@@ -204,8 +204,13 @@ def _signature_lines_from_diary_sources(paths: Sequence[Path]) -> tuple[str, ...
         for paragraph in doc.paragraphs:
             add(paragraph.text)
         for table in doc.tables:
-            seen_cells: set[int] = set()
             for row in table.rows:
+                # python-docx may expose the same merged physical cell several
+                # times inside one row. Deduplicate only within that row: lxml
+                # wrappers from earlier rows may be released and Python can
+                # reuse their object ids, which previously made later signature
+                # cells (notably «Зав.отделением») disappear from the scan.
+                seen_cells: set[int] = set()
                 for cell in row.cells:
                     cell_id = id(cell._tc)
                     if cell_id in seen_cells:
