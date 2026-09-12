@@ -127,7 +127,13 @@ def _assert_version_sync() -> None:
         "pyproject.toml version": f'version = "{TARGET_VERSION}"' in pyproject,
         "app_config APP_VERSION": TARGET_VERSION_LABEL in app_config,
         "version_info label": TARGET_VERSION_LABEL in version_info,
-        "version_info tuple": "filevers=(1, 4, 0, 0)" in version_info and "prodvers=(1, 4, 0, 0)" in version_info,
+        "version_info tuple": all(
+            marker in version_info
+            for marker in (
+                f"filevers=({', '.join(TARGET_VERSION.split('.'))}, 0)",
+                f"prodvers=({', '.join(TARGET_VERSION.split('.'))}, 0)",
+            )
+        ),
         "README version": TARGET_VERSION_LABEL in readme,
         "RELEASE_NOTES top version": release_notes.lstrip().startswith(f"# Release notes — {TARGET_VERSION_LABEL}"),
     }
