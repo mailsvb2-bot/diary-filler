@@ -433,6 +433,33 @@ assert date_revision_logic._prompt_sick_leave_start_date_if_needed() is True
 assert date_revision_logic.expert_sick_leave_from_var.get() == "13.06.2026"
 assert len(date_revision_prompts) == 1
 
+# Discharge-only and commission-only generation must still ask the sick-leave
+# decision because both render an expert-anamnesis block. Disability stays out
+# of these popups because those templates do not expose that standalone field.
+for clinical_kind in ("discharge", "commission"):
+    standalone_logic = _main_module.CombinedMedicalDiaryApp.__new__(_main_module.CombinedMedicalDiaryApp)
+    standalone_logic.expert_sick_leave_needed_var = _FakeVar("")
+    standalone_logic.expert_sick_leave_from_var = _FakeVar("")
+    standalone_logic.expert_sick_leave_number_var = _FakeVar("")
+    standalone_logic.disability_needed_var = _FakeVar("")
+    standalone_logic.epi_present_var = _FakeVar("")
+    standalone_logic.epi_path_var = _FakeVar("")
+    standalone_logic.admission_date_var = _FakeVar("10.06.2026")
+    standalone_logic.data = PatientData(admission_date="10.06.2026")
+    standalone_logic._update_expert_sick_leave_display = lambda: None
+    standalone_logic._normalize_date_for_ui = _main_module.CombinedMedicalDiaryApp._normalize_date_for_ui.__get__(standalone_logic, _main_module.CombinedMedicalDiaryApp)
+    standalone_calls = []
+    def _standalone_prompt(title, rows, width=46, linked_groups=None, choice_options=None):
+        standalone_calls.append((title, list(rows), choice_options))
+        assert title == "Дополнительные данные"
+        return ["нет", "нет"]
+    standalone_logic._prompt_fields = _standalone_prompt
+    assert standalone_logic._prompt_shared_clinical_options_if_needed([clinical_kind]) is True
+    assert [label for label, _ in standalone_calls[0][1]] == ["Нужен ли больничный лист", "Есть ли ЭПИ"]
+    assert "Нужно ли оформление инвалидности" not in [label for label, _ in standalone_calls[0][1]]
+    assert standalone_logic.expert_sick_leave_needed_var.get() == "нет"
+    assert standalone_logic.epi_present_var.get() == "нет"
+
 # Positive EPI selection must use the chosen file and persist its text.
 epi_logic = _main_module.CombinedMedicalDiaryApp.__new__(_main_module.CombinedMedicalDiaryApp)
 epi_logic.expert_sick_leave_needed_var = _FakeVar("нет")
@@ -445,7 +472,13 @@ epi_logic.admission_date_var = _FakeVar("10.06.2026")
 epi_logic.data = PatientData(admission_date="10.06.2026")
 epi_logic.service = service
 epi_logic._update_expert_sick_leave_display = lambda: None
-epi_logic._prompt_fields = lambda title, rows, width=46, linked_groups=None, choice_options=None: ["да"]
+def _epi_prompt(title, rows, width=46, linked_groups=None, choice_options=None):
+    values = {
+        "Нужен ли больничный лист": "нет",
+        "Есть ли ЭПИ": "да",
+    }
+    return [values[label] for label, _ in rows]
+epi_logic._prompt_fields = _epi_prompt
 epi_logic.choose_epi = lambda: (epi_logic.epi_path_var.set(str(epi)), epi_logic.epi_present_var.set("да"))
 assert epi_logic._prompt_shared_clinical_options_if_needed(["commission"]) is True
 assert epi_logic.epi_present_var.get() == "да"

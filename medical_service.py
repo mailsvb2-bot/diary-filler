@@ -195,8 +195,9 @@ class MedicalDocumentService:
         if selected_set & treatment_docs:
             data.treatment_plan = self._require_text(data.treatment_plan, "лечение")
 
-        explicit_option_docs = {"primary", "admission_doctor_referral"}
-        if selected_set & explicit_option_docs:
+        sick_leave_docs = {"primary", "admission_doctor_referral", "discharge", "commission"}
+        disability_docs = {"primary", "admission_doctor_referral"}
+        if selected_set & sick_leave_docs:
             sick_decision = normalize_yes_no(data.expert_sick_leave_needed)
             rendered_sick_decision, rendered_sick_from = parse_sick_leave_value(data.sick_leave)
             if not sick_decision:
@@ -218,6 +219,7 @@ class MedicalDocumentService:
                 data.expert_sick_leave_from = ""
                 data.sick_leave = "не нужен"
 
+        if selected_set & disability_docs:
             disability_decision = normalize_yes_no(data.disability_needed)
             if not disability_decision:
                 disability_decision = normalize_yes_no(data.disability)

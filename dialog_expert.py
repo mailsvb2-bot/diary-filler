@@ -81,20 +81,22 @@ class DialogExpertMixin:
         that contains an EPI block. One answer is reused across all selected docs.
         """
         selected = set(selected_medical)
-        flag_docs = {"primary", "admission_doctor_referral"}
+        sick_leave_docs = {"primary", "admission_doctor_referral", "discharge", "commission"}
+        disability_docs = {"primary", "admission_doctor_referral"}
         epi_docs = {"discharge", "commission", "vk_mse", "sick_leave_vk", "rvk"}
 
         rows: list[tuple[str, str]] = []
         fields: list[str] = []
         choices: dict[str, tuple[str, ...]] = {}
 
-        if selected & flag_docs:
+        if selected & sick_leave_docs:
             sick = self._normalize_yes_no(self.expert_sick_leave_needed_var.get())
             label = "Нужен ли больничный лист"
             rows.append((label, sick))
             fields.append("sick_leave")
             choices[label] = ("нет", "да")
 
+        if selected & disability_docs:
             disability = self._normalize_yes_no(self.disability_needed_var.get())
             label = "Нужно ли оформление инвалидности"
             rows.append((label, disability))
@@ -136,7 +138,7 @@ class DialogExpertMixin:
                 elif field == "epi":
                     self.epi_present_var.set(value)
 
-        if selected & flag_docs:
+        if selected & sick_leave_docs:
             sick = self._normalize_yes_no(self.expert_sick_leave_needed_var.get())
             if sick == "нет":
                 self.expert_sick_leave_from_var.set("")
