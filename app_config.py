@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 APP_TITLE = "Медицинский автозаполнитель"
-APP_VERSION = "v1.4.3-rvk-registry-document-order"
+APP_VERSION = "v1.4.4-date-linking-and-tail-cleanup"
 
 # Цветовая схема точно по референсу: глубокий navy-midnight, cyan-акцент, card-стиль блоков.
 BG = "#07111d"

@@ -1,14 +1,23 @@
 from app_config import DIARY_KIND
+from dialog_fields_linking import attach_linked_field_mirroring
 # --- UI sick-leave popup regression ---
 class _FakeVar:
     def __init__(self, value=""):
         self.value = value
+        self._traces = []
 
     def get(self):
         return self.value
 
     def set(self, value):
         self.value = value
+        for callback in list(self._traces):
+            callback("", "", "write")
+
+    def trace_add(self, mode, callback):
+        assert mode == "write"
+        self._traces.append(callback)
+        return str(len(self._traces))
 
 
 ui_logic = _main_module.CombinedMedicalDiaryApp.__new__(_main_module.CombinedMedicalDiaryApp)
@@ -227,6 +236,7 @@ case_dialog_logic._prompt_commission_details = _main_module.CombinedMedicalDiary
 assert case_dialog_logic._prompt_commission_details() is True
 assert [label for label, _default in commission_rows[0][1]][0] == "Номер истории болезни"
 assert commission_rows[0][1][0][1] == "77"
+assert commission_rows[0][1][1][1] == "", commission_rows[0][1]
 assert case_dialog_logic.case_number_var.get() == "88"
 assert case_dialog_logic.data.case_number == "88"
 
@@ -243,10 +253,52 @@ case_dialog_logic._prompt_vk_mse_details = _main_module.CombinedMedicalDiaryApp.
 assert case_dialog_logic._prompt_vk_mse_details() is True
 assert [label for label, _default in vk_rows[0][1]][0] == "Номер истории болезни"
 assert [label for label, _default in vk_rows[0][1]][1] == "Дата ВК на МСЭ"
+assert [label for label, _default in vk_rows[0][1]][3] == "Дата протокола"
 assert vk_rows[0][1][0][1] == "88"
+assert vk_rows[0][1][1][1] == "", vk_rows[0][1]
+assert vk_rows[0][1][3][1] == "", vk_rows[0][1]
 assert vk_rows[0][2] == [(1, [3])]
 assert case_dialog_logic.case_number_var.get() == "99"
 assert case_dialog_logic.data.case_number == "99"
+
+# Fresh VK sick-leave popup also starts without an invented calendar date.
+# Typing its main date mirrors it to «Дата протокола» (and the commission date)
+# through the same linked-field mechanism used by the real Tk dialog.
+sick_vk_rows = []
+case_dialog_logic.sick_leave_vk_date_var = _FakeVar("")
+case_dialog_logic.sick_leave_vk_protocol_number_var = _FakeVar("")
+case_dialog_logic.sick_leave_vk_protocol_date_var = _FakeVar("")
+case_dialog_logic.sick_leave_vk_commission_date_var = _FakeVar("")
+case_dialog_logic.sick_leave_vk_work_org_var = _FakeVar("")
+case_dialog_logic.sick_leave_vk_position_var = _FakeVar("")
+case_dialog_logic._prompt_fields = lambda title, rows, width=64, linked_groups=None: sick_vk_rows.append((title, rows, linked_groups)) or ["100", "23062026", "13", "23062026", "23062026", "ООО Тест", "инженер"]
+case_dialog_logic._prompt_sick_leave_vk_details = _main_module.CombinedMedicalDiaryApp._prompt_sick_leave_vk_details.__get__(case_dialog_logic, _main_module.CombinedMedicalDiaryApp)
+assert case_dialog_logic._prompt_sick_leave_vk_details() is True
+assert [label for label, _default in sick_vk_rows[0][1]][1] == "Дата / дата проведения ВК"
+assert [label for label, _default in sick_vk_rows[0][1]][3] == "Дата протокола"
+assert sick_vk_rows[0][1][1][1] == "", sick_vk_rows[0][1]
+assert sick_vk_rows[0][1][3][1] == "", sick_vk_rows[0][1]
+assert sick_vk_rows[0][1][4][1] == "", sick_vk_rows[0][1]
+assert sick_vk_rows[0][2] == [(1, [3, 4])]
+assert case_dialog_logic.sick_leave_vk_date_var.get() == "23.06.2026"
+assert case_dialog_logic.sick_leave_vk_protocol_date_var.get() == "23.06.2026"
+
+# Linked-field mirroring must be behavioral, not merely a static popup option.
+# A manually edited protocol date stops following later changes to the main date.
+linked_main = _FakeVar("")
+linked_protocol = _FakeVar("")
+linked_commission = _FakeVar("")
+linked_auto = ["", "", ""]
+attach_linked_field_mirroring(
+    [linked_main, linked_protocol, linked_commission], linked_auto, [(0, [1, 2])]
+)
+linked_main.set("22.06.2026")
+assert linked_protocol.get() == "22.06.2026"
+assert linked_commission.get() == "22.06.2026"
+linked_protocol.set("23.06.2026")
+linked_main.set("24.06.2026")
+assert linked_protocol.get() == "23.06.2026"
+assert linked_commission.get() == "24.06.2026"
 
 diary_only_logic = _main_module.CombinedMedicalDiaryApp.__new__(_main_module.CombinedMedicalDiaryApp)
 diary_only_logic.case_number_var = _FakeVar("")
@@ -350,7 +402,7 @@ from dialog_fields_core import normalize_prompt_field_values
 popup_date_submit = _main_module.CombinedMedicalDiaryApp.__new__(_main_module.CombinedMedicalDiaryApp)
 normalized_popup_values = normalize_prompt_field_values(
     popup_date_submit,
-    [("Дата выписки", ""), ("От / дата протокола / Дата протокола", ""), ("Лечение", "")],
+    [("Дата выписки", ""), ("Дата протокола", ""), ("Лечение", "")],
     ["090926", "09092026", "без изменений"],
 )
 assert normalized_popup_values == ["09.09.2026", "09.09.2026", "без изменений"], normalized_popup_values

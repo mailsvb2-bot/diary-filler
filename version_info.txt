@@ -1,8 +1,8 @@
 # UTF-8
 VSVersionInfo(
   ffi=FixedFileInfo(
-    filevers=(1, 4, 3, 0),
-    prodvers=(1, 4, 3, 0),
+    filevers=(1, 4, 4, 0),
+    prodvers=(1, 4, 4, 0),
     mask=0x3f,
     flags=0x0,
     OS=0x40004,
@@ -16,11 +16,11 @@ VSVersionInfo(
         '040904B0',
         [StringStruct('CompanyName', 'Medical Diary Autofill'),
          StringStruct('FileDescription', 'Medical documents and diary autofill utility'),
-         StringStruct('FileVersion', 'v1.4.3-rvk-registry-document-order'),
+         StringStruct('FileVersion', 'v1.4.4-date-linking-and-tail-cleanup'),
          StringStruct('InternalName', 'MedicalDiaryAutofill'),
          StringStruct('OriginalFilename', 'MedicalDiaryAutofill.exe'),
          StringStruct('ProductName', 'Medical Diary Autofill'),
-         StringStruct('ProductVersion', 'v1.4.3-rvk-registry-document-order')])
+         StringStruct('ProductVersion', 'v1.4.4-date-linking-and-tail-cleanup')])
     ]),
     VarFileInfo([VarStruct('Translation', [1033, 1200])])
   ]

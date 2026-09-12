@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Dict
 
@@ -67,9 +68,42 @@ class MedicalRendererLabsMixin:
         r"(?:[^.!?;\r\n]*?\bКДП\b[,.!?;]?|[^.!?;\r\n]*(?:[.!?;]+|$))\s*"
     )
 
+    _TRAILING_COMPLAINT_RE = re.compile(
+        r"(?is)\s*\bпациент(?:ка)?\s+предъявляет\s+жалобы\s+на\s+(?P<body>.+?)\s*$"
+    )
+
+    @staticmethod
+    def _complaint_core(value: str) -> str:
+        text = normalize_match(value).strip(" .,!?:;–—-")
+        for prefix in (
+            "жалобы на момент осмотра:",
+            "жалобы при поступлении:",
+            "жалобы:",
+            "пациентка предъявляет жалобы на ",
+            "пациент предъявляет жалобы на ",
+        ):
+            if text.startswith(prefix):
+                text = text[len(prefix):].strip(" .,!?:;–—-")
+                break
+        return text
+
+    @staticmethod
+    def _complaints_equivalent(left: str, right: str) -> bool:
+        left = MedicalRendererLabsMixin._complaint_core(left)
+        right = MedicalRendererLabsMixin._complaint_core(right)
+        if not left or not right:
+            return False
+        if left == right:
+            return True
+        # Legacy source documents sometimes switch grammatical case in the
+        # duplicated prose sentence (e.g. «апатия» -> «апатию»).  A very high
+        # similarity threshold is used only for the explicit trailing
+        # «Пациент(ка) предъявляет жалобы на ...» form.
+        return SequenceMatcher(None, left, right).ratio() >= 0.92
+
     @classmethod
     def _remove_trailing_clinical_leakage(cls, doc, data: PatientData) -> None:
-        complaint = normalize_match(data.complaints)
+        complaint_core = cls._complaint_core(data.complaints)
         for paragraph in list(iter_all_paragraphs(doc)):
             text = normalize_match(paragraph.text)
             if not text:
@@ -87,10 +121,21 @@ class MedicalRendererLabsMixin:
                     remove_paragraph(paragraph)
                     continue
                 text = normalize_match(paragraph.text)
-            # A legitimate complaint block starts with «Жалобы...:». A bare copy
-            # of the complaint text elsewhere is leakage from the source/template.
-            if complaint and text == complaint:
+
+            # Keep the canonical «Жалобы...:» block.  Legacy primary documents
+            # sometimes append a second prose sentence such as «Пациентка
+            # предъявляет жалобы на ...» after the last clinical section.
+            if text.startswith(("жалобы на момент осмотра:", "жалобы при поступлении:", "жалобы:")):
+                continue
+            if complaint_core and cls._complaint_core(paragraph.text) == complaint_core:
                 remove_paragraph(paragraph)
+                continue
+
+            trailing = cls._TRAILING_COMPLAINT_RE.search(paragraph.text)
+            if trailing and complaint_core and cls._complaints_equivalent(trailing.group("body"), complaint_core):
+                replace_paragraph_regex_preserving_runs(paragraph, cls._TRAILING_COMPLAINT_RE, "")
+                if not normalize_match(paragraph.text):
+                    remove_paragraph(paragraph)
 
     @staticmethod
     def _move_discharge_outcome_before_signatures(doc) -> bool:
