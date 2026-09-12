@@ -43,6 +43,11 @@ def main() -> None:
         dates_dir = temp_root / "Даты"
         dates_dir.mkdir()
         Document().save(dates_dir / "01.docx")
+        texts_dir = temp_root / "Тексты"
+        texts_dir.mkdir()
+        text_doc = Document()
+        text_doc.add_paragraph("Пациент спокоен, жалоб не предъявляет.")
+        text_doc.save(texts_dir / "F41.2 Тестовый диагноз.docx")
 
         root = _create_root(require_dnd=True)
         original_askdirectory = files_mixin.filedialog.askdirectory
@@ -59,8 +64,10 @@ def main() -> None:
             assert app._register_tkinterdnd_drop_targets(), "TkDND targets did not register"
             assert hasattr(app, "drop_zone"), "Primary drop zone missing"
             assert hasattr(app, "diary_dates_button"), "Dates button missing"
+            assert hasattr(app, "status_files_button"), "Texts button missing"
             assert app.drop_zone.winfo_ismapped(), "Primary drop-zone is not mapped"
             assert app.diary_dates_button.winfo_ismapped(), "Dates button is not mapped"
+            assert app.status_files_button.winfo_ismapped(), "Texts button is not mapped"
 
             # Drive the actual visible primary drop-zone. Its click binding must
             # call the production navigation chooser; dormant compatibility
@@ -84,6 +91,21 @@ def main() -> None:
             assert calls == ["askdirectory"], f"Unexpected Dates-dialog flow: {calls!r}"
             assert Path(app.diary_template_dir) == dates_dir
             assert app.diary_files and Path(app.diary_files[0]).name == "01.docx"
+
+            # User clicks «Тексты»: again exactly one folder dialog, then the
+            # diagnosis-specific DOCX is selected automatically from that folder.
+            app.diagnosis_var.set("F41.2 Тестовый диагноз")
+            text_calls: list[str] = []
+
+            def choose_texts_folder(*_args, **_kwargs):
+                text_calls.append("askdirectory")
+                return str(texts_dir)
+
+            files_mixin.filedialog.askdirectory = choose_texts_folder
+            _click(root, app.status_files_button)
+            assert text_calls == ["askdirectory"], f"Unexpected Texts-dialog flow: {text_calls!r}"
+            assert Path(app.diary_texts_dir) == texts_dir
+            assert app.status_files and Path(app.status_files[0]).name == "F41.2 Тестовый диагноз.docx"
 
             print("GUI RUNTIME CHECK OK")
         finally:

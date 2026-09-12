@@ -335,8 +335,9 @@ class WindowMixin:
         self._field(card, "ФИО или название файла", self.patient_name_var, row=0, col=0, colspan=5)
         self._field(card, "Дата поступления", self.admission_date_var, row=0, col=5, colspan=3)
         self._field(card, "Дата выписки", self.discharge_date_var, row=0, col=8, colspan=4)
-        self._diagnosis_field(card, row=1, col=0, colspan=8)
-        self._sick_leave_need_field(card, row=1, col=8, colspan=4)
+        # Sick-leave/disability decisions are asked only in the generation popup
+        # for documents that actually contain those fields. Keep one source of truth.
+        self._diagnosis_field(card, row=1, col=0, colspan=12)
 
     def _build_one_window_workspace(self, parent: tk.Frame) -> None:
         # Оставлено для совместимости со старой внутренней структурой.
@@ -357,5 +358,7 @@ class WindowMixin:
         files.grid_columnconfigure(1, weight=1)
         files.grid_columnconfigure(2, minsize=self._px(146, 104))
 
-        self._file_row(files, 0, "Файл ЭПИ", self.epi_path_var, self.choose_epi, "Выбрать", optional=True)
-        self._diary_compact_row(files, 1)
+        # EPI is requested contextually from the generation popup only when a
+        # selected document really contains an EPI block. Block 02 stays focused
+        # on the two diary sources the doctor uses every day: Dates and Texts.
+        self._diary_compact_row(files, 0)

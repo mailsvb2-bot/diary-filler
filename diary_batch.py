@@ -542,7 +542,7 @@ def fill_diary_batch(
     diary_file_paths = _existing_docx_files(diary_files, "таблица дневников")
     status_file_paths = _existing_docx_files(status_files, "тексты дневников") if status_files else []
     if not status_files and not fill_months and not force_final_diary:
-        raise ValueError("Сначала выберите файл(ы) с текстами дневников, включите месяц/год или финальную запись выписки.")
+        raise ValueError("Сначала выберите папку «Тексты» с DOCX по диагнозам, включите месяц/год или финальную запись выписки.")
 
     start_month, start_year = parse_admission_month_year(admission_value)
     try:

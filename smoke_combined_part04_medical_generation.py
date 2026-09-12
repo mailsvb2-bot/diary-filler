@@ -26,6 +26,28 @@ rvk_text = extract_docx_text(rvk_path)
 primary_text = extract_docx_text(primary_path)
 commission_text = extract_docx_text(commission_path)
 admission_doctor_text = extract_docx_text(admission_doctor_path)
+# Public service round-trip: a generated primary exam renders the sick-leave
+# decision as "нужен с <date>". Parsing that DOCX and regenerating it must
+# reconstruct the canonical decision/date rather than rejecting its own output.
+roundtrip_data = service.parse_primary_document(primary_path)
+assert roundtrip_data.sick_leave == "нужен с 15.06.2026", roundtrip_data.sick_leave
+assert roundtrip_data.expert_sick_leave_needed == ""
+assert roundtrip_data.expert_sick_leave_from == ""
+# Admission occurrence intentionally remains a doctor-confirmed fact at the
+# public boundary, so preserve the already-confirmed value for this round-trip.
+roundtrip_data.admission_occurrence = manual_data.admission_occurrence
+roundtrip_created, roundtrip_used = service.create_documents(
+    navigation_path=primary_path,
+    output_dir=OUT / "primary_roundtrip",
+    selected_docs=["primary"],
+    override_data=roundtrip_data,
+)
+assert len(roundtrip_created) == 1
+assert roundtrip_used.expert_sick_leave_needed == "да"
+assert roundtrip_used.expert_sick_leave_from == "15.06.2026"
+assert roundtrip_used.sick_leave == "нужен с 15.06.2026"
+assert "Больничный лист: нужен с 15.06.2026" in extract_docx_text(roundtrip_created[0])
+
 assert "На основании данных" in discharge_text and "F99.9 Тестовый диагноз из UI" in discharge_text, discharge_text
 for occurrence_text in (primary_text, discharge_text, commission_text, admission_doctor_text, rvk_text):
     assert "В 3 отделение КДП поступает повторно добровольно" in occurrence_text, occurrence_text
@@ -67,6 +89,24 @@ assert "ЭПИ тестовая информация" in combined_text
 # Dates entered in the dedicated popups must reach the actual document headers.
 commission_doc = Document(commission_path)
 assert commission_doc.paragraphs[0].text.startswith("18.06.2026 г. 10:00"), commission_doc.paragraphs[0].text
+
+# A complaints sentence belongs only to the complaints block. It must never be
+# duplicated as an unexplained trailing sentence at the end of Joint Examination.
+import copy
+complaint_data = copy.deepcopy(manual_data)
+complaint_data.complaints = "Пациентка предъявляет жалобы на плохой сон"
+complaint_created, _ = service.create_documents(
+    navigation_path=nav,
+    output_dir=OUT / "commission_complaint_position",
+    selected_docs=["commission"],
+    override_data=complaint_data,
+)
+complaint_text = extract_docx_text(complaint_created[0])
+assert complaint_text.count("Пациентка предъявляет жалобы на плохой сон") == 1, complaint_text
+complaint_lines = [line.strip() for line in complaint_text.splitlines() if line.strip()]
+complaint_index = next(i for i, line in enumerate(complaint_lines) if "Пациентка предъявляет жалобы на плохой сон" in line)
+assert complaint_lines[complaint_index].startswith("Жалобы при поступлении:"), complaint_lines[complaint_index]
+assert all("Пациентка предъявляет жалобы на плохой сон" not in line for line in complaint_lines[-4:]), complaint_lines[-4:]
 vk_mse_doc = Document(vk_mse_path)
 assert any(p.text.strip() == "16.06.2026" for p in vk_mse_doc.paragraphs), [p.text for p in vk_mse_doc.paragraphs[:5]]
 
@@ -129,11 +169,13 @@ for generated in created:
 
 # --- Legacy hospitalization recommendation must not leak into generated clinical blocks ---
 phrase_data = service.parse_navigation(nav)
-phrase_data.admission = "Целесообразна госпитализация пациентки в 3 отделение КДП"
+phrase_data.admission = "добровольно Целесообразна госпитализация пациентки в 3 отделение КДП"
 phrase_data.admission_occurrence = "первично"
 phrase_data.diagnosis = "F41.2 Тест"
 phrase_data.commission_date = "18.06.2026"
 phrase_data.commission_number = "10"
+phrase_data.expert_sick_leave_needed = "нет"
+phrase_data.disability_needed = "нет"
 phrase_created, _ = service.create_documents(
     navigation_path=nav,
     output_dir=OUT / "medical_with_hospitalization_phrase",
@@ -143,7 +185,7 @@ phrase_created, _ = service.create_documents(
 for path in phrase_created:
     phrase_text = extract_docx_text(path)
     assert "Целесообразна госпитализация" not in phrase_text, (path.name, phrase_text)
-    assert "В 3 отделение КДП поступает первично" in phrase_text, (path.name, phrase_text)
+    assert "В 3 отделение КДП поступает первично добровольно" in phrase_text, (path.name, phrase_text)
 
 # --- Representative medical document selection combinations must render without failure ---
 # Полный перебор всех 2^N комбинаций заметно раздувает smoke-time при добавлении
@@ -210,6 +252,8 @@ manual_no_epi.sick_leave_vk_position = ""
 manual_no_epi.sick_leave_vk_work_position = ""
 manual_no_epi.expert_work_status = "нет"
 manual_no_epi.expert_sick_leave_needed = "нет"
+manual_no_epi.disability_needed = "нет"
+manual_no_epi.epi_present = "нет"
 created_no_epi, _ = service.create_documents(
     navigation_path=nav,
     output_dir=OUT / "medical_without_epi",
@@ -316,6 +360,7 @@ def _build_contract_app(*, primary_path: Path, output_dir: Path, selected: tuple
     app.admission_occurrence_var = _ContractVar("")
     app.assigned_treatment_var = _ContractVar("")
     app.epi_path_var = _ContractVar("")
+    app.epi_present_var = _ContractVar("нет")
     app.strict_mode_var = _ContractVar(False)
     app.printer_var = _ContractVar("")
     app.open_result_folder_var = _ContractVar(True)
@@ -327,6 +372,7 @@ def _build_contract_app(*, primary_path: Path, output_dir: Path, selected: tuple
     app.expert_sick_leave_needed_var = _ContractVar("нет")
     app.expert_sick_leave_from_var = _ContractVar("")
     app.expert_sick_leave_number_var = _ContractVar("")
+    app.disability_needed_var = _ContractVar("нет")
 
     app.commission_date_var = _ContractVar("")
     app.commission_number_var = _ContractVar("")
@@ -395,6 +441,9 @@ try:
         selected=("primary", "discharge"),
         popup_values={
             "Номер истории болезни": "К-900",
+            "Нужен ли больничный лист": "нет",
+            "Нужно ли оформление инвалидности": "нет",
+            "Есть ли ЭПИ": "нет",
             "Лечение": "терапия из пользовательского popup",
             "Поступает в 3 отделение КДП": "первично",
             "Дата выписки": "11062026",
@@ -402,15 +451,26 @@ try:
     )
     assert contract_app.selected_medical_docs() == ["primary", "discharge"]
     contract_app.create_selected_outputs(print_after=False)
-    assert len(contract_popup_calls) == 1, contract_popup_calls
-    assert contract_popup_calls[0][0] == "Данные для выписного эпикриза"
+    assert len(contract_popup_calls) == 2, contract_popup_calls
+    assert contract_popup_calls[0][0] == "Дополнительные данные"
     assert [label for label, _default in contract_popup_calls[0][1]] == [
+        "Нужен ли больничный лист",
+        "Нужно ли оформление инвалидности",
+        "Есть ли ЭПИ",
+    ]
+    assert contract_popup_calls[0][2] == {
+        "Нужен ли больничный лист": ("нет", "да"),
+        "Нужно ли оформление инвалидности": ("нет", "да"),
+        "Есть ли ЭПИ": ("нет", "да"),
+    }
+    assert contract_popup_calls[1][0] == "Данные для выписного эпикриза"
+    assert [label for label, _default in contract_popup_calls[1][1]] == [
         "Номер истории болезни",
         "Лечение",
         "Поступает в 3 отделение КДП",
         "Дата выписки",
     ]
-    assert contract_popup_calls[0][2] == {"Поступает в 3 отделение КДП": ("первично", "повторно")}
+    assert contract_popup_calls[1][2] == {"Поступает в 3 отделение КДП": ("первично", "повторно")}
 
     contract_created = sorted((contract_dir / "created").glob("*.docx"))
     assert [path.name for path in contract_created] == [
@@ -447,6 +507,9 @@ try:
         selected=("primary", "discharge", DIARY_KIND),
         popup_values={
             "Номер истории болезни": "К-901",
+            "Нужен ли больничный лист": "нет",
+            "Нужно ли оформление инвалидности": "нет",
+            "Есть ли ЭПИ": "нет",
             "Лечение": "терапия для rollback",
             "Поступает в 3 отделение КДП": "повторно",
             "Дата выписки": "11062026",
@@ -480,7 +543,9 @@ try:
     rollback_app._create_diaries_impl = _rollback_failing_diary
     rollback_app.create_selected_outputs(print_after=False)
     assert rollback_snapshot_ids["medical"] == rollback_snapshot_ids["diary"], rollback_snapshot_ids
-    assert len(rollback_popup_calls) == 1, rollback_popup_calls
+    assert len(rollback_popup_calls) == 2, rollback_popup_calls
+    assert rollback_popup_calls[0][0] == "Дополнительные данные"
+    assert rollback_popup_calls[1][0] == "Данные для выписного эпикриза"
     assert rollback_output.exists(), rollback_output
     assert not list(rollback_output.glob("*.docx")), list(rollback_output.glob("*.docx"))
     assert not list(rollback_output.glob(".medical-autofill-set-*")), list(rollback_output.iterdir())

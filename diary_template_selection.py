@@ -211,13 +211,12 @@ class DiaryTemplateSelectionMixin:
             return True
 
         if ask_folder:
-            selected_file = filedialog.askopenfilename(
-                title="Выберите любой DOCX из папки «шаблоны дневников»",
+            selected_folder = filedialog.askdirectory(
+                title="Выберите папку «Даты» с шаблонами дневников 01–31",
                 initialdir=self._dialog_initial_dir(DIR_NUMBERED_DIARY_TEMPLATES, self._get_saved_directory(DIR_DIARY_TEMPLATES)),
-                filetypes=[("Word DOCX", "*.docx *.docm"), ("All files", "*.*")],
             )
-            if selected_file:
-                folder = str(Path(selected_file).parent)
+            if selected_folder:
+                folder = str(Path(selected_folder))
                 self._set_numbered_diary_template_dir(folder, auto_select=False, warn_if_missing=True)
                 found, day, reason, template_date = self._try_find_template_in_dirs([Path(folder)], day_candidates)
                 if found and day is not None and template_date is not None:

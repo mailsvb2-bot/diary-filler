@@ -67,6 +67,7 @@ class MedicalRendererPrimaryMixin:
             PRIMARY_MARKERS,
             allow_empty=True,
         )
+        editor.remove_all_matching_paragraphs(["Целесообразна госпитализация"])
         editor.replace_block(["Жалобы на момент осмотра", "Жалобы"], "Жалобы на момент осмотра:", data.complaints, PRIMARY_MARKERS)
         editor.replace_block(["Анамнез жизни"], "Анамнез жизни:", data.life_anamnesis, PRIMARY_MARKERS)
         editor.replace_block(["Анамнез заболевания"], "Анамнез заболевания:", data.disease_anamnesis, PRIMARY_MARKERS)

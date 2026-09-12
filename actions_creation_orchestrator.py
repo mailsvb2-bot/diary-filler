@@ -121,6 +121,8 @@ class ActionsCreationOrchestratorMixin:
             messagebox.showwarning("Ничего не выбрано", "Отметьте хотя бы один документ или «Дневники наблюдения».")
             return
         self._log("\n▶ Выбрано для создания: " + ", ".join(self._selected_output_names(selected_medical, selected_diaries)) + "\n")
+        if selected_medical and not self._prompt_shared_clinical_options_if_needed(selected_medical):
+            return
         occurrence_docs = {"primary", "discharge", "commission", "admission_doctor_referral", "rvk"}
         occurrence_selected = any(kind in occurrence_docs for kind in selected_medical)
         special_merged_popup_selected = any(kind in selected_medical for kind in {"discharge", "rvk"})

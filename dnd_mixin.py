@@ -99,6 +99,8 @@ class DragDropMixin:
             self._apply_primary_document_path(primary_path, prompt_for_referral=True)
         if epi_path:
             self.epi_path_var.set(epi_path)
+            if hasattr(self, "epi_present_var"):
+                self.epi_present_var.set("да")
             self._remember_dialog_directory(DIR_EPI, epi_path)
             self.reparse_navigation(silent=True)
         if status_paths:

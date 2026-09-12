@@ -103,7 +103,10 @@ def _project_python_source() -> str:
     )
 
 main_source = _project_python_source()
-assert 'expert_sick_leave_needed_var = tk.StringVar(value="нет")' in main_source
+window_source = (ROOT / "window_mixin.py").read_text(encoding="utf-8")
+assert 'expert_sick_leave_needed_var = tk.StringVar()' in main_source
+assert 'disability_needed_var = tk.StringVar()' in main_source
+assert 'epi_present_var = tk.StringVar()' in main_source
 assert '("Место работы", self.vk_mse_work_org_var.get().strip() or shared_org)' in main_source
 assert '("Должность", self.vk_mse_position_var.get().strip() or shared_position)' in main_source
 assert '("Место работы", self.sick_leave_vk_work_org_var.get().strip() or shared_org)' in main_source
@@ -119,10 +122,12 @@ assert 'title="Дата выписки"' in main_source
 assert 'self.output_vars[DIARY_KIND] = tk.BooleanVar(value=False)' in main_source
 assert 'admission_doctor_referral' in main_source
 assert 'Перетащите сюда первичный осмотр/направление на госпитализацию' in main_source
-assert 'text="Нужен больничный лист?"' in main_source
-assert 'command=self._on_expert_sick_leave_fill' in main_source
-assert 'text="Да"' in main_source
-assert 'text="Нет"' in main_source
+assert 'label = "Нужен ли больничный лист"' in main_source
+assert 'label = "Нужно ли оформление инвалидности"' in main_source
+assert 'label = "Есть ли ЭПИ"' in main_source
+assert 'rows=[("С какого числа", default)]' in main_source
+assert 'self._sick_leave_need_field(card' not in window_source
+assert '_file_row(files, 0, "Файл ЭПИ"' not in window_source
 assert '("Работает? да/нет"' not in main_source
 assert '("Нужен больничный лист? да/нет"' not in main_source
 assert '("С какого числа больничный"' in main_source

@@ -15,8 +15,8 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
-TARGET_VERSION = "1.4.1"
-TARGET_VERSION_LABEL = "v1.4.1-document-flow-polish"
+TARGET_VERSION = "1.4.2"
+TARGET_VERSION_LABEL = "v1.4.2-clinical-popup-and-diary-polish"
 MAX_PYTHON_FILES = 125
 MAX_TINY_PYTHON_FILES = 25
 # Release/CI probes are executable quality gates, not runtime architecture.
@@ -344,6 +344,11 @@ def _assert_final_user_flow_gate_contract() -> None:
     choose_source = files[choose_start:choose_end]
     if "askopenfilename" in choose_source or "askopenfilenames" in choose_source:
         _fail("Dates UI reintroduced the old two-dialog file/folder flow")
+    status_start = files.index("    def choose_status_files")
+    status_end = files.index("    def _diary_template_label_text", status_start)
+    status_source = files[status_start:status_end]
+    if "askdirectory" not in status_source or "askopenfilename" in status_source or "askopenfilenames" in status_source:
+        _fail("Texts UI must select the diagnosis folder directly")
 
 
 def _assert_discharge_date_contract() -> None:
@@ -567,7 +572,7 @@ def _assert_patient_session_reset_contract() -> None:
     required_always = {
         "assigned_treatment_var", "case_number_var",
         "expert_work_status_var", "expert_work_org_var", "expert_position_var",
-        "expert_sick_leave_needed_var", "expert_sick_leave_from_var", "expert_sick_leave_number_var",
+        "expert_sick_leave_needed_var", "expert_sick_leave_from_var", "expert_sick_leave_number_var", "disability_needed_var",
         "vk_mse_work_org_var", "vk_mse_position_var",
         "sick_leave_vk_work_org_var", "sick_leave_vk_position_var", "sick_leave_vk_work_position_var",
     }
@@ -577,7 +582,7 @@ def _assert_patient_session_reset_contract() -> None:
         "vk_date_var", "vk_protocol_number_var", "vk_protocol_date_var",
         "sick_leave_vk_date_var", "sick_leave_vk_protocol_number_var",
         "sick_leave_vk_protocol_date_var", "sick_leave_vk_commission_date_var",
-        "commission_date_var", "commission_number_var", "epi_path_var",
+        "commission_date_var", "commission_number_var", "epi_path_var", "epi_present_var",
     }
     for label, required, actual in (
         ("always", required_always, set(always_vars)),
@@ -749,6 +754,48 @@ def _assert_admission_occurrence_contract() -> None:
         _fail("clinical admission tail normalization changed")
     if clean_admission_detail("Целесообразна госпитализация пациентки в 3 отделение КДП"):
         _fail("legacy hospitalization recommendation leaks into generated documents")
+    if clean_admission_detail("нецелесообразна госпитализация в стационар") != "нецелесообразна госпитализация в стационар":
+        _fail("negated hospitalization decision is corrupted by recommendation cleanup")
+
+
+def _assert_shared_clinical_popup_contract() -> None:
+    expert = _read("dialog_expert.py")
+    flow = _read("actions_creation_orchestrator.py")
+    medical_flow = _read("actions_medical_flow.py")
+    init = _read("app_initialization.py")
+    window = _read("window_mixin.py")
+    service = _read("medical_service.py")
+    required = (
+        (expert, 'label = "Нужен ли больничный лист"', "sick-leave popup question is missing"),
+        (expert, 'label = "Нужно ли оформление инвалидности"', "disability popup question is missing"),
+        (expert, 'label = "Есть ли ЭПИ"', "EPI popup question is missing"),
+        (expert, 'rows.append((label, sick))', "sick-leave popup does not allow revising a prior answer"),
+        (expert, 'rows.append((label, disability))', "disability popup does not allow revising a prior answer"),
+        (expert, 'rows.append((label, epi))', "EPI popup does not allow revising a prior answer"),
+        (expert, 'rows=[("С какого числа", default)]', "positive sick-leave choice does not ask start date"),
+        (expert, 'self.choose_epi()', "positive EPI choice does not open file selection"),
+        (flow, '_prompt_shared_clinical_options_if_needed(selected_medical)', "generation bypasses shared clinical preflight"),
+        (medical_flow, 'data.disability = "нужно"', "disability decision is not copied into patient snapshot"),
+        (init, 'self.epi_present_var = tk.StringVar()', "EPI decision state is not patient scoped"),
+        (window, 'self._diary_compact_row(files, 0)', "Block 02 no longer starts with Dates/Texts row"),
+        (expert, 'sick_leave_docs = {"primary", "admission_doctor_referral", "discharge", "commission"}', "shared popup skips sick-leave decision for expert-anamnesis documents"),
+        (expert, 'disability_docs = {"primary", "admission_doctor_referral"}', "shared popup disability scope drifted from templates with explicit disability rows"),
+        (service, 'sick_leave_docs = {"primary", "admission_doctor_referral", "discharge", "commission"}', "service boundary skips sick-leave validation for expert-anamnesis documents"),
+        (service, 'disability_docs = {"primary", "admission_doctor_referral"}', "service boundary disability scope drifted from explicit template rows"),
+        (service, 'parse_sick_leave_value(data.sick_leave)', "service boundary cannot round-trip rendered sick-leave values"),
+        (service, 'data.expert_sick_leave_from = rendered_sick_from', "rendered sick-leave start date is not restored at service boundary"),
+        (service, 'epi_docs = {"discharge", "commission", "vk_mse", "sick_leave_vk", "rvk"}', "service boundary does not normalize EPI decision"),
+    )
+    for source, snippet, message in required:
+        if snippet not in source:
+            _fail(message)
+    if 'self._sick_leave_need_field(card' in window:
+        _fail("Main patient card reintroduced a second sick-leave source of truth")
+    sick_date_section = expert.split("def _prompt_sick_leave_start_date_if_needed", 1)[1].split("def _prompt_shared_clinical_options_if_needed", 1)[0]
+    if "if current and parse_date(current):" in sick_date_section:
+        _fail("valid retained sick-leave date became non-editable again")
+    if 'Файл ЭПИ' in window:
+        _fail("Block 02 reintroduced persistent EPI selection instead of contextual popup")
 
 
 def _assert_compact_diary_layout_contract() -> None:
@@ -762,8 +809,10 @@ def _assert_compact_diary_layout_contract() -> None:
         (cells, "section.right_margin = Cm(1.0)", "diary right margin is not 1 cm"),
         (cells, "section.top_margin = Cm(1.0)", "diary top margin is not 1 cm"),
         (cells, "section.bottom_margin = Cm(1.0)", "diary bottom margin is not 1 cm"),
-        (cells, "paragraph.paragraph_format.space_after = Cm(3)", "diary signature-to-next-entry gap is not 3 cm"),
-        (cells, "next_nonempty = next(", "diary formatter does not skip blanks between signatures"),
+        (constants, "DIARY_SIGNATURE_GAP_LINES = 3", "diary signature gap is not three compact lines"),
+        (cells, "blank_paragraphs_after[DIARY_SIGNATURE_GAP_LINES:]", "diary formatter does not trim excess legacy blank paragraphs"),
+        (cells, "visible_blank_lines = min(len(blank_paragraphs_after), DIARY_SIGNATURE_GAP_LINES)", "diary formatter does not account for existing blank lines"),
+        (cells, "space_after = Pt(STATUS_FONT_SIZE_PT * remaining_lines)", "diary signature gap is not expressed as compact line spacing"),
         (writer, "apply_compact_diary_layout(doc)", "table diary route skips compact formatter"),
         (batch, "apply_compact_diary_layout(doc)", "text diary route skips compact formatter"),
     )
@@ -1062,6 +1111,7 @@ def main() -> None:
     _assert_diary_service_boundary()
     _assert_joint_diary_semantics_contract()
     _assert_admission_occurrence_contract()
+    _assert_shared_clinical_popup_contract()
     _assert_compact_diary_layout_contract()
     _assert_diagnosis_diary_text_contract()
     _assert_shared_gender_contract()
