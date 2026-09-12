@@ -18,7 +18,7 @@ from medical_formatting import (
     format_birth_for_person_line,
     format_date_with_russian_year_suffix,
     format_military_commissariat_area,
-    format_military_commissariat_referral,
+    format_registration_text,
     treatment_period_text,
 )
 from medical_gender import finalize_medical_document
@@ -46,19 +46,13 @@ class MedicalRendererPrimaryMixin:
         editor.replace_block(["История болезни №"], "История болезни №", data.case_number, PRIMARY_MARKERS, preserve_when_empty=False, allow_empty=True)
         editor.replace_block(["Ф.И.О.", "ФИО"], "Ф.И.О.:", data.fio, PRIMARY_MARKERS, allow_empty=True)
         editor.replace_block(["Год рождения", "Дата рождения"], "Год рождения:", data.birth, PRIMARY_MARKERS, allow_empty=True)
-        editor.replace_block(["Зарегистрирован"], "Зарегистрирован:", data.registered, PRIMARY_MARKERS, allow_empty=True)
-        # В итоговом первичном осмотре не оставляем шаблонные варианты
-        # «состоит/не состоит», «нужен/не нужен», «да/нет». Если источник не
-        # содержит значения, строка остаётся с чистой подписью без мусорной подсказки.
-        editor.replace_block(["На учёте у психиатров", "На учете у психиатров"], "На учёте у психиатров:", data.psych_account, PRIMARY_MARKERS, allow_empty=True)
+        editor.replace_block(["Зарегистрирован", "Регистрация по адресу"], "Регистрация по адресу:", data.registered, PRIMARY_MARKERS, allow_empty=True)
+        self._place_psych_account_after_registration(editor, data, ["Регистрация по адресу"], fallback_markers=["Ф.И.О.", "ФИО"])
         editor.replace_block(["Работает в организации"], "Работает в организации:", data.work_org, PRIMARY_MARKERS, allow_empty=True)
         editor.replace_block(["Должность"], "Должность:", data.position, PRIMARY_MARKERS, allow_empty=True)
         editor.replace_block(["Больничный лист"], "Больничный лист:", data.sick_leave, PRIMARY_MARKERS, allow_empty=True)
         editor.replace_block(["Оформление инвалидности"], "Оформление инвалидности:", data.disability, PRIMARY_MARKERS, allow_empty=True)
-        rvk_referral = data.rvk_referral
-        if not rvk_referral and data.rvk_military_commissariat:
-            rvk_referral = format_military_commissariat_referral(data.rvk_military_commissariat)
-        editor.replace_block(["Направление от РВК"], "Направление от РВК:", rvk_referral, PRIMARY_MARKERS, allow_empty=True)
+        editor.replace_block(["Направление от РВК"], "Направление от РВК:", data.rvk_referral, PRIMARY_MARKERS, allow_empty=True)
         editor.remove_all_matching_paragraphs(["Экспертный анамнез"])
         editor.replace_block(
             ["В 3 отделение КДП поступает"],
@@ -97,6 +91,7 @@ class MedicalRendererPrimaryMixin:
         )
         editor.replace_block(["Врач психиатр", "Врач-психиатр"], "Врач психиатр", data.doctor, PRIMARY_MARKERS, allow_empty=True)
         editor.replace_block(["Зав. отделением", "Зав. отд."], "Зав. отделением", data.head, PRIMARY_MARKERS, allow_empty=True)
+        self._remove_trailing_clinical_leakage(doc, data)
         finalize_medical_document(doc, data)
         doc.save(str(output_path))
 
@@ -111,9 +106,10 @@ class MedicalRendererPrimaryMixin:
         birth_text = format_birth_for_person_line(data.birth)
         person_parts = [data.fio, birth_text]
         if data.registered:
-            person_parts.append(f"зарегистрирован по адресу: {data.registered}")
+            person_parts.append(format_registration_text(data.registered))
         person_line = ", ".join(part for part in person_parts if part).strip(" ,")
-        editor.replace_first_matching_paragraph(["г.р.,", "зарегистрирован по адресу"], person_line)
+        editor.replace_first_matching_paragraph(["г.р.,", "зарегистрирован по адресу", "регистрация по адресу"], person_line)
+        self._place_psych_account_after_registration(editor, data, ["регистрация по адресу"], fallback_markers=[data.fio])
         period = f"Находился на лечении в ГБУЗ НО «НКЦПЗ» диспансер №2 с {data.admission_date} по {data.discharge_date}".strip()
         editor.replace_first_matching_paragraph(["Находился на лечении"], period)
         period_index = editor.find_paragraph_index(["Находился на лечении"])
@@ -154,5 +150,6 @@ class MedicalRendererPrimaryMixin:
             editor.replace_block(["Лечение"], "Лечение:", data.treatment_plan, DISCHARGE_MARKERS)
         signature = f"  Зав. отд. {data.head}                                                                                                 Врач-психиатр\t{data.doctor}"
         editor.replace_first_matching_paragraph(["Зав. отд.", "Врач-психиатр"], signature)
+        self._move_discharge_outcome_before_signatures(doc)
         finalize_medical_document(doc, data)
         doc.save(str(output_path))
