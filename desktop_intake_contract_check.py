@@ -6,6 +6,7 @@ import tempfile
 from datetime import date
 from pathlib import Path
 
+import desktop_intake_agent as agent
 from desktop_intake import (
     is_candidate_word_file,
     iter_candidate_files,
@@ -108,10 +109,48 @@ def _assert_top_level_only_and_safe_move() -> None:
         assert second.read_bytes() == b"changed-primary"
 
 
+def _assert_agent_update_and_encoding_contract() -> None:
+    payload = agent._startup_vbs_payload([r"C:\Программа\MedicalDiaryAutofill.exe", agent.AGENT_ARGUMENT])
+    encoded = payload.encode("utf-16")
+    assert encoded.startswith(b"\xff\xfe")
+    assert not encoded.startswith(b"\xef\xbb\xbf")
+    assert payload.splitlines()[0] == "On Error Resume Next"
+    assert "WScript.Shell" in payload
+    assert "shell.Run" in payload
+
+    with tempfile.TemporaryDirectory() as tmp:
+        runtime = Path(tmp)
+        current = runtime / "new" / "MedicalDiaryAutofill.exe"
+        current.parent.mkdir()
+        current.write_bytes(b"stub")
+        old = runtime / "old" / "MedicalDiaryAutofill.exe"
+        old.parent.mkdir()
+        old.write_bytes(b"stub")
+
+        original_runtime_dir = agent._local_runtime_dir
+        original_native_command = agent._native_gui_command
+        try:
+            agent._local_runtime_dir = lambda: runtime  # type: ignore[assignment]
+            agent._native_gui_command = lambda: [str(current)]  # type: ignore[assignment]
+            agent._write_agent_handoff()
+            assert agent._agent_is_retired() is False
+            assert agent._launch_command() == [str(current)]
+
+            # Simulate yesterday's already-running agent after today's EXE has
+            # published ownership.  It must retire instead of launching itself.
+            agent._native_gui_command = lambda: [str(old)]  # type: ignore[assignment]
+            assert agent._agent_is_retired() is True
+            assert agent._launch_command() == [str(current)]
+        finally:
+            agent._local_runtime_dir = original_runtime_dir  # type: ignore[assignment]
+            agent._native_gui_command = original_native_command  # type: ignore[assignment]
+
+
 def main() -> None:
     _assert_naming_contract()
     _assert_primary_detection_contract()
     _assert_top_level_only_and_safe_move()
+    _assert_agent_update_and_encoding_contract()
     print("desktop intake contract: PASS")
 
 
