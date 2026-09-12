@@ -47,13 +47,20 @@ def main() -> None:
         root = _create_root(require_dnd=True)
         original_askdirectory = files_mixin.filedialog.askdirectory
         try:
-            root.withdraw()
             app = CombinedMedicalDiaryApp(root)
+            # Mouse events on custom Canvas buttons are meaningful only after the
+            # real top-level and its descendants are mapped. A withdrawn window
+            # can still accept direct bindings (the drop-zone) while discarding
+            # stateful press/release button semantics.
             root.update_idletasks()
+            root.deiconify()
+            root.update()
 
             assert app._register_tkinterdnd_drop_targets(), "TkDND targets did not register"
             assert hasattr(app, "drop_zone"), "Primary drop zone missing"
             assert hasattr(app, "diary_dates_button"), "Dates button missing"
+            assert app.drop_zone.winfo_ismapped(), "Primary drop-zone is not mapped"
+            assert app.diary_dates_button.winfo_ismapped(), "Dates button is not mapped"
 
             # Drive the actual visible primary drop-zone. Its click binding must
             # call the production navigation chooser; dormant compatibility
