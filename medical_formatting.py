@@ -173,6 +173,32 @@ def format_military_commissariat_referral(value: str) -> str:
     normalized = _normalize_district_list(base)
     return f"По направлению из {normalized} военкомата" if normalized else ""
 
+
+def format_registration_text(value: str) -> str:
+    value = normalize_text(value)
+    return f"регистрация по адресу: {value}".rstrip()
+
+
+def format_psych_account_value(status: str, since_year: str = "", fallback: str = "") -> str:
+    status = normalize_text(status).lower().replace("ё", "е")
+    year = normalize_text(since_year)
+    if status == "нет":
+        return "не состоит"
+    if status == "да":
+        return f"состоит с {year} года" if year else "состоит"
+    return normalize_text(fallback)
+
+
+def format_rvk_referral_decision(status: str, commissariat: str = "", fallback: str = "") -> str:
+    status = normalize_text(status).lower().replace("ё", "е")
+    if status == "нет":
+        return "нет"
+    if status == "да":
+        area = format_military_commissariat_area(commissariat)
+        return f"по направлению из РВК ({area})".strip()
+    return normalize_text(fallback)
+
+
 def russian_day_word(days: int) -> str:
     if 11 <= days % 100 <= 14:
         return "дней"

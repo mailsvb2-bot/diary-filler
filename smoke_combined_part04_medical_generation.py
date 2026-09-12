@@ -1,3 +1,4 @@
+import copy
 from docx.shared import RGBColor
 created, data = service.create_documents(
     navigation_path=nav,
@@ -51,8 +52,7 @@ assert "Больничный лист: нужен с 15.06.2026" in extract_docx
 assert "На основании данных" in discharge_text and "F99.9 Тестовый диагноз из UI" in discharge_text, discharge_text
 for occurrence_text in (primary_text, discharge_text, commission_text, admission_doctor_text, rvk_text):
     assert "В 3 отделение КДП поступает повторно добровольно" in occurrence_text, occurrence_text
-assert "На учёте у психиатров" not in admission_doctor_text, admission_doctor_text
-assert "На учете у психиатров" not in admission_doctor_text, admission_doctor_text
+assert "На учёте у психиатров: не состоит" in admission_doctor_text, admission_doctor_text
 assert "Целесообразна госпитализация" not in commission_text, commission_text
 # The bundled discharge placeholder is red, but final clinical text must be explicitly black.
 discharge_doc = Document(discharge_path)
@@ -74,7 +74,7 @@ assert "Выписка из ПРОТОКОЛА № 55" in combined_text
 assert "Место работы: ГБУЗ НО Тест, санитар" in combined_text
 assert "Место работы: ООО РВК, программист" not in extract_docx_text(next(path for path in created if "РВК" in path.name))
 assert "военного комиссариата Ленинского района" in combined_text
-assert "По направлению из Ленинского военкомата" in primary_text
+assert "Направление от РВК: по направлению из РВК (Ленинского района)" in primary_text
 assert "Место работы, должность: ООО Тест, инженер" in combined_text
 assert "Экспертный анамнез: Работает в ООО Завод, в должности инженер. Больничный лист. Срок лечения с 10.06.2026 по 11.06.2026, 2 дня. К труду с 12.06.2026." in combined_text
 assert "Экспертный анамнез: Работает в ООО Завод, в должности инженер. Больничный лист нужен с 15.06.2026." in combined_text
@@ -90,9 +90,73 @@ assert "ЭПИ тестовая информация" in combined_text
 commission_doc = Document(commission_path)
 assert commission_doc.paragraphs[0].text.startswith("18.06.2026 г. 10:00"), commission_doc.paragraphs[0].text
 
+
+# Registration + psychiatric account is a shared top-block contract for every
+# medical document. Legacy "зарегистрирован по адресу" wording must not survive.
+for medical_path in created:
+    medical_doc = Document(medical_path)
+    top_lines = [p.text.strip() for p in medical_doc.paragraphs if p.text.strip()]
+    reg_idx = next(i for i, line in enumerate(top_lines) if "регистрация по адресу" in line.lower())
+    psych_idx = next(i for i, line in enumerate(top_lines) if line.lower().startswith("на учёте у психиатров:"))
+    assert psych_idx == reg_idx + 1, (medical_path.name, top_lines[max(0, reg_idx - 1):psych_idx + 2])
+    assert top_lines[psych_idx] == "На учёте у психиатров: не состоит", (medical_path.name, top_lines[psych_idx])
+    assert "зарегистрирован по адресу" not in "\n".join(top_lines).lower(), medical_path.name
+
+for referral_path in (primary_path, admission_doctor_path):
+    referral_text = extract_docx_text(referral_path)
+    assert "Направление от РВК: по направлению из РВК (Ленинского района)" in referral_text, referral_text
+
+# Negative RVK choice must render explicitly as «нет» and clear any stale area.
+rvk_no_data = copy.deepcopy(manual_data)
+rvk_no_data.rvk_referral_present = "нет"
+rvk_no_data.rvk_referral_commissariat = "Ленинского"
+rvk_no_created, rvk_no_used = service.create_documents(
+    navigation_path=nav,
+    output_dir=OUT / "rvk_referral_no",
+    selected_docs=("primary", "admission_doctor_referral"),
+    override_data=rvk_no_data,
+)
+assert rvk_no_used.rvk_referral_present == "нет"
+assert rvk_no_used.rvk_referral_commissariat == ""
+for path in rvk_no_created:
+    text = extract_docx_text(path)
+    assert "Направление от РВК: нет" in text, (path.name, text)
+    assert "Ленинского района" not in text, (path.name, text)
+
+# Positive psychiatric-account choice with a year must propagate to every
+# medical document, immediately after registration.
+psych_yes_data = copy.deepcopy(manual_data)
+psych_yes_data.psych_account_status = "да"
+psych_yes_data.psych_account_since_year = "2018"
+psych_yes_created, _psych_yes_used = service.create_documents(
+    navigation_path=nav,
+    output_dir=OUT / "psych_account_yes_all_docs",
+    discharge_date="11.06.2026",
+    epi_path=epi,
+    selected_docs=DOCUMENT_ORDER,
+    override_data=psych_yes_data,
+)
+for path in psych_yes_created:
+    doc = Document(path)
+    lines = [p.text.strip() for p in doc.paragraphs if p.text.strip()]
+    reg_idx = next(i for i, line in enumerate(lines) if "регистрация по адресу" in line.lower())
+    assert lines[reg_idx + 1] == "На учёте у психиатров: состоит с 2018 года", (path.name, lines[reg_idx:reg_idx + 3])
+
+# The discharge outcome/recommendation block must be the final clinical block:
+# after it only the physicians' signatures remain.
+discharge_lines = [p.text.strip() for p in Document(discharge_path).paragraphs if p.text.strip()]
+assert discharge_lines[-3].startswith("За время лечения состояние улучшилось."), discharge_lines[-5:]
+assert discharge_lines[-2].startswith("Рекомендовано:"), discharge_lines[-5:]
+assert "Врач-психиатр" in discharge_lines[-1] and "Зав. отд." in discharge_lines[-1], discharge_lines[-5:]
+
+# Admission-doctor footer is strict: after all clinical sections only the
+# required referral sentence and the doctor signature remain.
+admission_lines = [p.text.strip() for p in Document(admission_doctor_path).paragraphs if p.text.strip()]
+assert admission_lines[-2] == "В связи с психическим состоянием, направляется на лечение в ГБУЗ НО «НКЦПЗ» диспансер №2", admission_lines[-5:]
+assert admission_lines[-1].startswith("Врач психиатр"), admission_lines[-5:]
+
 # A complaints sentence belongs only to the complaints block. It must never be
 # duplicated as an unexplained trailing sentence at the end of Joint Examination.
-import copy
 complaint_data = copy.deepcopy(manual_data)
 complaint_data.complaints = "Пациентка предъявляет жалобы на плохой сон"
 complaint_created, _ = service.create_documents(
@@ -373,6 +437,10 @@ def _build_contract_app(*, primary_path: Path, output_dir: Path, selected: tuple
     app.expert_sick_leave_from_var = _ContractVar("")
     app.expert_sick_leave_number_var = _ContractVar("")
     app.disability_needed_var = _ContractVar("нет")
+    app.psych_account_status_var = _ContractVar("")
+    app.psych_account_since_year_var = _ContractVar("")
+    app.rvk_referral_present_var = _ContractVar("")
+    app.rvk_referral_commissariat_var = _ContractVar("")
 
     app.commission_date_var = _ContractVar("")
     app.commission_number_var = _ContractVar("")
@@ -441,6 +509,8 @@ try:
         selected=("primary", "discharge"),
         popup_values={
             "Номер истории болезни": "К-900",
+            "Состоит ли на учёте у психиатров": "нет",
+            "По направлению из РВК": "нет",
             "Нужен ли больничный лист": "нет",
             "Нужно ли оформление инвалидности": "нет",
             "Есть ли ЭПИ": "нет",
@@ -454,11 +524,15 @@ try:
     assert len(contract_popup_calls) == 2, contract_popup_calls
     assert contract_popup_calls[0][0] == "Дополнительные данные"
     assert [label for label, _default in contract_popup_calls[0][1]] == [
+        "Состоит ли на учёте у психиатров",
+        "По направлению из РВК",
         "Нужен ли больничный лист",
         "Нужно ли оформление инвалидности",
         "Есть ли ЭПИ",
     ]
     assert contract_popup_calls[0][2] == {
+        "Состоит ли на учёте у психиатров": ("нет", "да"),
+        "По направлению из РВК": ("нет", "да"),
         "Нужен ли больничный лист": ("нет", "да"),
         "Нужно ли оформление инвалидности": ("нет", "да"),
         "Есть ли ЭПИ": ("нет", "да"),
@@ -490,6 +564,42 @@ try:
     assert contract_app._opened_output_folders == [contract_dir / "created"], contract_app._opened_output_folders
     assert not any(event[0] in {"info", "warning", "error", "askyesno"} for event in _contract_messagebox_events), _contract_messagebox_events
 
+    # Joint Examination date must travel through the real popup -> Tk vars ->
+    # generation snapshot -> DOCX header, not merely work when PatientData is
+    # populated manually by a test.
+    _contract_messagebox_events.clear()
+    commission_contract_dir = OUT / "user_contract_commission_popup_date"
+    if commission_contract_dir.exists():
+        shutil.rmtree(commission_contract_dir)
+    commission_contract_dir.mkdir(parents=True, exist_ok=True)
+    commission_contract_primary = commission_contract_dir / "Первичный_для_совместного.docx"
+    _make_user_contract_primary(commission_contract_primary)
+    commission_contract_app, commission_popup_calls = _build_contract_app(
+        primary_path=commission_contract_primary,
+        output_dir=commission_contract_dir / "created",
+        selected=("commission",),
+        popup_values={
+            "Состоит ли на учёте у психиатров": "нет",
+            "Нужен ли больничный лист": "нет",
+            "Есть ли ЭПИ": "нет",
+            "Номер истории болезни": "К-902",
+            "Лечение": "терапия для совместного",
+            "Диагноз": "F41.2 Смешанное тревожное и депрессивное расстройство",
+            "Поступает в 3 отделение КДП": "повторно",
+            "Дата / дата проведения комиссии": "21062026",
+            "Номер": "17",
+        },
+    )
+    commission_contract_app.create_selected_outputs(print_after=False)
+    commission_files = list((commission_contract_dir / "created").glob("*Совместный осмотр.docx"))
+    assert len(commission_files) == 1, commission_files
+    commission_contract_doc = Document(commission_files[0])
+    assert commission_contract_doc.paragraphs[0].text.startswith("21.06.2026 г. 10:00"), commission_contract_doc.paragraphs[0].text
+    assert "№ 17" in commission_contract_doc.paragraphs[0].text, commission_contract_doc.paragraphs[0].text
+    assert commission_contract_app.commission_date_var.get() == "21.06.2026"
+    assert any(call[0] == "Совместный осмотр" for call in commission_popup_calls), commission_popup_calls
+    assert not any(event[0] in {"warning", "error"} for event in _contract_messagebox_events), _contract_messagebox_events
+
     # Whole-set transaction: medical generation may succeed internally, but if
     # diaries then fail the final user folder must receive none of that staged
     # medical output. This locks the top-level all-or-nothing user contract.
@@ -507,6 +617,8 @@ try:
         selected=("primary", "discharge", DIARY_KIND),
         popup_values={
             "Номер истории болезни": "К-901",
+            "Состоит ли на учёте у психиатров": "нет",
+            "По направлению из РВК": "нет",
             "Нужен ли больничный лист": "нет",
             "Нужно ли оформление инвалидности": "нет",
             "Есть ли ЭПИ": "нет",

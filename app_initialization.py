@@ -130,6 +130,10 @@ class AppInitializationMixin:
         self.expert_sick_leave_from_var = tk.StringVar()
         self.expert_sick_leave_number_var = tk.StringVar()
         self.disability_needed_var = tk.StringVar()  # да/нет
+        self.psych_account_status_var = tk.StringVar()  # да/нет
+        self.psych_account_since_year_var = tk.StringVar()
+        self.rvk_referral_present_var = tk.StringVar()  # да/нет
+        self.rvk_referral_commissariat_var = tk.StringVar()
         self.expert_sick_leave_display_var = tk.StringVar(value="—")
         self._primary_work_org_default = ""
         self._primary_work_position_default = ""

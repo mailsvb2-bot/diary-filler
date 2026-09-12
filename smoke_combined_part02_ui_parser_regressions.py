@@ -365,6 +365,11 @@ clinical_logic.expert_sick_leave_needed_var = _FakeVar("")
 clinical_logic.expert_sick_leave_from_var = _FakeVar("")
 clinical_logic.expert_sick_leave_number_var = _FakeVar("")
 clinical_logic.disability_needed_var = _FakeVar("")
+clinical_logic.psych_account_status_var = _FakeVar("")
+clinical_logic.psych_account_since_year_var = _FakeVar("")
+clinical_logic.rvk_referral_present_var = _FakeVar("")
+clinical_logic.rvk_referral_commissariat_var = _FakeVar("")
+clinical_logic.rvk_military_commissariat_var = _FakeVar("")
 clinical_logic.epi_present_var = _FakeVar("")
 clinical_logic.epi_path_var = _FakeVar("")
 clinical_logic.admission_date_var = _FakeVar("10.06.2026")
@@ -376,11 +381,17 @@ def _clinical_prompt(title, rows, width=46, linked_groups=None, choice_options=N
     clinical_prompts.append((title, list(rows), choice_options))
     if title == "Дополнительные данные":
         values = {
+            "Состоит ли на учёте у психиатров": "да",
+            "По направлению из РВК": "да",
             "Нужен ли больничный лист": "да",
             "Нужно ли оформление инвалидности": "нет",
             "Есть ли ЭПИ": "нет",
         }
         return [values[label] for label, _ in rows]
+    if title == "Учёт у психиатров":
+        return ["2018"]
+    if title == "Направление из РВК":
+        return ["Ленинский"]
     if title == "Больничный лист":
         return ["12062026"]
     raise AssertionError((title, rows))
@@ -392,8 +403,14 @@ assert clinical_logic.disability_needed_var.get() == "нет"
 assert clinical_logic.epi_present_var.get() == "нет"
 assert clinical_logic.epi_path_var.get() == ""
 assert clinical_logic.data.disability == "не нужно"
-assert [call[0] for call in clinical_prompts] == ["Дополнительные данные", "Больничный лист"]
+assert [call[0] for call in clinical_prompts] == ["Дополнительные данные", "Учёт у психиатров", "Направление из РВК", "Больничный лист"]
+assert clinical_logic.psych_account_status_var.get() == "да"
+assert clinical_logic.psych_account_since_year_var.get() == "2018"
+assert clinical_logic.rvk_referral_present_var.get() == "да"
+assert clinical_logic.rvk_referral_commissariat_var.get() == "Ленинский"
 choices = clinical_prompts[0][2]
+assert choices["Состоит ли на учёте у психиатров"] == ("нет", "да")
+assert choices["По направлению из РВК"] == ("нет", "да")
 assert choices["Нужен ли больничный лист"] == ("нет", "да")
 assert choices["Нужно ли оформление инвалидности"] == ("нет", "да")
 assert choices["Есть ли ЭПИ"] == ("нет", "да")
@@ -403,11 +420,23 @@ assert choices["Есть ли ЭПИ"] == ("нет", "да")
 # appear again with current values rather than silently locking the first answer.
 revision_rows = []
 def _revision_prompt(title, rows, width=46, linked_groups=None, choice_options=None):
+    if title != "Дополнительные данные":
+        raise AssertionError((title, rows))
     revision_rows.extend(rows)
-    return ["нет", "да"]
+    values = {
+        "Состоит ли на учёте у психиатров": "нет",
+        "По направлению из РВК": "нет",
+        "Нужен ли больничный лист": "нет",
+        "Нужно ли оформление инвалидности": "да",
+    }
+    return [values[label] for label, _ in rows]
 clinical_logic._prompt_fields = _revision_prompt
 assert clinical_logic._prompt_shared_clinical_options_if_needed(["primary"]) is True
-assert [initial for _label, initial in revision_rows] == ["да", "нет"], revision_rows
+assert [initial for _label, initial in revision_rows] == ["да", "да", "да", "нет"], revision_rows
+assert clinical_logic.psych_account_status_var.get() == "нет"
+assert clinical_logic.psych_account_since_year_var.get() == ""
+assert clinical_logic.rvk_referral_present_var.get() == "нет"
+assert clinical_logic.rvk_referral_commissariat_var.get() == ""
 assert clinical_logic.expert_sick_leave_needed_var.get() == "нет"
 assert clinical_logic.expert_sick_leave_from_var.get() == ""
 assert clinical_logic.disability_needed_var.get() == "да"
@@ -442,6 +471,11 @@ for clinical_kind in ("discharge", "commission"):
     standalone_logic.expert_sick_leave_from_var = _FakeVar("")
     standalone_logic.expert_sick_leave_number_var = _FakeVar("")
     standalone_logic.disability_needed_var = _FakeVar("")
+    standalone_logic.psych_account_status_var = _FakeVar("")
+    standalone_logic.psych_account_since_year_var = _FakeVar("")
+    standalone_logic.rvk_referral_present_var = _FakeVar("")
+    standalone_logic.rvk_referral_commissariat_var = _FakeVar("")
+    standalone_logic.rvk_military_commissariat_var = _FakeVar("")
     standalone_logic.epi_present_var = _FakeVar("")
     standalone_logic.epi_path_var = _FakeVar("")
     standalone_logic.admission_date_var = _FakeVar("10.06.2026")
@@ -452,10 +486,10 @@ for clinical_kind in ("discharge", "commission"):
     def _standalone_prompt(title, rows, width=46, linked_groups=None, choice_options=None):
         standalone_calls.append((title, list(rows), choice_options))
         assert title == "Дополнительные данные"
-        return ["нет", "нет"]
+        return ["нет", "нет", "нет"]
     standalone_logic._prompt_fields = _standalone_prompt
     assert standalone_logic._prompt_shared_clinical_options_if_needed([clinical_kind]) is True
-    assert [label for label, _ in standalone_calls[0][1]] == ["Нужен ли больничный лист", "Есть ли ЭПИ"]
+    assert [label for label, _ in standalone_calls[0][1]] == ["Состоит ли на учёте у психиатров", "Нужен ли больничный лист", "Есть ли ЭПИ"]
     assert "Нужно ли оформление инвалидности" not in [label for label, _ in standalone_calls[0][1]]
     assert standalone_logic.expert_sick_leave_needed_var.get() == "нет"
     assert standalone_logic.epi_present_var.get() == "нет"
@@ -466,6 +500,11 @@ epi_logic.expert_sick_leave_needed_var = _FakeVar("нет")
 epi_logic.expert_sick_leave_from_var = _FakeVar("")
 epi_logic.expert_sick_leave_number_var = _FakeVar("")
 epi_logic.disability_needed_var = _FakeVar("нет")
+epi_logic.psych_account_status_var = _FakeVar("")
+epi_logic.psych_account_since_year_var = _FakeVar("")
+epi_logic.rvk_referral_present_var = _FakeVar("")
+epi_logic.rvk_referral_commissariat_var = _FakeVar("")
+epi_logic.rvk_military_commissariat_var = _FakeVar("")
 epi_logic.epi_present_var = _FakeVar("")
 epi_logic.epi_path_var = _FakeVar("")
 epi_logic.admission_date_var = _FakeVar("10.06.2026")
@@ -474,6 +513,7 @@ epi_logic.service = service
 epi_logic._update_expert_sick_leave_display = lambda: None
 def _epi_prompt(title, rows, width=46, linked_groups=None, choice_options=None):
     values = {
+        "Состоит ли на учёте у психиатров": "нет",
         "Нужен ли больничный лист": "нет",
         "Есть ли ЭПИ": "да",
     }
@@ -494,6 +534,7 @@ for name in (
     "assigned_treatment_var", "case_number_var", "admission_occurrence_var", "expert_work_status_var",
     "expert_work_org_var", "expert_position_var", "expert_sick_leave_needed_var",
     "expert_sick_leave_from_var", "expert_sick_leave_number_var", "disability_needed_var",
+    "psych_account_status_var", "psych_account_since_year_var", "rvk_referral_present_var", "rvk_referral_commissariat_var",
     "vk_mse_work_org_var", "vk_mse_position_var", "sick_leave_vk_work_org_var",
     "sick_leave_vk_position_var", "sick_leave_vk_work_position_var",
     "patient_name_var", "admission_date_var", "discharge_date_var", "diagnosis_var",
@@ -552,6 +593,7 @@ for name in (
     "assigned_treatment_var", "case_number_var", "admission_occurrence_var", "expert_work_status_var",
     "expert_work_org_var", "expert_position_var", "expert_sick_leave_needed_var",
     "expert_sick_leave_from_var", "expert_sick_leave_number_var", "disability_needed_var",
+    "psych_account_status_var", "psych_account_since_year_var", "rvk_referral_present_var", "rvk_referral_commissariat_var",
     "vk_mse_work_org_var", "vk_mse_position_var", "sick_leave_vk_work_org_var",
     "sick_leave_vk_position_var", "sick_leave_vk_work_position_var",
     "patient_name_var", "admission_date_var", "discharge_date_var", "diagnosis_var",

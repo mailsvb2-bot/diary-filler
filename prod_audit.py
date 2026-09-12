@@ -15,8 +15,8 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
-TARGET_VERSION = "1.4.2"
-TARGET_VERSION_LABEL = "v1.4.2-clinical-popup-and-diary-polish"
+TARGET_VERSION = "1.4.3"
+TARGET_VERSION_LABEL = "v1.4.3-rvk-registry-document-order"
 MAX_PYTHON_FILES = 125
 MAX_TINY_PYTHON_FILES = 25
 # Release/CI probes are executable quality gates, not runtime architecture.
@@ -573,6 +573,8 @@ def _assert_patient_session_reset_contract() -> None:
         "assigned_treatment_var", "case_number_var",
         "expert_work_status_var", "expert_work_org_var", "expert_position_var",
         "expert_sick_leave_needed_var", "expert_sick_leave_from_var", "expert_sick_leave_number_var", "disability_needed_var",
+        "psych_account_status_var", "psych_account_since_year_var",
+        "rvk_referral_present_var", "rvk_referral_commissariat_var",
         "vk_mse_work_org_var", "vk_mse_position_var",
         "sick_leave_vk_work_org_var", "sick_leave_vk_position_var", "sick_leave_vk_work_position_var",
     }
@@ -608,6 +610,66 @@ def _assert_patient_session_reset_contract() -> None:
     for name in required_always | required_tracked | required_switch:
         if f"self.{name}.set(" in reset_section:
             _fail(f"patient field reset escaped the canonical registry: {name}")
+
+
+def _assert_clinical_popup_and_document_order_contract() -> None:
+    """Lock the shared clinical decisions and their DOCX placement contract."""
+    dialog = _read("dialog_expert.py")
+    service = _read("medical_service.py")
+    primary = _read("medical_renderer_primary.py")
+    commission = _read("medical_renderer_commission.py")
+    labs = _read("medical_renderer_labs.py")
+    special = _read("medical_renderer_special.py")
+    parser = _read("medical_parser.py")
+
+    required_dialog = (
+        "Состоит ли на учёте у психиатров",
+        "По направлению из РВК",
+        "С какого года",
+        "Район РВК",
+        "psych_account_status_var",
+        "rvk_referral_present_var",
+    )
+    missing = [snippet for snippet in required_dialog if snippet not in dialog]
+    if missing:
+        _fail("shared clinical popup lost required controls: " + ", ".join(missing))
+
+    required_service = (
+        "Укажите, состоит ли пациент на учёте у психиатров.",
+        "Укажите год постановки на учёт у психиатров в формате ГГГГ.",
+        "Укажите, пациент по направлению из РВК или нет.",
+        "Укажите район РВК для направления.",
+        "format_psych_account_value",
+        "format_rvk_referral_decision",
+    )
+    missing = [snippet for snippet in required_service if snippet not in service]
+    if missing:
+        _fail("medical service no longer enforces shared clinical decisions: " + ", ".join(missing))
+
+    if '"Регистрация по адресу"' not in parser:
+        _fail("parser cannot read the canonical registration wording")
+    for filename, source in (
+        ("medical_renderer_primary.py", primary),
+        ("medical_renderer_commission.py", commission),
+        ("medical_renderer_special.py", special),
+    ):
+        if "format_registration_text" not in source and "Регистрация по адресу:" not in source:
+            _fail(f"{filename} bypasses canonical registration wording")
+        if "_place_psych_account_after_registration" not in source:
+            _fail(f"{filename} no longer places psychiatric registration after address")
+
+    if "data.rvk_referral" not in primary or "data.rvk_referral" not in commission:
+        _fail("RVK referral is not shared by primary/admission-doctor renderers")
+    if "commission_date = format_date_with_russian_year_suffix(data.commission_date)" not in commission:
+        _fail("joint-exam header may fall back to a wrong non-popup date")
+    if "data.commission_date or data.admission_date" in commission:
+        _fail("joint-exam date silently falls back to admission date")
+    if "_remove_trailing_clinical_leakage(doc, data)" not in primary or "_remove_trailing_clinical_leakage(doc, data)" not in commission:
+        _fail("clinical trailing-leak cleanup is missing from primary/joint/admission flow")
+    if 'r"\\bцелесообразна\\s+госпитализация\\b"' not in labs:
+        _fail("trailing cleanup lost the word-boundary guard for hospitalization recommendation")
+    if "_move_discharge_outcome_before_signatures(doc)" not in primary:
+        _fail("discharge outcome/recommendations are no longer forced before signatures")
 
 
 def _assert_diary_service_boundary() -> None:
@@ -1108,6 +1170,7 @@ def main() -> None:
     _assert_final_user_flow_gate_contract()
     _assert_discharge_date_contract()
     _assert_patient_session_reset_contract()
+    _assert_clinical_popup_and_document_order_contract()
     _assert_diary_service_boundary()
     _assert_joint_diary_semantics_contract()
     _assert_admission_occurrence_contract()

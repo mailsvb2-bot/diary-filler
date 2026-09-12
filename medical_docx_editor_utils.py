@@ -25,7 +25,7 @@ def paragraph_matches_marker(normalized_paragraph_text: str, marker: str) -> boo
         # Разрешаем совпадение только если после маркера идёт разделитель.
         next_char = text[len(marker)]
         return not (next_char.isalnum() or next_char == "_")
-    if marker == "зарегистрирован по адресу" and " зарегистрирован по адресу" in text:
+    if marker in {"зарегистрирован по адресу", "регистрация по адресу"} and f" {marker}" in text:
         return True
     return False
 

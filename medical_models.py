@@ -54,6 +54,38 @@ def parse_sick_leave_value(value: str) -> tuple[str, str]:
     return "", ""
 
 
+def parse_psych_account_value(value: str) -> tuple[str, str]:
+    """Parse rendered psychiatric-registration text into decision/year."""
+    text = " ".join(str(value or "").strip().split())
+    if not text:
+        return "", ""
+    normalized = text.lower().replace("ё", "е")
+    if re.search(r"\bне\s+состоит\b", normalized) or normalize_yes_no(normalized) == "нет":
+        return "нет", ""
+    if re.search(r"\bсостоит\b", normalized) or normalize_yes_no(normalized) == "да":
+        year = re.search(r"\b(19|20)\d{2}\b", normalized)
+        return "да", (year.group(0) if year else "")
+    return "", ""
+
+
+def parse_rvk_referral_value(value: str) -> tuple[str, str]:
+    """Parse rendered RVK referral text into decision and optional area text."""
+    text = " ".join(str(value or "").strip().split())
+    if not text:
+        return "", ""
+    normalized = text.lower().replace("ё", "е")
+    if normalize_yes_no(normalized) == "нет" or normalized in {"не по направлению", "не направлялся"}:
+        return "нет", ""
+    if "направлен" in normalized or "направлению" in normalized or "рвк" in normalized or "военком" in normalized:
+        area = re.sub(
+            r"(?i)^.*?(?:по\s+направлению\s+из\s+рвк|по\s+направлению\s+из\s+военн(?:ого|ый)\s+комиссариат(?:а)?|по\s+направлению\s+из)\s*",
+            "",
+            text,
+        ).strip(" -—–,.;:()")
+        return "да", area
+    return "", ""
+
+
 def normalize_admission_occurrence(value: str) -> str:
     """Return the canonical episode occurrence selected by the doctor."""
     normalized = " ".join(str(value or "").strip().lower().replace("ё", "е").split())
@@ -114,6 +146,8 @@ class PatientData:
     birth: str = ""
     registered: str = ""
     psych_account: str = ""
+    psych_account_status: str = ""  # да / нет
+    psych_account_since_year: str = ""
     work_org: str = ""
     position: str = ""
     sick_leave: str = ""
@@ -128,6 +162,8 @@ class PatientData:
     disability_needed: str = ""  # да / нет
     disability: str = ""
     rvk_referral: str = ""
+    rvk_referral_present: str = ""  # да / нет
+    rvk_referral_commissariat: str = ""
     admission: str = ""
     # How the patient enters this hospitalization episode; explicitly confirmed in popup.
     admission_occurrence: str = ""  # первично / повторно

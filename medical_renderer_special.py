@@ -17,6 +17,7 @@ from medical_formatting import (
     format_birth_for_person_line,
     format_date_with_russian_year_suffix,
     format_military_commissariat_area,
+    format_registration_text,
     treatment_period_text,
 )
 from medical_gender import finalize_medical_document
@@ -51,7 +52,8 @@ class MedicalRendererSpecialMixin:
 
         editor.replace_all_matching_paragraphs(["Ф.И.О", "Ф.И.О:"], f"Ф.И.О: {data.fio}")
         editor.replace_all_matching_paragraphs(["Год рождения"], f"Год рождения: {data.birth}")
-        editor.replace_all_matching_paragraphs(["Проживает"], f"Проживает: {data.registered}".rstrip())
+        editor.replace_all_matching_paragraphs(["Проживает", "Регистрация по адресу"], format_registration_text(data.registered))
+        self._place_psych_account_after_registration(editor, data, ["Регистрация по адресу"])
         vk_work_parts = [
             (data.vk_mse_work_org or data.work_org).strip(),
             (data.vk_mse_position or data.position).strip(),
@@ -96,7 +98,8 @@ class MedicalRendererSpecialMixin:
 
         editor.replace_all_matching_paragraphs(["Ф.И.О", "Ф.И.О:"], f"Ф.И.О: {data.fio}")
         editor.replace_all_matching_paragraphs(["Год рождения"], f"Год рождения: {data.birth}")
-        editor.replace_all_matching_paragraphs(["Проживает"], f"Проживает: {data.registered}".rstrip())
+        editor.replace_all_matching_paragraphs(["Проживает", "Регистрация по адресу"], format_registration_text(data.registered))
+        self._place_psych_account_after_registration(editor, data, ["Регистрация по адресу"])
         editor.replace_all_matching_paragraphs(["Место работы"], f"Место работы, должность: {work_position}")
         editor.replace_all_matching_paragraphs(["Находится на лечении"], treatment_line)
         editor.replace_all_matching_paragraphs(["Диагноз"], f"Диагноз: {sanitize_diagnosis(data.diagnosis)}")
@@ -125,7 +128,8 @@ class MedicalRendererSpecialMixin:
         editor.replace_block(["История болезни №"], "История болезни №", data.case_number, RVK_MARKERS, preserve_when_empty=False, allow_empty=True)
         editor.replace_block(["Ф.И.О.", "ФИО"], "Ф.И.О.:", data.fio, RVK_MARKERS, allow_empty=True)
         editor.replace_block(["Год рождения"], "Год рождения:", data.birth, RVK_MARKERS, allow_empty=True)
-        editor.replace_block(["Проживает"], "Проживает:", data.registered, RVK_MARKERS, allow_empty=True)
+        editor.replace_block(["Проживает", "Регистрация по адресу"], "Регистрация по адресу:", data.registered, RVK_MARKERS, allow_empty=True)
+        self._place_psych_account_after_registration(editor, data, ["Регистрация по адресу"])
         # В Акте для РВК строка "Место работы" не нужна: удаляем её из результата,
         # чтобы туда не попадали данные из направления или старые значения UI.
         editor.remove_all_matching_paragraphs(["Место работы"])
@@ -137,8 +141,6 @@ class MedicalRendererSpecialMixin:
                 ["Госпитализируется по направлению военного комиссариата"],
                 f"Госпитализируется по направлению военного комиссариата {military_area}."
             )
-        if data.psych_account:
-            editor.replace_first_matching_paragraph(["На учёте", "На учете"], f"На учёте у психиатров {data.psych_account}.")
         admission_label = admission_occurrence_label(data.admission_occurrence)
         if not editor.replace_block(
             ["В 3 отделение КДП поступает"],

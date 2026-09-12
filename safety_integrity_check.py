@@ -265,6 +265,8 @@ def _test_medical_transaction(tmp: Path) -> None:
         admission_occurrence="первично",
         expert_sick_leave_needed="нет",
         disability_needed="нет",
+        psych_account_status="нет",
+        rvk_referral_present="нет",
         epi_present="нет",
     )
     out = tmp / "medical-tx"

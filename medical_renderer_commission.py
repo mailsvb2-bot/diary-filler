@@ -16,6 +16,7 @@ from medical_formatting import (
     format_birth_for_person_line,
     format_date_with_russian_year_suffix,
     format_military_commissariat_area,
+    format_registration_text,
     treatment_period_text,
 )
 from medical_gender import finalize_medical_document
@@ -39,20 +40,23 @@ class MedicalRendererCommissionMixin:
         editor = DocxBlockEditor(doc)
         dates = data.lab_dates()
 
-        if data.commission_date or data.commission_number:
-            commission_date = format_date_with_russian_year_suffix(data.commission_date or data.admission_date)
-            header = (
-                f"{commission_date} 10:00      "
-                f"Совместный осмотр с зам глав врача Зуйковой А.А. № {data.commission_number}"
-            ).rstrip()
-            editor.replace_first_matching_regex(r"Совместный\s+осмотр", header)
+        commission_date = format_date_with_russian_year_suffix(data.commission_date)
+        header = (
+            f"{commission_date} 10:00      "
+            f"Совместный осмотр с зам глав врача Зуйковой А.А. № {data.commission_number}"
+        ).rstrip()
+        for paragraph in doc.paragraphs:
+            if "совместный осмотр" in normalize_match(paragraph.text):
+                set_paragraph_text(paragraph, header)
+                break
 
         birth_text = format_birth_for_person_line(data.birth)
         person_parts = [data.fio, birth_text]
         if data.registered:
-            person_parts.append(f"зарегистрирован по адресу: {data.registered}")
+            person_parts.append(format_registration_text(data.registered))
         person_line = ", ".join(part for part in person_parts if part).strip(" ,")
-        editor.replace_first_matching_paragraph(["г.р.,", "зарегистрирован по адресу"], person_line)
+        editor.replace_first_matching_paragraph(["г.р.,", "зарегистрирован по адресу", "регистрация по адресу"], person_line)
+        self._place_psych_account_after_registration(editor, data, ["регистрация по адресу"])
         put_expert_anamnesis(editor, data, COMMISSION_MARKERS, ["В 3 отделение КДП поступает"], include_sick_leave_number=False, include_return_to_work=False)
         editor.replace_block(
             ["В 3 отделение КДП поступает"],
@@ -98,6 +102,7 @@ class MedicalRendererCommissionMixin:
         editor.replace_block(["Лечение"], "Лечение:", data.treatment_plan, COMMISSION_MARKERS)
         editor.replace_block(["Эпидемиологический анамнез"], "Эпидемиологический анамнез:", data.epidemiology, COMMISSION_MARKERS, allow_empty=True)
         editor.remove_all_matching_paragraphs(["Целесообразна госпитализация"])
+        self._remove_trailing_clinical_leakage(doc, data)
         finalize_medical_document(doc, data)
         doc.save(str(output_path))
 
@@ -119,10 +124,13 @@ class MedicalRendererCommissionMixin:
         )
         if not header_done:
             editor.replace_first_matching_paragraph(["Дата, время"], f"{header_date} 10:00 Осмотр врача приёмного покоя.")
-        person_line = f"{data.fio}, {data.birth}, {data.registered}".strip(" ,")
+        person_parts = [data.fio, data.birth]
+        if data.registered:
+            person_parts.append(format_registration_text(data.registered))
+        person_line = ", ".join(part for part in person_parts if part).strip(" ,")
         if person_line.strip(" ,"):
             editor.replace_first_matching_paragraph(["Сидоров", "Ф.И.О.", "ФИО"], person_line)
-        editor.remove_all_matching_paragraphs(["На учёте у психиатров", "На учете у психиатров"])
+        self._place_psych_account_after_registration(editor, data, ["регистрация по адресу"])
         editor.replace_block(["Работает в организации"], "Работает в организации:", data.work_org, PRIMARY_MARKERS, allow_empty=True)
         editor.replace_block(["Должность"], "Должность:", data.position, PRIMARY_MARKERS, allow_empty=True)
         editor.replace_block(["Больничный лист"], "Больничный лист:", data.sick_leave, PRIMARY_MARKERS, allow_empty=True)
@@ -150,6 +158,7 @@ class MedicalRendererCommissionMixin:
             )
         editor.replace_block(["На основании данных", "Диагноз"], "", diagnosis_sentence, PRIMARY_MARKERS)
         editor.replace_block(["Эпидемиологический анамнез"], "Эпидемиологический анамнез:", data.epidemiology, PRIMARY_MARKERS, allow_empty=True)
+        self._remove_trailing_clinical_leakage(doc, data)
         # Финальная фраза должна быть строго такой по пользовательскому требованию.
         target_referral_line = f"В связи с психическим состоянием, направляется на лечение в {TARGET_MEDICAL_FACILITY}"
         referral_done = False

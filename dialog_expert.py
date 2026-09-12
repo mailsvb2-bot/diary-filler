@@ -8,7 +8,13 @@ from tkinter import messagebox
 
 from app_config import *
 from medical_formatting import parse_date
-from medical_models import PatientData, normalize_admission_occurrence, normalize_yes_no
+from medical_models import (
+    PatientData,
+    normalize_admission_occurrence,
+    normalize_yes_no,
+    parse_psych_account_value,
+    parse_rvk_referral_value,
+)
 from medical_parser_sanitize import sanitize_diagnosis
 
 def _search_icd10_f(query: str, *, limit: int):
@@ -73,6 +79,54 @@ class DialogExpertMixin:
         self._update_expert_sick_leave_display()
         return True
 
+    def _prompt_psych_account_year_if_needed(self) -> bool:
+        if self._normalize_yes_no(self.psych_account_status_var.get()) != "да":
+            self.psych_account_since_year_var.set("")
+            return True
+        current = self.psych_account_since_year_var.get().strip()
+        if not current and hasattr(self, "data"):
+            _status, current = parse_psych_account_value(getattr(self.data, "psych_account", ""))
+        values = self._prompt_fields(
+            title="Учёт у психиатров",
+            rows=[("С какого года", current)],
+            width=28,
+        )
+        if values is None:
+            return False
+        year = values[0].strip()
+        if not re.fullmatch(r"(?:19|20)\d{2}", year):
+            messagebox.showwarning("Некорректный год", "Укажите год постановки на учёт в формате ГГГГ, например 2018.")
+            return False
+        from datetime import datetime
+        if int(year) > datetime.now().year:
+            messagebox.showwarning("Некорректный год", "Год постановки на учёт не может быть в будущем.")
+            return False
+        self.psych_account_since_year_var.set(year)
+        return True
+
+    def _prompt_rvk_referral_commissariat_if_needed(self) -> bool:
+        if self._normalize_yes_no(self.rvk_referral_present_var.get()) != "да":
+            self.rvk_referral_commissariat_var.set("")
+            return True
+        current = self.rvk_referral_commissariat_var.get().strip()
+        if not current and hasattr(self, "data"):
+            _status, parsed = parse_rvk_referral_value(getattr(self.data, "rvk_referral", ""))
+            current = parsed or getattr(self.data, "rvk_military_commissariat", "")
+        current = current or self.rvk_military_commissariat_var.get().strip()
+        values = self._prompt_fields(
+            title="Направление из РВК",
+            rows=[("Район РВК", current)],
+            width=46,
+        )
+        if values is None:
+            return False
+        area = values[0].strip()
+        if not area:
+            messagebox.showwarning("Не заполнено поле", "Укажите район РВК.")
+            return False
+        self.rvk_referral_commissariat_var.set(area)
+        return True
+
     def _prompt_shared_clinical_options_if_needed(self, selected_medical: List[str]) -> bool:
         """Collect shared doctor decisions once for the whole selected document set.
 
@@ -84,10 +138,40 @@ class DialogExpertMixin:
         sick_leave_docs = {"primary", "admission_doctor_referral", "discharge", "commission"}
         disability_docs = {"primary", "admission_doctor_referral"}
         epi_docs = {"discharge", "commission", "vk_mse", "sick_leave_vk", "rvk"}
+        rvk_referral_docs = {"primary", "admission_doctor_referral"}
+
+        # Every medical document carries the psychiatric-registration context.
+        # Seed the checkbox from an already parsed/rendered value only when the
+        # doctor has not answered for this patient yet.
+        if not self._normalize_yes_no(self.psych_account_status_var.get()) and hasattr(self, "data"):
+            parsed_status, parsed_year = parse_psych_account_value(getattr(self.data, "psych_account", ""))
+            if parsed_status:
+                self.psych_account_status_var.set(parsed_status)
+            if parsed_year and not self.psych_account_since_year_var.get().strip():
+                self.psych_account_since_year_var.set(parsed_year)
+        if selected & rvk_referral_docs and not self._normalize_yes_no(self.rvk_referral_present_var.get()) and hasattr(self, "data"):
+            parsed_status, parsed_area = parse_rvk_referral_value(getattr(self.data, "rvk_referral", ""))
+            if parsed_status:
+                self.rvk_referral_present_var.set(parsed_status)
+            if parsed_area and not self.rvk_referral_commissariat_var.get().strip():
+                self.rvk_referral_commissariat_var.set(parsed_area)
 
         rows: list[tuple[str, str]] = []
         fields: list[str] = []
         choices: dict[str, tuple[str, ...]] = {}
+
+        psych = self._normalize_yes_no(self.psych_account_status_var.get())
+        label = "Состоит ли на учёте у психиатров"
+        rows.append((label, psych))
+        fields.append("psych_account")
+        choices[label] = ("нет", "да")
+
+        if selected & rvk_referral_docs:
+            rvk_referral = self._normalize_yes_no(self.rvk_referral_present_var.get())
+            label = "По направлению из РВК"
+            rows.append((label, rvk_referral))
+            fields.append("rvk_referral")
+            choices[label] = ("нет", "да")
 
         if selected & sick_leave_docs:
             sick = self._normalize_yes_no(self.expert_sick_leave_needed_var.get())
@@ -128,7 +212,15 @@ class DialogExpertMixin:
                 if not value:
                     messagebox.showwarning("Не выбран вариант", "Для каждого вопроса выберите Да или Нет.")
                     return False
-                if field == "sick_leave":
+                if field == "psych_account":
+                    self.psych_account_status_var.set(value)
+                    if hasattr(self, "data"):
+                        self.data.psych_account_status = value
+                elif field == "rvk_referral":
+                    self.rvk_referral_present_var.set(value)
+                    if hasattr(self, "data"):
+                        self.data.rvk_referral_present = value
+                elif field == "sick_leave":
                     self.expert_sick_leave_needed_var.set(value)
                 elif field == "disability":
                     self.disability_needed_var.set(value)
@@ -137,6 +229,17 @@ class DialogExpertMixin:
                         self.data.disability = "нужно" if value == "да" else "не нужно"
                 elif field == "epi":
                     self.epi_present_var.set(value)
+
+        if self._normalize_yes_no(self.psych_account_status_var.get()) == "нет":
+            self.psych_account_since_year_var.set("")
+        elif not self._prompt_psych_account_year_if_needed():
+            return False
+
+        if selected & rvk_referral_docs:
+            if self._normalize_yes_no(self.rvk_referral_present_var.get()) == "нет":
+                self.rvk_referral_commissariat_var.set("")
+            elif not self._prompt_rvk_referral_commissariat_if_needed():
+                return False
 
         if selected & sick_leave_docs:
             sick = self._normalize_yes_no(self.expert_sick_leave_needed_var.get())
