@@ -754,6 +754,8 @@ def _assert_admission_occurrence_contract() -> None:
         _fail("clinical admission tail normalization changed")
     if clean_admission_detail("Целесообразна госпитализация пациентки в 3 отделение КДП"):
         _fail("legacy hospitalization recommendation leaks into generated documents")
+    if clean_admission_detail("нецелесообразна госпитализация в стационар") != "нецелесообразна госпитализация в стационар":
+        _fail("negated hospitalization decision is corrupted by recommendation cleanup")
 
 
 def _assert_shared_clinical_popup_contract() -> None:
@@ -786,6 +788,9 @@ def _assert_shared_clinical_popup_contract() -> None:
             _fail(message)
     if 'self._sick_leave_need_field(card' in window:
         _fail("Main patient card reintroduced a second sick-leave source of truth")
+    sick_date_section = expert.split("def _prompt_sick_leave_start_date_if_needed", 1)[1].split("def _prompt_shared_clinical_options_if_needed", 1)[0]
+    if "if current and parse_date(current):" in sick_date_section:
+        _fail("valid retained sick-leave date became non-editable again")
     if 'Файл ЭПИ' in window:
         _fail("Block 02 reintroduced persistent EPI selection instead of contextual popup")
 

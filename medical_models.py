@@ -93,7 +93,7 @@ def clean_admission_detail(value: str) -> str:
     # copied into generated documents, even when the source omitted punctuation
     # before it (a common legacy-template formatting defect).
     text = re.sub(
-        r"(?i)\s*целесообразна\s+госпитализация\b.*$",
+        r"(?i)\s*\bцелесообразна\s+госпитализация\b.*$",
         "",
         text,
     )

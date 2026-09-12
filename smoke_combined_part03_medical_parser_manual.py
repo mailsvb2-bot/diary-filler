@@ -107,6 +107,9 @@ from medical_models import parse_sick_leave_value
 assert parse_sick_leave_value("не нужен") == ("нет", "")
 assert parse_sick_leave_value("нужен с 12.06.2026") == ("да", "12.06.2026")
 assert parse_sick_leave_value("НУЖЕН С 120626") == ("да", "120626")
+from medical_models import clean_admission_detail
+assert clean_admission_detail("нецелесообразна госпитализация в стационар") == "нецелесообразна госпитализация в стационар"
+assert clean_admission_detail("добровольно нецелесообразна госпитализация в стационар") == "добровольно нецелесообразна госпитализация в стационар"
 assert parse_sick_leave_value("неизвестно") == ("", "")
 
 manual_data = service.parse_navigation(nav)

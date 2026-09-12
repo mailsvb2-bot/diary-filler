@@ -413,6 +413,26 @@ assert clinical_logic.expert_sick_leave_from_var.get() == ""
 assert clinical_logic.disability_needed_var.get() == "да"
 assert clinical_logic.data.disability == "нужно"
 
+# A previously valid sick-leave date is only a default, not a lock. Reconfirming
+# «Да» must reopen the date question so the doctor can correct it.
+date_revision_logic = _main_module.CombinedMedicalDiaryApp.__new__(_main_module.CombinedMedicalDiaryApp)
+date_revision_logic.expert_sick_leave_needed_var = _FakeVar("да")
+date_revision_logic.expert_sick_leave_from_var = _FakeVar("12.06.2026")
+date_revision_logic.admission_date_var = _FakeVar("10.06.2026")
+date_revision_logic.data = PatientData(admission_date="10.06.2026")
+date_revision_logic._update_expert_sick_leave_display = lambda: None
+date_revision_logic._normalize_date_for_ui = _main_module.CombinedMedicalDiaryApp._normalize_date_for_ui.__get__(date_revision_logic, _main_module.CombinedMedicalDiaryApp)
+date_revision_prompts = []
+def _date_revision_prompt(title, rows, width=34, linked_groups=None, choice_options=None):
+    date_revision_prompts.append((title, list(rows)))
+    assert title == "Больничный лист"
+    assert rows == [("С какого числа", "12.06.2026")], rows
+    return ["13062026"]
+date_revision_logic._prompt_fields = _date_revision_prompt
+assert date_revision_logic._prompt_sick_leave_start_date_if_needed() is True
+assert date_revision_logic.expert_sick_leave_from_var.get() == "13.06.2026"
+assert len(date_revision_prompts) == 1
+
 # Positive EPI selection must use the chosen file and persist its text.
 epi_logic = _main_module.CombinedMedicalDiaryApp.__new__(_main_module.CombinedMedicalDiaryApp)
 epi_logic.expert_sick_leave_needed_var = _FakeVar("нет")

@@ -44,14 +44,12 @@ class DialogExpertMixin:
         if self._normalize_yes_no(self.expert_sick_leave_needed_var.get()) != "да":
             return True
         current = self.expert_sick_leave_from_var.get().strip()
-        if current and parse_date(current):
-            self.expert_sick_leave_from_var.set(self._normalize_date_for_ui(current))
-            return True
+        # Always reopen the date question after the doctor confirms «Да».
+        # The previous value is only a default, never a lock: this lets the
+        # physician correct a valid-but-wrong date on a later generation run.
         default = (
-            current
-            or self.admission_date_var.get().strip()
-            or getattr(getattr(self, "data", None), "admission_date", "")
-        )
+            self._normalize_date_for_ui(current) if current and parse_date(current) else current
+        ) or self.admission_date_var.get().strip() or getattr(getattr(self, "data", None), "admission_date", "")
         values = self._prompt_fields(
             title="Больничный лист",
             rows=[("С какого числа", default)],
