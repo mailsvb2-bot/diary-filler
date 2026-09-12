@@ -43,7 +43,7 @@ jobs:
         run: python release_check.py
 
       - name: Run desktop intake contract
-        run: python desktop_intake_contract_check.py
+        run: python tests/desktop_intake_contract_check.py
 
       - name: Run real Tk GUI wiring smoke
         run: python gui_runtime_check.py
