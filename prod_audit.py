@@ -720,6 +720,8 @@ def _assert_admission_occurrence_contract() -> None:
         (reset, '("admission_occurrence_var", "")', "occurrence leaks between patients"),
         (orchestrator, 'occurrence_docs = {"primary", "discharge", "commission", "admission_doctor_referral", "rvk"}', "UI flow does not request occurrence for all relevant docs"),
         (expert, 'choice_options', "generic popup lost checkbox occurrence choices"),
+        (expert, 'elif field == "admission_occurrence":', "generic popup does not persist occurrence selection"),
+        (expert, 'self._store_admission_occurrence_value(value)', "generic popup occurrence is not stored canonically"),
         (details, 'tk.Checkbutton(', "RVK popup occurrence is no longer a checkbox choice"),
         (details, '"Автозаводский"', "RVK popup lost Автозаводский commissariat"),
         (details, 'Другой военкомат (введите вручную)', "RVK popup lost custom commissariat input"),

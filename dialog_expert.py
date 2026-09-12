@@ -497,6 +497,13 @@ class DialogExpertMixin:
                 self._manual_diagnosis = True
                 if hasattr(self, "data"):
                     self.data.diagnosis = diagnosis
+            elif field == "admission_occurrence":
+                if not self._store_admission_occurrence_value(value):
+                    messagebox.showwarning(
+                        "Не выбран вариант",
+                        "Укажите, пациент поступает первично или повторно.",
+                    )
+                    return False
             elif field == "discharge_date":
                 if not self._store_discharge_date_value(value):
                     messagebox.showwarning(
