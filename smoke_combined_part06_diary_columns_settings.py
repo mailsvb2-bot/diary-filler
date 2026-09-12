@@ -364,28 +364,37 @@ try:
 except ValueError as exc:
     assert "ЭПИ" in str(exc) and ".txt" in str(exc), str(exc)
 
+bad_date_order_data = service.parse_primary_document(nav)
+bad_date_order_data.admission_occurrence = "первично"
 try:
     service.create_documents(
         navigation_path=nav,
         output_dir=OUT / "bad_date_order",
         selected_docs=["discharge"],
         discharge_date="09.06.2026",
+        override_data=bad_date_order_data,
     )
     raise AssertionError("service must reject discharge date before admission date")
 except ValueError as exc:
     assert "раньше" in str(exc), str(exc)
 
+single_kind_data = service.parse_primary_document(nav)
+single_kind_data.admission_occurrence = "первично"
 single_kind_created, _single_kind_data = service.create_documents(
     navigation_path=nav,
     output_dir=OUT / "single_kind_string",
     selected_docs="primary",
+    override_data=single_kind_data,
 )
 assert len(single_kind_created) == 1 and single_kind_created[0].name.endswith("Первичный осмотр.docx")
 
+none_output_data = service.parse_primary_document(nav)
+none_output_data.admission_occurrence = "первично"
 none_output_created, _none_output_data = service.create_documents(
     navigation_path=nav,
     output_dir=None,
     selected_docs="primary",
+    override_data=none_output_data,
 )
 assert none_output_created[0].parent == nav.parent
 
