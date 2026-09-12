@@ -20,7 +20,7 @@ def _pe_has_authenticode_signature(path: Path) -> bool:
     if len(data) < 0x100 or data[:2] != b"MZ":
         raise SystemExit(f"Not a PE executable: {path}")
     pe_offset = struct.unpack_from("<I", data, 0x3C)[0]
-    if data[pe_offset : pe_offset + 4] != b"PE\\0\\0":
+    if data[pe_offset : pe_offset + 4] != b"PE\x00\x00":
         raise SystemExit(f"Invalid PE signature: {path}")
     optional_offset = pe_offset + 24
     magic = struct.unpack_from("<H", data, optional_offset)[0]

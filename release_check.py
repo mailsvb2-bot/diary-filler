@@ -237,6 +237,33 @@ def _assert_ui_selected_state_contract() -> None:
 
 
 
+def _assert_pe_parser_contract() -> None:
+    """Catch PE-header parser regressions before the expensive EXE build."""
+    from tempfile import TemporaryDirectory
+
+    from verify_built_exe import _pe_has_authenticode_signature
+
+    with TemporaryDirectory(prefix="medical-autofill-pe-") as temp_dir:
+        fixture = bytearray(512)
+        fixture[:2] = b"MZ"
+        fixture[0x3C:0x40] = (0x80).to_bytes(4, "little")
+        fixture[0x80:0x84] = b"PE\x00\x00"
+        optional_offset = 0x80 + 24
+        fixture[optional_offset:optional_offset + 2] = (0x20B).to_bytes(2, "little")
+        security_entry = optional_offset + 112 + (8 * 4)
+        path = Path(temp_dir) / "fixture.exe"
+
+        path.write_bytes(fixture)
+        if _pe_has_authenticode_signature(path):
+            raise SystemExit("Unsigned PE fixture was incorrectly reported as signed")
+
+        fixture[security_entry:security_entry + 4] = (0x180).to_bytes(4, "little")
+        fixture[security_entry + 4:security_entry + 8] = (0x40).to_bytes(4, "little")
+        path.write_bytes(fixture)
+        if not _pe_has_authenticode_signature(path):
+            raise SystemExit("Signed PE fixture was not recognized")
+
+
 def _assert_startup_state_contract() -> None:
     from app_initialization import AppInitializationMixin
 
@@ -375,6 +402,9 @@ def main() -> None:
 
     _print_step("Startup state contract")
     _assert_startup_state_contract()
+
+    _print_step("PE parser contract")
+    _assert_pe_parser_contract()
 
     _print_step("Production contracts")
     _assert_settings_contract()
