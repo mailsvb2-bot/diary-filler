@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import ctypes
 import hashlib
+import json
 import os
 import subprocess
 import sys
@@ -26,7 +27,9 @@ _AGENT_MUTEX_NAME = "Local\\MedicalDiaryAutofillDesktopIntakeAgent"
 _HEARTBEAT_MAX_AGE_SECONDS = 6.0
 _AGENT_POLL_SECONDS = 2.0
 _AGENT_RELAUNCH_COOLDOWN_SECONDS = 30.0
+_AGENT_MUTEX_HANDOFF_SECONDS = 8.0
 _MAX_LOG_BYTES = 128 * 1024
+_HANDOFF_SCHEMA = 1
 
 
 def _local_runtime_dir() -> Path:
@@ -43,16 +46,18 @@ def gui_heartbeat_path() -> Path:
 
 def touch_gui_heartbeat() -> None:
     """Record GUI liveness without storing any patient data."""
-    path = gui_heartbeat_path()
-    tmp = path.with_suffix(".tmp")
+    tmp: Path | None = None
     try:
+        path = gui_heartbeat_path()
+        tmp = path.with_suffix(".tmp")
         tmp.write_text(f"{time.time():.6f}\n", encoding="ascii")
         os.replace(tmp, path)
     except OSError:
-        try:
-            tmp.unlink(missing_ok=True)
-        except OSError:
-            pass
+        if tmp is not None:
+            try:
+                tmp.unlink(missing_ok=True)
+            except OSError:
+                pass
 
 
 def gui_is_active(*, max_age_seconds: float = _HEARTBEAT_MAX_AGE_SECONDS) -> bool:
@@ -75,6 +80,80 @@ def _runtime_command(*arguments: str) -> list[str]:
             executable = pythonw
     main_py = Path(__file__).resolve().with_name("main.py")
     return [str(executable), str(main_py), *arguments]
+
+
+def _native_gui_command() -> list[str]:
+    return _runtime_command()
+
+
+def _current_agent_identity() -> str:
+    """Stable identity of the install/source tree that owns this running agent."""
+    raw = "\0".join(_native_gui_command()).encode("utf-8", errors="surrogatepass")
+    return hashlib.sha256(raw).hexdigest()
+
+
+def _handoff_path() -> Path:
+    return _local_runtime_dir() / "desktop-intake-agent-handoff.json"
+
+
+def _write_agent_handoff() -> None:
+    """Publish the newest GUI launch target so stale agents can retire safely."""
+    payload = {
+        "schema": _HANDOFF_SCHEMA,
+        "identity": _current_agent_identity(),
+        "gui_command": _native_gui_command(),
+    }
+    path = _handoff_path()
+    tmp = path.with_suffix(".tmp")
+    tmp.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+    os.replace(tmp, path)
+
+
+def _read_agent_handoff() -> dict[str, object] | None:
+    try:
+        payload = json.loads(_handoff_path().read_text(encoding="utf-8"))
+    except (OSError, ValueError, TypeError):
+        return None
+    if not isinstance(payload, dict) or payload.get("schema") != _HANDOFF_SCHEMA:
+        return None
+    command = payload.get("gui_command")
+    identity = payload.get("identity")
+    if not isinstance(identity, str) or not identity:
+        return None
+    if not isinstance(command, list) or not command or not all(isinstance(item, str) and item for item in command):
+        return None
+    return payload
+
+
+def _command_target_exists(command: list[str]) -> bool:
+    try:
+        if not Path(command[0]).is_file():
+            return False
+        # Source mode is [pythonw.exe, main.py].  A deleted source tree must not
+        # be preferred merely because Python itself still exists.
+        if len(command) >= 2 and command[1].lower().endswith((".py", ".pyw")):
+            return Path(command[1]).is_file()
+        return True
+    except OSError:
+        return False
+
+
+def _launch_command() -> list[str]:
+    """Prefer the newest installed GUI target, falling back to this process."""
+    handoff = _read_agent_handoff()
+    if handoff is not None:
+        command = [str(item) for item in handoff["gui_command"]]  # type: ignore[index]
+        if _command_target_exists(command):
+            return command
+    return _native_gui_command()
+
+
+def _agent_is_retired() -> bool:
+    """Return True when a newer/different install has taken ownership."""
+    handoff = _read_agent_handoff()
+    if handoff is None:
+        return False
+    return str(handoff["identity"]) != _current_agent_identity()
 
 
 def _hidden_popen(command: list[str]) -> subprocess.Popen[bytes]:
@@ -102,22 +181,39 @@ def _startup_script_path() -> Path | None:
     return startup / "MedicalDiaryAutofill Intake.vbs"
 
 
+def _startup_vbs_payload(command: list[str]) -> str:
+    command_line = subprocess.list2cmdline(command)
+    escaped = command_line.replace('"', '""')
+    return (
+        "On Error Resume Next\r\n"
+        'Set shell = CreateObject("WScript.Shell")\r\n'
+        f'shell.Run "{escaped}", 0, False\r\n'
+    )
+
+
 def install_agent_autostart() -> bool:
-    """Install/update a per-user hidden Startup entry; no admin rights required."""
+    """Install/update a per-user hidden Startup entry; no admin rights required.
+
+    VBS is deliberately UTF-16 with BOM.  Windows Script Host is not reliably
+    UTF-8-safe for Cyrillic profile/install paths on older Windows builds.
+    """
     if os.name != "nt" or os.environ.get("CI", "").strip():
         return False
     path = _startup_script_path()
     if path is None:
         return False
-    path.parent.mkdir(parents=True, exist_ok=True)
-    command = subprocess.list2cmdline(_runtime_command(AGENT_ARGUMENT))
-    escaped = command.replace('"', '""')
-    payload = f'CreateObject("Wscript.Shell").Run "{escaped}", 0, False\r\n'
     try:
-        if path.is_file() and path.read_text(encoding="utf-8") == payload:
-            return True
+        _write_agent_handoff()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        payload = _startup_vbs_payload(_runtime_command(AGENT_ARGUMENT))
+        if path.is_file():
+            try:
+                if path.read_text(encoding="utf-16") == payload:
+                    return True
+            except (OSError, UnicodeError):
+                pass
         tmp = path.with_suffix(".tmp")
-        tmp.write_text(payload, encoding="utf-8")
+        tmp.write_text(payload, encoding="utf-16")
         os.replace(tmp, path)
         return True
     except OSError:
@@ -128,6 +224,8 @@ def start_agent_process() -> bool:
     if os.name != "nt" or os.environ.get("CI", "").strip():
         return False
     try:
+        # Keep the handoff fresh even if the Startup entry was already current.
+        _write_agent_handoff()
         _hidden_popen(_runtime_command(AGENT_ARGUMENT))
         return True
     except OSError:
@@ -136,9 +234,9 @@ def start_agent_process() -> bool:
 
 def _log(message: str) -> None:
     """Best-effort bounded technical log.  Patient filenames are never logged."""
-    path = _local_runtime_dir() / "desktop-intake-agent.log"
-    line = f"{time.strftime('%Y-%m-%d %H:%M:%S')} {message}\n"
     try:
+        path = _local_runtime_dir() / "desktop-intake-agent.log"
+        line = f"{time.strftime('%Y-%m-%d %H:%M:%S')} {message}\n"
         if path.exists() and path.stat().st_size > _MAX_LOG_BYTES:
             path.write_text("", encoding="utf-8")
         with path.open("a", encoding="utf-8") as stream:
@@ -147,13 +245,14 @@ def _log(message: str) -> None:
         pass
 
 
-def _acquire_agent_mutex() -> int | None:
+def _acquire_agent_mutex_once() -> int | None:
     if os.name != "nt":
         return None
     kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
     create_mutex = kernel32.CreateMutexW
     create_mutex.argtypes = [ctypes.c_void_p, ctypes.c_bool, ctypes.c_wchar_p]
     create_mutex.restype = ctypes.c_void_p
+    ctypes.set_last_error(0)
     handle = create_mutex(None, False, _AGENT_MUTEX_NAME)
     if not handle:
         return None
@@ -161,6 +260,18 @@ def _acquire_agent_mutex() -> int | None:
         kernel32.CloseHandle(ctypes.c_void_p(handle))
         return None
     return int(handle)
+
+
+def _acquire_agent_mutex() -> int | None:
+    """Allow a newly installed agent to take over after the stale owner retires."""
+    deadline = time.monotonic() + _AGENT_MUTEX_HANDOFF_SECONDS
+    while True:
+        handle = _acquire_agent_mutex_once()
+        if handle is not None:
+            return handle
+        if time.monotonic() >= deadline:
+            return None
+        time.sleep(0.4)
 
 
 def _release_agent_mutex(handle: int | None) -> None:
@@ -183,7 +294,7 @@ def _source_signature(path: Path) -> str:
 
 def _launch_gui_for_primary(path: Path) -> bool:
     try:
-        _hidden_popen(_runtime_command(PRIMARY_ARGUMENT, str(path.resolve())))
+        _hidden_popen([*_launch_command(), PRIMARY_ARGUMENT, str(path.resolve())])
         return True
     except OSError:
         return False
@@ -202,6 +313,10 @@ def run_agent() -> int:
         root = ensure_intake_root()
         _log("agent started")
         while True:
+            if _agent_is_retired():
+                _log("agent retired after application update")
+                return 0
+
             now = time.time()
             recently_launched = {
                 signature: launched_at
