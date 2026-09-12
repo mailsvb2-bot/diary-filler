@@ -98,16 +98,25 @@ def _poll_intake(app, intake_root: Path) -> None:
 
 
 def start_gui_intake_runtime(app, *, initial_primary: str | Path | None = None) -> None:
-    """Enable the patient-folder convenience layer for a normal Windows GUI."""
+    """Enable the patient-folder convenience layer for a normal Windows GUI.
+
+    This layer is deliberately fail-open.  A redirected/locked Desktop, a
+    broken Startup folder, antivirus interference or any watcher problem must
+    never prevent the original document application from opening.
+    """
     if os.name != "nt" or os.environ.get("MEDICAL_AUTOFILL_DISABLE_DESKTOP_INTAKE", "").strip() == "1":
         return
 
-    # Publish liveness before starting/updating the agent so an already open GUI
-    # is never followed by a second window for the same dropped file.
-    touch_gui_heartbeat()
-    intake_root = ensure_intake_root()
-    install_agent_autostart()
-    start_agent_process()
+    try:
+        # Publish liveness before starting/updating the agent so an already open
+        # GUI is never followed by a second window for the same dropped file.
+        touch_gui_heartbeat()
+        intake_root = ensure_intake_root()
+        install_agent_autostart()
+        start_agent_process()
+    except Exception:
+        # Optional workflow convenience: the core program must remain usable.
+        return
 
     app._desktop_intake_processing = False
     _schedule_heartbeat(app)
