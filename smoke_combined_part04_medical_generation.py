@@ -90,6 +90,14 @@ for readable_path in (primary_path, discharge_path, commission_path, vk_mse_path
         (readable_path.name, p.text, p.paragraph_format.space_before) for p in section_paragraphs
     ]
 
+for treatment_path in (vk_mse_path, sick_leave_vk_path):
+    treatment_doc = Document(treatment_path)
+    treatment_paragraphs = [p for p in treatment_doc.paragraphs if p.text.strip().lower().startswith("получает лечение")]
+    assert treatment_paragraphs, treatment_path
+    assert all(p.paragraph_format.space_before is not None and p.paragraph_format.space_before.pt >= 9.5 for p in treatment_paragraphs), [
+        (treatment_path.name, p.text, p.paragraph_format.space_before) for p in treatment_paragraphs
+    ]
+
 # ЭПИ must stay in its own block and never overwrite laboratory/analysis rows.
 # This locks the exact user regression where unrelated text appeared around analyses.
 lab_prefixes = (
