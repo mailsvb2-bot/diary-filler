@@ -191,6 +191,31 @@ complaint_index = next(i for i, line in enumerate(complaint_lines) if "Паци�
 assert complaint_lines[complaint_index].startswith("Жалобы при поступлении:"), complaint_lines[complaint_index]
 assert all("Пациентка предъявляет жалобы на плохой сон" not in line for line in complaint_lines[-4:]), complaint_lines[-4:]
 
+# Real legacy-primary regression: the parsed complaints field may contain only
+# the clinical content in nominative form, while the trailing source sentence
+# uses the accusative form «Пациентка предъявляет жалобы на апатию...».  That
+# duplicate must be removed from Primary, Joint Examination and Admission Doctor.
+legacy_tail_data = copy.deepcopy(manual_data)
+legacy_tail_data.complaints = "апатия, отсутствие сил, нарушенный сон"
+legacy_tail_data.epidemiology = (
+    "контакт с инфекционными больными отрицает\n"
+    "Пациентка предъявляет жалобы на апатию, отсутствие сил, нарушенный сон."
+)
+legacy_tail_created, _ = service.create_documents(
+    navigation_path=nav,
+    output_dir=OUT / "legacy_trailing_complaint_cleanup",
+    selected_docs=("primary", "commission", "admission_doctor_referral"),
+    override_data=legacy_tail_data,
+)
+legacy_tail_phrase = "Пациентка предъявляет жалобы на апатию, отсутствие сил, нарушенный сон"
+for path in legacy_tail_created:
+    text = extract_docx_text(path)
+    assert legacy_tail_phrase not in text, (path.name, text)
+    assert "апатия, отсутствие сил, нарушенный сон" in text, (path.name, text)
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    complaint_rows = [line for line in lines if line.lower().startswith(("жалобы на момент осмотра:", "жалобы при поступлении:"))]
+    assert len(complaint_rows) == 1, (path.name, complaint_rows)
+
 # Removing the legacy hospitalization recommendation must never discard the
 # surrounding clinical history. Preserve both text before and after the service
 # phrase, including when the phrase lives inside the same paragraph.

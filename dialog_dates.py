@@ -179,12 +179,12 @@ class DialogDatesMixin:
         return None
 
     def _default_committee_date(self) -> str:
-        """Без межоконного копирования дат: новое popup-окно стартует с текущей даты."""
-        return self._today_str()
+        """Новая комиссия не получает календарную дату автоматически."""
+        return ""
 
     def _default_protocol_date(self, fallback: str | None = None) -> str:
-        """Дата протокола может наследовать дату только внутри того же popup."""
-        return (fallback or "").strip() or self._today_str()
+        """Дата протокола наследует только введённую врачом дату этого popup."""
+        return (fallback or "").strip()
 
     def _remember_committee_dates(self, *, committee_date: str | None = None, protocol_date: str | None = None) -> None:
         """Ничего не запоминаем между разными popup-окнами.

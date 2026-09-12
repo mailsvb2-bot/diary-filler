@@ -15,8 +15,8 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
-TARGET_VERSION = "1.4.3"
-TARGET_VERSION_LABEL = "v1.4.3-rvk-registry-document-order"
+TARGET_VERSION = "1.4.4"
+TARGET_VERSION_LABEL = "v1.4.4-date-linking-and-tail-cleanup"
 MAX_PYTHON_FILES = 125
 MAX_TINY_PYTHON_FILES = 25
 # Release/CI probes are executable quality gates, not runtime architecture.
@@ -615,6 +615,7 @@ def _assert_patient_session_reset_contract() -> None:
 def _assert_clinical_popup_and_document_order_contract() -> None:
     """Lock the shared clinical decisions and their DOCX placement contract."""
     dialog = _read("dialog_expert.py")
+    details = _read("dialog_document_details.py")
     service = _read("medical_service.py")
     primary = _read("medical_renderer_primary.py")
     commission = _read("medical_renderer_commission.py")
@@ -639,6 +640,22 @@ def _assert_clinical_popup_and_document_order_contract() -> None:
         _fail("psychiatric-account popup no longer maps display choices to canonical decisions")
     if 'Введите только 4 цифры года' not in dialog:
         _fail("psychiatric-account year input no longer enforces four-digit numeric entry")
+
+    # VK/commission dates are doctor-entered facts. A fresh popup must never
+    # silently invent today's date, and the main VK date mirrors to protocol date.
+    required_date_popup = (
+        'date_default = self.commission_date_var.get().strip()',
+        'date_default = self.vk_date_var.get().strip()',
+        'date_default = self.sick_leave_vk_date_var.get().strip()',
+        '("Дата протокола", protocol_date_default)',
+        'linked_groups=[(1, [3])]',
+        'linked_groups=[(1, [3, 4])]',
+    )
+    missing = [snippet for snippet in required_date_popup if snippet not in details]
+    if missing:
+        _fail("doctor-entered committee/protocol date contract regressed: " + ", ".join(missing))
+    if 'get().strip() or self._today_str()' in details:
+        _fail("committee/VK popup silently pre-fills today's date")
 
     required_service = (
         "Укажите, состоит ли пациент на учёте у психиатров.",
@@ -678,6 +695,8 @@ def _assert_clinical_popup_and_document_order_contract() -> None:
         _fail("hospitalization cleanup may discard the surrounding clinical paragraph")
     if "fallback_markers" not in labs:
         _fail("psychiatric-account placement lacks a fallback when registration is empty")
+    if "_TRAILING_COMPLAINT_RE" not in labs or "_complaints_equivalent" not in labs or "SequenceMatcher" not in labs:
+        _fail("legacy trailing complaint cleanup no longer handles prose/morphology variants")
     if "_move_discharge_outcome_before_signatures(doc)" not in primary:
         _fail("discharge outcome/recommendations are no longer forced before signatures")
 

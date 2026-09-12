@@ -17,7 +17,7 @@ def _sync_custom_commissariat_value(military_var, custom_military_var, *, suppre
 
 class DialogDocumentDetailsMixin:
     def _prompt_commission_details(self) -> bool:
-        date_default = self.commission_date_var.get().strip() or self._today_str()
+        date_default = self.commission_date_var.get().strip()
         values = self._prompt_fields(
             title="Совместный осмотр",
             rows=[
@@ -268,7 +268,7 @@ class DialogDocumentDetailsMixin:
         return bool(result["ok"])
 
     def _prompt_vk_mse_details(self) -> bool:
-        date_default = self.vk_date_var.get().strip() or self._today_str()
+        date_default = self.vk_date_var.get().strip()
         protocol_date_default = self.vk_protocol_date_var.get().strip() or date_default
         shared_org, shared_position = self._shared_work_defaults()
         values = self._prompt_fields(
@@ -277,7 +277,7 @@ class DialogDocumentDetailsMixin:
                 ("Номер истории болезни", self._case_number_popup_default()),
                 ("Дата ВК на МСЭ", date_default),
                 ("Протокол номер", self.vk_protocol_number_var.get().strip()),
-                ("От / дата протокола / Дата протокола", protocol_date_default),
+                ("Дата протокола", protocol_date_default),
                 ("Место работы", self.vk_mse_work_org_var.get().strip() or shared_org),
                 ("Должность", self.vk_mse_position_var.get().strip() or shared_position),
             ],
@@ -312,7 +312,7 @@ class DialogDocumentDetailsMixin:
         return True
 
     def _prompt_sick_leave_vk_details(self) -> bool:
-        date_default = self.sick_leave_vk_date_var.get().strip() or self._today_str()
+        date_default = self.sick_leave_vk_date_var.get().strip()
         protocol_date_default = self.sick_leave_vk_protocol_date_var.get().strip() or date_default
         commission_date_default = self.sick_leave_vk_commission_date_var.get().strip() or date_default
         shared_org, shared_position = self._shared_work_defaults()
@@ -322,7 +322,7 @@ class DialogDocumentDetailsMixin:
                 ("Номер истории болезни", self._case_number_popup_default()),
                 ("Дата / дата проведения ВК", date_default),
                 ("Номер протокола", self.sick_leave_vk_protocol_number_var.get().strip()),
-                ("От / дата протокола / Дата протокола", protocol_date_default),
+                ("Дата протокола", protocol_date_default),
                 ("Дата проведения комиссии", commission_date_default),
                 ("Место работы", self.sick_leave_vk_work_org_var.get().strip() or shared_org),
                 ("Должность", self.sick_leave_vk_position_var.get().strip() or shared_position),
