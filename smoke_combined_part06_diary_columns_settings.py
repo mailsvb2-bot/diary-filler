@@ -308,6 +308,7 @@ assert "18.06.2026" in compact_text and "19.06.2026" in compact_text and "20.06.
 
 dupe_out = OUT / "duplicate_selected_docs"
 dupe_data = service.parse_primary_document(nav)
+dupe_data.admission_occurrence = "первично"
 dupe_data.commission_date = "18062026"
 dupe_data.commission_number = "12"
 dupe_created, _dupe_data = service.create_documents(
