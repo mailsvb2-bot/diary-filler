@@ -623,20 +623,26 @@ assert all(path.parent == blank_template.parent for path in space_output_result.
 # --- v1.3.18 production-quality gate: output dir/file hygiene, labels, archive and repo hygiene ---
 file_output_target = OUT / "not_a_directory_output.txt"
 file_output_target.write_text("I am a file, not an output directory", encoding="utf-8")
+file_output_data = service.parse_primary_document(nav)
+file_output_data.admission_occurrence = "первично"
 try:
     service.create_documents(
         navigation_path=nav,
         output_dir=file_output_target,
         selected_docs="Первичный осмотр",
+        override_data=file_output_data,
     )
     raise AssertionError("medical service must reject output_dir pointing to a file")
 except ValueError as exc:
     assert "Папка результата" in str(exc), str(exc)
 
+label_selected_data = service.parse_primary_document(nav)
+label_selected_data.admission_occurrence = "первично"
 label_selected_created, _label_selected_data = service.create_documents(
     navigation_path=nav,
     output_dir=OUT / "label_selected_docs",
     selected_docs=["Первичный осмотр"],
+    override_data=label_selected_data,
 )
 assert len(label_selected_created) == 1 and label_selected_created[0].name.endswith("Первичный осмотр.docx")
 
