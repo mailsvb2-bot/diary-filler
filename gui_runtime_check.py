@@ -21,10 +21,12 @@ from startup import _create_root
 
 
 def _click(root, widget) -> None:
+    # Keep press/release contiguous. Pumping Tk's idle queue between them can
+    # synthesize a <Leave> from the runner's real mouse position, which resets
+    # the production button's pressed state before ButtonRelease arrives.
     root.update_idletasks()
     widget.event_generate("<Enter>")
     widget.event_generate("<ButtonPress-1>", x=8, y=8)
-    root.update_idletasks()
     widget.event_generate("<ButtonRelease-1>", x=8, y=8)
     root.update_idletasks()
 
