@@ -9,6 +9,12 @@ from medical_parser_sanitize import sanitize_diagnosis
 from medical_models import normalize_admission_occurrence
 
 
+def _sync_custom_commissariat_value(military_var, custom_military_var, *, suppress: bool = False) -> None:
+    """Mirror manual commissariat text, including clearing it when the field is erased."""
+    if not suppress:
+        military_var.set(custom_military_var.get().strip())
+
+
 class DialogDocumentDetailsMixin:
     def _prompt_commission_details(self) -> bool:
         date_default = self.commission_date_var.get().strip() or self._today_str()
@@ -101,21 +107,31 @@ class DialogDocumentDetailsMixin:
         )
         row += 1
         occurrence_frame = tk.Frame(frame, bg=PANEL)
-        occurrence_frame.grid(row=row, column=0, sticky="ew", pady=(0, 8))
+        occurrence_frame.grid(row=row, column=0, sticky="ew", pady=(0, 10))
         row += 1
+        occurrence_flags: dict[str, tk.BooleanVar] = {}
+
+        def choose_occurrence(value: str) -> None:
+            if occurrence_flags[value].get():
+                occurrence_var.set(value)
+                for other, flag in occurrence_flags.items():
+                    if other != value:
+                        flag.set(False)
+            elif occurrence_var.get() == value:
+                occurrence_var.set("")
+
         for idx, value in enumerate(("первично", "повторно")):
             occurrence_frame.grid_columnconfigure(idx, weight=1)
-            tk.Button(
+            flag = tk.BooleanVar(value=occurrence_var.get() == value)
+            occurrence_flags[value] = flag
+            tk.Checkbutton(
                 occurrence_frame,
                 text=value.capitalize(),
-                command=lambda v=value: occurrence_var.set(v),
-                bg=FIELD, fg=TEXT, activebackground=ACCENT, activeforeground="#03101f",
-                relief="flat", padx=8, pady=6, cursor="hand2",
-            ).grid(row=0, column=idx, sticky="ew", padx=(0 if idx == 0 else 6, 0))
-        tk.Label(frame, textvariable=occurrence_var, bg=PANEL, fg=ACCENT, font=self._font(10), anchor="w").grid(
-            row=row, column=0, sticky="w", pady=(0, 12)
-        )
-        row += 1
+                variable=flag,
+                command=lambda v=value: choose_occurrence(v),
+                bg=PANEL, fg=TEXT, activebackground=PANEL, activeforeground=TEXT,
+                selectcolor=FIELD, relief="flat", padx=8, pady=4, cursor="hand2",
+            ).grid(row=0, column=idx, sticky="w", padx=(0 if idx == 0 else 12, 0))
 
         tk.Label(frame, text="Военкомат", bg=PANEL, fg=TEXT, font=self._font(10), anchor="w").grid(
             row=row, column=0, sticky="w", pady=(0, 6)
@@ -124,12 +140,26 @@ class DialogDocumentDetailsMixin:
         options_frame = tk.Frame(frame, bg=PANEL)
         options_frame.grid(row=row, column=0, sticky="ew", pady=(0, 8))
         row += 1
-        for idx, value in enumerate(("Ленинский", "Канавинский", "Сормовский и Московский")):
-            options_frame.grid_columnconfigure(idx, weight=1)
+        commissariat_options = ("Ленинский", "Канавинский", "Автозаводский", "Сормовский и Московский")
+        custom_military_var = tk.StringVar(value="" if military_var.get() in commissariat_options else military_var.get())
+        suppress_custom_sync = False
+
+        def choose_commissariat(value: str) -> None:
+            nonlocal suppress_custom_sync
+            suppress_custom_sync = True
+            try:
+                custom_military_var.set("")
+            finally:
+                suppress_custom_sync = False
+            military_var.set(value)
+
+        for idx, value in enumerate(commissariat_options):
+            grid_row, grid_col = divmod(idx, 2)
+            options_frame.grid_columnconfigure(grid_col, weight=1)
             btn = tk.Button(
                 options_frame,
                 text=value,
-                command=lambda v=value: military_var.set(v),
+                command=lambda v=value: choose_commissariat(v),
                 bg=FIELD,
                 fg=TEXT,
                 activebackground=ACCENT,
@@ -139,8 +169,26 @@ class DialogDocumentDetailsMixin:
                 pady=6,
                 cursor="hand2",
             )
-            btn.grid(row=0, column=idx, sticky="ew", padx=(0 if idx == 0 else 6, 0))
+            btn.grid(row=grid_row, column=grid_col, sticky="ew", padx=(0 if grid_col == 0 else 6, 0), pady=(0, 6))
 
+        tk.Label(frame, text="Другой военкомат (введите вручную)", bg=PANEL, fg=TEXT, font=self._font(10), anchor="w").grid(
+            row=row, column=0, sticky="w", pady=(0, 4)
+        )
+        row += 1
+        custom_military_entry = tk.Entry(
+            frame, textvariable=custom_military_var, width=44, bg=FIELD, fg=TEXT, insertbackground=TEXT, relief="flat"
+        )
+        custom_military_entry.grid(row=row, column=0, sticky="ew", pady=(0, 6))
+        row += 1
+
+        def sync_custom_commissariat(*_args) -> None:
+            _sync_custom_commissariat_value(
+                military_var,
+                custom_military_var,
+                suppress=suppress_custom_sync,
+            )
+
+        custom_military_var.trace_add("write", sync_custom_commissariat)
         selected_label = tk.Label(frame, textvariable=military_var, bg=PANEL, fg=ACCENT, font=self._font(10), anchor="w")
         selected_label.grid(row=row, column=0, sticky="w", pady=(0, 12))
         row += 1
@@ -227,7 +275,7 @@ class DialogDocumentDetailsMixin:
             title="ВК на МСЭ",
             rows=[
                 ("Номер истории болезни", self._case_number_popup_default()),
-                ("Дата / дата проведения ВК / дата проведения комиссии", date_default),
+                ("Дата ВК на МСЭ", date_default),
                 ("Протокол номер", self.vk_protocol_number_var.get().strip()),
                 ("От / дата протокола / Дата протокола", protocol_date_default),
                 ("Место работы", self.vk_mse_work_org_var.get().strip() or shared_org),

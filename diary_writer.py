@@ -8,6 +8,7 @@ from typing import Sequence
 
 from docx import Document
 
+from diary_table_cells import apply_compact_diary_layout
 from diary_models import FillResult
 from diary_writer_apply import apply_diary_entries
 from diary_writer_entries import (
@@ -74,5 +75,6 @@ def fill_diary_file(
         final_entry_index=final_entry_index,
         patient_gender=patient_gender,
     )
+    apply_compact_diary_layout(doc)
     doc.save(str(path))
     return FillResult(**stats)

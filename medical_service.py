@@ -195,12 +195,15 @@ class MedicalDocumentService:
         if selected_set & treatment_docs:
             data.treatment_plan = self._require_text(data.treatment_plan, "лечение")
 
-        if {"discharge", "rvk"} & selected_set:
-            data.discharge_date = self._normalize_required_date(data.discharge_date, "Дата выписки")
-            self._ensure_discharge_not_before_admission(data.admission_date, data.discharge_date)
+        occurrence_docs = {"primary", "discharge", "commission", "admission_doctor_referral", "rvk"}
+        if occurrence_docs & selected_set:
             data.admission_occurrence = normalize_admission_occurrence(data.admission_occurrence)
             if not data.admission_occurrence:
                 raise ValueError("Укажите, пациент поступает первично или повторно.")
+
+        if {"discharge", "rvk"} & selected_set:
+            data.discharge_date = self._normalize_required_date(data.discharge_date, "Дата выписки")
+            self._ensure_discharge_not_before_admission(data.admission_date, data.discharge_date)
 
         if "commission" in selected_set:
             data.commission_date = self._normalize_required_date(data.commission_date, "Дата совместного осмотра")

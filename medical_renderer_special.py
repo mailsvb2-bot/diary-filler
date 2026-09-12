@@ -7,6 +7,7 @@ from docx import Document
 from medical_constants import TARGET_MEDICAL_FACILITY
 from medical_docx_editor import (
     DocxBlockEditor,
+    clear_paragraph_highlight,
     iter_all_paragraphs,
     remove_exact_paragraphs,
     set_paragraph_text,
@@ -27,7 +28,7 @@ from medical_markers import (
     SICK_LEAVE_VK_MARKERS,
     VK_MSE_MARKERS,
 )
-from medical_models import PatientData
+from medical_models import PatientData, admission_occurrence_label, clean_admission_detail
 from medical_parser_sanitize import sanitize_diagnosis
 from medical_text_utils import normalize_match
 
@@ -44,6 +45,9 @@ class MedicalRendererSpecialMixin:
             editor.replace_first_matching_paragraph(["Выписка из ПРОТОКОЛА"], f"Выписка из ПРОТОКОЛА № {data.vk_protocol_number}")
         if data.vk_protocol_date:
             editor.replace_first_matching_regex(r"^\s*От\s*\.?\s*\d{4}\s*г\.?\s*$", f"От {data.vk_protocol_date} г.")
+            for paragraph in iter_all_paragraphs(doc):
+                if normalize_match(paragraph.text).startswith("от "):
+                    clear_paragraph_highlight(paragraph)
 
         editor.replace_all_matching_paragraphs(["Ф.И.О", "Ф.И.О:"], f"Ф.И.О: {data.fio}")
         editor.replace_all_matching_paragraphs(["Год рождения"], f"Год рождения: {data.birth}")
@@ -81,6 +85,9 @@ class MedicalRendererSpecialMixin:
             editor.replace_first_matching_paragraph(["Выписка из ПРОТОКОЛА"], f"Выписка из ПРОТОКОЛА № {data.sick_leave_vk_protocol_number}")
         if data.sick_leave_vk_protocol_date:
             editor.replace_first_matching_regex(r"^\s*От\s*\.?\s*\d{4}\s*г\.?\s*$", f"От {data.sick_leave_vk_protocol_date} г.")
+            for paragraph in iter_all_paragraphs(doc):
+                if normalize_match(paragraph.text).startswith("от "):
+                    clear_paragraph_highlight(paragraph)
 
         work_position = data.sick_leave_vk_work_position or ", ".join(
             part for part in [data.sick_leave_vk_work_org, data.sick_leave_vk_position] if part
@@ -132,15 +139,15 @@ class MedicalRendererSpecialMixin:
             )
         if data.psych_account:
             editor.replace_first_matching_paragraph(["На учёте", "На учете"], f"На учёте у психиатров {data.psych_account}.")
-        admission_label = f"В 3 отделение КДП поступает {data.admission_occurrence}".strip()
+        admission_label = admission_occurrence_label(data.admission_occurrence)
         if not editor.replace_block(
             ["В 3 отделение КДП поступает"],
             admission_label,
-            data.admission,
+            clean_admission_detail(data.admission),
             RVK_MARKERS,
             allow_empty=True,
         ):
-            admission_line = f"{admission_label} {data.admission}".strip()
+            admission_line = f"{admission_label} {clean_admission_detail(data.admission)}".strip()
             editor.insert_before_first_matching_paragraph(["Жалобы"], admission_line)
         editor.replace_block(["Жалобы"], "Жалобы:", data.complaints, RVK_MARKERS, allow_empty=True)
         editor.replace_block(["Анамнез жизни"], "Анамнез жизни:", data.life_anamnesis, RVK_MARKERS)

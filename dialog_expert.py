@@ -419,7 +419,7 @@ class DialogExpertMixin:
         except Exception:
             return False
 
-    def _prompt_common_output_requirements(self, *, include_discharge_date: bool, include_case_number: bool = True, include_medical_details: bool = True) -> bool:
+    def _prompt_common_output_requirements(self, *, include_discharge_date: bool, include_case_number: bool = True, include_medical_details: bool = True, include_admission_occurrence: bool = False) -> bool:
         """Единый popup для общих недостающих полей выбора документов.
 
         Используется для сценариев без специальных merged-popup документов
@@ -443,6 +443,10 @@ class DialogExpertMixin:
                 detail_rows.append(("Лечение", self.assigned_treatment_var.get().strip() or self._treatment_popup_default()))
                 detail_fields.append("treatment")
 
+        if include_admission_occurrence and not self._current_admission_occurrence():
+            detail_rows.append(("Поступает в 3 отделение КДП", ""))
+            detail_fields.append("admission_occurrence")
+
         if include_discharge_date and self._selected_outputs_require_discharge_date() and self._discharge_date_missing_or_invalid():
             detail_rows.append(("Дата выписки", self._discharge_popup_default()))
             detail_fields.append("discharge_date")
@@ -458,10 +462,14 @@ class DialogExpertMixin:
         if not rows:
             return True
 
+        prompt_kwargs = {}
+        if "admission_occurrence" in fields:
+            prompt_kwargs["choice_options"] = {"Поступает в 3 отделение КДП": ("первично", "повторно")}
         values = self._prompt_fields(
             title="Данные для выбранных документов",
             rows=rows,
             width=72,
+            **prompt_kwargs,
         )
         if values is None:
             return False
@@ -489,6 +497,13 @@ class DialogExpertMixin:
                 self._manual_diagnosis = True
                 if hasattr(self, "data"):
                     self.data.diagnosis = diagnosis
+            elif field == "admission_occurrence":
+                if not self._store_admission_occurrence_value(value):
+                    messagebox.showwarning(
+                        "Не выбран вариант",
+                        "Укажите, пациент поступает первично или повторно.",
+                    )
+                    return False
             elif field == "discharge_date":
                 if not self._store_discharge_date_value(value):
                     messagebox.showwarning(
@@ -519,7 +534,7 @@ class DialogExpertMixin:
             detail_fields.append("treatment")
 
         if not self._current_admission_occurrence():
-            detail_rows.append(("Поступает в 3 отделение КДП (первично/повторно)", ""))
+            detail_rows.append(("Поступает в 3 отделение КДП", ""))
             detail_fields.append("admission_occurrence")
 
         if self._selected_outputs_require_discharge_date() and self._discharge_date_missing_or_invalid():
@@ -541,10 +556,14 @@ class DialogExpertMixin:
         if not rows:
             return True
 
+        prompt_kwargs = {}
+        if "admission_occurrence" in fields:
+            prompt_kwargs["choice_options"] = {"Поступает в 3 отделение КДП": ("первично", "повторно")}
         values = self._prompt_fields(
             title="Данные для выписного эпикриза",
             rows=rows,
             width=72,
+            **prompt_kwargs,
         )
         if values is None:
             return False

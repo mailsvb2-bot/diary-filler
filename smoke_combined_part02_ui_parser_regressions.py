@@ -133,12 +133,50 @@ occurrence_logic._case_number_missing = lambda: False
 occurrence_logic._current_admission_occurrence = _main_module.CombinedMedicalDiaryApp._current_admission_occurrence.__get__(occurrence_logic, _main_module.CombinedMedicalDiaryApp)
 occurrence_logic._store_admission_occurrence_value = _main_module.CombinedMedicalDiaryApp._store_admission_occurrence_value.__get__(occurrence_logic, _main_module.CombinedMedicalDiaryApp)
 occurrence_calls = []
-occurrence_logic._prompt_fields = lambda title, rows, width=72: occurrence_calls.append((title, rows)) or ["повторно"]
+occurrence_logic._prompt_fields = lambda title, rows, width=72, choice_options=None: occurrence_calls.append((title, rows, choice_options)) or ["повторно"]
 occurrence_logic._prompt_discharge_output_requirements = _main_module.CombinedMedicalDiaryApp._prompt_discharge_output_requirements.__get__(occurrence_logic, _main_module.CombinedMedicalDiaryApp)
 assert occurrence_logic._prompt_discharge_output_requirements() is True
-assert [label for label, _default in occurrence_calls[0][1]] == ["Поступает в 3 отделение КДП (первично/повторно)"]
+assert [label for label, _default in occurrence_calls[0][1]] == ["Поступает в 3 отделение КДП"]
+assert occurrence_calls[0][2] == {"Поступает в 3 отделение КДП": ("первично", "повторно")}
 assert occurrence_logic.admission_occurrence_var.get() == "повторно"
 assert occurrence_logic.data.admission_occurrence == "повторно"
+
+from dialog_document_details import _sync_custom_commissariat_value
+
+manual_commissariat = _FakeVar("старое значение")
+manual_commissariat_entry = _FakeVar("военного комиссариата Нижегородской области")
+_sync_custom_commissariat_value(manual_commissariat, manual_commissariat_entry)
+assert manual_commissariat.get() == "военного комиссариата Нижегородской области"
+manual_commissariat_entry.set("")
+_sync_custom_commissariat_value(manual_commissariat, manual_commissariat_entry)
+assert manual_commissariat.get() == "", "erasing the custom field must clear the selected commissariat"
+manual_commissariat.set("Автозаводский")
+_sync_custom_commissariat_value(manual_commissariat, manual_commissariat_entry, suppress=True)
+assert manual_commissariat.get() == "Автозаводский", "predefined button selection must survive custom-field clearing"
+
+# The shared popup used by primary/commission/admission-doctor must persist the
+# same checkbox selection; otherwise the service boundary rejects generation.
+common_occurrence_logic = _main_module.CombinedMedicalDiaryApp.__new__(_main_module.CombinedMedicalDiaryApp)
+common_occurrence_logic.admission_occurrence_var = _FakeVar("")
+common_occurrence_logic.data = PatientData()
+common_occurrence_logic._hospitalization_details_missing = lambda: False
+common_occurrence_logic._manual_treatment_missing = lambda: False
+common_occurrence_logic._selected_outputs_require_discharge_date = lambda: False
+common_occurrence_logic._case_number_missing = lambda: False
+common_occurrence_logic._current_admission_occurrence = _main_module.CombinedMedicalDiaryApp._current_admission_occurrence.__get__(common_occurrence_logic, _main_module.CombinedMedicalDiaryApp)
+common_occurrence_logic._store_admission_occurrence_value = _main_module.CombinedMedicalDiaryApp._store_admission_occurrence_value.__get__(common_occurrence_logic, _main_module.CombinedMedicalDiaryApp)
+common_occurrence_calls = []
+common_occurrence_logic._prompt_fields = lambda title, rows, width=72, choice_options=None: common_occurrence_calls.append((title, rows, choice_options)) or ["первично"]
+common_occurrence_logic._prompt_common_output_requirements = _main_module.CombinedMedicalDiaryApp._prompt_common_output_requirements.__get__(common_occurrence_logic, _main_module.CombinedMedicalDiaryApp)
+assert common_occurrence_logic._prompt_common_output_requirements(
+    include_discharge_date=False,
+    include_case_number=False,
+    include_medical_details=False,
+    include_admission_occurrence=True,
+) is True
+assert common_occurrence_calls[0][2] == {"Поступает в 3 отделение КДП": ("первично", "повторно")}
+assert common_occurrence_logic.admission_occurrence_var.get() == "первично"
+assert common_occurrence_logic.data.admission_occurrence == "первично"
 
 # Hospitalization referral popup must not request discharge date unless the
 # selected outputs actually need it.
@@ -204,6 +242,7 @@ case_dialog_logic._prompt_fields = lambda title, rows, width=64, linked_groups=N
 case_dialog_logic._prompt_vk_mse_details = _main_module.CombinedMedicalDiaryApp._prompt_vk_mse_details.__get__(case_dialog_logic, _main_module.CombinedMedicalDiaryApp)
 assert case_dialog_logic._prompt_vk_mse_details() is True
 assert [label for label, _default in vk_rows[0][1]][0] == "Номер истории болезни"
+assert [label for label, _default in vk_rows[0][1]][1] == "Дата ВК на МСЭ"
 assert vk_rows[0][1][0][1] == "88"
 assert vk_rows[0][2] == [(1, [3])]
 assert case_dialog_logic.case_number_var.get() == "99"

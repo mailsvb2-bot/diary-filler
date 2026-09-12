@@ -15,8 +15,8 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
-TARGET_VERSION = "1.4.0"
-TARGET_VERSION_LABEL = "v1.4.0-final-user-flow"
+TARGET_VERSION = "1.4.1"
+TARGET_VERSION_LABEL = "v1.4.1-document-flow-polish"
 MAX_PYTHON_FILES = 125
 MAX_TINY_PYTHON_FILES = 25
 # Release/CI probes are executable quality gates, not runtime architecture.
@@ -127,7 +127,13 @@ def _assert_version_sync() -> None:
         "pyproject.toml version": f'version = "{TARGET_VERSION}"' in pyproject,
         "app_config APP_VERSION": TARGET_VERSION_LABEL in app_config,
         "version_info label": TARGET_VERSION_LABEL in version_info,
-        "version_info tuple": "filevers=(1, 4, 0, 0)" in version_info and "prodvers=(1, 4, 0, 0)" in version_info,
+        "version_info tuple": all(
+            marker in version_info
+            for marker in (
+                f"filevers=({', '.join(TARGET_VERSION.split('.'))}, 0)",
+                f"prodvers=({', '.join(TARGET_VERSION.split('.'))}, 0)",
+            )
+        ),
         "README version": TARGET_VERSION_LABEL in readme,
         "RELEASE_NOTES top version": release_notes.lstrip().startswith(f"# Release notes — {TARGET_VERSION_LABEL}"),
     }
@@ -691,45 +697,79 @@ def _assert_joint_diary_semantics_contract() -> None:
 
 
 def _assert_admission_occurrence_contract() -> None:
-    """Первично/повторно is one explicit patient fact shared by discharge and RVK."""
+    """Primary/repeat admission is one explicit fact shared by every relevant document."""
     model = _read("medical_models.py")
     service = _read("medical_service.py")
     flow = _read("actions_medical_flow.py")
     orchestrator = _read("actions_creation_orchestrator.py")
     details = _read("dialog_document_details.py")
+    formatting = _read("medical_formatting.py")
     expert = _read("dialog_expert.py")
     reset = _read("files_mixin.py")
-    discharge_renderer = _read("medical_renderer_primary.py")
+    primary_renderer = _read("medical_renderer_primary.py")
+    commission_renderer = _read("medical_renderer_commission.py")
     rvk_renderer = _read("medical_renderer_special.py")
     parser = _read("medical_parser_core.py")
 
     required_pairs = (
         (model, 'ADMISSION_OCCURRENCE_OPTIONS = ("первично", "повторно")', "canonical occurrence options missing"),
         (model, "admission_occurrence: str", "PatientData lost admission occurrence"),
-        (model, "def strip_admission_occurrence_prefix", "clinical admission tail is not separated from occurrence"),
+        (model, "def clean_admission_detail", "legacy hospitalization recommendation is not filtered"),
         (flow, "data.admission_occurrence = normalize_admission_occurrence", "generation snapshot does not capture occurrence"),
-        (service, 'if {"discharge", "rvk"} & selected_set:', "service does not own occurrence validation boundary"),
+        (service, 'occurrence_docs = {"primary", "discharge", "commission", "admission_doctor_referral", "rvk"}', "service occurrence boundary misses a document"),
         (service, "первично или повторно", "service does not reject missing occurrence"),
         (reset, '("admission_occurrence_var", "")', "occurrence leaks between patients"),
-        (orchestrator, "or not self._current_admission_occurrence()", "RVK flow can bypass occurrence popup"),
-        (expert, 'detail_fields.append("admission_occurrence")', "discharge popup does not ask occurrence"),
-        (details, '("первично", "повторно")', "RVK popup lost binary occurrence choices"),
-        (discharge_renderer, "data.admission_occurrence", "discharge renderer ignores occurrence"),
-        (rvk_renderer, "data.admission_occurrence", "RVK renderer ignores occurrence"),
+        (orchestrator, 'occurrence_docs = {"primary", "discharge", "commission", "admission_doctor_referral", "rvk"}', "UI flow does not request occurrence for all relevant docs"),
+        (expert, 'choice_options', "generic popup lost checkbox occurrence choices"),
+        (expert, 'elif field == "admission_occurrence":', "generic popup does not persist occurrence selection"),
+        (expert, 'self._store_admission_occurrence_value(value)', "generic popup occurrence is not stored canonically"),
+        (details, 'tk.Checkbutton(', "RVK popup occurrence is no longer a checkbox choice"),
+        (details, '"Автозаводский"', "RVK popup lost Автозаводский commissariat"),
+        (details, 'Другой военкомат (введите вручную)', "RVK popup lost custom commissariat input"),
+        (details, '_sync_custom_commissariat_value', "custom commissariat clear-state synchronization is missing"),
+        (details, 'suppress_custom_sync', "predefined commissariat buttons can be erased by custom-field synchronization"),
+        (formatting, '_looks_like_complete_commissariat_area', "arbitrary commissariat names can be corrupted into district names"),
+        (primary_renderer, "admission_occurrence_label(data.admission_occurrence)", "primary/discharge renderer ignores occurrence"),
+        (commission_renderer, "admission_occurrence_label(data.admission_occurrence)", "commission/admission-doctor renderer ignores occurrence"),
+        (rvk_renderer, "admission_occurrence_label(data.admission_occurrence)", "RVK renderer ignores occurrence"),
         (parser, "strip_admission_occurrence_prefix(data.admission)", "parser can duplicate legacy occurrence word"),
     )
     for source, snippet, message in required_pairs:
         if snippet not in source:
             _fail(message)
 
-    from medical_models import normalize_admission_occurrence, strip_admission_occurrence_prefix
+    from medical_models import clean_admission_detail, normalize_admission_occurrence, strip_admission_occurrence_prefix
     if normalize_admission_occurrence("ПОВТОРНО") != "повторно":
         _fail("occurrence normalization changed")
     if normalize_admission_occurrence("иногда"):
         _fail("invalid occurrence must never be accepted")
     if strip_admission_occurrence_prefix("повторно добровольно") != "добровольно":
         _fail("legacy occurrence prefix is not separated from admission clinical text")
+    if clean_admission_detail("повторно добровольно") != "добровольно":
+        _fail("clinical admission tail normalization changed")
+    if clean_admission_detail("Целесообразна госпитализация пациентки в 3 отделение КДП"):
+        _fail("legacy hospitalization recommendation leaks into generated documents")
 
+
+def _assert_compact_diary_layout_contract() -> None:
+    cells = _read("diary_table_cells.py")
+    writer = _read("diary_writer.py")
+    batch = _read("diary_batch.py")
+    constants = _read("diary_constants.py")
+    required = (
+        (constants, "STATUS_FONT_SIZE_PT = 8", "diary font is no longer 8 pt"),
+        (cells, "section.left_margin = Cm(1.5)", "diary left margin is not 1.5 cm"),
+        (cells, "section.right_margin = Cm(1.0)", "diary right margin is not 1 cm"),
+        (cells, "section.top_margin = Cm(1.0)", "diary top margin is not 1 cm"),
+        (cells, "section.bottom_margin = Cm(1.0)", "diary bottom margin is not 1 cm"),
+        (cells, "paragraph.paragraph_format.space_after = Cm(3)", "diary signature-to-next-entry gap is not 3 cm"),
+        (cells, "next_nonempty = next(", "diary formatter does not skip blanks between signatures"),
+        (writer, "apply_compact_diary_layout(doc)", "table diary route skips compact formatter"),
+        (batch, "apply_compact_diary_layout(doc)", "text diary route skips compact formatter"),
+    )
+    for source, snippet, message in required:
+        if snippet not in source:
+            _fail(message)
 
 def _assert_diagnosis_diary_text_contract() -> None:
     """Ordinary diaries come from diagnosis template; discharge text is universal."""
@@ -1022,6 +1062,7 @@ def main() -> None:
     _assert_diary_service_boundary()
     _assert_joint_diary_semantics_contract()
     _assert_admission_occurrence_contract()
+    _assert_compact_diary_layout_contract()
     _assert_diagnosis_diary_text_contract()
     _assert_shared_gender_contract()
     _assert_shared_paths_contract()

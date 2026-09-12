@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 APP_TITLE = "Медицинский автозаполнитель"
-APP_VERSION = "v1.4.0-final-user-flow"
+APP_VERSION = "v1.4.1-document-flow-polish"
 
 # Цветовая схема точно по референсу: глубокий navy-midnight, cyan-акцент, card-стиль блоков.
 BG = "#07111d"

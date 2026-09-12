@@ -31,6 +31,7 @@ def prompt_fields_dialog(
     rows: list[tuple[str, str]],
     width: int = 28,
     linked_groups: list[tuple[int, list[int]]] | None = None,
+    choice_options: dict[str, tuple[str, ...]] | None = None,
 ) -> list[str] | None:
     win = tk.Toplevel(self.root)
     win.title(title)
@@ -40,9 +41,10 @@ def prompt_fields_dialog(
     win.grab_set()
 
     result: list[str] | None = None
-    entries: list[tk.Entry] = []
+    entries: list[tk.Entry | None] = []
     entry_vars: list[tk.StringVar] = []
     entry_auto_values: list[str] = []
+    choice_options = choice_options or {}
     diagnosis_popup = DialogDiagnosisPopup(win, self.root)
 
     body = tk.Frame(win, bg=PANEL, padx=18, pady=16)
@@ -51,9 +53,14 @@ def prompt_fields_dialog(
         row=0, column=0, columnspan=2, sticky="w", pady=(0, 10)
     )
     for idx, (label, initial) in enumerate(rows, start=1):
-        entry, var = _build_field_row(self, body, idx, label, initial, width)
-        if diagnosis_popup.is_diagnosis_label(label):
-            diagnosis_popup.attach(entry, var)
+        options = choice_options.get(label)
+        if options:
+            entry = None
+            var = _build_choice_row(body, idx, label, initial, options)
+        else:
+            entry, var = _build_field_row(self, body, idx, label, initial, width)
+            if diagnosis_popup.is_diagnosis_label(label):
+                diagnosis_popup.attach(entry, var)
         entries.append(entry)
         entry_vars.append(var)
         entry_auto_values.append(initial)
@@ -67,7 +74,7 @@ def prompt_fields_dialog(
 
     def ok() -> None:
         nonlocal result
-        raw_values = [entry.get().strip() for entry in entries]
+        raw_values = [var.get().strip() for var in entry_vars]
         values = normalize_prompt_field_values(self, rows, raw_values)
         for index, (raw, normalized) in enumerate(zip(raw_values, values)):
             if normalized != raw:
@@ -84,13 +91,59 @@ def prompt_fields_dialog(
         win.destroy()
 
     _build_action_buttons(buttons, ok, cancel)
-    if entries:
-        entries[0].focus_set()
+    first_entry = next((entry for entry in entries if entry is not None), None)
+    if first_entry is not None:
+        first_entry.focus_set()
     win.bind("<Return>", lambda _event: ok())
     win.bind("<Escape>", lambda _event: cancel())
     self.root.wait_window(win)
     return result
 
+
+
+def _build_choice_row(
+    body: tk.Frame,
+    idx: int,
+    label: str,
+    initial: str,
+    options: tuple[str, ...],
+) -> tk.StringVar:
+    """Build mutually-exclusive checkbox choices while returning one canonical value."""
+    tk.Label(body, text=label, bg=PANEL, fg=TEXT, font=("Segoe UI", 8)).grid(
+        row=idx, column=0, sticky="w", pady=6
+    )
+    selected = tk.StringVar(value=initial if initial in options else "")
+    frame = tk.Frame(body, bg=PANEL)
+    frame.grid(row=idx, column=1, sticky="w", padx=(12, 0), pady=6)
+    flags: dict[str, tk.BooleanVar] = {}
+
+    def choose(value: str) -> None:
+        if flags[value].get():
+            selected.set(value)
+            for other, flag in flags.items():
+                if other != value:
+                    flag.set(False)
+        elif selected.get() == value:
+            selected.set("")
+
+    for col, value in enumerate(options):
+        flag = tk.BooleanVar(value=selected.get() == value)
+        flags[value] = flag
+        tk.Checkbutton(
+            frame,
+            text=value.capitalize(),
+            variable=flag,
+            command=lambda v=value: choose(v),
+            bg=PANEL,
+            fg=TEXT,
+            activebackground=PANEL,
+            activeforeground=TEXT,
+            selectcolor=FIELD,
+            relief="flat",
+            padx=4,
+            pady=2,
+        ).grid(row=0, column=col, sticky="w", padx=(0, 14))
+    return selected
 
 def _build_field_row(
     app,

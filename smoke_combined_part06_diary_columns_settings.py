@@ -174,46 +174,57 @@ try:
 except ValueError as exc:
     assert "unknown_kind" in str(exc)
 
+bad_discharge_date_data = service.parse_primary_document(nav)
+bad_discharge_date_data.admission_occurrence = "первично"
 try:
     service.create_documents(
         navigation_path=nav,
         output_dir=OUT / "bad_discharge_date",
         selected_docs=["discharge"],
         discharge_date="99.99.2026",
+        override_data=bad_discharge_date_data,
     )
     raise AssertionError("bad discharge date must fail before rendering")
 except ValueError as exc:
     assert "Дата выписки" in str(exc)
 
 
+missing_discharge_required_data = service.parse_primary_document(nav)
+missing_discharge_required_data.admission_occurrence = "первично"
 try:
     service.create_documents(
         navigation_path=nav,
         output_dir=OUT / "missing_discharge_required",
         selected_docs=["discharge"],
+        override_data=missing_discharge_required_data,
     )
     raise AssertionError("discharge document must require discharge date at service boundary")
 except ValueError as exc:
     assert "Дата выписки" in str(exc), str(exc)
 
-missing_occurrence_data = service.parse_primary_document(nav)
-missing_occurrence_data.discharge_date = "11.06.2026"
-try:
-    service.create_documents(
-        navigation_path=nav,
-        output_dir=OUT / "missing_admission_occurrence",
-        selected_docs=["discharge"],
-        override_data=missing_occurrence_data,
-    )
-    raise AssertionError("discharge/RVK must require explicit первично/повторно")
-except ValueError as exc:
-    assert "первично или повторно" in str(exc), str(exc)
+import copy as _copy_for_occurrence_contract
+for occurrence_kind in ("primary", "discharge", "commission", "admission_doctor_referral", "rvk"):
+    missing_occurrence_data = _copy_for_occurrence_contract.deepcopy(manual_data)
+    missing_occurrence_data.admission_occurrence = ""
+    try:
+        service.create_documents(
+            navigation_path=nav,
+            output_dir=OUT / f"missing_admission_occurrence_{occurrence_kind}",
+            selected_docs=[occurrence_kind],
+            override_data=missing_occurrence_data,
+        )
+        raise AssertionError(f"{occurrence_kind} must require explicit первично/повторно")
+    except ValueError as exc:
+        assert "первично или повторно" in str(exc), (occurrence_kind, str(exc))
 
+missing_commission_fields_data = service.parse_primary_document(nav)
+missing_commission_fields_data.admission_occurrence = "первично"
 try:
     service.create_documents(
         navigation_path=nav,
         output_dir=OUT / "missing_commission_fields",
         selected_docs=["commission"],
+        override_data=missing_commission_fields_data,
     )
     raise AssertionError("commission document must require commission date/number at service boundary")
 except ValueError as exc:
@@ -297,6 +308,7 @@ assert "18.06.2026" in compact_text and "19.06.2026" in compact_text and "20.06.
 
 dupe_out = OUT / "duplicate_selected_docs"
 dupe_data = service.parse_primary_document(nav)
+dupe_data.admission_occurrence = "первично"
 dupe_data.commission_date = "18062026"
 dupe_data.commission_number = "12"
 dupe_created, _dupe_data = service.create_documents(
@@ -352,28 +364,37 @@ try:
 except ValueError as exc:
     assert "ЭПИ" in str(exc) and ".txt" in str(exc), str(exc)
 
+bad_date_order_data = service.parse_primary_document(nav)
+bad_date_order_data.admission_occurrence = "первично"
 try:
     service.create_documents(
         navigation_path=nav,
         output_dir=OUT / "bad_date_order",
         selected_docs=["discharge"],
         discharge_date="09.06.2026",
+        override_data=bad_date_order_data,
     )
     raise AssertionError("service must reject discharge date before admission date")
 except ValueError as exc:
     assert "раньше" in str(exc), str(exc)
 
+single_kind_data = service.parse_primary_document(nav)
+single_kind_data.admission_occurrence = "первично"
 single_kind_created, _single_kind_data = service.create_documents(
     navigation_path=nav,
     output_dir=OUT / "single_kind_string",
     selected_docs="primary",
+    override_data=single_kind_data,
 )
 assert len(single_kind_created) == 1 and single_kind_created[0].name.endswith("Первичный осмотр.docx")
 
+none_output_data = service.parse_primary_document(nav)
+none_output_data.admission_occurrence = "первично"
 none_output_created, _none_output_data = service.create_documents(
     navigation_path=nav,
     output_dir=None,
     selected_docs="primary",
+    override_data=none_output_data,
 )
 assert none_output_created[0].parent == nav.parent
 
@@ -480,6 +501,7 @@ except ValueError as exc:
     assert "номер медицинского заключения" in str(exc), str(exc)
 
 bad_commission_order_data = service.parse_primary_document(nav)
+bad_commission_order_data.admission_occurrence = "первично"
 bad_commission_order_data.commission_date = "09.06.2026"
 bad_commission_order_data.commission_number = "77"
 try:
@@ -601,20 +623,26 @@ assert all(path.parent == blank_template.parent for path in space_output_result.
 # --- v1.3.18 production-quality gate: output dir/file hygiene, labels, archive and repo hygiene ---
 file_output_target = OUT / "not_a_directory_output.txt"
 file_output_target.write_text("I am a file, not an output directory", encoding="utf-8")
+file_output_data = service.parse_primary_document(nav)
+file_output_data.admission_occurrence = "первично"
 try:
     service.create_documents(
         navigation_path=nav,
         output_dir=file_output_target,
         selected_docs="Первичный осмотр",
+        override_data=file_output_data,
     )
     raise AssertionError("medical service must reject output_dir pointing to a file")
 except ValueError as exc:
     assert "Папка результата" in str(exc), str(exc)
 
+label_selected_data = service.parse_primary_document(nav)
+label_selected_data.admission_occurrence = "первично"
 label_selected_created, _label_selected_data = service.create_documents(
     navigation_path=nav,
     output_dir=OUT / "label_selected_docs",
     selected_docs=["Первичный осмотр"],
+    override_data=label_selected_data,
 )
 assert len(label_selected_created) == 1 and label_selected_created[0].name.endswith("Первичный осмотр.docx")
 
