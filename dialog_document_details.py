@@ -9,6 +9,12 @@ from medical_parser_sanitize import sanitize_diagnosis
 from medical_models import normalize_admission_occurrence
 
 
+def _sync_custom_commissariat_value(military_var, custom_military_var, *, suppress: bool = False) -> None:
+    """Mirror manual commissariat text, including clearing it when the field is erased."""
+    if not suppress:
+        military_var.set(custom_military_var.get().strip())
+
+
 class DialogDocumentDetailsMixin:
     def _prompt_commission_details(self) -> bool:
         date_default = self.commission_date_var.get().strip() or self._today_str()
@@ -136,10 +142,16 @@ class DialogDocumentDetailsMixin:
         row += 1
         commissariat_options = ("Ленинский", "Канавинский", "Автозаводский", "Сормовский и Московский")
         custom_military_var = tk.StringVar(value="" if military_var.get() in commissariat_options else military_var.get())
+        suppress_custom_sync = False
 
         def choose_commissariat(value: str) -> None:
+            nonlocal suppress_custom_sync
+            suppress_custom_sync = True
+            try:
+                custom_military_var.set("")
+            finally:
+                suppress_custom_sync = False
             military_var.set(value)
-            custom_military_var.set("")
 
         for idx, value in enumerate(commissariat_options):
             grid_row, grid_col = divmod(idx, 2)
@@ -170,9 +182,11 @@ class DialogDocumentDetailsMixin:
         row += 1
 
         def sync_custom_commissariat(*_args) -> None:
-            value = custom_military_var.get().strip()
-            if value:
-                military_var.set(value)
+            _sync_custom_commissariat_value(
+                military_var,
+                custom_military_var,
+                suppress=suppress_custom_sync,
+            )
 
         custom_military_var.trace_add("write", sync_custom_commissariat)
         selected_label = tk.Label(frame, textvariable=military_var, bg=PANEL, fg=ACCENT, font=self._font(10), anchor="w")

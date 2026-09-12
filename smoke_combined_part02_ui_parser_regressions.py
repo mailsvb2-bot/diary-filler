@@ -141,6 +141,19 @@ assert occurrence_calls[0][2] == {"Поступает в 3 отделение К
 assert occurrence_logic.admission_occurrence_var.get() == "повторно"
 assert occurrence_logic.data.admission_occurrence == "повторно"
 
+from dialog_document_details import _sync_custom_commissariat_value
+
+manual_commissariat = _FakeVar("старое значение")
+manual_commissariat_entry = _FakeVar("военного комиссариата Нижегородской области")
+_sync_custom_commissariat_value(manual_commissariat, manual_commissariat_entry)
+assert manual_commissariat.get() == "военного комиссариата Нижегородской области"
+manual_commissariat_entry.set("")
+_sync_custom_commissariat_value(manual_commissariat, manual_commissariat_entry)
+assert manual_commissariat.get() == "", "erasing the custom field must clear the selected commissariat"
+manual_commissariat.set("Автозаводский")
+_sync_custom_commissariat_value(manual_commissariat, manual_commissariat_entry, suppress=True)
+assert manual_commissariat.get() == "Автозаводский", "predefined button selection must survive custom-field clearing"
+
 # The shared popup used by primary/commission/admission-doctor must persist the
 # same checkbox selection; otherwise the service boundary rejects generation.
 common_occurrence_logic = _main_module.CombinedMedicalDiaryApp.__new__(_main_module.CombinedMedicalDiaryApp)

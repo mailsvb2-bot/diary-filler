@@ -99,6 +99,9 @@ assert format_military_commissariat_area("Автозаводский") == "Ав�
 assert format_military_commissariat_area("Ленинский") == "Ленинского района"
 assert format_military_commissariat_area("Ленинского района") == "Ленинского района"
 assert format_military_commissariat_area("Сормовский и Московский") == "Сормовского и Московского района"
+assert format_military_commissariat_area("военного комиссариата Нижегородской области") == "Нижегородской области"
+assert format_military_commissariat_area("Нижегородской области") == "Нижегородской области"
+assert format_military_commissariat_referral("военного комиссариата Нижегородской области") == "По направлению из военного комиссариата Нижегородской области"
 
 manual_data = service.parse_navigation(nav)
 manual_data.discharge_date = "11.06.2026"

@@ -74,6 +74,18 @@ for table in table_diary_doc.tables:
                 assert last_signature.paragraph_format.space_after is not None
                 assert abs(last_signature.paragraph_format.space_after.cm - 3.0) < 0.05, last_signature.paragraph_format.space_after.cm
 
+# Blank paragraphs between doctor/head signatures must not receive the 3 cm inter-diary gap.
+from diary_table_cells import _format_paragraphs
+separated_signature_doc = Document()
+first_signature = separated_signature_doc.add_paragraph("Лечащий врач Балаганин С.В.")
+separated_signature_doc.add_paragraph("")
+last_signature = separated_signature_doc.add_paragraph("Зав.отделением Можарова Е.А.")
+_format_paragraphs(separated_signature_doc.paragraphs)
+assert first_signature.paragraph_format.space_after is not None
+assert abs(first_signature.paragraph_format.space_after.pt) < 0.05, first_signature.paragraph_format.space_after.pt
+assert last_signature.paragraph_format.space_after is not None
+assert abs(last_signature.paragraph_format.space_after.cm - 3.0) < 0.05, last_signature.paragraph_format.space_after.cm
+
 # --- Diary gender source smoke: UI filename may be male, source document is female ---
 result_filename_male = fill_diary_batch(
     status_files=[source],

@@ -703,6 +703,7 @@ def _assert_admission_occurrence_contract() -> None:
     flow = _read("actions_medical_flow.py")
     orchestrator = _read("actions_creation_orchestrator.py")
     details = _read("dialog_document_details.py")
+    formatting = _read("medical_formatting.py")
     expert = _read("dialog_expert.py")
     reset = _read("files_mixin.py")
     primary_renderer = _read("medical_renderer_primary.py")
@@ -725,6 +726,9 @@ def _assert_admission_occurrence_contract() -> None:
         (details, 'tk.Checkbutton(', "RVK popup occurrence is no longer a checkbox choice"),
         (details, '"Автозаводский"', "RVK popup lost Автозаводский commissariat"),
         (details, 'Другой военкомат (введите вручную)', "RVK popup lost custom commissariat input"),
+        (details, '_sync_custom_commissariat_value', "custom commissariat clear-state synchronization is missing"),
+        (details, 'suppress_custom_sync', "predefined commissariat buttons can be erased by custom-field synchronization"),
+        (formatting, '_looks_like_complete_commissariat_area', "arbitrary commissariat names can be corrupted into district names"),
         (primary_renderer, "admission_occurrence_label(data.admission_occurrence)", "primary/discharge renderer ignores occurrence"),
         (commission_renderer, "admission_occurrence_label(data.admission_occurrence)", "commission/admission-doctor renderer ignores occurrence"),
         (rvk_renderer, "admission_occurrence_label(data.admission_occurrence)", "RVK renderer ignores occurrence"),
@@ -759,6 +763,7 @@ def _assert_compact_diary_layout_contract() -> None:
         (cells, "section.top_margin = Cm(1.0)", "diary top margin is not 1 cm"),
         (cells, "section.bottom_margin = Cm(1.0)", "diary bottom margin is not 1 cm"),
         (cells, "paragraph.paragraph_format.space_after = Cm(3)", "diary signature-to-next-entry gap is not 3 cm"),
+        (cells, "next_nonempty = next(", "diary formatter does not skip blanks between signatures"),
         (writer, "apply_compact_diary_layout(doc)", "table diary route skips compact formatter"),
         (batch, "apply_compact_diary_layout(doc)", "text diary route skips compact formatter"),
     )

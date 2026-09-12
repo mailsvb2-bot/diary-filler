@@ -93,23 +93,44 @@ def _decline_russian_district_name(value: str) -> str:
     return value
 
 
-def format_military_commissariat_area(value: str) -> str:
-    """Normalize user input for phrase: военного комиссариата <...> района.
+def _normalize_commissariat_input(value: str) -> tuple[str, bool, bool]:
+    """Return (name, explicit_commissariat_prefix, explicit_district_suffix)."""
+    text = normalize_text(value).strip(" .,;")
+    if not text:
+        return "", False, False
+    text = re.sub(r"^по\s+направлению\s+из\s+", "", text, flags=re.IGNORECASE).strip(" .,;")
+    prefix_re = r"^(?:военного\s+комиссариата|военный\s+комиссариат|военкомата|военкомат)\s+"
+    explicit_prefix = bool(re.match(prefix_re, text, flags=re.IGNORECASE))
+    text = re.sub(prefix_re, "", text, flags=re.IGNORECASE).strip(" .,;")
+    text = re.sub(
+        r"\s+(?:военного\s+комиссариата|военный\s+комиссариат|военкомата|военкомат)\s*$",
+        "",
+        text,
+        flags=re.IGNORECASE,
+    ).strip(" .,;")
+    district_suffix = bool(re.search(r"\s+район(?:а|у|е|ом)?\s*$", text, flags=re.IGNORECASE))
+    if district_suffix:
+        text = re.sub(r"\s+район(?:а|у|е|ом)?\s*$", "", text, flags=re.IGNORECASE).strip(" .,;")
+    return text, explicit_prefix, district_suffix
 
-    Поддерживает один район и связки: "Сормовский и Канвинского",
-    "Автозаводский, Ленинский". Слово "района" добавляется один раз в конце.
-    """
-    value = normalize_text(value)
-    if not value:
-        return ""
-    base = value.strip(" .,;")
-    base = re.sub(r"^по\s+направлению\s+из\s+", "", base, flags=re.IGNORECASE).strip(" .,;")
-    base = re.sub(r"^(?:военного\s+комиссариата|военкомата)\s+", "", base, flags=re.IGNORECASE).strip(" .,;")
-    base = re.sub(r"\s+(?:военного\s+комиссариата|военкомат)(?:а|у|е|ом)?\s*$", "", base, flags=re.IGNORECASE).strip(" .,;")
-    base = re.sub(r"\s+район(?:а|у|е|ом)?\s*$", "", base, flags=re.IGNORECASE).strip(" .,;")
-    if not base:
-        return ""
 
+def _looks_like_complete_commissariat_area(value: str) -> bool:
+    """Recognize non-district territorial names that must not gain «района»."""
+    low = normalize_text(value).lower().replace("ё", "е")
+    if not low:
+        return False
+    return bool(
+        re.search(
+            r"(?:\bобласт(?:ь|и|ью|е)\b|\bкра(?:й|я|ю|ем|е)\b|"
+            r"\bреспублик(?:а|и|у|ой|е)\b|\bокруг(?:а|у|е|ом)?\b|"
+            r"\bгород(?:а|у|е|ом)?\b|(?:^|\s)г\.\s*)",
+            low,
+            flags=re.IGNORECASE,
+        )
+    )
+
+
+def _normalize_district_list(base: str) -> str:
     tokens = re.split(r"(\s+и\s+|\s*,\s*|\s*/\s*|\s*\\\s*)", base, flags=re.IGNORECASE)
     out: list[str] = []
     for token in tokens:
@@ -123,43 +144,33 @@ def format_military_commissariat_area(value: str) -> str:
             out.append(" и ")
         else:
             out.append(_decline_russian_district_name(token))
-    normalized = "".join(out).strip(" ,;")
-    normalized = re.sub(r"\s+", " ", normalized)
+    return re.sub(r"\s+", " ", "".join(out).strip(" ,;"))
+
+
+def format_military_commissariat_area(value: str) -> str:
+    """Format the part after «военного комиссариата» in the RVK act.
+
+    Short district choices are declined and gain «района».  Arbitrary complete
+    commissariat names from the manual field (for example «Нижегородской
+    области») are preserved instead of being corrupted into «... области района».
+    """
+    base, explicit_prefix, district_suffix = _normalize_commissariat_input(value)
+    if not base:
+        return ""
+    if not district_suffix and (explicit_prefix or _looks_like_complete_commissariat_area(base)):
+        return base
+    normalized = _normalize_district_list(base)
     return f"{normalized} района" if normalized else ""
 
 
-
 def format_military_commissariat_referral(value: str) -> str:
-    """Phrase for primary exam: «По направлению из ... военкомата».
-
-    The RVK act needs «военного комиссариата <...> района», while the
-    primary exam must use the doctor's requested wording with «из ...
-    военкомата».
-    """
-    value = normalize_text(value)
-    if not value:
-        return ""
-    base = value.strip(" .,;")
-    base = re.sub(r"^по\s+направлению\s+из\s+", "", base, flags=re.IGNORECASE).strip(" .,;")
-    base = re.sub(r"^(?:военного\s+комиссариата|военкомата)\s+", "", base, flags=re.IGNORECASE).strip(" .,;")
-    base = re.sub(r"\s+(?:военного\s+комиссариата|военкомат)(?:а|у|е|ом)?\s*$", "", base, flags=re.IGNORECASE).strip(" .,;")
-    base = re.sub(r"\s+район(?:а|у|е|ом)?\s*$", "", base, flags=re.IGNORECASE).strip(" .,;")
+    """Format the primary-exam referral phrase without corrupting custom names."""
+    base, explicit_prefix, district_suffix = _normalize_commissariat_input(value)
     if not base:
         return ""
-    tokens = re.split(r"(\s+и\s+|\s*,\s*|\s*/\s*|\s*\\\s*)", base, flags=re.IGNORECASE)
-    out: list[str] = []
-    for token in tokens:
-        if not token:
-            continue
-        if re.fullmatch(r"\s+и\s+", token, flags=re.IGNORECASE):
-            out.append(" и ")
-        elif re.fullmatch(r"\s*,\s*", token):
-            out.append(", ")
-        elif re.fullmatch(r"\s*/\s*|\s*\\\s*", token):
-            out.append(" и ")
-        else:
-            out.append(_decline_russian_district_name(token))
-    normalized = re.sub(r"\s+", " ", "".join(out).strip(" ,;"))
+    if not district_suffix and (explicit_prefix or _looks_like_complete_commissariat_area(base)):
+        return f"По направлению из военного комиссариата {base}"
+    normalized = _normalize_district_list(base)
     return f"По направлению из {normalized} военкомата" if normalized else ""
 
 def russian_day_word(days: int) -> str:

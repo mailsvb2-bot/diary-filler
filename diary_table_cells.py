@@ -71,8 +71,11 @@ def _format_paragraphs(paragraphs) -> None:
     for index, paragraph in enumerate(items):
         if not is_signature_paragraph_text(paragraph.text):
             continue
-        next_is_signature = index + 1 < len(items) and is_signature_paragraph_text(items[index + 1].text)
-        if not next_is_signature:
+        next_nonempty = next(
+            (candidate for candidate in items[index + 1 :] if normalize_text(candidate.text)),
+            None,
+        )
+        if next_nonempty is None or not is_signature_paragraph_text(next_nonempty.text):
             paragraph.paragraph_format.space_after = Cm(3)
 
 
