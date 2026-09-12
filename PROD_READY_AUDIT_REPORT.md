@@ -1,3 +1,11 @@
+# Final user-flow gate addendum — v1.4.0-final-user-flow
+
+Автоматизированы два прежних P0-разрыва: настоящий Windows Tk user-interface wiring smoke и post-build запуск exact PyInstaller EXE с обязательной регистрацией TkDND. Официальная публикация отделена от обычного QA-artifact: `Signed Windows Release` требует Authenticode credentials, подписывает EXE, выполняет `signtool verify`, повторно запускает exact signed EXE и только после этого создаёт GitHub Release.
+
+Остаются физические эксплуатационные проверки, которые CI не может честно заменить: реальный принтер, SmartScreen/Defender reputation на пользовательской машине и корпус 20–50 обезличенных реальных документов. Эти пункты сохраняются в launch checklist и не выдаются за автоматизированные.
+
+---
+
 # Current prod-ready audit addendum — v1.3.18-production-quality-gate
 
 Service-boundary and user edge-case audit completed. Direct medical document generation now rejects missing core patient fields, impossible episode dates and malformed military commissariat wording before DOCX rendering.

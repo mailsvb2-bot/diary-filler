@@ -18,11 +18,13 @@ def _write_startup_error(details: str) -> None:
     except Exception:
         pass
 
-def _create_root():
-    """Создать root без падения, даже если drag/drop-библиотека не установлена."""
+def _create_root(*, require_dnd: bool = False):
+    """Create the root; production may fall back, release probes require TkDND."""
     try:
         from tkinterdnd2 import TkinterDnD  # type: ignore
         return TkinterDnD.Tk()
     except Exception:
+        if require_dnd:
+            raise
         return tk.Tk()
 

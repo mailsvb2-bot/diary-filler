@@ -315,14 +315,14 @@ assert app4._auto_select_numbered_diary_template(ask_folder=False) is True
 assert Path(app4.diary_files[0]).name == "16.docx"
 assert "16.docx" in app4.diary_files_label.kwargs.get("text", "")
 
-# --- UI contract: "Шаблоны дневников" lets user see DOCX files and also supports folder fallback ---
+# --- UI contract: «Даты» is one direct folder-selection action, not a two-dialog flow ---
 choose_src_start = main_source.index("    def choose_diary_files")
 choose_src_end = main_source.index("    def _short_file_list", choose_src_start)
 choose_src = main_source[choose_src_start:choose_src_end]
-assert "filedialog.askopenfilename" in choose_src
 assert "filedialog.askdirectory" in choose_src
+assert "filedialog.askopenfilename" not in choose_src
 assert "filedialog.askopenfilenames" not in choose_src
-assert "Path(selected).parent" in choose_src
+assert "Выберите папку «Даты» с шаблонами 01–31" in choose_src
 
 
 

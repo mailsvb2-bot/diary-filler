@@ -1,0 +1,94 @@
+name: Signed Windows Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing v1.4.0-style tag to publish
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: signed-release-${{ inputs.tag }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: windows-latest
+    timeout-minutes: 35
+    env:
+      SIGNING_CERT_PFX_BASE64: ${{ secrets.SIGNING_CERT_PFX_BASE64 }}
+      SIGNING_CERT_PASSWORD: ${{ secrets.SIGNING_CERT_PASSWORD }}
+    steps:
+      - name: Require signing credentials
+        shell: pwsh
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:SIGNING_CERT_PFX_BASE64) -or [string]::IsNullOrWhiteSpace($env:SIGNING_CERT_PASSWORD)) {
+            throw "Official release is blocked: configure SIGNING_CERT_PFX_BASE64 and SIGNING_CERT_PASSWORD first."
+          }
+
+      - name: Checkout exact release tag
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          ref: ${{ inputs.tag }}
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: |
+            requirements*.txt
+            pyproject.toml
+
+      - name: Install build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements_build.txt
+
+      - name: Run release and GUI gates
+        run: |
+          python release_check.py
+          python gui_runtime_check.py
+
+      - name: Build EXE
+        shell: cmd
+        run: build_exe_windows.bat
+
+      - name: Import code-signing certificate
+        shell: pwsh
+        run: |
+          $pfx = Join-Path $env:RUNNER_TEMP "medical-autofill-signing.pfx"
+          [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:SIGNING_CERT_PFX_BASE64))
+          echo "SIGNING_PFX=$pfx" >> $env:GITHUB_ENV
+
+      - name: Authenticode sign EXE
+        shell: pwsh
+        run: |
+          $signtool = (Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin" -Recurse -Filter signtool.exe | Where-Object { $_.FullName -match '\x64\signtool.exe$' } | Sort-Object FullName -Descending | Select-Object -First 1).FullName
+          if (-not $signtool) { throw "signtool.exe not found" }
+          & $signtool sign /fd SHA256 /f $env:SIGNING_PFX /p $env:SIGNING_CERT_PASSWORD /tr http://timestamp.digicert.com /td SHA256 dist\MedicalDiaryAutofill.exe
+          if ($LASTEXITCODE -ne 0) { throw "signtool sign failed: $LASTEXITCODE" }
+          & $signtool verify /pa /v dist\MedicalDiaryAutofill.exe
+          if ($LASTEXITCODE -ne 0) { throw "signtool verify failed: $LASTEXITCODE" }
+
+      - name: Verify exact signed packaged EXE
+        shell: pwsh
+        run: |
+          $env:MEDICAL_AUTOFILL_REQUIRE_SIGNED_EXE = "1"
+          python verify_built_exe.py
+
+      - name: Build clean source archive
+        run: python make_release_zip.py
+
+      - name: Publish GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view "${{ inputs.tag }}" *> $null
+          if ($LASTEXITCODE -eq 0) { throw "Release ${{ inputs.tag }} already exists; refusing to overwrite it." }
+          gh release create "${{ inputs.tag }}" dist\MedicalDiaryAutofill.exe release\MedicalDiaryAutofill_PRODUCTION_SOURCE.zip --verify-tag --title "MedicalDiaryAutofill ${{ inputs.tag }}" --generate-notes
