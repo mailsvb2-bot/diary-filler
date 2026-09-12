@@ -14,7 +14,7 @@ from typing import Dict, List, Optional, Sequence, Tuple
 from medical_constants import DOCUMENT_LABELS, DOCUMENT_ORDER, OUTPUT_SUFFIXES
 from medical_docx_reader import extract_docx_text
 from medical_formatting import available_path, parse_date, safe_filename, strip_leading_epi_label
-from medical_models import PatientData, normalize_admission_occurrence, normalize_yes_no
+from medical_models import PatientData, normalize_admission_occurrence, normalize_yes_no, parse_sick_leave_value
 from medical_parser import MedicalTextParser
 from medical_paths import bundled_template_path
 from medical_renderer import MedicalDocumentRenderer
@@ -198,12 +198,15 @@ class MedicalDocumentService:
         explicit_option_docs = {"primary", "admission_doctor_referral"}
         if selected_set & explicit_option_docs:
             sick_decision = normalize_yes_no(data.expert_sick_leave_needed)
+            rendered_sick_decision, rendered_sick_from = parse_sick_leave_value(data.sick_leave)
             if not sick_decision:
-                sick_decision = normalize_yes_no(data.sick_leave)
+                sick_decision = rendered_sick_decision
             if not sick_decision:
                 raise ValueError("Укажите, нужен ли больничный лист.")
             data.expert_sick_leave_needed = sick_decision
             if sick_decision == "да":
+                if not data.expert_sick_leave_from.strip() and rendered_sick_from:
+                    data.expert_sick_leave_from = rendered_sick_from
                 data.expert_sick_leave_from = self._normalize_required_date(
                     data.expert_sick_leave_from, "Дата начала больничного"
                 )

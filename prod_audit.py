@@ -777,6 +777,8 @@ def _assert_shared_clinical_popup_contract() -> None:
         (init, 'self.epi_present_var = tk.StringVar()', "EPI decision state is not patient scoped"),
         (window, 'self._diary_compact_row(files, 0)', "Block 02 no longer starts with Dates/Texts row"),
         (service, 'explicit_option_docs = {"primary", "admission_doctor_referral"}', "service boundary does not validate sick-leave/disability choices"),
+        (service, 'parse_sick_leave_value(data.sick_leave)', "service boundary cannot round-trip rendered sick-leave values"),
+        (service, 'data.expert_sick_leave_from = rendered_sick_from', "rendered sick-leave start date is not restored at service boundary"),
         (service, 'epi_docs = {"discharge", "commission", "vk_mse", "sick_leave_vk", "rvk"}', "service boundary does not normalize EPI decision"),
     )
     for source, snippet, message in required:

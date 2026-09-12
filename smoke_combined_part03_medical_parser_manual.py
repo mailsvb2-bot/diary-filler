@@ -103,6 +103,12 @@ assert format_military_commissariat_area("военного комиссариа�
 assert format_military_commissariat_area("Нижегородской области") == "Нижегородской области"
 assert format_military_commissariat_referral("военного комиссариата Нижегородской области") == "По направлению из военного комиссариата Нижегородской области"
 
+from medical_models import parse_sick_leave_value
+assert parse_sick_leave_value("не нужен") == ("нет", "")
+assert parse_sick_leave_value("нужен с 12.06.2026") == ("да", "12.06.2026")
+assert parse_sick_leave_value("НУЖЕН С 120626") == ("да", "120626")
+assert parse_sick_leave_value("неизвестно") == ("", "")
+
 manual_data = service.parse_navigation(nav)
 manual_data.discharge_date = "11.06.2026"
 manual_data.diagnosis = "F99.9 Тестовый диагноз из UI"

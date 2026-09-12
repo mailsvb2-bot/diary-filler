@@ -26,6 +26,34 @@ def normalize_yes_no(value: str) -> str:
     return ""
 
 
+def parse_sick_leave_value(value: str) -> tuple[str, str]:
+    """Parse a rendered sick-leave field into canonical decision/date parts.
+
+    Generated primary documents contain values such as ``не нужен`` or
+    ``нужен с 12.06.2026``.  Public service callers may legitimately parse one
+    of those documents and feed the resulting ``PatientData`` back into the
+    generator, so the rendered representation must round-trip through the same
+    service boundary as the explicit popup fields.  Date syntax is deliberately
+    left to the service's canonical date parser/validator.
+    """
+    text = " ".join(str(value or "").strip().split())
+    if not text:
+        return "", ""
+    exact = normalize_yes_no(text)
+    if exact:
+        return exact, ""
+    normalized = text.lower().replace("ё", "е")
+    if re.search(r"\bне\s+(?:нужен|нужна|нужно|требуется)\b", normalized):
+        return "нет", ""
+    match = re.search(
+        r"\b(?:нужен|нужна|нужно)\b(?:\s+с\s+([0-9]{4,8}|[0-9]{1,2}(?:[./-][0-9]{1,2}(?:[./-][0-9]{2,4})?)?)(?=$|[\s,.;]))?",
+        normalized,
+    )
+    if match:
+        return "да", (match.group(1) or "")
+    return "", ""
+
+
 def normalize_admission_occurrence(value: str) -> str:
     """Return the canonical episode occurrence selected by the doctor."""
     normalized = " ".join(str(value or "").strip().lower().replace("ё", "е").split())

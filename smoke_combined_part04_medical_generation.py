@@ -26,6 +26,28 @@ rvk_text = extract_docx_text(rvk_path)
 primary_text = extract_docx_text(primary_path)
 commission_text = extract_docx_text(commission_path)
 admission_doctor_text = extract_docx_text(admission_doctor_path)
+# Public service round-trip: a generated primary exam renders the sick-leave
+# decision as "нужен с <date>". Parsing that DOCX and regenerating it must
+# reconstruct the canonical decision/date rather than rejecting its own output.
+roundtrip_data = service.parse_primary_document(primary_path)
+assert roundtrip_data.sick_leave == "нужен с 15.06.2026", roundtrip_data.sick_leave
+assert roundtrip_data.expert_sick_leave_needed == ""
+assert roundtrip_data.expert_sick_leave_from == ""
+# Admission occurrence intentionally remains a doctor-confirmed fact at the
+# public boundary, so preserve the already-confirmed value for this round-trip.
+roundtrip_data.admission_occurrence = manual_data.admission_occurrence
+roundtrip_created, roundtrip_used = service.create_documents(
+    navigation_path=primary_path,
+    output_dir=OUT / "primary_roundtrip",
+    selected_docs=["primary"],
+    override_data=roundtrip_data,
+)
+assert len(roundtrip_created) == 1
+assert roundtrip_used.expert_sick_leave_needed == "да"
+assert roundtrip_used.expert_sick_leave_from == "15.06.2026"
+assert roundtrip_used.sick_leave == "нужен с 15.06.2026"
+assert "Больничный лист: нужен с 15.06.2026" in extract_docx_text(roundtrip_created[0])
+
 assert "На основании данных" in discharge_text and "F99.9 Тестовый диагноз из UI" in discharge_text, discharge_text
 for occurrence_text in (primary_text, discharge_text, commission_text, admission_doctor_text, rvk_text):
     assert "В 3 отделение КДП поступает повторно добровольно" in occurrence_text, occurrence_text
