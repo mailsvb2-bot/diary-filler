@@ -119,6 +119,27 @@ assert common_logic.assigned_treatment_var.get() == "терапия"
 assert common_logic.diagnosis_var.get() == "F41.2 тест"
 assert common_logic.discharge_date_var.get() == "11.06.2026"
 
+# Discharge popup owns the explicit episode-occurrence fact. It must ask even
+# when every other discharge requirement is already complete, and store the
+# canonical value in both session state and PatientData.
+occurrence_logic = _main_module.CombinedMedicalDiaryApp.__new__(_main_module.CombinedMedicalDiaryApp)
+occurrence_logic.admission_occurrence_var = _FakeVar("")
+occurrence_logic.data = PatientData()
+occurrence_logic._hospitalization_details_missing = lambda: False
+occurrence_logic._manual_treatment_missing = lambda: False
+occurrence_logic._selected_outputs_require_discharge_date = lambda: False
+occurrence_logic._should_prompt_discharge_sick_leave_number = lambda: False
+occurrence_logic._case_number_missing = lambda: False
+occurrence_logic._current_admission_occurrence = _main_module.CombinedMedicalDiaryApp._current_admission_occurrence.__get__(occurrence_logic, _main_module.CombinedMedicalDiaryApp)
+occurrence_logic._store_admission_occurrence_value = _main_module.CombinedMedicalDiaryApp._store_admission_occurrence_value.__get__(occurrence_logic, _main_module.CombinedMedicalDiaryApp)
+occurrence_calls = []
+occurrence_logic._prompt_fields = lambda title, rows, width=72: occurrence_calls.append((title, rows)) or ["повторно"]
+occurrence_logic._prompt_discharge_output_requirements = _main_module.CombinedMedicalDiaryApp._prompt_discharge_output_requirements.__get__(occurrence_logic, _main_module.CombinedMedicalDiaryApp)
+assert occurrence_logic._prompt_discharge_output_requirements() is True
+assert [label for label, _default in occurrence_calls[0][1]] == ["Поступает в 3 отделение КДП (первично/повторно)"]
+assert occurrence_logic.admission_occurrence_var.get() == "повторно"
+assert occurrence_logic.data.admission_occurrence == "повторно"
+
 # Hospitalization referral popup must not request discharge date unless the
 # selected outputs actually need it.
 referral_logic = _main_module.CombinedMedicalDiaryApp.__new__(_main_module.CombinedMedicalDiaryApp)
@@ -305,13 +326,13 @@ assert normalize_prompt_field_values(
 # Texts/Dates folders may remain so the next patient's files can be auto-picked.
 patient_switch = _main_module.CombinedMedicalDiaryApp.__new__(_main_module.CombinedMedicalDiaryApp)
 for name in (
-    "assigned_treatment_var", "case_number_var", "expert_work_status_var",
+    "assigned_treatment_var", "case_number_var", "admission_occurrence_var", "expert_work_status_var",
     "expert_work_org_var", "expert_position_var", "expert_sick_leave_needed_var",
     "expert_sick_leave_from_var", "expert_sick_leave_number_var",
     "vk_mse_work_org_var", "vk_mse_position_var", "sick_leave_vk_work_org_var",
     "sick_leave_vk_position_var", "sick_leave_vk_work_position_var",
     "patient_name_var", "admission_date_var", "discharge_date_var", "diagnosis_var",
-    "rvk_act_number_var", "rvk_military_commissariat_var", "rvk_work_position_var",
+    "admission_occurrence_var", "rvk_act_number_var", "rvk_military_commissariat_var", "rvk_work_position_var",
     "vk_date_var", "vk_protocol_number_var", "vk_protocol_date_var",
     "sick_leave_vk_date_var", "sick_leave_vk_protocol_number_var",
     "sick_leave_vk_protocol_date_var", "sick_leave_vk_commission_date_var",
@@ -363,7 +384,7 @@ assert patient_switch._last_protocol_date == ""
 # the doctor remain intact; isolation is activated only on an actual patient switch.
 first_primary = _main_module.CombinedMedicalDiaryApp.__new__(_main_module.CombinedMedicalDiaryApp)
 for name in (
-    "assigned_treatment_var", "case_number_var", "expert_work_status_var",
+    "assigned_treatment_var", "case_number_var", "admission_occurrence_var", "expert_work_status_var",
     "expert_work_org_var", "expert_position_var", "expert_sick_leave_needed_var",
     "expert_sick_leave_from_var", "expert_sick_leave_number_var",
     "vk_mse_work_org_var", "vk_mse_position_var", "sick_leave_vk_work_org_var",

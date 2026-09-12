@@ -9,10 +9,12 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from docx import Document
+from docx.enum.text import WD_ALIGN_PARAGRAPH
 
 import diary_batch as diary_batch_module
 from app_config import DIR_DIARY_TEXTS, DIR_PRIMARY_DOCUMENTS
 from diary_batch import fill_diary_batch
+from diary_constants import DIARY_DEPARTMENT_HEAD_SIGNATURE, DIARY_TREATING_DOCTOR_SIGNATURE
 from diary_service import DiaryService
 from diary_gender import adapt_text_to_patient_gender, detect_gender_from_patient_name
 from diary_models import FillResult
@@ -37,6 +39,15 @@ def _test_missing_patient_facts() -> None:
     assert data.epidemiology == "", data.epidemiology
     assert any("адрес регистрации" in warning for warning in data.warnings), data.warnings
     assert any("эпидемиологический анамнез" in warning for warning in data.warnings), data.warnings
+    legacy_admission = MedicalTextParser().parse_text(
+        "12.01.2026 Первичный осмотр\n"
+        "Ф.И.О.: Иванов Иван Иванович\n"
+        "В 3 отделение КДП поступает повторно добровольно\n"
+        "Диагноз: F41.2 тест\n"
+        "Лечение: тестовое лечение"
+    )
+    assert legacy_admission.admission == "добровольно", legacy_admission.admission
+    assert legacy_admission.admission_occurrence == "", "occurrence must be explicitly confirmed in popup"
 
 
 def _test_conservative_gender() -> None:
@@ -91,33 +102,22 @@ def _test_common_diary_gender_agreement() -> None:
         assert expected in adapted, adapted
 
 
-def _test_text_diary_signature_fallbacks(tmp: Path) -> None:
-    doctor_only = tmp / "doctor-only-dates.docx"
-    doc = Document()
-    table = doc.add_table(rows=2, cols=4)
-    for index, header in enumerate(("День госпитализации", "Число", "Месяц/Год", "Дневник наблюдения")):
-        table.rows[0].cells[index].text = header
-    table.rows[1].cells[0].text = "2"
-    table.rows[1].cells[3].text = "Лечащий врач Балаганин С.В."
-    doc.save(doctor_only)
-    assert diary_batch_module._signature_lines_from_diary_sources([doctor_only]) == (
-        "Лечащий врач Балаганин С.В.",
-        "Зав. отделением ____________________",
+def _test_text_diary_signature_semantics() -> None:
+    assert DIARY_TREATING_DOCTOR_SIGNATURE == "Лечащий врач Балаганин С.В."
+    assert DIARY_DEPARTMENT_HEAD_SIGNATURE == "Зав.отделением Можарова Е.А."
+    entries, final_rows, _gender = diary_batch_module._build_text_diary_entries(
+        ["Пациент спокоен"],
+        [date(2026, 1, day) for day in (2, 3, 4, 5, 6, 7)],
+        discharge_date_value=date(2026, 1, 7),
+        force_final_diary=True,
+        repeat_statuses=True,
+        patient_gender="male",
     )
-
-    head_only = tmp / "head-only-dates.docx"
-    doc = Document()
-    table = doc.add_table(rows=2, cols=4)
-    for index, header in enumerate(("День госпитализации", "Число", "Месяц/Год", "Дневник наблюдения")):
-        table.rows[0].cells[index].text = header
-    table.rows[1].cells[0].text = "2"
-    table.rows[1].cells[3].text = "Заведующий отделением Можарова Е.А."
-    doc.save(head_only)
-    assert diary_batch_module._signature_lines_from_diary_sources([head_only]) == (
-        "Лечащий врач ____________________",
-        "Заведующий отделением Можарова Е.А.",
-    )
-
+    assert [entry.sequence_number for entry in entries] == [1, 2, 3, 4, 5, 6]
+    assert [entry.sequence_number for entry in entries if entry.is_joint_head_exam] == [3, 6]
+    assert entries[-1].is_final is True
+    assert entries[-1].is_joint_head_exam is True, "every third diary includes a third-position discharge diary"
+    assert final_rows == 1
 
 def _test_text_diary_user_route(tmp: Path) -> None:
     statuses = tmp / "text-route-texts.docx"
@@ -168,7 +168,7 @@ def _test_text_diary_user_route(tmp: Path) -> None:
     assert tuple(line.split()[0] for line in diary_lines) == expected_prefixes, diary_lines
     assert "02.01.26 Пациентка спокойна" in text, text
     assert "03.01.26 Пациентка спокойна" in text, text
-    assert "04.01.26 Пациентка спокойна" in text, text
+    assert "04.01.26 Совместный осмотр с зав. отделением" in text, text
     assert "08.01.26 Пациентка спокойна" in text, text
     assert "09.01.26 Состояние улучшилось" in text, text
     for omitted in ("05.01.26", "06.01.26", "07.01.26"):
@@ -176,21 +176,25 @@ def _test_text_diary_user_route(tmp: Path) -> None:
     assert "12.01.26" not in text, text
     assert result.detected_rows == 4, result.detected_rows
     assert result.filled_rows == 5, result.filled_rows
-    assert "Лечащий врач Балаганин С.В." in text, text
-    assert "Зав.отделением Можарова Е.А." in text, text
-    lines = [paragraph.text.strip() for paragraph in rendered.paragraphs if paragraph.text.strip()]
+    assert text.count("Лечащий врач Балаганин С.В.") == 5, text
+    assert text.count("Зав.отделением Можарова Е.А.") == 1, text
     nonempty_paragraphs = [paragraph for paragraph in rendered.paragraphs if paragraph.text.strip()]
-    for prefix in expected_prefixes:
-        index = next(i for i, line in enumerate(lines) if line.startswith(prefix))
-        assert lines[index + 1:index + 3] == [
-            "Лечащий врач Балаганин С.В.",
-            "Зав.отделением Можарова Е.А.",
-        ], lines[index:index + 3]
-        entry_paragraph = next(paragraph for paragraph in nonempty_paragraphs if paragraph.text.startswith(prefix))
-        doctor_paragraph = nonempty_paragraphs[nonempty_paragraphs.index(entry_paragraph) + 1]
-        assert entry_paragraph.paragraph_format.keep_together is True
-        assert entry_paragraph.paragraph_format.keep_with_next is True
-        assert doctor_paragraph.paragraph_format.keep_with_next is True
+    joint_heading = next(
+        paragraph for paragraph in nonempty_paragraphs
+        if paragraph.text.strip() == "04.01.26 Совместный осмотр с зав. отделением"
+    )
+    joint_index = nonempty_paragraphs.index(joint_heading)
+    assert "Пациентка спокойна" in nonempty_paragraphs[joint_index + 1].text
+    assert nonempty_paragraphs[joint_index + 2].text == "Лечащий врач Балаганин С.В."
+    assert nonempty_paragraphs[joint_index + 3].text == "Зав.отделением Можарова Е.А."
+    for paragraph in nonempty_paragraphs:
+        if paragraph.text == "Лечащий врач Балаганин С.В.":
+            assert paragraph.alignment == WD_ALIGN_PARAGRAPH.RIGHT
+        if paragraph.text == "Зав.отделением Можарова Е.А.":
+            assert paragraph.alignment == WD_ALIGN_PARAGRAPH.RIGHT
+    # Source-table signature placement no longer controls clinical semantics.
+    # The head signs exactly every third generated diary, regardless of which
+    # source row happened to contain a head signature.
     assert len(Document(template).tables) == 1, "doctor-owned Dates source must not be modified"
     assert result.final_rows_filled == 1
     action_source = (ROOT / "actions_diary_flow.py").read_text(encoding="utf-8")
@@ -258,6 +262,7 @@ def _test_medical_transaction(tmp: Path) -> None:
         discharge_date="11.06.2026",
         diagnosis="F41.2 тест",
         treatment_plan="тестовое лечение",
+        admission_occurrence="первично",
     )
     out = tmp / "medical-tx"
     try:
@@ -424,7 +429,7 @@ def main() -> None:
     with TemporaryDirectory(prefix="medical-autofill-safety-") as temp_dir:
         tmp = Path(temp_dir)
         _test_holiday_default_is_safe(tmp)
-        _test_text_diary_signature_fallbacks(tmp)
+        _test_text_diary_signature_semantics()
         _test_text_diary_user_route(tmp)
         _test_daily_diary_coverage(tmp)
         _test_medical_transaction(tmp)

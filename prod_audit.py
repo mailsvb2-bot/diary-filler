@@ -598,13 +598,106 @@ def _assert_diary_service_boundary() -> None:
     if "def fill_diary_file(*args, **kwargs)" not in batch or "legacy_fill_diary_file" not in batch:
         _fail("legacy fill_diary_file compatibility proxy is missing")
 
+def _assert_joint_diary_semantics_contract() -> None:
+    """Joint/head signatures are clinical entry semantics, not template formatting."""
+    batch = _read("diary_batch.py")
+    constants = _read("diary_constants.py")
+    actions = _read("actions_diary_flow.py")
+
+    required_constants = (
+        'DIARY_JOINT_HEAD_EXAM_TITLE = "Совместный осмотр с зав. отделением"',
+        'DIARY_TREATING_DOCTOR_SIGNATURE = "Лечащий врач Балаганин С.В."',
+        'DIARY_DEPARTMENT_HEAD_SIGNATURE = "Зав.отделением Можарова Е.А."',
+    )
+    for required in required_constants:
+        if required not in constants:
+            _fail(f"canonical diary joint-exam contract misses: {required}")
+    for required in (
+        "class TextDiaryEntry",
+        "is_joint_head_exam: bool",
+        "is_joint_head_exam=(index % 3 == 0)",
+        "if entry.is_joint_head_exam:",
+        "doctor_paragraph.alignment = WD_ALIGN_PARAGRAPH.RIGHT",
+        "head_paragraph.alignment = WD_ALIGN_PARAGRAPH.RIGHT",
+    ):
+        if required not in batch:
+            _fail(f"semantic joint-diary implementation misses: {required}")
+    if "_signature_lines_from_diary_sources" in batch:
+        _fail("source-template signatures may not decide production joint-exam semantics")
+    if "doctor_name=" in actions or "head_name=" in actions:
+        _fail("patient/input signature fields leaked back into canonical diary signing roles")
+
+    from datetime import date
+    import diary_batch as diary_batch_module
+    entries, final_rows, _ = diary_batch_module._build_text_diary_entries(
+        ["Пациент спокоен"],
+        [date(2026, 1, day) for day in (2, 3, 4, 5, 6, 7)],
+        discharge_date_value=date(2026, 1, 7),
+        force_final_diary=True,
+        repeat_statuses=True,
+        patient_gender="male",
+    )
+    if [entry.sequence_number for entry in entries if entry.is_joint_head_exam] != [3, 6]:
+        _fail("every-third-diary joint examination semantics changed")
+    if final_rows != 1 or not entries[-1].is_final:
+        _fail("joint-exam semantics broke the independent final-discharge diary")
+
+
+def _assert_admission_occurrence_contract() -> None:
+    """Первично/повторно is one explicit patient fact shared by discharge and RVK."""
+    model = _read("medical_models.py")
+    service = _read("medical_service.py")
+    flow = _read("actions_medical_flow.py")
+    orchestrator = _read("actions_creation_orchestrator.py")
+    details = _read("dialog_document_details.py")
+    expert = _read("dialog_expert.py")
+    reset = _read("files_mixin.py")
+    discharge_renderer = _read("medical_renderer_primary.py")
+    rvk_renderer = _read("medical_renderer_special.py")
+    parser = _read("medical_parser_core.py")
+
+    required_pairs = (
+        (model, 'ADMISSION_OCCURRENCE_OPTIONS = ("первично", "повторно")', "canonical occurrence options missing"),
+        (model, "admission_occurrence: str", "PatientData lost admission occurrence"),
+        (model, "def strip_admission_occurrence_prefix", "clinical admission tail is not separated from occurrence"),
+        (flow, "data.admission_occurrence = normalize_admission_occurrence", "generation snapshot does not capture occurrence"),
+        (service, 'if {"discharge", "rvk"} & selected_set:', "service does not own occurrence validation boundary"),
+        (service, "первично или повторно", "service does not reject missing occurrence"),
+        (reset, '("admission_occurrence_var", "")', "occurrence leaks between patients"),
+        (orchestrator, "or not self._current_admission_occurrence()", "RVK flow can bypass occurrence popup"),
+        (expert, 'detail_fields.append("admission_occurrence")', "discharge popup does not ask occurrence"),
+        (details, '("первично", "повторно")', "RVK popup lost binary occurrence choices"),
+        (discharge_renderer, "data.admission_occurrence", "discharge renderer ignores occurrence"),
+        (rvk_renderer, "data.admission_occurrence", "RVK renderer ignores occurrence"),
+        (parser, "strip_admission_occurrence_prefix(data.admission)", "parser can duplicate legacy occurrence word"),
+    )
+    for source, snippet, message in required_pairs:
+        if snippet not in source:
+            _fail(message)
+
+    from medical_models import normalize_admission_occurrence, strip_admission_occurrence_prefix
+    if normalize_admission_occurrence("ПОВТОРНО") != "повторно":
+        _fail("occurrence normalization changed")
+    if normalize_admission_occurrence("иногда"):
+        _fail("invalid occurrence must never be accepted")
+    if strip_admission_occurrence_prefix("повторно добровольно") != "добровольно":
+        _fail("legacy occurrence prefix is not separated from admission clinical text")
+
+
 def _assert_diagnosis_diary_text_contract() -> None:
     """Ordinary diaries come from diagnosis template; discharge text is universal."""
     batch = _read("diary_batch.py")
     constants = _read("diary_constants.py")
     selection = _read("diary_text_selection.py")
 
-    if "from diary_constants import FINAL_DIARY_TEXT" not in batch:
+    batch_tree = ast.parse(batch, filename="diary_batch.py")
+    imported_from_constants = {
+        alias.name
+        for node in batch_tree.body
+        if isinstance(node, ast.ImportFrom) and node.module == "diary_constants"
+        for alias in node.names
+    }
+    if "FINAL_DIARY_TEXT" not in imported_from_constants:
         _fail("production diary route lost the universal final-discharge diary text")
     if "adapt_text_to_patient_gender(FINAL_DIARY_TEXT" not in batch:
         _fail("final discharge diary is no longer generated from FINAL_DIARY_TEXT")
@@ -878,6 +971,8 @@ def main() -> None:
     _assert_discharge_date_contract()
     _assert_patient_session_reset_contract()
     _assert_diary_service_boundary()
+    _assert_joint_diary_semantics_contract()
+    _assert_admission_occurrence_contract()
     _assert_diagnosis_diary_text_contract()
     _assert_shared_gender_contract()
     _assert_shared_paths_contract()

@@ -8,7 +8,7 @@ from tkinter import messagebox
 
 from app_config import *
 from medical_formatting import parse_date
-from medical_models import PatientData
+from medical_models import PatientData, normalize_admission_occurrence
 from medical_parser_sanitize import sanitize_diagnosis
 
 def _search_icd10_f(query: str, *, limit: int):
@@ -22,6 +22,19 @@ def _format_diagnosis(item) -> str:
 
 
 class DialogExpertMixin:
+    def _current_admission_occurrence(self) -> str:
+        var = getattr(self, "admission_occurrence_var", None)
+        return normalize_admission_occurrence(var.get() if var is not None else "")
+
+    def _store_admission_occurrence_value(self, value: str) -> bool:
+        occurrence = normalize_admission_occurrence(value)
+        if not occurrence:
+            return False
+        self.admission_occurrence_var.set(occurrence)
+        if hasattr(self, "data"):
+            self.data.admission_occurrence = occurrence
+        return True
+
     @staticmethod
     def _normalize_yes_no(value: str) -> str:
         value = (value or "").strip().lower().replace("ё", "е")
@@ -505,6 +518,10 @@ class DialogExpertMixin:
             detail_rows.append(("Лечение", self.assigned_treatment_var.get().strip() or self._treatment_popup_default()))
             detail_fields.append("treatment")
 
+        if not self._current_admission_occurrence():
+            detail_rows.append(("Поступает в 3 отделение КДП (первично/повторно)", ""))
+            detail_fields.append("admission_occurrence")
+
         if self._selected_outputs_require_discharge_date() and self._discharge_date_missing_or_invalid():
             detail_rows.append(("Дата выписки", self._discharge_popup_default()))
             detail_fields.append("discharge_date")
@@ -555,6 +572,13 @@ class DialogExpertMixin:
                 self._manual_diagnosis = True
                 if hasattr(self, "data"):
                     self.data.diagnosis = diagnosis
+            elif field == "admission_occurrence":
+                if not self._store_admission_occurrence_value(value):
+                    messagebox.showwarning(
+                        "Некорректное значение",
+                        "Укажите: первично или повторно.",
+                    )
+                    return False
             elif field == "discharge_date":
                 if not self._store_discharge_date_value(value):
                     messagebox.showwarning(

@@ -6,6 +6,7 @@ from tkinter import messagebox
 
 from app_config import *
 from medical_parser_sanitize import sanitize_diagnosis
+from medical_models import normalize_admission_occurrence
 
 
 class DialogDocumentDetailsMixin:
@@ -58,6 +59,7 @@ class DialogDocumentDetailsMixin:
         discharge_var = tk.StringVar(value=self._discharge_popup_default())
         act_var = tk.StringVar(value=self.rvk_act_number_var.get().strip())
         military_var = tk.StringVar(value=self.rvk_military_commissariat_var.get().strip())
+        occurrence_var = tk.StringVar(value=self._current_admission_occurrence())
 
         need_hospitalization_details = self._hospitalization_details_missing()
         need_manual_treatment = (not need_hospitalization_details) and self._manual_treatment_missing()
@@ -93,6 +95,27 @@ class DialogDocumentDetailsMixin:
             add_entry("Дата выписки", discharge_var, width=28)
 
         number_entry = add_entry("Номер медицинского заключения", act_var, width=36)
+
+        tk.Label(frame, text="Поступает в 3 отделение КДП", bg=PANEL, fg=TEXT, font=self._font(10), anchor="w").grid(
+            row=row, column=0, sticky="w", pady=(0, 6)
+        )
+        row += 1
+        occurrence_frame = tk.Frame(frame, bg=PANEL)
+        occurrence_frame.grid(row=row, column=0, sticky="ew", pady=(0, 8))
+        row += 1
+        for idx, value in enumerate(("первично", "повторно")):
+            occurrence_frame.grid_columnconfigure(idx, weight=1)
+            tk.Button(
+                occurrence_frame,
+                text=value.capitalize(),
+                command=lambda v=value: occurrence_var.set(v),
+                bg=FIELD, fg=TEXT, activebackground=ACCENT, activeforeground="#03101f",
+                relief="flat", padx=8, pady=6, cursor="hand2",
+            ).grid(row=0, column=idx, sticky="ew", padx=(0 if idx == 0 else 6, 0))
+        tk.Label(frame, textvariable=occurrence_var, bg=PANEL, fg=ACCENT, font=self._font(10), anchor="w").grid(
+            row=row, column=0, sticky="w", pady=(0, 12)
+        )
+        row += 1
 
         tk.Label(frame, text="Военкомат", bg=PANEL, fg=TEXT, font=self._font(10), anchor="w").grid(
             row=row, column=0, sticky="w", pady=(0, 6)
@@ -165,6 +188,13 @@ class DialogDocumentDetailsMixin:
 
             if not act_var.get().strip():
                 messagebox.showwarning("Не заполнено поле", "Укажите номер медицинского заключения.", parent=win)
+                return
+            if not self._store_admission_occurrence_value(occurrence_var.get()):
+                messagebox.showwarning(
+                    "Не выбран вариант",
+                    "Укажите, пациент поступает первично или повторно.",
+                    parent=win,
+                )
                 return
             if not military_var.get().strip():
                 messagebox.showwarning("Не выбран военкомат", "Выберите военкомат кнопкой.", parent=win)

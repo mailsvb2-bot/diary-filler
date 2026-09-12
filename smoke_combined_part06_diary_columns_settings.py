@@ -196,6 +196,19 @@ try:
 except ValueError as exc:
     assert "Дата выписки" in str(exc), str(exc)
 
+missing_occurrence_data = service.parse_primary_document(nav)
+missing_occurrence_data.discharge_date = "11.06.2026"
+try:
+    service.create_documents(
+        navigation_path=nav,
+        output_dir=OUT / "missing_admission_occurrence",
+        selected_docs=["discharge"],
+        override_data=missing_occurrence_data,
+    )
+    raise AssertionError("discharge/RVK must require explicit первично/повторно")
+except ValueError as exc:
+    assert "первично или повторно" in str(exc), str(exc)
+
 try:
     service.create_documents(
         navigation_path=nav,
@@ -240,6 +253,7 @@ except ValueError as exc:
 try:
     bad_rvk_data = service.parse_primary_document(nav)
     bad_rvk_data.discharge_date = "11.06.2026"
+    bad_rvk_data.admission_occurrence = "первично"
     bad_rvk_data.rvk_act_number = "77-А"
     bad_rvk_data.rvk_military_commissariat = ""
     service.create_documents(
@@ -254,6 +268,7 @@ except ValueError as exc:
 
 compact_popup_data = service.parse_primary_document(nav)
 compact_popup_data.discharge_date = "11062026"
+compact_popup_data.admission_occurrence = "повторно"
 compact_popup_data.commission_date = "18062026"
 compact_popup_data.commission_number = "12"
 compact_popup_data.vk_date = "19062026"
@@ -272,6 +287,7 @@ compact_created, compact_used = service.create_documents(
     override_data=compact_popup_data,
 )
 assert compact_used.discharge_date == "11.06.2026"
+assert compact_used.admission_occurrence == "повторно"
 assert compact_used.commission_date == "18.06.2026"
 assert compact_used.vk_date == "19.06.2026"
 assert compact_used.sick_leave_vk_commission_date == "20.06.2026"
@@ -363,6 +379,7 @@ assert none_output_created[0].parent == nav.parent
 
 override_data = service.parse_primary_document(nav)
 override_data.discharge_date = ""
+override_data.admission_occurrence = "первично"
 _mutation_created, used_override = service.create_documents(
     navigation_path=nav,
     output_dir=OUT / "override_copy",
@@ -448,6 +465,7 @@ except ValueError as exc:
 
 bad_rvk_act_number_data = service.parse_primary_document(nav)
 bad_rvk_act_number_data.discharge_date = "11.06.2026"
+bad_rvk_act_number_data.admission_occurrence = "первично"
 bad_rvk_act_number_data.rvk_act_number = ""
 bad_rvk_act_number_data.rvk_military_commissariat = "Ленинский"
 try:

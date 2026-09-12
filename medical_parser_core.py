@@ -12,7 +12,7 @@ from medical_docx_reader import (
     _is_birth_or_demographic_context,
     _is_primary_title_context,
 )
-from medical_models import PatientData
+from medical_models import PatientData, strip_admission_occurrence_prefix
 from medical_parser_sanitize import sanitize_diagnosis
 from medical_treatment_detection import has_treatment_section_marker
 from medical_text_utils import (
@@ -79,6 +79,8 @@ class MedicalParserCoreMixin:
                 if field_name == "registered" and not self._looks_like_address_tail(value):
                     continue
                 setattr(data, field_name, value)
+
+        data.admission = strip_admission_occurrence_prefix(data.admission)
 
         for field_name, aliases in self.BLOCK_ALIASES.items():
             value = self._extract_block(text, aliases)

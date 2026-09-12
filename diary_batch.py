@@ -10,15 +10,22 @@ import re
 import shutil
 import subprocess
 import sys
+from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Iterable, Sequence
 
 from docx import Document
+from docx.enum.text import WD_ALIGN_PARAGRAPH
 
 from diary_dates import parse_admission_month_year, parse_full_date, parse_optional_discharge_date
-from diary_constants import FINAL_DIARY_TEXT
+from diary_constants import (
+    DIARY_DEPARTMENT_HEAD_SIGNATURE,
+    DIARY_JOINT_HEAD_EXAM_TITLE,
+    DIARY_TREATING_DOCTOR_SIGNATURE,
+    FINAL_DIARY_TEXT,
+)
 from shared_gender import adapt_text_to_patient_gender, detect_gender_from_patient_name
 from diary_models import DiaryBatchResult
 from shared_paths import available_path, make_diary_output_name, safe_filename_part
@@ -26,6 +33,21 @@ from diary_table_columns import find_day_column, find_hospitalization_day_column
 from diary_table_numbers import cell_int, hospitalization_day_int
 from diary_text_parser import clean_status_text, extract_statuses_from_docx, is_signature_paragraph_text, remove_examinee_words
 
+
+@dataclass(frozen=True)
+class TextDiaryEntry:
+    """One clinical observation with semantic flags independent of DOCX layout.
+
+    Joint examination is a property of the clinical sequence, not of source
+    template formatting. Discharge is orthogonal: a final diary can also be the
+    third observation and therefore a joint examination.
+    """
+
+    date: date
+    text: str
+    sequence_number: int
+    is_final: bool = False
+    is_joint_head_exam: bool = False
 
 def fill_diary_file(*args, **kwargs):
     """Compatibility proxy that loads the legacy table writer on demand."""
@@ -218,52 +240,6 @@ def _clinical_diary_offsets(max_offset: int) -> tuple[int, ...]:
     return tuple(offset for offset in offsets if offset <= max_offset)
 
 
-def _signature_lines_from_diary_sources(paths: Sequence[Path]) -> tuple[str, ...]:
-    """Preserve doctor-owned signature wording when converting a table to text."""
-    found: list[str] = []
-    seen: set[str] = set()
-
-    def add(text: str) -> None:
-        for line in str(text or "").splitlines():
-            value = " ".join(line.split()).strip()
-            key = value.lower().replace("ё", "е")
-            if value and is_signature_paragraph_text(value) and key not in seen:
-                seen.add(key)
-                found.append(value)
-
-    for path in paths:
-        doc = Document(str(path))
-        for paragraph in doc.paragraphs:
-            add(paragraph.text)
-        for table in doc.tables:
-            for row in table.rows:
-                # python-docx may expose the same merged physical cell several
-                # times inside one row. Deduplicate only within that row: lxml
-                # wrappers from earlier rows may be released and Python can
-                # reuse their object ids, which previously made later signature
-                # cells (notably «Зав.отделением») disappear from the scan.
-                seen_cells: set[int] = set()
-                for cell in row.cells:
-                    cell_id = id(cell._tc)
-                    if cell_id in seen_cells:
-                        continue
-                    seen_cells.add(cell_id)
-                    for paragraph in cell.paragraphs:
-                        add(paragraph.text)
-    if len(found) >= 2:
-        return tuple(found[:2])
-    if len(found) == 1:
-        only = found[0]
-        key = only.lower().replace("ё", "е")
-        # The text-diary contract always has two signature roles. Preserve the
-        # doctor-owned wording we did find, but never invent a missing person's
-        # name: supplement only the blank role line required for signing.
-        if ("зав" in key or "завед" in key) and "отдел" in key:
-            return ("Лечащий врач ____________________", only)
-        return (only, "Зав. отделением ____________________")
-    return ("Лечащий врач ____________________", "Зав. отделением ____________________")
-
-
 def _build_text_diary_entries(
     statuses: Sequence[str],
     dates: Sequence[date],
@@ -272,7 +248,14 @@ def _build_text_diary_entries(
     force_final_diary: bool,
     repeat_statuses: bool,
     patient_gender: str | None,
-) -> tuple[list[tuple[date, str]], int, int]:
+) -> tuple[list[TextDiaryEntry], int, int]:
+    """Build the semantic clinical diary sequence before any DOCX formatting.
+
+    The clinical contract restored from the old template-owned Dokkomplekt flow:
+    every third generated diary is a joint examination with the department head.
+    This classification is based on the final chronological sequence, so source
+    template signature rows cannot accidentally make every entry a joint exam.
+    """
     planned = tuple(sorted(dict.fromkeys(dates)))
     final_date: date | None = None
     if force_final_diary:
@@ -283,7 +266,7 @@ def _build_text_diary_entries(
             final_date = planned[-1]
             planned = planned[:-1]
 
-    entries: list[tuple[date, str]] = []
+    raw_entries: list[tuple[date, str, bool]] = []
     status_index = 0
     gender_replacements = 0
     for item_date in planned:
@@ -298,37 +281,66 @@ def _build_text_diary_entries(
         adapted, changed = adapt_text_to_patient_gender(status, patient_gender)
         gender_replacements += changed
         cleaned = remove_examinee_words(clean_status_text(adapted))
-        entries.append((item_date, cleaned))
+        raw_entries.append((item_date, cleaned, False))
 
     final_rows = 0
     if final_date is not None:
         adapted, changed = adapt_text_to_patient_gender(FINAL_DIARY_TEXT, patient_gender)
         gender_replacements += changed
-        entries.append((final_date, remove_examinee_words(clean_status_text(adapted))))
+        raw_entries.append((final_date, remove_examinee_words(clean_status_text(adapted)), True))
         final_rows = 1
+
+    entries = [
+        TextDiaryEntry(
+            date=item_date,
+            text=text,
+            sequence_number=index,
+            is_final=is_final,
+            is_joint_head_exam=(index % 3 == 0),
+        )
+        for index, (item_date, text, is_final) in enumerate(raw_entries, start=1)
+    ]
     return entries, final_rows, gender_replacements
 
 
-def _write_text_diary_docx(path: Path, entries: Sequence[tuple[date, str]], signatures: Sequence[str]) -> None:
+def _write_text_diary_docx(
+    path: Path,
+    entries: Sequence[TextDiaryEntry],
+) -> None:
+    """Render semantic diary entries without deciding their clinical meaning.
+
+    Regular observations have only the treating-doctor signature. Joint exams
+    have a dedicated structural heading and both signatures. Signature paragraphs
+    are always right-aligned, matching the doctor's requested paper layout.
+    """
     doc = Document()
-    for item_date, text in entries:
+    doctor_signature = DIARY_TREATING_DOCTOR_SIGNATURE
+    head_signature = DIARY_DEPARTMENT_HEAD_SIGNATURE
+
+    for entry in entries:
         if doc.paragraphs:
             doc.add_paragraph("")
-        entry_paragraph = doc.add_paragraph(f"{item_date:%d.%m.%y} {text}".rstrip())
-        # Keep one clinical diary block together in Word/PDF. Without these
-        # flags the final department-head signature can become an orphan on a
-        # separate page even though the diary itself still fits on the previous
-        # page. Chaining keep-with-next through the first signature keeps the
-        # diary + signature block visually atomic.
-        entry_paragraph.paragraph_format.keep_together = True
-        if signatures:
-            entry_paragraph.paragraph_format.keep_with_next = True
-        for index, signature in enumerate(signatures):
-            signature_paragraph = doc.add_paragraph(signature)
-            if index < len(signatures) - 1:
-                signature_paragraph.paragraph_format.keep_with_next = True
-    doc.save(str(path))
 
+        if entry.is_joint_head_exam:
+            heading = doc.add_paragraph(f"{entry.date:%d.%m.%y} {DIARY_JOINT_HEAD_EXAM_TITLE}")
+            heading.paragraph_format.keep_together = True
+            heading.paragraph_format.keep_with_next = True
+            clinical = doc.add_paragraph(entry.text)
+            clinical.paragraph_format.keep_together = True
+            clinical.paragraph_format.keep_with_next = True
+        else:
+            clinical = doc.add_paragraph(f"{entry.date:%d.%m.%y} {entry.text}".rstrip())
+            clinical.paragraph_format.keep_together = True
+            clinical.paragraph_format.keep_with_next = True
+
+        doctor_paragraph = doc.add_paragraph(doctor_signature)
+        doctor_paragraph.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+        if entry.is_joint_head_exam:
+            doctor_paragraph.paragraph_format.keep_with_next = True
+            head_paragraph = doc.add_paragraph(head_signature)
+            head_paragraph.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+
+    doc.save(str(path))
 
 def _fill_text_diary_batch(
     *,
@@ -362,7 +374,6 @@ def _fill_text_diary_batch(
             "В выбранном источнике «Даты» не найдено дат дневников после поступления. "
             "Проверьте файл 01–31 или выберите другой источник дат."
         )
-    signatures = _signature_lines_from_diary_sources(diary_file_paths)
     entries, final_rows, gender_replacements = _build_text_diary_entries(
         statuses,
         dates,
@@ -381,7 +392,7 @@ def _fill_text_diary_batch(
     with TemporaryDirectory(prefix=".diary-autofill-", dir=str(result_dir)) as tmp_dir:
         tmp_root = Path(tmp_dir)
         staged_doc = tmp_root / "diary.docx"
-        _write_text_diary_docx(staged_doc, entries, signatures)
+        _write_text_diary_docx(staged_doc, entries)
         staged_report: Path | None = None
         if write_report:
             staged_report = tmp_root / report_name

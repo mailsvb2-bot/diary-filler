@@ -9,6 +9,9 @@ from shared_gender import GENDER_WORD_PAIRS
 
 MIN_STATUS_LEN = 25
 STATUS_FONT_SIZE_PT = 8
+DIARY_JOINT_HEAD_EXAM_TITLE = "Совместный осмотр с зав. отделением"
+DIARY_TREATING_DOCTOR_SIGNATURE = "Лечащий врач Балаганин С.В."
+DIARY_DEPARTMENT_HEAD_SIGNATURE = "Зав.отделением Можарова Е.А."
 HOLIDAY_SKIP_MONTHS = {1, 5}
 HOLIDAY_SKIP_START_DAY = 1
 HOLIDAY_SKIP_END_DAY = 9

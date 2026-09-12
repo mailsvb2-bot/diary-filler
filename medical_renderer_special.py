@@ -132,6 +132,16 @@ class MedicalRendererSpecialMixin:
             )
         if data.psych_account:
             editor.replace_first_matching_paragraph(["На учёте", "На учете"], f"На учёте у психиатров {data.psych_account}.")
+        admission_label = f"В 3 отделение КДП поступает {data.admission_occurrence}".strip()
+        if not editor.replace_block(
+            ["В 3 отделение КДП поступает"],
+            admission_label,
+            data.admission,
+            RVK_MARKERS,
+            allow_empty=True,
+        ):
+            admission_line = f"{admission_label} {data.admission}".strip()
+            editor.insert_before_first_matching_paragraph(["Жалобы"], admission_line)
         editor.replace_block(["Жалобы"], "Жалобы:", data.complaints, RVK_MARKERS, allow_empty=True)
         editor.replace_block(["Анамнез жизни"], "Анамнез жизни:", data.life_anamnesis, RVK_MARKERS)
         editor.replace_block(["Анамнез заболевания"], "Анамнез заболевания:", data.disease_anamnesis, RVK_MARKERS)

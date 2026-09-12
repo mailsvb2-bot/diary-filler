@@ -149,6 +149,7 @@ class ActionsCreationOrchestratorMixin:
                     self.rvk_military_commissariat_var.get().strip(),
                 ])
                 or self._case_number_missing()
+                or not self._current_admission_occurrence()
                 or self._should_prompt_discharge_date()
                 or self._manual_treatment_missing()
                 or self._hospitalization_details_missing()

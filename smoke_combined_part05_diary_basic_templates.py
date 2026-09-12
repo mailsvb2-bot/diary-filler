@@ -107,7 +107,15 @@ contract_lines = [p.text for p in contract_output.paragraphs if p.text.strip()]
 contract_joined = "\n".join(contract_lines)
 assert "TEMPLATE_STATUS_ONE пациентка пришла спокойно." in contract_joined, contract_joined
 assert "TEMPLATE_STATUS_TWO пациентка оставалась спокойна." in contract_joined, contract_joined
-assert "13.06.26 Состояние улучшилось." in contract_joined, contract_joined
+# The discharge diary is the third generated observation here, so the universal
+# final text remains diagnosis-independent but is rendered as a joint exam.
+assert "13.06.26 Совместный осмотр с зав. отделением" in contract_joined, contract_joined
+joint_index = contract_lines.index("13.06.26 Совместный осмотр с зав. отделением")
+assert contract_lines[joint_index + 1].startswith("Состояние улучшилось."), contract_lines
+assert contract_lines[joint_index + 2] == "Лечащий врач Балаганин С.В.", contract_lines
+assert contract_lines[joint_index + 3] == "Зав.отделением Можарова Е.А.", contract_lines
+assert contract_joined.count("Лечащий врач Балаганин С.В.") == 3, contract_joined
+assert contract_joined.count("Зав.отделением Можарова Е.А.") == 1, contract_joined
 assert "TEMPLATE_STATUS_THREE" not in contract_joined, contract_joined
 assert contract_result.final_rows_filled == 1
 
@@ -262,6 +270,7 @@ Document().save(refresh_dir / "15.docx")
 Document().save(refresh_dir / "16.docx")
 app4 = CombinedMedicalDiaryApp.__new__(CombinedMedicalDiaryApp)
 app4.assigned_treatment_var = _Var("old")
+app4.admission_occurrence_var = _Var("old")
 app4.case_number_var = _Var("old")
 app4.expert_work_status_var = _Var("да")
 app4.expert_work_org_var = _Var("ООО")

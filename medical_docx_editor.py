@@ -13,6 +13,7 @@ from medical_docx_editor_utils import (
     remove_paragraph,
     replace_paragraph_regex_preserving_runs,
     set_paragraph_text,
+    set_paragraph_font_color,
 )
 
 
@@ -24,6 +25,7 @@ __all__ = [
     "DocxBlockEditor",
     "paragraph_matches_marker",
     "set_paragraph_text",
+    "set_paragraph_font_color",
     "replace_paragraph_regex_preserving_runs",
     "insert_paragraph_after",
     "remove_paragraph",

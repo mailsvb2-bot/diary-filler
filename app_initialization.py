@@ -150,6 +150,7 @@ class AppInitializationMixin:
     def _init_document_detail_state(self) -> None:
         # Ручные реквизиты для отдельных документов. В UI они не занимают место:
         # появляются маленькие окна при включении соответствующих галочек.
+        self.admission_occurrence_var = tk.StringVar()
         self.rvk_act_number_var = tk.StringVar()
         self.rvk_military_commissariat_var = tk.StringVar()
         self.rvk_work_position_var = tk.StringVar()
