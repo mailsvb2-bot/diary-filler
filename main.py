@@ -9,6 +9,7 @@ numbered diary-template discovery, drag-and-drop, and creation actions.
 from __future__ import annotations
 
 import os
+import sys
 import traceback
 from pathlib import Path
 from tkinter import messagebox
@@ -64,14 +65,42 @@ def _run_startup_probe() -> None:
             pass
 
 
+def _intake_primary_argument(argv: list[str]) -> str:
+    """Read the private agent hand-off argument without changing normal CLI behavior."""
+    for index, value in enumerate(argv):
+        if value == "--intake-primary" and index + 1 < len(argv):
+            return argv[index + 1]
+        if value.startswith("--intake-primary="):
+            return value.split("=", 1)[1]
+    return ""
+
+
 def main() -> None:
     probe_mode = os.environ.get("MEDICAL_AUTOFILL_STARTUP_PROBE", "").strip() == "1"
     try:
         if probe_mode:
             _run_startup_probe()
             return
+
+        # The background watcher is another mode of this same source/EXE.  It
+        # never creates medical documents; it only notices a dropped primary
+        # and opens the normal application for it.
+        if "--intake-agent" in sys.argv[1:]:
+            from desktop_intake_agent import run_agent
+
+            exit_code = run_agent()
+            if exit_code:
+                raise SystemExit(exit_code)
+            return
+
         root = _create_root()
-        CombinedMedicalDiaryApp(root)
+        app = CombinedMedicalDiaryApp(root)
+
+        # Keep the new convenience layer outside the document engine.  Its only
+        # hand-off is the app's pre-existing _apply_primary_document_path path.
+        from desktop_intake_workflow import start_gui_intake_runtime
+
+        start_gui_intake_runtime(app, initial_primary=_intake_primary_argument(sys.argv[1:]) or None)
         root.mainloop()
     except Exception as exc:  # pragma: no cover - safety net for Windows double-click start
         details = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
