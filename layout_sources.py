@@ -120,31 +120,11 @@ class LayoutSourcesMixin:
         ttk.Label(parent, text="Тип первичного документа", style="Card.TLabel", font=self._font(11)).grid(
             row=row, column=0, sticky="w", pady=self._px(4 if self._compact_ui else 5, 2)
         )
-        # Тип первичного документа — отображаемое состояние, а не свободный ввод.
-        # Раньше здесь был обычный Entry: врач мог руками написать «Направление»,
-        # но внутренний primary_document_type_var при этом оставался прежним.
-        # Read-only label устраняет визуально-логическое расхождение; менять тип
-        # можно только явной кнопкой «Выбрать» или автоопределением из DOCX.
-        type_canvas, _type_label = self._rounded_label_canvas(
-            parent,
-            self.primary_document_type_display_var.get(),
-            height=self._px(40, 27),
-            fg=TEXT,
-            font=self._font(12),
-        )
-        self.primary_document_type_display_widget = type_canvas
-        self.primary_document_type_display_label = _type_label
-        type_canvas.grid(
+        # Визуально это теперь такое же тёмное поле, как в референсе, без квадратной combobox-стрелки.
+        self._rounded_entry_canvas(parent, self.primary_document_type_display_var, height=self._px(40, 27), calendar=False, font=self._font(12)).grid(
             row=row, column=1, sticky="ew", padx=(self._px(16, 9), self._px(14, 8)), pady=self._px(4 if self._compact_ui else 5, 2)
         )
-        self.primary_document_type_display_var.trace_add(
-            "write",
-            lambda *_: self.primary_document_type_display_label.config(text=self.primary_document_type_display_var.get()),
-        )
-        self.primary_type_button = self._small_neon_button(
-            parent, text="Выбрать", command=self._toggle_primary_document_type
-        )
-        self.primary_type_button.grid(
+        self._small_neon_button(parent, text="Выбрать", command=self._toggle_primary_document_type).grid(
             row=row, column=2, sticky="ew", pady=self._px(4 if self._compact_ui else 5, 2)
         )
 

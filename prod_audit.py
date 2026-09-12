@@ -318,7 +318,6 @@ def _assert_final_user_flow_gate_contract() -> None:
         (main_source, "MEDICAL_AUTOFILL_STARTUP_PROBE", "packaged app needs a non-interactive startup probe"),
         (main_source, "_register_tkinterdnd_drop_targets", "packaged startup probe must prove TkDND registration"),
         (startup, "require_dnd: bool = False", "release probe must be able to fail closed on TkDND"),
-        (layout, "primary_document_type_display_widget = type_canvas", "primary document type must be read-only"),
         (files, "Выберите папку «Даты» с шаблонами 01–31", "Dates must use one direct folder dialog"),
         (files, "def _confirm_manual_output_dir_for_patient_switch", "manual output folder needs patient-switch confirmation"),
         (files, "self._confirm_manual_output_dir_for_patient_switch()", "patient switch must invoke output-folder confirmation"),

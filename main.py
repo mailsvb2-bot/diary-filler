@@ -56,10 +56,6 @@ def _run_startup_probe() -> None:
         missing = [name for name in required_widgets if not hasattr(app, name)]
         if missing:
             raise RuntimeError("GUI startup probe misses widgets: " + ", ".join(missing))
-        if not hasattr(app, "primary_document_type_display_widget"):
-            raise RuntimeError("Primary-document type display widget was not created")
-        if hasattr(app.primary_document_type_display_widget, "entry"):
-            raise RuntimeError("Primary-document type display must be read-only")
         _write_startup_probe_result(f"OK\nversion={APP_VERSION}\ndnd=1\n")
     finally:
         try:

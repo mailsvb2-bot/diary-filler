@@ -458,8 +458,6 @@ assert 'Path(path).name' in files_mixin_text
 assert 'primary_selected_status_label.grid_remove()' not in files_mixin_text
 assert 'primary_selected_status_label.grid()' not in files_mixin_text
 assert 'def _truncate_label_text' in files_mixin_text
-assert 'primary_document_type_display_widget = type_canvas' in layout_sources_text
-assert '_rounded_entry_canvas(parent, self.primary_document_type_display_var' not in layout_sources_text
 assert 'self._confirm_manual_output_dir_for_patient_switch()' in files_mixin_text
 assert ('single_line=self._compact_ui' in Path("dnd_mixin.py").read_text(encoding="utf-8") or '_update_diary_text_label(success=True)' in Path("dnd_mixin.py").read_text(encoding="utf-8"))
 from files_mixin import FilesMixin

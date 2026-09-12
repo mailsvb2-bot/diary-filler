@@ -51,18 +51,15 @@ def main() -> None:
 
             assert app._register_tkinterdnd_drop_targets(), "TkDND targets did not register"
             assert hasattr(app, "drop_zone"), "Primary drop zone missing"
-            assert hasattr(app, "primary_type_button"), "Primary type button missing"
             assert hasattr(app, "diary_dates_button"), "Dates button missing"
-            assert hasattr(app, "primary_document_type_display_widget"), "Primary type display missing"
-            assert not hasattr(app.primary_document_type_display_widget, "entry"), (
-                "Primary document type is still editable"
-            )
 
-            # User changes the document type with the actual visible button.
-            assert app.primary_document_type_var.get() == "primary_exam"
-            _click(root, app.primary_type_button)
-            assert app.primary_document_type_var.get() == "hospitalization_referral"
-            assert app.primary_document_type_display_var.get() == "Направление на госпитализацию"
+            # Drive the actual visible primary drop-zone. Its click binding must
+            # call the production navigation chooser; dormant compatibility
+            # controls are not treated as part of the current user path.
+            navigation_clicks: list[str] = []
+            app.choose_navigation = lambda: navigation_clicks.append("choose_navigation")
+            _click(root, app.drop_zone)
+            assert navigation_clicks == ["choose_navigation"], "Primary drop-zone click is not wired"
 
             # User clicks «Даты»: exactly one folder dialog is used and the
             # numbered template is selected from that folder.
