@@ -16,12 +16,22 @@ combined_text = "\n".join(extract_docx_text(path) for path in created)
 assert "F99.9 Тестовый диагноз из UI" in combined_text
 discharge_path = next(path for path in created if "Выписной" in path.name)
 rvk_path = next(path for path in created if "РВК" in path.name)
+primary_path = next(path for path in created if "Первичный" in path.name)
+commission_path = next(path for path in created if "Совместный" in path.name)
+admission_doctor_path = next(path for path in created if "приёмного покоя" in path.name)
+vk_mse_path = next(path for path in created if "ВК на МСЭ" in path.name)
+sick_leave_vk_path = next(path for path in created if "ВК больничный" in path.name)
 discharge_text = extract_docx_text(discharge_path)
 rvk_text = extract_docx_text(rvk_path)
-primary_text = extract_docx_text(next(path for path in created if "Первичный" in path.name))
+primary_text = extract_docx_text(primary_path)
+commission_text = extract_docx_text(commission_path)
+admission_doctor_text = extract_docx_text(admission_doctor_path)
 assert "На основании данных" in discharge_text and "F99.9 Тестовый диагноз из UI" in discharge_text, discharge_text
-assert "В 3 отделение КДП поступает повторно добровольно" in discharge_text, discharge_text
-assert "В 3 отделение КДП поступает повторно добровольно" in rvk_text, rvk_text
+for occurrence_text in (primary_text, discharge_text, commission_text, admission_doctor_text, rvk_text):
+    assert "В 3 отделение КДП поступает повторно добровольно" in occurrence_text, occurrence_text
+assert "На учёте у психиатров" not in admission_doctor_text, admission_doctor_text
+assert "На учете у психиатров" not in admission_doctor_text, admission_doctor_text
+assert "Целесообразна госпитализация" not in commission_text, commission_text
 # The bundled discharge placeholder is red, but final clinical text must be explicitly black.
 discharge_doc = Document(discharge_path)
 period_paragraph = next(
@@ -54,6 +64,32 @@ assert "Находится на лечении с 10.06.2026 (9 дней)" in co
 assert "От 16.06.2026 г." in combined_text
 assert "ЭПИ тестовая информация" in combined_text
 
+# Dates entered in the dedicated popups must reach the actual document headers.
+commission_doc = Document(commission_path)
+assert commission_doc.paragraphs[0].text.startswith("18.06.2026 г. 10:00"), commission_doc.paragraphs[0].text
+vk_mse_doc = Document(vk_mse_path)
+assert any(p.text.strip() == "16.06.2026" for p in vk_mse_doc.paragraphs), [p.text for p in vk_mse_doc.paragraphs[:5]]
+
+# Template yellow highlighting on the protocol date must not survive into either VK document.
+for vk_path in (vk_mse_path, sick_leave_vk_path):
+    vk_doc = Document(vk_path)
+    protocol_date_paragraphs = [p for p in vk_doc.paragraphs if p.text.strip().lower().startswith("от ")]
+    assert protocol_date_paragraphs, vk_path
+    for paragraph in protocol_date_paragraphs:
+        for run in paragraph.runs:
+            assert run.font.highlight_color is None, (vk_path.name, paragraph.text, run.text, run.font.highlight_color)
+            assert "w:highlight" not in run._r.xml and "w:shd" not in run._r.xml, (vk_path.name, run._r.xml)
+        assert "w:shd" not in paragraph._p.xml, (vk_path.name, paragraph._p.xml)
+
+# Clinical sections must be visually separated in generated medical documents.
+for readable_path in (primary_path, discharge_path, commission_path, vk_mse_path, sick_leave_vk_path, admission_doctor_path, rvk_path):
+    readable_doc = Document(readable_path)
+    section_paragraphs = [p for p in readable_doc.paragraphs if p.text.strip().lower().startswith(("жалобы", "анамнез жизни", "анамнез заболевания", "психический статус"))]
+    assert section_paragraphs, readable_path
+    assert all(p.paragraph_format.space_before is not None and p.paragraph_format.space_before.pt >= 9.5 for p in section_paragraphs), [
+        (readable_path.name, p.text, p.paragraph_format.space_before) for p in section_paragraphs
+    ]
+
 # ЭПИ must stay in its own block and never overwrite laboratory/analysis rows.
 # This locks the exact user regression where unrelated text appeared around analyses.
 lab_prefixes = (
@@ -83,9 +119,10 @@ for generated in created:
     ]
     assert not contaminated_labs, (generated.name, contaminated_labs)
 
-# --- Referral hospitalization phrase must be preserved when source clinical text contains it ---
+# --- Legacy hospitalization recommendation must not leak into generated clinical blocks ---
 phrase_data = service.parse_navigation(nav)
 phrase_data.admission = "Целесообразна госпитализация пациентки в 3 отделение КДП"
+phrase_data.admission_occurrence = "первично"
 phrase_data.diagnosis = "F41.2 Тест"
 phrase_data.commission_date = "18.06.2026"
 phrase_data.commission_number = "10"
@@ -95,7 +132,10 @@ phrase_created, _ = service.create_documents(
     selected_docs=("primary", "commission"),
     override_data=phrase_data,
 )
-assert any("Целесообразна госпитализация" in extract_docx_text(path) for path in phrase_created), phrase_created
+for path in phrase_created:
+    phrase_text = extract_docx_text(path)
+    assert "Целесообразна госпитализация" not in phrase_text, (path.name, phrase_text)
+    assert "В 3 отделение КДП поступает первично" in phrase_text, (path.name, phrase_text)
 
 # --- Representative medical document selection combinations must render without failure ---
 # Полный перебор всех 2^N комбинаций заметно раздувает smoke-time при добавлении
@@ -301,10 +341,10 @@ def _build_contract_app(*, primary_path: Path, output_dir: Path, selected: tuple
     app.output_vars = {kind: _ContractVar(kind in selected) for kind in DOCUMENT_ORDER}
     app.output_vars[DIARY_KIND] = _ContractVar(DIARY_KIND in selected)
 
-    popup_calls: list[tuple[str, list[tuple[str, str]]]] = []
+    popup_calls: list[tuple[str, list[tuple[str, str]], dict[str, tuple[str, ...]] | None]] = []
 
-    def _contract_prompt_fields(title, rows, width=72, linked_groups=None):
-        popup_calls.append((title, list(rows)))
+    def _contract_prompt_fields(title, rows, width=72, linked_groups=None, choice_options=None):
+        popup_calls.append((title, list(rows), choice_options))
         if popup_values is None:
             return None
         values: list[str] = []
@@ -348,7 +388,7 @@ try:
         popup_values={
             "Номер истории болезни": "К-900",
             "Лечение": "терапия из пользовательского popup",
-            "Поступает в 3 отделение КДП (первично/повторно)": "первично",
+            "Поступает в 3 отделение КДП": "первично",
             "Дата выписки": "11062026",
         },
     )
@@ -359,9 +399,10 @@ try:
     assert [label for label, _default in contract_popup_calls[0][1]] == [
         "Номер истории болезни",
         "Лечение",
-        "Поступает в 3 отделение КДП (первично/повторно)",
+        "Поступает в 3 отделение КДП",
         "Дата выписки",
     ]
+    assert contract_popup_calls[0][2] == {"Поступает в 3 отделение КДП": ("первично", "повторно")}
 
     contract_created = sorted((contract_dir / "created").glob("*.docx"))
     assert [path.name for path in contract_created] == [
@@ -399,7 +440,7 @@ try:
         popup_values={
             "Номер истории болезни": "К-901",
             "Лечение": "терапия для rollback",
-            "Поступает в 3 отделение КДП (первично/повторно)": "повторно",
+            "Поступает в 3 отделение КДП": "повторно",
             "Дата выписки": "11062026",
         },
     )

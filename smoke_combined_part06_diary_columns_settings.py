@@ -196,24 +196,29 @@ try:
 except ValueError as exc:
     assert "Дата выписки" in str(exc), str(exc)
 
-missing_occurrence_data = service.parse_primary_document(nav)
-missing_occurrence_data.discharge_date = "11.06.2026"
-try:
-    service.create_documents(
-        navigation_path=nav,
-        output_dir=OUT / "missing_admission_occurrence",
-        selected_docs=["discharge"],
-        override_data=missing_occurrence_data,
-    )
-    raise AssertionError("discharge/RVK must require explicit первично/повторно")
-except ValueError as exc:
-    assert "первично или повторно" in str(exc), str(exc)
+import copy as _copy_for_occurrence_contract
+for occurrence_kind in ("primary", "discharge", "commission", "admission_doctor_referral", "rvk"):
+    missing_occurrence_data = _copy_for_occurrence_contract.deepcopy(manual_data)
+    missing_occurrence_data.admission_occurrence = ""
+    try:
+        service.create_documents(
+            navigation_path=nav,
+            output_dir=OUT / f"missing_admission_occurrence_{occurrence_kind}",
+            selected_docs=[occurrence_kind],
+            override_data=missing_occurrence_data,
+        )
+        raise AssertionError(f"{occurrence_kind} must require explicit первично/повторно")
+    except ValueError as exc:
+        assert "первично или повторно" in str(exc), (occurrence_kind, str(exc))
 
+missing_commission_fields_data = service.parse_primary_document(nav)
+missing_commission_fields_data.admission_occurrence = "первично"
 try:
     service.create_documents(
         navigation_path=nav,
         output_dir=OUT / "missing_commission_fields",
         selected_docs=["commission"],
+        override_data=missing_commission_fields_data,
     )
     raise AssertionError("commission document must require commission date/number at service boundary")
 except ValueError as exc:
@@ -480,6 +485,7 @@ except ValueError as exc:
     assert "номер медицинского заключения" in str(exc), str(exc)
 
 bad_commission_order_data = service.parse_primary_document(nav)
+bad_commission_order_data.admission_occurrence = "первично"
 bad_commission_order_data.commission_date = "09.06.2026"
 bad_commission_order_data.commission_number = "77"
 try:

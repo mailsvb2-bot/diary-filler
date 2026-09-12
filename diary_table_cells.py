@@ -9,8 +9,9 @@ import re
 from datetime import date
 
 from docx import Document
+from docx.document import Document as DocxDocument
 from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx.shared import Pt
+from docx.shared import Cm, Pt
 
 from diary_constants import HOLIDAY_SKIP_END_DAY, HOLIDAY_SKIP_MONTHS, HOLIDAY_SKIP_START_DAY, STATUS_FONT_SIZE_PT, STRUCTURAL_DIARY_PREFIXES
 from diary_dates import add_month, format_month_year, parse_month_year, safe_row_date
@@ -58,3 +59,41 @@ def write_diary_text_into_existing_paragraph(paragraph, diary_text: str) -> None
     clear_paragraph_keep_properties(paragraph)
     paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
     add_run_with_size(paragraph, diary_text)
+
+def _format_paragraphs(paragraphs) -> None:
+    items = list(paragraphs)
+    for paragraph in items:
+        for run in paragraph.runs:
+            run.font.size = Pt(STATUS_FONT_SIZE_PT)
+        paragraph.paragraph_format.space_before = Pt(0)
+        paragraph.paragraph_format.space_after = Pt(0)
+
+    for index, paragraph in enumerate(items):
+        if not is_signature_paragraph_text(paragraph.text):
+            continue
+        next_is_signature = index + 1 < len(items) and is_signature_paragraph_text(items[index + 1].text)
+        if not next_is_signature:
+            paragraph.paragraph_format.space_after = Cm(3)
+
+
+def apply_compact_diary_layout(doc: DocxDocument) -> None:
+    """Apply the doctor's compact print layout to every diary output mode."""
+    for section in doc.sections:
+        section.left_margin = Cm(1.5)
+        section.right_margin = Cm(1.0)
+        section.top_margin = Cm(1.0)
+        section.bottom_margin = Cm(1.0)
+
+    try:
+        doc.styles["Normal"].font.size = Pt(STATUS_FONT_SIZE_PT)
+    except KeyError:
+        pass
+
+    _format_paragraphs(doc.paragraphs)
+    # Do not deduplicate by ``id(cell._tc)``: python-docx can create transient
+    # wrappers whose Python ids are reused while iterating a table. Reformatting
+    # a merged cell twice is harmless; accidentally skipping a real cell is not.
+    for table in doc.tables:
+        for row in table.rows:
+            for cell in row.cells:
+                _format_paragraphs(cell.paragraphs)

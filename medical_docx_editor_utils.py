@@ -5,9 +5,10 @@ from typing import Callable, Iterable, Sequence
 
 from docx.document import Document as DocxDocument
 from docx.oxml import OxmlElement
+from docx.oxml.ns import qn
 from docx.table import _Cell
 from docx.text.paragraph import Paragraph
-from docx.shared import RGBColor
+from docx.shared import Pt, RGBColor
 
 from medical_text_utils import normalize_match
 
@@ -27,6 +28,44 @@ def paragraph_matches_marker(normalized_paragraph_text: str, marker: str) -> boo
     if marker == "зарегистрирован по адресу" and " зарегистрирован по адресу" in text:
         return True
     return False
+
+
+def clear_paragraph_highlight(paragraph: Paragraph) -> None:
+    """Remove Word highlight/shading left by template placeholders."""
+    for run in paragraph.runs:
+        run.font.highlight_color = None
+        r_pr = run._r.get_or_add_rPr()
+        for tag in (qn("w:highlight"), qn("w:shd")):
+            for child in list(r_pr.findall(tag)):
+                r_pr.remove(child)
+    p_pr = paragraph._p.pPr
+    if p_pr is not None:
+        for child in list(p_pr.findall(qn("w:shd"))):
+            p_pr.remove(child)
+
+
+def apply_readable_section_spacing(doc: DocxDocument) -> None:
+    """Give clinical blocks visual separation without changing their text."""
+    prefixes = (
+        "жалобы",
+        "анамнез жизни",
+        "анамнез заболевания",
+        "психический статус",
+        "соматический статус",
+        "сомато-неврологический статус",
+        "план обследования",
+        "план лечения",
+        "результаты обследований",
+        "результаты исследований",
+        "лечение",
+        "экспертный анамнез",
+        "эпидемиологический анамнез",
+    )
+    for paragraph in iter_all_paragraphs(doc):
+        text = normalize_match(paragraph.text)
+        if any(text.startswith(prefix) for prefix in prefixes):
+            paragraph.paragraph_format.space_before = Pt(10)
+            paragraph.paragraph_format.space_after = Pt(3)
 
 def set_paragraph_font_color(paragraph: Paragraph, color: RGBColor) -> None:
     """Set an explicit final font color on every run of one output paragraph."""

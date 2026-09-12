@@ -19,6 +19,7 @@ from typing import Iterable, Sequence
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 
+from diary_table_cells import apply_compact_diary_layout
 from diary_dates import parse_admission_month_year, parse_full_date, parse_optional_discharge_date
 from diary_constants import (
     DIARY_DEPARTMENT_HEAD_SIGNATURE,
@@ -340,6 +341,7 @@ def _write_text_diary_docx(
             head_paragraph = doc.add_paragraph(head_signature)
             head_paragraph.alignment = WD_ALIGN_PARAGRAPH.RIGHT
 
+    apply_compact_diary_layout(doc)
     doc.save(str(path))
 
 def _fill_text_diary_batch(

@@ -133,10 +133,11 @@ occurrence_logic._case_number_missing = lambda: False
 occurrence_logic._current_admission_occurrence = _main_module.CombinedMedicalDiaryApp._current_admission_occurrence.__get__(occurrence_logic, _main_module.CombinedMedicalDiaryApp)
 occurrence_logic._store_admission_occurrence_value = _main_module.CombinedMedicalDiaryApp._store_admission_occurrence_value.__get__(occurrence_logic, _main_module.CombinedMedicalDiaryApp)
 occurrence_calls = []
-occurrence_logic._prompt_fields = lambda title, rows, width=72: occurrence_calls.append((title, rows)) or ["повторно"]
+occurrence_logic._prompt_fields = lambda title, rows, width=72, choice_options=None: occurrence_calls.append((title, rows, choice_options)) or ["повторно"]
 occurrence_logic._prompt_discharge_output_requirements = _main_module.CombinedMedicalDiaryApp._prompt_discharge_output_requirements.__get__(occurrence_logic, _main_module.CombinedMedicalDiaryApp)
 assert occurrence_logic._prompt_discharge_output_requirements() is True
-assert [label for label, _default in occurrence_calls[0][1]] == ["Поступает в 3 отделение КДП (первично/повторно)"]
+assert [label for label, _default in occurrence_calls[0][1]] == ["Поступает в 3 отделение КДП"]
+assert occurrence_calls[0][2] == {"Поступает в 3 отделение КДП": ("первично", "повторно")}
 assert occurrence_logic.admission_occurrence_var.get() == "повторно"
 assert occurrence_logic.data.admission_occurrence == "повторно"
 
@@ -204,6 +205,7 @@ case_dialog_logic._prompt_fields = lambda title, rows, width=64, linked_groups=N
 case_dialog_logic._prompt_vk_mse_details = _main_module.CombinedMedicalDiaryApp._prompt_vk_mse_details.__get__(case_dialog_logic, _main_module.CombinedMedicalDiaryApp)
 assert case_dialog_logic._prompt_vk_mse_details() is True
 assert [label for label, _default in vk_rows[0][1]][0] == "Номер истории болезни"
+assert [label for label, _default in vk_rows[0][1]][1] == "Дата ВК на МСЭ"
 assert vk_rows[0][1][0][1] == "88"
 assert vk_rows[0][2] == [(1, [3])]
 assert case_dialog_logic.case_number_var.get() == "99"

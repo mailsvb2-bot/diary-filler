@@ -27,7 +27,7 @@ from medical_markers import (
     SICK_LEAVE_VK_MARKERS,
     VK_MSE_MARKERS,
 )
-from medical_models import PatientData
+from medical_models import PatientData, admission_occurrence_label, clean_admission_detail
 from medical_parser_sanitize import sanitize_diagnosis
 from medical_text_utils import normalize_match
 
@@ -54,7 +54,13 @@ class MedicalRendererCommissionMixin:
         person_line = ", ".join(part for part in person_parts if part).strip(" ,")
         editor.replace_first_matching_paragraph(["г.р.,", "зарегистрирован по адресу"], person_line)
         put_expert_anamnesis(editor, data, COMMISSION_MARKERS, ["В 3 отделение КДП поступает"], include_sick_leave_number=False, include_return_to_work=False)
-        editor.replace_block(["В 3 отделение КДП поступает"], "В 3 отделение КДП поступает", data.admission, COMMISSION_MARKERS)
+        editor.replace_block(
+            ["В 3 отделение КДП поступает"],
+            admission_occurrence_label(data.admission_occurrence),
+            clean_admission_detail(data.admission),
+            COMMISSION_MARKERS,
+            allow_empty=True,
+        )
         editor.replace_block(["Жалобы при поступлении", "Жалобы"], "Жалобы при поступлении:", data.complaints, COMMISSION_MARKERS)
         editor.replace_block(["Анамнез жизни"], "Анамнез жизни:", data.life_anamnesis, COMMISSION_MARKERS)
         editor.replace_block(["Анамнез заболевания"], "Анамнез заболевания:", data.disease_anamnesis, COMMISSION_MARKERS)
@@ -91,6 +97,7 @@ class MedicalRendererCommissionMixin:
         editor.replace_block(["На основании данных", "Диагноз"], "", diagnosis_sentence, COMMISSION_MARKERS)
         editor.replace_block(["Лечение"], "Лечение:", data.treatment_plan, COMMISSION_MARKERS)
         editor.replace_block(["Эпидемиологический анамнез"], "Эпидемиологический анамнез:", data.epidemiology, COMMISSION_MARKERS, allow_empty=True)
+        editor.remove_all_matching_paragraphs(["Целесообразна госпитализация"])
         finalize_medical_document(doc, data)
         doc.save(str(output_path))
 
@@ -115,13 +122,19 @@ class MedicalRendererCommissionMixin:
         person_line = f"{data.fio}, {data.birth}, {data.registered}".strip(" ,")
         if person_line.strip(" ,"):
             editor.replace_first_matching_paragraph(["Сидоров", "Ф.И.О.", "ФИО"], person_line)
-        editor.replace_block(["На учёте у психиатров", "На учете у психиатров"], "На учёте у психиатров:", data.psych_account, PRIMARY_MARKERS, allow_empty=True)
+        editor.remove_all_matching_paragraphs(["На учёте у психиатров", "На учете у психиатров"])
         editor.replace_block(["Работает в организации"], "Работает в организации:", data.work_org, PRIMARY_MARKERS, allow_empty=True)
         editor.replace_block(["Должность"], "Должность:", data.position, PRIMARY_MARKERS, allow_empty=True)
         editor.replace_block(["Больничный лист"], "Больничный лист:", data.sick_leave, PRIMARY_MARKERS, allow_empty=True)
         editor.replace_block(["Оформление инвалидности"], "Оформление инвалидности:", data.disability, PRIMARY_MARKERS, allow_empty=True)
         editor.replace_block(["Направление от РВК"], "Направление от РВК:", data.rvk_referral, PRIMARY_MARKERS, allow_empty=True)
-        editor.replace_block(["В 3 отделение КДП поступает"], "В 3 отделение КДП поступает:", data.admission, PRIMARY_MARKERS, allow_empty=True)
+        editor.replace_block(
+            ["В 3 отделение КДП поступает"],
+            admission_occurrence_label(data.admission_occurrence),
+            clean_admission_detail(data.admission),
+            PRIMARY_MARKERS,
+            allow_empty=True,
+        )
         editor.replace_block(["Жалобы на момент осмотра", "Жалобы"], "Жалобы на момент осмотра:", data.complaints, PRIMARY_MARKERS)
         editor.replace_block(["Анамнез жизни"], "Анамнез жизни:", data.life_anamnesis, PRIMARY_MARKERS)
         editor.replace_block(["Анамнез заболевания"], "Анамнез заболевания:", data.disease_anamnesis, PRIMARY_MARKERS)

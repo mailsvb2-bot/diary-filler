@@ -13,6 +13,7 @@ from docx.document import Document as DocxDocument
 from shared_gender import GENDER_WORD_PAIRS, adapt_text_to_patient_gender, detect_gender_from_patient_name
 from medical_constants import TARGET_MEDICAL_FACILITY
 from medical_docx_editor import (
+    apply_readable_section_spacing,
     iter_all_paragraphs,
     remove_epi_mentions_from_document,
     replace_paragraph_regex_preserving_runs,
@@ -138,3 +139,4 @@ def finalize_medical_document(doc: DocxDocument, data: PatientData) -> None:
     adapt_document_to_patient_gender(doc, data)
     if not data.epi_text:
         remove_epi_mentions_from_document(doc)
+    apply_readable_section_spacing(doc)

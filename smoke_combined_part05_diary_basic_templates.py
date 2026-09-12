@@ -54,6 +54,26 @@ diary_text = "\n".join("\t".join(cell.text for cell in row.cells) for row in Doc
 assert "Пациентка была спокойна" in diary_text
 assert "не предъявляла" in diary_text
 
+# Compact diary print layout: exact margins, 8 pt text, 3 cm after each signature block.
+table_diary_doc = Document(result.created_files[0])
+for section in table_diary_doc.sections:
+    assert abs(section.left_margin.cm - 1.5) < 0.03, section.left_margin.cm
+    assert abs(section.right_margin.cm - 1.0) < 0.03, section.right_margin.cm
+    assert abs(section.top_margin.cm - 1.0) < 0.03, section.top_margin.cm
+    assert abs(section.bottom_margin.cm - 1.0) < 0.03, section.bottom_margin.cm
+for table in table_diary_doc.tables:
+    for row in table.rows:
+        for cell in row.cells:
+            for paragraph in cell.paragraphs:
+                for run in paragraph.runs:
+                    if run.text.strip():
+                        assert run.font.size is not None and abs(run.font.size.pt - 8.0) < 0.05, (run.text, run.font.size)
+            signature_paragraphs = [p for p in cell.paragraphs if "лечащий врач" in p.text.lower() or "зав.отделением" in p.text.lower()]
+            if signature_paragraphs:
+                last_signature = signature_paragraphs[-1]
+                assert last_signature.paragraph_format.space_after is not None
+                assert abs(last_signature.paragraph_format.space_after.cm - 3.0) < 0.05, last_signature.paragraph_format.space_after.cm
+
 # --- Diary gender source smoke: UI filename may be male, source document is female ---
 result_filename_male = fill_diary_batch(
     status_files=[source],
@@ -118,6 +138,24 @@ assert contract_joined.count("Лечащий врач Балаганин С.В."
 assert contract_joined.count("Зав.отделением Можарова Е.А.") == 1, contract_joined
 assert "TEMPLATE_STATUS_THREE" not in contract_joined, contract_joined
 assert contract_result.final_rows_filled == 1
+for section in contract_output.sections:
+    assert abs(section.left_margin.cm - 1.5) < 0.03
+    assert abs(section.right_margin.cm - 1.0) < 0.03
+    assert abs(section.top_margin.cm - 1.0) < 0.03
+    assert abs(section.bottom_margin.cm - 1.0) < 0.03
+for paragraph in contract_output.paragraphs:
+    for run in paragraph.runs:
+        if run.text.strip():
+            assert run.font.size is not None and abs(run.font.size.pt - 8.0) < 0.05, (run.text, run.font.size)
+text_signature_blocks = [p for p in contract_output.paragraphs if "Лечащий врач" in p.text or "Зав.отделением" in p.text]
+assert text_signature_blocks, contract_lines
+for index, paragraph in enumerate(contract_output.paragraphs):
+    if "Лечащий врач" not in paragraph.text and "Зав.отделением" not in paragraph.text:
+        continue
+    next_is_signature = index + 1 < len(contract_output.paragraphs) and ("Лечащий врач" in contract_output.paragraphs[index + 1].text or "Зав.отделением" in contract_output.paragraphs[index + 1].text)
+    if not next_is_signature:
+        assert paragraph.paragraph_format.space_after is not None
+        assert abs(paragraph.paragraph_format.space_after.cm - 3.0) < 0.05, paragraph.paragraph_format.space_after.cm
 
 
 # --- Admission date regression: title date is admission, FIO-near date is birth ---

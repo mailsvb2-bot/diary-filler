@@ -30,7 +30,7 @@ from medical_markers import (
     SICK_LEAVE_VK_MARKERS,
     VK_MSE_MARKERS,
 )
-from medical_models import PatientData
+from medical_models import PatientData, admission_occurrence_label, clean_admission_detail
 from medical_parser_sanitize import sanitize_diagnosis
 from medical_text_utils import normalize_match
 
@@ -60,7 +60,13 @@ class MedicalRendererPrimaryMixin:
             rvk_referral = format_military_commissariat_referral(data.rvk_military_commissariat)
         editor.replace_block(["Направление от РВК"], "Направление от РВК:", rvk_referral, PRIMARY_MARKERS, allow_empty=True)
         editor.remove_all_matching_paragraphs(["Экспертный анамнез"])
-        editor.replace_block(["В 3 отделение КДП поступает"], "В 3 отделение КДП поступает:", data.admission, PRIMARY_MARKERS)
+        editor.replace_block(
+            ["В 3 отделение КДП поступает"],
+            admission_occurrence_label(data.admission_occurrence),
+            clean_admission_detail(data.admission),
+            PRIMARY_MARKERS,
+            allow_empty=True,
+        )
         editor.replace_block(["Жалобы на момент осмотра", "Жалобы"], "Жалобы на момент осмотра:", data.complaints, PRIMARY_MARKERS)
         editor.replace_block(["Анамнез жизни"], "Анамнез жизни:", data.life_anamnesis, PRIMARY_MARKERS)
         editor.replace_block(["Анамнез заболевания"], "Анамнез заболевания:", data.disease_anamnesis, PRIMARY_MARKERS)
@@ -117,8 +123,14 @@ class MedicalRendererPrimaryMixin:
 
         put_expert_anamnesis(editor, data, DISCHARGE_MARKERS, ["В 3 отделение КДП поступает"])
 
-        admission_label = f"В 3 отделение КДП поступает {data.admission_occurrence}".strip()
-        editor.replace_block(["В 3 отделение КДП поступает"], admission_label, data.admission, DISCHARGE_MARKERS, allow_empty=True)
+        admission_label = admission_occurrence_label(data.admission_occurrence)
+        editor.replace_block(
+            ["В 3 отделение КДП поступает"],
+            admission_label,
+            clean_admission_detail(data.admission),
+            DISCHARGE_MARKERS,
+            allow_empty=True,
+        )
         editor.replace_block(["Жалобы при поступлении", "Жалобы"], "Жалобы при поступлении:", data.complaints, DISCHARGE_MARKERS)
         editor.replace_block(["Анамнез жизни"], "Анамнез жизни:", data.life_anamnesis, DISCHARGE_MARKERS)
         editor.replace_block(["Анамнез заболевания"], "Анамнез заболевания:", data.disease_anamnesis, DISCHARGE_MARKERS)

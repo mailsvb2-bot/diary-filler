@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from datetime import timedelta
 from typing import Dict, List
@@ -39,6 +40,28 @@ def strip_admission_occurrence_prefix(value: str) -> str:
             if len(lowered) > boundary and lowered[boundary].isspace():
                 return text[boundary:].strip()
     return text
+
+
+def clean_admission_detail(value: str) -> str:
+    """Keep only clinically useful tail text after the occurrence selector.
+
+    Legacy primary documents sometimes store a recommendation such as
+    «Целесообразна госпитализация ...» in the same field. That sentence must
+    not be copied into generated documents; the actual hospitalization fact
+    is represented by the canonical «первично/повторно» choice.
+    """
+    text = strip_admission_occurrence_prefix(value)
+    text = re.sub(
+        r"(?i)(?:^|(?<=[.!?]))\s*целесообразна\s+госпитализация\b.*$",
+        "",
+        text,
+    )
+    return " ".join(text.strip(" ,.;:–—-").split())
+
+
+def admission_occurrence_label(value: str) -> str:
+    occurrence = normalize_admission_occurrence(value)
+    return f"В 3 отделение КДП поступает {occurrence}".strip()
 
 @dataclass
 class PatientData:
