@@ -95,7 +95,7 @@ class DialogExpertMixin:
             return False
         year = values[0].strip()
         if not re.fullmatch(r"(?:19|20)\d{2}", year):
-            messagebox.showwarning("Некорректный год", "Укажите год постановки на учёт в формате ГГГГ, например 2018.")
+            messagebox.showwarning("Некорректный год", "Введите только 4 цифры года, например 2018.")
             return False
         from datetime import datetime
         if int(year) > datetime.now().year:
@@ -160,11 +160,12 @@ class DialogExpertMixin:
         fields: list[str] = []
         choices: dict[str, tuple[str, ...]] = {}
 
-        psych = self._normalize_yes_no(self.psych_account_status_var.get())
-        label = "Состоит ли на учёте у психиатров"
+        psych_decision = self._normalize_yes_no(self.psych_account_status_var.get())
+        psych = "состоит" if psych_decision == "да" else ("не состоит" if psych_decision == "нет" else "")
+        label = "На учёте у психиатров"
         rows.append((label, psych))
         fields.append("psych_account")
-        choices[label] = ("нет", "да")
+        choices[label] = ("состоит", "не состоит")
 
         if selected & rvk_referral_docs:
             rvk_referral = self._normalize_yes_no(self.rvk_referral_present_var.get())
@@ -208,9 +209,13 @@ class DialogExpertMixin:
             if values is None:
                 return False
             for field, raw in zip(fields, values):
-                value = self._normalize_yes_no(raw)
+                if field == "psych_account":
+                    normalized_psych = " ".join(raw.strip().lower().replace("ё", "е").split())
+                    value = {"состоит": "да", "не состоит": "нет"}.get(normalized_psych, "")
+                else:
+                    value = self._normalize_yes_no(raw)
                 if not value:
-                    messagebox.showwarning("Не выбран вариант", "Для каждого вопроса выберите Да или Нет.")
+                    messagebox.showwarning("Не выбран вариант", "Для каждого вопроса выберите один из вариантов.")
                     return False
                 if field == "psych_account":
                     self.psych_account_status_var.set(value)

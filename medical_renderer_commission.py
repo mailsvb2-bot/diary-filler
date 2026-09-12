@@ -56,7 +56,7 @@ class MedicalRendererCommissionMixin:
             person_parts.append(format_registration_text(data.registered))
         person_line = ", ".join(part for part in person_parts if part).strip(" ,")
         editor.replace_first_matching_paragraph(["г.р.,", "зарегистрирован по адресу", "регистрация по адресу"], person_line)
-        self._place_psych_account_after_registration(editor, data, ["регистрация по адресу"])
+        self._place_psych_account_after_registration(editor, data, ["регистрация по адресу"], fallback_markers=[data.fio])
         put_expert_anamnesis(editor, data, COMMISSION_MARKERS, ["В 3 отделение КДП поступает"], include_sick_leave_number=False, include_return_to_work=False)
         editor.replace_block(
             ["В 3 отделение КДП поступает"],
@@ -130,7 +130,7 @@ class MedicalRendererCommissionMixin:
         person_line = ", ".join(part for part in person_parts if part).strip(" ,")
         if person_line.strip(" ,"):
             editor.replace_first_matching_paragraph(["Сидоров", "Ф.И.О.", "ФИО"], person_line)
-        self._place_psych_account_after_registration(editor, data, ["регистрация по адресу"])
+        self._place_psych_account_after_registration(editor, data, ["регистрация по адресу"], fallback_markers=[data.fio])
         editor.replace_block(["Работает в организации"], "Работает в организации:", data.work_org, PRIMARY_MARKERS, allow_empty=True)
         editor.replace_block(["Должность"], "Должность:", data.position, PRIMARY_MARKERS, allow_empty=True)
         editor.replace_block(["Больничный лист"], "Больничный лист:", data.sick_leave, PRIMARY_MARKERS, allow_empty=True)

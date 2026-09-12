@@ -13,6 +13,7 @@ from medical_docx_editor import (
     iter_all_paragraphs,
     remove_exact_paragraphs,
     remove_paragraph,
+    replace_paragraph_regex_preserving_runs,
     set_paragraph_text,
 )
 from medical_expert import put_expert_anamnesis
@@ -46,27 +47,46 @@ class MedicalRendererLabsMixin:
         return f"На учёте у психиатров: {value}".rstrip()
 
     def _place_psych_account_after_registration(
-        self, editor: DocxBlockEditor, data: PatientData, registration_markers
+        self, editor: DocxBlockEditor, data: PatientData, registration_markers, *, fallback_markers=()
     ) -> bool:
         # Always own this line at render time so template placeholders or a legacy
-        # copy elsewhere in the document cannot survive.
+        # copy elsewhere in the document cannot survive.  Registration is optional
+        # source data, therefore an empty address must not make the mandatory
+        # psychiatric-account decision disappear from the generated document.
         editor.remove_all_matching_paragraphs(["На учёте у психиатров", "На учете у психиатров", "На учёте", "На учете"])
         idx = editor.find_paragraph_index(registration_markers)
+        if idx is None and fallback_markers:
+            idx = editor.find_paragraph_index(fallback_markers)
         if idx is None:
             return False
         insert_paragraph_after(editor.paragraphs[idx], self._psych_account_line(data))
         return True
 
-    @staticmethod
-    def _remove_trailing_clinical_leakage(doc, data: PatientData) -> None:
+    _HOSPITALIZATION_RECOMMENDATION_RE = re.compile(
+        r"(?i)\s*\bцелесообразна\s+госпитализация\b"
+        r"(?:[^.!?;\r\n]*?\bКДП\b[,.!?;]?|[^.!?;\r\n]*(?:[.!?;]+|$))\s*"
+    )
+
+    @classmethod
+    def _remove_trailing_clinical_leakage(cls, doc, data: PatientData) -> None:
         complaint = normalize_match(data.complaints)
         for paragraph in list(iter_all_paragraphs(doc)):
             text = normalize_match(paragraph.text)
             if not text:
                 continue
-            if re.search(r"\bцелесообразна\s+госпитализация\b", text):
-                remove_paragraph(paragraph)
-                continue
+            if cls._HOSPITALIZATION_RECOMMENDATION_RE.search(paragraph.text):
+                def _preserve_spacing(match: re.Match[str]) -> str:
+                    before = match.string[:match.start()].strip()
+                    after = match.string[match.end():].strip()
+                    return " " if before and after else ""
+
+                replace_paragraph_regex_preserving_runs(
+                    paragraph, cls._HOSPITALIZATION_RECOMMENDATION_RE, _preserve_spacing
+                )
+                if not normalize_match(paragraph.text):
+                    remove_paragraph(paragraph)
+                    continue
+                text = normalize_match(paragraph.text)
             # A legitimate complaint block starts with «Жалобы...:». A bare copy
             # of the complaint text elsewhere is leakage from the source/template.
             if complaint and text == complaint:

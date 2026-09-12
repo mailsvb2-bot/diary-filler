@@ -381,7 +381,7 @@ def _clinical_prompt(title, rows, width=46, linked_groups=None, choice_options=N
     clinical_prompts.append((title, list(rows), choice_options))
     if title == "Дополнительные данные":
         values = {
-            "Состоит ли на учёте у психиатров": "да",
+            "На учёте у психиатров": "состоит",
             "По направлению из РВК": "да",
             "Нужен ли больничный лист": "да",
             "Нужно ли оформление инвалидности": "нет",
@@ -409,7 +409,7 @@ assert clinical_logic.psych_account_since_year_var.get() == "2018"
 assert clinical_logic.rvk_referral_present_var.get() == "да"
 assert clinical_logic.rvk_referral_commissariat_var.get() == "Ленинский"
 choices = clinical_prompts[0][2]
-assert choices["Состоит ли на учёте у психиатров"] == ("нет", "да")
+assert choices["На учёте у психиатров"] == ("состоит", "не состоит")
 assert choices["По направлению из РВК"] == ("нет", "да")
 assert choices["Нужен ли больничный лист"] == ("нет", "да")
 assert choices["Нужно ли оформление инвалидности"] == ("нет", "да")
@@ -424,7 +424,7 @@ def _revision_prompt(title, rows, width=46, linked_groups=None, choice_options=N
         raise AssertionError((title, rows))
     revision_rows.extend(rows)
     values = {
-        "Состоит ли на учёте у психиатров": "нет",
+        "На учёте у психиатров": "не состоит",
         "По направлению из РВК": "нет",
         "Нужен ли больничный лист": "нет",
         "Нужно ли оформление инвалидности": "да",
@@ -432,7 +432,7 @@ def _revision_prompt(title, rows, width=46, linked_groups=None, choice_options=N
     return [values[label] for label, _ in rows]
 clinical_logic._prompt_fields = _revision_prompt
 assert clinical_logic._prompt_shared_clinical_options_if_needed(["primary"]) is True
-assert [initial for _label, initial in revision_rows] == ["да", "да", "да", "нет"], revision_rows
+assert [initial for _label, initial in revision_rows] == ["состоит", "да", "да", "нет"], revision_rows
 assert clinical_logic.psych_account_status_var.get() == "нет"
 assert clinical_logic.psych_account_since_year_var.get() == ""
 assert clinical_logic.rvk_referral_present_var.get() == "нет"
@@ -486,10 +486,10 @@ for clinical_kind in ("discharge", "commission"):
     def _standalone_prompt(title, rows, width=46, linked_groups=None, choice_options=None):
         standalone_calls.append((title, list(rows), choice_options))
         assert title == "Дополнительные данные"
-        return ["нет", "нет", "нет"]
+        return ["не состоит", "нет", "нет"]
     standalone_logic._prompt_fields = _standalone_prompt
     assert standalone_logic._prompt_shared_clinical_options_if_needed([clinical_kind]) is True
-    assert [label for label, _ in standalone_calls[0][1]] == ["Состоит ли на учёте у психиатров", "Нужен ли больничный лист", "Есть ли ЭПИ"]
+    assert [label for label, _ in standalone_calls[0][1]] == ["На учёте у психиатров", "Нужен ли больничный лист", "Есть ли ЭПИ"]
     assert "Нужно ли оформление инвалидности" not in [label for label, _ in standalone_calls[0][1]]
     assert standalone_logic.expert_sick_leave_needed_var.get() == "нет"
     assert standalone_logic.epi_present_var.get() == "нет"
@@ -513,7 +513,7 @@ epi_logic.service = service
 epi_logic._update_expert_sick_leave_display = lambda: None
 def _epi_prompt(title, rows, width=46, linked_groups=None, choice_options=None):
     values = {
-        "Состоит ли на учёте у психиатров": "нет",
+        "На учёте у психиатров": "не состоит",
         "Нужен ли больничный лист": "нет",
         "Есть ли ЭПИ": "да",
     }

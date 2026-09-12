@@ -623,7 +623,7 @@ def _assert_clinical_popup_and_document_order_contract() -> None:
     parser = _read("medical_parser.py")
 
     required_dialog = (
-        "Состоит ли на учёте у психиатров",
+        "На учёте у психиатров",
         "По направлению из РВК",
         "С какого года",
         "Район РВК",
@@ -633,6 +633,12 @@ def _assert_clinical_popup_and_document_order_contract() -> None:
     missing = [snippet for snippet in required_dialog if snippet not in dialog]
     if missing:
         _fail("shared clinical popup lost required controls: " + ", ".join(missing))
+    if 'choices[label] = ("состоит", "не состоит")' not in dialog:
+        _fail("psychiatric-account popup lost the explicit состоит/не состоит checkbox contract")
+    if '{"состоит": "да", "не состоит": "нет"}' not in dialog:
+        _fail("psychiatric-account popup no longer maps display choices to canonical decisions")
+    if 'Введите только 4 цифры года' not in dialog:
+        _fail("psychiatric-account year input no longer enforces four-digit numeric entry")
 
     required_service = (
         "Укажите, состоит ли пациент на учёте у психиатров.",
@@ -666,8 +672,12 @@ def _assert_clinical_popup_and_document_order_contract() -> None:
         _fail("joint-exam date silently falls back to admission date")
     if "_remove_trailing_clinical_leakage(doc, data)" not in primary or "_remove_trailing_clinical_leakage(doc, data)" not in commission:
         _fail("clinical trailing-leak cleanup is missing from primary/joint/admission flow")
-    if 'r"\\bцелесообразна\\s+госпитализация\\b"' not in labs:
+    if r"\bцелесообразна\s+госпитализация\b" not in labs:
         _fail("trailing cleanup lost the word-boundary guard for hospitalization recommendation")
+    if "replace_paragraph_regex_preserving_runs" not in labs:
+        _fail("hospitalization cleanup may discard the surrounding clinical paragraph")
+    if "fallback_markers" not in labs:
+        _fail("psychiatric-account placement lacks a fallback when registration is empty")
     if "_move_discharge_outcome_before_signatures(doc)" not in primary:
         _fail("discharge outcome/recommendations are no longer forced before signatures")
 

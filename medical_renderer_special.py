@@ -53,7 +53,7 @@ class MedicalRendererSpecialMixin:
         editor.replace_all_matching_paragraphs(["Ф.И.О", "Ф.И.О:"], f"Ф.И.О: {data.fio}")
         editor.replace_all_matching_paragraphs(["Год рождения"], f"Год рождения: {data.birth}")
         editor.replace_all_matching_paragraphs(["Проживает", "Регистрация по адресу"], format_registration_text(data.registered))
-        self._place_psych_account_after_registration(editor, data, ["Регистрация по адресу"])
+        self._place_psych_account_after_registration(editor, data, ["Регистрация по адресу"], fallback_markers=["Ф.И.О", "Ф.И.О:"])
         vk_work_parts = [
             (data.vk_mse_work_org or data.work_org).strip(),
             (data.vk_mse_position or data.position).strip(),
@@ -99,7 +99,7 @@ class MedicalRendererSpecialMixin:
         editor.replace_all_matching_paragraphs(["Ф.И.О", "Ф.И.О:"], f"Ф.И.О: {data.fio}")
         editor.replace_all_matching_paragraphs(["Год рождения"], f"Год рождения: {data.birth}")
         editor.replace_all_matching_paragraphs(["Проживает", "Регистрация по адресу"], format_registration_text(data.registered))
-        self._place_psych_account_after_registration(editor, data, ["Регистрация по адресу"])
+        self._place_psych_account_after_registration(editor, data, ["Регистрация по адресу"], fallback_markers=["Ф.И.О", "Ф.И.О:"])
         editor.replace_all_matching_paragraphs(["Место работы"], f"Место работы, должность: {work_position}")
         editor.replace_all_matching_paragraphs(["Находится на лечении"], treatment_line)
         editor.replace_all_matching_paragraphs(["Диагноз"], f"Диагноз: {sanitize_diagnosis(data.diagnosis)}")
@@ -129,7 +129,7 @@ class MedicalRendererSpecialMixin:
         editor.replace_block(["Ф.И.О.", "ФИО"], "Ф.И.О.:", data.fio, RVK_MARKERS, allow_empty=True)
         editor.replace_block(["Год рождения"], "Год рождения:", data.birth, RVK_MARKERS, allow_empty=True)
         editor.replace_block(["Проживает", "Регистрация по адресу"], "Регистрация по адресу:", data.registered, RVK_MARKERS, allow_empty=True)
-        self._place_psych_account_after_registration(editor, data, ["Регистрация по адресу"])
+        self._place_psych_account_after_registration(editor, data, ["Регистрация по адресу"], fallback_markers=["Ф.И.О", "Ф.И.О:"])
         # В Акте для РВК строка "Место работы" не нужна: удаляем её из результата,
         # чтобы туда не попадали данные из направления или старые значения UI.
         editor.remove_all_matching_paragraphs(["Место работы"])

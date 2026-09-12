@@ -142,6 +142,25 @@ for path in psych_yes_created:
     reg_idx = next(i for i, line in enumerate(lines) if "регистрация по адресу" in line.lower())
     assert lines[reg_idx + 1] == "На учёте у психиатров: состоит с 2018 года", (path.name, lines[reg_idx:reg_idx + 3])
 
+# Empty registration is valid source data. The mandatory psychiatric-account
+# decision must still survive in documents whose compact identity line normally
+# carries the registration text. This locks the fallback anchor used by the
+# discharge, joint-exam and admission-doctor renderers.
+psych_no_address = copy.deepcopy(psych_yes_data)
+psych_no_address.registered = ""
+psych_no_address_created, _ = service.create_documents(
+    navigation_path=nav,
+    output_dir=OUT / "psych_account_without_registration",
+    discharge_date="11.06.2026",
+    epi_path=epi,
+    selected_docs=("discharge", "commission", "admission_doctor_referral"),
+    override_data=psych_no_address,
+)
+for path in psych_no_address_created:
+    lines = [p.text.strip() for p in Document(path).paragraphs if p.text.strip()]
+    psych_lines = [line for line in lines if line.lower().startswith("на учёте у психиатров:")]
+    assert psych_lines == ["На учёте у психиатров: состоит с 2018 года"], (path.name, psych_lines, lines[:12])
+
 # The discharge outcome/recommendation block must be the final clinical block:
 # after it only the physicians' signatures remain.
 discharge_lines = [p.text.strip() for p in Document(discharge_path).paragraphs if p.text.strip()]
@@ -171,6 +190,28 @@ complaint_lines = [line.strip() for line in complaint_text.splitlines() if line.
 complaint_index = next(i for i, line in enumerate(complaint_lines) if "Пациентка предъявляет жалобы на плохой сон" in line)
 assert complaint_lines[complaint_index].startswith("Жалобы при поступлении:"), complaint_lines[complaint_index]
 assert all("Пациентка предъявляет жалобы на плохой сон" not in line for line in complaint_lines[-4:]), complaint_lines[-4:]
+
+# Removing the legacy hospitalization recommendation must never discard the
+# surrounding clinical history. Preserve both text before and after the service
+# phrase, including when the phrase lives inside the same paragraph.
+clinical_preserve_data = copy.deepcopy(manual_data)
+clinical_preserve_data.disease_anamnesis = (
+    "До ухудшения наблюдалась амбулаторно. "
+    "Целесообразна госпитализация пациентки в 3 отделение КДП. "
+    "После осмотра лечение продолжено."
+)
+clinical_preserve_created, _ = service.create_documents(
+    navigation_path=nav,
+    output_dir=OUT / "clinical_phrase_preservation",
+    selected_docs=("primary", "commission", "admission_doctor_referral"),
+    override_data=clinical_preserve_data,
+)
+for path in clinical_preserve_created:
+    text = extract_docx_text(path)
+    assert "Целесообразна госпитализация" not in text, (path.name, text)
+    assert "До ухудшения наблюдалась амбулаторно." in text, (path.name, text)
+    assert "После осмотра лечение продолжено." in text, (path.name, text)
+
 vk_mse_doc = Document(vk_mse_path)
 assert any(p.text.strip() == "16.06.2026" for p in vk_mse_doc.paragraphs), [p.text for p in vk_mse_doc.paragraphs[:5]]
 
@@ -509,7 +550,7 @@ try:
         selected=("primary", "discharge"),
         popup_values={
             "Номер истории болезни": "К-900",
-            "Состоит ли на учёте у психиатров": "нет",
+            "На учёте у психиатров": "не состоит",
             "По направлению из РВК": "нет",
             "Нужен ли больничный лист": "нет",
             "Нужно ли оформление инвалидности": "нет",
@@ -524,14 +565,14 @@ try:
     assert len(contract_popup_calls) == 2, contract_popup_calls
     assert contract_popup_calls[0][0] == "Дополнительные данные"
     assert [label for label, _default in contract_popup_calls[0][1]] == [
-        "Состоит ли на учёте у психиатров",
+        "На учёте у психиатров",
         "По направлению из РВК",
         "Нужен ли больничный лист",
         "Нужно ли оформление инвалидности",
         "Есть ли ЭПИ",
     ]
     assert contract_popup_calls[0][2] == {
-        "Состоит ли на учёте у психиатров": ("нет", "да"),
+        "На учёте у психиатров": ("состоит", "не состоит"),
         "По направлению из РВК": ("нет", "да"),
         "Нужен ли больничный лист": ("нет", "да"),
         "Нужно ли оформление инвалидности": ("нет", "да"),
@@ -579,7 +620,7 @@ try:
         output_dir=commission_contract_dir / "created",
         selected=("commission",),
         popup_values={
-            "Состоит ли на учёте у психиатров": "нет",
+            "На учёте у психиатров": "не состоит",
             "Нужен ли больничный лист": "нет",
             "Есть ли ЭПИ": "нет",
             "Номер истории болезни": "К-902",
@@ -617,7 +658,7 @@ try:
         selected=("primary", "discharge", DIARY_KIND),
         popup_values={
             "Номер истории болезни": "К-901",
-            "Состоит ли на учёте у психиатров": "нет",
+            "На учёте у психиатров": "не состоит",
             "По направлению из РВК": "нет",
             "Нужен ли больничный лист": "нет",
             "Нужно ли оформление инвалидности": "нет",
