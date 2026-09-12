@@ -174,23 +174,29 @@ try:
 except ValueError as exc:
     assert "unknown_kind" in str(exc)
 
+bad_discharge_date_data = service.parse_primary_document(nav)
+bad_discharge_date_data.admission_occurrence = "первично"
 try:
     service.create_documents(
         navigation_path=nav,
         output_dir=OUT / "bad_discharge_date",
         selected_docs=["discharge"],
         discharge_date="99.99.2026",
+        override_data=bad_discharge_date_data,
     )
     raise AssertionError("bad discharge date must fail before rendering")
 except ValueError as exc:
     assert "Дата выписки" in str(exc)
 
 
+missing_discharge_required_data = service.parse_primary_document(nav)
+missing_discharge_required_data.admission_occurrence = "первично"
 try:
     service.create_documents(
         navigation_path=nav,
         output_dir=OUT / "missing_discharge_required",
         selected_docs=["discharge"],
+        override_data=missing_discharge_required_data,
     )
     raise AssertionError("discharge document must require discharge date at service boundary")
 except ValueError as exc:
