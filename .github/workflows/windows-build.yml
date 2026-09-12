@@ -42,9 +42,15 @@ jobs:
       - name: Run release gate
         run: python release_check.py
 
+      - name: Run real Tk GUI wiring smoke
+        run: python gui_runtime_check.py
+
       - name: Build EXE
         shell: cmd
         run: build_exe_windows.bat
+
+      - name: Verify packaged EXE startup and TkDND
+        run: python verify_built_exe.py
 
       - name: Build clean source archive
         run: python make_release_zip.py

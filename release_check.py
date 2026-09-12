@@ -37,7 +37,10 @@ REQUIRED_FILES = [
     "dnd_contract_check.py",
     "performance_check.py",
     "safety_integrity_check.py",
+    "gui_runtime_check.py",
+    "verify_built_exe.py",
     ".github/workflows/windows-build.yml",
+    ".github/workflows/release.yml",
     ".gitattributes",
 ]
 FORBIDDEN_DIR_NAMES = {"__pycache__", "build", "dist", ".pytest_cache", ".vscode", ".idea"}
@@ -154,6 +157,7 @@ def _assert_settings_contract() -> None:
 def _assert_build_contract() -> None:
     build = (ROOT / "build_exe_windows.bat").read_text(encoding="utf-8", errors="replace")
     workflow = (ROOT / ".github/workflows/windows-build.yml").read_text(encoding="utf-8")
+    release_workflow = (ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
     for snippet in ["release_check.py", "version_info.txt", "--noupx", "MedicalDiaryAutofill.exe"]:
         if snippet not in build:
             raise SystemExit(f"build_exe_windows.bat misses production snippet: {snippet}")
@@ -168,11 +172,44 @@ def _assert_build_contract() -> None:
         "cancel-in-progress: true",
         "timeout-minutes:",
         "release_check.py",
+        "gui_runtime_check.py",
+        "verify_built_exe.py",
         "Upload source release artifact",
         "Upload EXE artifact",
     ]:
         if snippet not in workflow:
             raise SystemExit(f"GitHub Actions workflow misses production snippet: {snippet}")
+    for snippet in [
+        "Signed Windows Release",
+        "SIGNING_CERT_PFX_BASE64",
+        "SIGNING_CERT_PASSWORD",
+        "signtool verify",
+        "MEDICAL_AUTOFILL_REQUIRE_SIGNED_EXE",
+        "python verify_built_exe.py",
+        "gh release create",
+        "--verify-tag",
+    ]:
+        if snippet not in release_workflow:
+            raise SystemExit(f"Signed release workflow misses fail-closed snippet: {snippet}")
+    verify_exe = (ROOT / "verify_built_exe.py").read_text(encoding="utf-8", errors="replace")
+    for snippet in [
+        "MEDICAL_AUTOFILL_STARTUP_PROBE",
+        "MEDICAL_AUTOFILL_REQUIRE_SIGNED_EXE",
+        "_pe_has_authenticode_signature",
+        "dnd=1",
+    ]:
+        if snippet not in verify_exe:
+            raise SystemExit(f"verify_built_exe.py misses packaged-runtime snippet: {snippet}")
+    gui_check = (ROOT / "gui_runtime_check.py").read_text(encoding="utf-8", errors="replace")
+    for snippet in [
+        "CombinedMedicalDiaryApp(root)",
+        "_register_tkinterdnd_drop_targets",
+        "event_generate",
+        "askdirectory",
+    ]:
+        if snippet not in gui_check:
+            raise SystemExit(f"gui_runtime_check.py misses real-GUI snippet: {snippet}")
+
     attrs = (ROOT / ".gitattributes").read_text(encoding="utf-8", errors="replace")
     for snippet in ["*.py text eol=lf", "*.bat text eol=crlf", "*.docx binary", "*.zip binary"]:
         if snippet not in attrs:
@@ -198,6 +235,33 @@ def _assert_ui_selected_state_contract() -> None:
         raise SystemExit("UI selected-state contract is incomplete: " + ", ".join(missing))
 
 
+
+
+def _assert_pe_parser_contract() -> None:
+    """Catch PE-header parser regressions before the expensive EXE build."""
+    from tempfile import TemporaryDirectory
+
+    from verify_built_exe import _pe_has_authenticode_signature
+
+    with TemporaryDirectory(prefix="medical-autofill-pe-") as temp_dir:
+        fixture = bytearray(512)
+        fixture[:2] = b"MZ"
+        fixture[0x3C:0x40] = (0x80).to_bytes(4, "little")
+        fixture[0x80:0x84] = b"PE\x00\x00"
+        optional_offset = 0x80 + 24
+        fixture[optional_offset:optional_offset + 2] = (0x20B).to_bytes(2, "little")
+        security_entry = optional_offset + 112 + (8 * 4)
+        path = Path(temp_dir) / "fixture.exe"
+
+        path.write_bytes(fixture)
+        if _pe_has_authenticode_signature(path):
+            raise SystemExit("Unsigned PE fixture was incorrectly reported as signed")
+
+        fixture[security_entry:security_entry + 4] = (0x180).to_bytes(4, "little")
+        fixture[security_entry + 4:security_entry + 8] = (0x40).to_bytes(4, "little")
+        path.write_bytes(fixture)
+        if not _pe_has_authenticode_signature(path):
+            raise SystemExit("Signed PE fixture was not recognized")
 
 
 def _assert_startup_state_contract() -> None:
@@ -338,6 +402,9 @@ def main() -> None:
 
     _print_step("Startup state contract")
     _assert_startup_state_contract()
+
+    _print_step("PE parser contract")
+    _assert_pe_parser_contract()
 
     _print_step("Production contracts")
     _assert_settings_contract()

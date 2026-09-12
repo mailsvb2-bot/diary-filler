@@ -122,6 +122,20 @@ class FilesMixin:
             self._manual_output_dir = True
             self._remember_dialog_directory(DIR_OUTPUT, path, selected_is_dir=True)
 
+    def _confirm_manual_output_dir_for_patient_switch(self) -> bool:
+        """Decide whether a manually pinned output folder follows the next patient."""
+        if not self._manual_output_dir or not self.output_dir_var.get().strip():
+            return False
+        keep = messagebox.askyesno(
+            "Папка результата для нового пациента",
+            "Вы выбрали папку результата вручную для предыдущего пациента.\n\n"
+            f"Оставить эту же папку для нового пациента?\n{self.output_dir_var.get().strip()}\n\n"
+            "«Нет» — программа снова сохранит документы рядом с новым первичным файлом.",
+        )
+        if not keep:
+            self._manual_output_dir = False
+        return keep
+
     def _set_primary_document_type(self, selected_type: str) -> None:
         selected_type = "hospitalization_referral" if selected_type == "hospitalization_referral" else "primary_exam"
         self.primary_document_type_var.set(selected_type)
@@ -205,6 +219,8 @@ class FilesMixin:
             )
         except Exception:
             switching_primary = bool(previous_primary and previous_primary != path)
+        if switching_primary:
+            self._confirm_manual_output_dir_for_patient_switch()
         self.navigation_path_var.set(path)
         self._remember_dialog_directory(DIR_PRIMARY_DOCUMENTS, path)
         self._reset_primary_document_runtime_state(clear_patient_inputs=switching_primary)
@@ -470,29 +486,20 @@ class FilesMixin:
         return True
 
     def choose_diary_files(self) -> None:
-        # Кнопка «Шаблоны дневников» выбирает ПАПКУ шаблонов.
-        # Чтобы врач видел, что файлы внутри действительно есть, сначала открываем
-        # файловое окно и просим выбрать любой DOCX из этой папки. Если пользователь
-        # отменил — даём fallback на обычный выбор папки.
+        # Пользовательская кнопка называется «Даты», поэтому она сразу выбирает
+        # папку 01–31. Старый двухшаговый путь «сначала любой DOCX, затем папка
+        # после Cancel» был неожиданным и выглядел как две разные операции.
         initial_dir = self._dialog_initial_dir(
             DIR_NUMBERED_DIARY_TEMPLATES,
             self._get_saved_directory(DIR_DIARY_TEMPLATES),
         )
-        selected = filedialog.askopenfilename(
-            title="Выберите любой DOCX из папки «шаблоны дневников»",
+        folder_value = filedialog.askdirectory(
+            title="Выберите папку «Даты» с шаблонами 01–31",
             initialdir=initial_dir,
-            filetypes=[("Word DOCX", "*.docx *.docm"), ("All files", "*.*")],
         )
-        if selected:
-            folder = Path(selected).parent
-        else:
-            folder_value = filedialog.askdirectory(
-                title="Выберите папку «шаблоны дневников»",
-                initialdir=initial_dir,
-            )
-            if not folder_value:
-                return
-            folder = Path(folder_value)
+        if not folder_value:
+            return
+        folder = Path(folder_value)
         if self._set_numbered_diary_template_dir(folder, auto_select=True, warn_if_missing=True):
             if not self.output_dir_var.get().strip():
                 self._set_output_dir_auto(folder)

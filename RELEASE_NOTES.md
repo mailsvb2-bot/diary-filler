@@ -1,4 +1,13 @@
-# Release notes — v1.3.18-production-quality-gate
+# Release notes — v1.4.0-final-user-flow
+
+## v1.4.0-final-user-flow
+
+- Добавлен post-build probe **именно собранного `MedicalDiaryAutofill.exe`**: EXE обязан реально запустить production Tk UI, зарегистрировать TkDND и завершиться с машинно-проверяемым evidence-файлом.
+- Добавлен `gui_runtime_check.py`: на Windows создаётся настоящий `CombinedMedicalDiaryApp`, проверяется TkDND и мышью проходят реальные видимые UI-связи — первичная drop-зона и кнопка «Даты». Проверка намеренно не опирается на dormant compatibility-контролы, которых нет в текущем one-window UI.
+- Кнопка «Даты» теперь сразу выбирает папку 01–31 одним диалогом, без прежнего неожиданного сценария «выбрать DOCX → Cancel → выбрать папку».
+- При смене пациента вручную закреплённая папка результата больше не переносится молча: врач явно подтверждает, оставить её для нового пациента или вернуться к папке нового первичного DOCX.
+- Версия синхронизирована как `1.4.0` / `v1.4.0-final-user-flow`.
+- Добавлен отдельный `Signed Windows Release` workflow: официальный GitHub Release создаётся только после Authenticode-подписи, `signtool verify` и повторного packaged-EXE probe с обязательным `signed=1`. Без сертификата workflow fail-closed и релиз не публикуется.
 
 ## v1.3.18-production-quality-gate
 

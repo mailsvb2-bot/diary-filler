@@ -426,6 +426,25 @@ assert first_primary.epi_path_var.get() == "preselected-epi.docx"
 assert first_primary.status_files == ["preselected-texts.docx"]
 assert first_primary.diary_files == ["preselected-dates.docx"]
 
+# A manually pinned output folder must not leak silently to the next patient.
+# The doctor explicitly chooses whether to keep it; choosing «Нет» restores the
+# normal "save beside the new primary DOCX" behavior.
+import files_mixin as _files_mixin_module
+manual_output = _main_module.CombinedMedicalDiaryApp.__new__(_main_module.CombinedMedicalDiaryApp)
+manual_output._manual_output_dir = True
+manual_output.output_dir_var = _FakeVar(r"C:\old-patient")
+_original_askyesno = _files_mixin_module.messagebox.askyesno
+try:
+    _files_mixin_module.messagebox.askyesno = lambda *_a, **_k: False
+    assert manual_output._confirm_manual_output_dir_for_patient_switch() is False
+    assert manual_output._manual_output_dir is False
+    manual_output._manual_output_dir = True
+    _files_mixin_module.messagebox.askyesno = lambda *_a, **_k: True
+    assert manual_output._confirm_manual_output_dir_for_patient_switch() is True
+    assert manual_output._manual_output_dir is True
+finally:
+    _files_mixin_module.messagebox.askyesno = _original_askyesno
+
 # --- Primary selected status layout regression ---
 layout_sources_text = Path("layout_sources.py").read_text(encoding="utf-8")
 files_mixin_text = Path("files_mixin.py").read_text(encoding="utf-8")
@@ -439,6 +458,7 @@ assert 'Path(path).name' in files_mixin_text
 assert 'primary_selected_status_label.grid_remove()' not in files_mixin_text
 assert 'primary_selected_status_label.grid()' not in files_mixin_text
 assert 'def _truncate_label_text' in files_mixin_text
+assert 'self._confirm_manual_output_dir_for_patient_switch()' in files_mixin_text
 assert ('single_line=self._compact_ui' in Path("dnd_mixin.py").read_text(encoding="utf-8") or '_update_diary_text_label(success=True)' in Path("dnd_mixin.py").read_text(encoding="utf-8"))
 from files_mixin import FilesMixin
 _long_name = "Очень длинное название первичного документа пациента Иванова Ирина Ивановна 10052026.docx"
