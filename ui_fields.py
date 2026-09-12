@@ -176,7 +176,7 @@ class UiFieldsMixin:
             row_frame,
             text="Нет",
             command=self._set_expert_sick_leave_no,
-            selected=lambda: (self._normalize_yes_no(self.expert_sick_leave_needed_var.get()) or "нет") == "нет",
+            selected=lambda: self._normalize_yes_no(self.expert_sick_leave_needed_var.get()) == "нет",
         )
         self.expert_sick_leave_no_button.grid(row=0, column=0, sticky="ew", padx=(0, self._px(5, 3)))
 
@@ -217,11 +217,9 @@ class UiFieldsMixin:
             self.expert_work_status_var.set(previous[0])
             self.expert_work_org_var.set(previous[1])
             self.expert_position_var.set(previous[2])
-            self.expert_sick_leave_needed_var.set(previous[3] or "нет")
+            self.expert_sick_leave_needed_var.set(previous[3])
             self.expert_sick_leave_from_var.set(previous[4])
             self.expert_sick_leave_number_var.set(previous[5] if len(previous) > 5 else "")
-            if not self._normalize_yes_no(self.expert_sick_leave_needed_var.get()):
-                self.expert_sick_leave_needed_var.set("нет")
         self._update_expert_sick_leave_display()
 
     def _on_expert_sick_leave_yes(self) -> None:
@@ -232,6 +230,6 @@ class UiFieldsMixin:
         self._update_expert_sick_leave_display()
 
     def _update_expert_sick_leave_display(self) -> None:
-        value = self._normalize_yes_no(self.expert_sick_leave_needed_var.get()) or "нет"
-        self.expert_sick_leave_display_var.set(value)
+        value = self._normalize_yes_no(self.expert_sick_leave_needed_var.get())
+        self.expert_sick_leave_display_var.set(value or "—")
         self._redraw_selection_controls()

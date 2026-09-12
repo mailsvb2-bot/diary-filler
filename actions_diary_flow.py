@@ -34,7 +34,7 @@ class ActionsDiaryFlowMixin:
                 ),
             )
         if not self.diary_files:
-            raise ValueError("Выберите папку «шаблоны дневников» через кнопку «Шаблоны дневников»/«Папка».")
+            raise ValueError("Выберите папку «Даты» с шаблонами дневников 01–31.")
         if not self.status_files:
             self._auto_select_diary_text_by_diagnosis(
                 ask_folder=False,
@@ -45,7 +45,7 @@ class ActionsDiaryFlowMixin:
         if not self.status_files:
             self.choose_status_files()
         if not self.status_files:
-            raise ValueError("Выберите файл(ы) «Тексты» для дневников. Источник «Даты» задаёт календарь, а тексты берутся отдельно.")
+            raise ValueError("Выберите папку «Тексты» с DOCX по диагнозам. Источник «Даты» задаёт календарь, а тексты подбираются по диагнозу.")
         if patient_data_snapshot is None:
             diary_patient_name = self.patient_name_var.get().strip()
             source_patient_fio = ""

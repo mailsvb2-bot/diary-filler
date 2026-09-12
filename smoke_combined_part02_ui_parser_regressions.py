@@ -359,6 +359,79 @@ assert normalize_prompt_field_values(
 ) == ["99.99.26"], "invalid input must remain available for the normal validator warning"
 
 
+# --- Shared clinical popup behavior regression ---
+clinical_logic = _main_module.CombinedMedicalDiaryApp.__new__(_main_module.CombinedMedicalDiaryApp)
+clinical_logic.expert_sick_leave_needed_var = _FakeVar("")
+clinical_logic.expert_sick_leave_from_var = _FakeVar("")
+clinical_logic.expert_sick_leave_number_var = _FakeVar("")
+clinical_logic.disability_needed_var = _FakeVar("")
+clinical_logic.epi_present_var = _FakeVar("")
+clinical_logic.epi_path_var = _FakeVar("")
+clinical_logic.admission_date_var = _FakeVar("10.06.2026")
+clinical_logic.data = PatientData(admission_date="10.06.2026")
+clinical_logic._update_expert_sick_leave_display = lambda: None
+clinical_logic._normalize_date_for_ui = _main_module.CombinedMedicalDiaryApp._normalize_date_for_ui.__get__(clinical_logic, _main_module.CombinedMedicalDiaryApp)
+clinical_prompts = []
+def _clinical_prompt(title, rows, width=46, linked_groups=None, choice_options=None):
+    clinical_prompts.append((title, list(rows), choice_options))
+    if title == "Дополнительные данные":
+        values = {
+            "Нужен ли больничный лист": "да",
+            "Нужно ли оформление инвалидности": "нет",
+            "Есть ли ЭПИ": "нет",
+        }
+        return [values[label] for label, _ in rows]
+    if title == "Больничный лист":
+        return ["12062026"]
+    raise AssertionError((title, rows))
+clinical_logic._prompt_fields = _clinical_prompt
+assert clinical_logic._prompt_shared_clinical_options_if_needed(["primary", "commission"]) is True
+assert clinical_logic.expert_sick_leave_needed_var.get() == "да"
+assert clinical_logic.expert_sick_leave_from_var.get() == "12.06.2026"
+assert clinical_logic.disability_needed_var.get() == "нет"
+assert clinical_logic.epi_present_var.get() == "нет"
+assert clinical_logic.epi_path_var.get() == ""
+assert clinical_logic.data.disability == "не нужно"
+assert [call[0] for call in clinical_prompts] == ["Дополнительные данные", "Больничный лист"]
+choices = clinical_prompts[0][2]
+assert choices["Нужен ли больничный лист"] == ("нет", "да")
+assert choices["Нужно ли оформление инвалидности"] == ("нет", "да")
+assert choices["Есть ли ЭПИ"] == ("нет", "да")
+
+# The same patient may regenerate a document and correct a previous decision.
+# Because the permanent UI controls were intentionally removed, the popup must
+# appear again with current values rather than silently locking the first answer.
+revision_rows = []
+def _revision_prompt(title, rows, width=46, linked_groups=None, choice_options=None):
+    revision_rows.extend(rows)
+    return ["нет", "да"]
+clinical_logic._prompt_fields = _revision_prompt
+assert clinical_logic._prompt_shared_clinical_options_if_needed(["primary"]) is True
+assert [initial for _label, initial in revision_rows] == ["да", "нет"], revision_rows
+assert clinical_logic.expert_sick_leave_needed_var.get() == "нет"
+assert clinical_logic.expert_sick_leave_from_var.get() == ""
+assert clinical_logic.disability_needed_var.get() == "да"
+assert clinical_logic.data.disability == "нужно"
+
+# Positive EPI selection must use the chosen file and persist its text.
+epi_logic = _main_module.CombinedMedicalDiaryApp.__new__(_main_module.CombinedMedicalDiaryApp)
+epi_logic.expert_sick_leave_needed_var = _FakeVar("нет")
+epi_logic.expert_sick_leave_from_var = _FakeVar("")
+epi_logic.expert_sick_leave_number_var = _FakeVar("")
+epi_logic.disability_needed_var = _FakeVar("нет")
+epi_logic.epi_present_var = _FakeVar("")
+epi_logic.epi_path_var = _FakeVar("")
+epi_logic.admission_date_var = _FakeVar("10.06.2026")
+epi_logic.data = PatientData(admission_date="10.06.2026")
+epi_logic.service = service
+epi_logic._update_expert_sick_leave_display = lambda: None
+epi_logic._prompt_fields = lambda title, rows, width=46, linked_groups=None, choice_options=None: ["да"]
+epi_logic.choose_epi = lambda: (epi_logic.epi_path_var.set(str(epi)), epi_logic.epi_present_var.set("да"))
+assert epi_logic._prompt_shared_clinical_options_if_needed(["commission"]) is True
+assert epi_logic.epi_present_var.get() == "да"
+assert epi_logic.epi_path_var.get() == str(epi)
+assert "EPI_PLACEMENT_SENTINEL_7F31" in epi_logic.data.epi_text
+
 # --- Patient switch isolation regression ---
 # Switching from one primary file to another must never reuse patient-specific
 # EPI/commission/VK/RVK values or manually selected diary inputs. Reusable
@@ -367,7 +440,7 @@ patient_switch = _main_module.CombinedMedicalDiaryApp.__new__(_main_module.Combi
 for name in (
     "assigned_treatment_var", "case_number_var", "admission_occurrence_var", "expert_work_status_var",
     "expert_work_org_var", "expert_position_var", "expert_sick_leave_needed_var",
-    "expert_sick_leave_from_var", "expert_sick_leave_number_var",
+    "expert_sick_leave_from_var", "expert_sick_leave_number_var", "disability_needed_var",
     "vk_mse_work_org_var", "vk_mse_position_var", "sick_leave_vk_work_org_var",
     "sick_leave_vk_position_var", "sick_leave_vk_work_position_var",
     "patient_name_var", "admission_date_var", "discharge_date_var", "diagnosis_var",
@@ -375,7 +448,7 @@ for name in (
     "vk_date_var", "vk_protocol_number_var", "vk_protocol_date_var",
     "sick_leave_vk_date_var", "sick_leave_vk_protocol_number_var",
     "sick_leave_vk_protocol_date_var", "sick_leave_vk_commission_date_var",
-    "commission_date_var", "commission_number_var", "epi_path_var",
+    "commission_date_var", "commission_number_var", "epi_path_var", "epi_present_var",
 ):
     setattr(patient_switch, name, _FakeVar("OLD"))
 patient_switch.expert_sick_leave_needed_var.set("да")
@@ -409,7 +482,7 @@ for name in (
     "vk_date_var", "vk_protocol_number_var", "vk_protocol_date_var",
     "sick_leave_vk_date_var", "sick_leave_vk_protocol_number_var",
     "sick_leave_vk_protocol_date_var", "sick_leave_vk_commission_date_var",
-    "commission_date_var", "commission_number_var", "epi_path_var",
+    "commission_date_var", "commission_number_var", "epi_path_var", "epi_present_var",
 ):
     assert getattr(patient_switch, name).get() == "", (name, getattr(patient_switch, name).get())
 assert patient_switch.status_files == []
@@ -425,7 +498,7 @@ first_primary = _main_module.CombinedMedicalDiaryApp.__new__(_main_module.Combin
 for name in (
     "assigned_treatment_var", "case_number_var", "admission_occurrence_var", "expert_work_status_var",
     "expert_work_org_var", "expert_position_var", "expert_sick_leave_needed_var",
-    "expert_sick_leave_from_var", "expert_sick_leave_number_var",
+    "expert_sick_leave_from_var", "expert_sick_leave_number_var", "disability_needed_var",
     "vk_mse_work_org_var", "vk_mse_position_var", "sick_leave_vk_work_org_var",
     "sick_leave_vk_position_var", "sick_leave_vk_work_position_var",
     "patient_name_var", "admission_date_var", "discharge_date_var", "diagnosis_var",
@@ -433,10 +506,11 @@ for name in (
     "vk_date_var", "vk_protocol_number_var", "vk_protocol_date_var",
     "sick_leave_vk_date_var", "sick_leave_vk_protocol_number_var",
     "sick_leave_vk_protocol_date_var", "sick_leave_vk_commission_date_var",
-    "commission_date_var", "commission_number_var", "epi_path_var",
+    "commission_date_var", "commission_number_var", "epi_path_var", "epi_present_var",
 ):
     setattr(first_primary, name, _FakeVar(""))
 first_primary.epi_path_var.set("preselected-epi.docx")
+first_primary.epi_present_var.set("да")
 first_primary.status_files = ["preselected-texts.docx"]
 first_primary.diary_files = ["preselected-dates.docx"]
 first_primary.diary_texts_dir = "reusable-texts-folder"
@@ -462,6 +536,7 @@ first_primary._set_ui_var = lambda var, value: var.set(value)
 first_primary._set_primary_drop_empty = lambda: None
 first_primary._reset_primary_document_runtime_state(clear_patient_inputs=False)
 assert first_primary.epi_path_var.get() == "preselected-epi.docx"
+assert first_primary.epi_present_var.get() == "да"
 assert first_primary.status_files == ["preselected-texts.docx"]
 assert first_primary.diary_files == ["preselected-dates.docx"]
 

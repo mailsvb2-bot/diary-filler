@@ -8,7 +8,7 @@ from tkinter import messagebox
 
 from app_config import *
 from medical_formatting import parse_date
-from medical_models import PatientData, normalize_admission_occurrence
+from medical_models import PatientData, normalize_admission_occurrence, normalize_yes_no
 from medical_parser_sanitize import sanitize_diagnosis
 
 def _search_icd10_f(query: str, *, limit: int):
@@ -37,12 +37,143 @@ class DialogExpertMixin:
 
     @staticmethod
     def _normalize_yes_no(value: str) -> str:
-        value = (value or "").strip().lower().replace("ё", "е")
-        if value in {"да", "д", "yes", "y", "1", "+", "нужен", "нужна", "нужно", "работает"}:
-            return "да"
-        if value in {"нет", "н", "no", "n", "0", "-", "не нужен", "не нужна", "не нужно", "не работает"}:
-            return "нет"
-        return ""
+        return normalize_yes_no(value)
+
+    def _prompt_sick_leave_start_date_if_needed(self) -> bool:
+        """Ask only the conditional follow-up required by a positive sick-leave choice."""
+        if self._normalize_yes_no(self.expert_sick_leave_needed_var.get()) != "да":
+            return True
+        current = self.expert_sick_leave_from_var.get().strip()
+        if current and parse_date(current):
+            self.expert_sick_leave_from_var.set(self._normalize_date_for_ui(current))
+            return True
+        default = (
+            current
+            or self.admission_date_var.get().strip()
+            or getattr(getattr(self, "data", None), "admission_date", "")
+        )
+        values = self._prompt_fields(
+            title="Больничный лист",
+            rows=[("С какого числа", default)],
+            width=34,
+        )
+        if values is None:
+            return False
+        value = values[0].strip()
+        parsed = parse_date(value)
+        if not parsed:
+            messagebox.showwarning(
+                "Некорректная дата",
+                "Укажите дату начала больничного, например 12.09.2026 или 120926.",
+            )
+            return False
+        admission = parse_date(self.admission_date_var.get().strip() or getattr(getattr(self, "data", None), "admission_date", ""))
+        if admission and parsed.date() < admission.date():
+            messagebox.showwarning("Некорректная дата", "Дата начала больничного не может быть раньше даты госпитализации.")
+            return False
+        self.expert_sick_leave_from_var.set(parsed.strftime("%d.%m.%Y"))
+        self._update_expert_sick_leave_display()
+        return True
+
+    def _prompt_shared_clinical_options_if_needed(self, selected_medical: List[str]) -> bool:
+        """Collect shared doctor decisions once for the whole selected document set.
+
+        Explicit sick-leave/disability rows currently exist in the primary exam
+        and admission-doctor templates. EPI is shared by every output template
+        that contains an EPI block. One answer is reused across all selected docs.
+        """
+        selected = set(selected_medical)
+        flag_docs = {"primary", "admission_doctor_referral"}
+        epi_docs = {"discharge", "commission", "vk_mse", "sick_leave_vk", "rvk"}
+
+        rows: list[tuple[str, str]] = []
+        fields: list[str] = []
+        choices: dict[str, tuple[str, ...]] = {}
+
+        if selected & flag_docs:
+            sick = self._normalize_yes_no(self.expert_sick_leave_needed_var.get())
+            label = "Нужен ли больничный лист"
+            rows.append((label, sick))
+            fields.append("sick_leave")
+            choices[label] = ("нет", "да")
+
+            disability = self._normalize_yes_no(self.disability_needed_var.get())
+            label = "Нужно ли оформление инвалидности"
+            rows.append((label, disability))
+            fields.append("disability")
+            choices[label] = ("нет", "да")
+
+        if selected & epi_docs:
+            epi_path = self.epi_path_var.get().strip()
+            epi = self._normalize_yes_no(self.epi_present_var.get())
+            if epi_path and Path(epi_path).exists() and not epi:
+                epi = "да"
+                self.epi_present_var.set(epi)
+            label = "Есть ли ЭПИ"
+            rows.append((label, epi))
+            fields.append("epi")
+            choices[label] = ("нет", "да")
+
+        if rows:
+            values = self._prompt_fields(
+                title="Дополнительные данные",
+                rows=rows,
+                width=46,
+                choice_options=choices,
+            )
+            if values is None:
+                return False
+            for field, raw in zip(fields, values):
+                value = self._normalize_yes_no(raw)
+                if not value:
+                    messagebox.showwarning("Не выбран вариант", "Для каждого вопроса выберите Да или Нет.")
+                    return False
+                if field == "sick_leave":
+                    self.expert_sick_leave_needed_var.set(value)
+                elif field == "disability":
+                    self.disability_needed_var.set(value)
+                    if hasattr(self, "data"):
+                        self.data.disability_needed = value
+                        self.data.disability = "нужно" if value == "да" else "не нужно"
+                elif field == "epi":
+                    self.epi_present_var.set(value)
+
+        if selected & flag_docs:
+            sick = self._normalize_yes_no(self.expert_sick_leave_needed_var.get())
+            if sick == "нет":
+                self.expert_sick_leave_from_var.set("")
+                self.expert_sick_leave_number_var.set("")
+                self._update_expert_sick_leave_display()
+            elif sick == "да" and not self._prompt_sick_leave_start_date_if_needed():
+                return False
+
+        if selected & epi_docs:
+            epi = self._normalize_yes_no(self.epi_present_var.get())
+            if epi == "нет":
+                self.epi_path_var.set("")
+                if hasattr(self, "data"):
+                    self.data.epi_present = "нет"
+                    self.data.epi_text = ""
+            elif epi == "да":
+                epi_path = self.epi_path_var.get().strip()
+                if not epi_path or not Path(epi_path).is_file():
+                    self.choose_epi()
+                    epi_path = self.epi_path_var.get().strip()
+                if not epi_path or not Path(epi_path).is_file():
+                    messagebox.showwarning("ЭПИ не выбрано", "При ответе «Да» выберите DOCX или TXT с текстом ЭПИ.")
+                    return False
+                try:
+                    epi_text = self.service.load_epi_text(epi_path)
+                except Exception as exc:
+                    messagebox.showwarning("Не удалось прочитать ЭПИ", str(exc))
+                    return False
+                if not epi_text.strip():
+                    messagebox.showwarning("Пустое ЭПИ", "В выбранном файле не найден текст ЭПИ.")
+                    return False
+                if hasattr(self, "data"):
+                    self.data.epi_present = "да"
+                    self.data.epi_text = epi_text
+        return True
 
     @staticmethod
     def _clean_popup_work_org(value: str) -> str:

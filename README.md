@@ -1,6 +1,6 @@
 # Медицинский автозаполнитель
 
-**Версия:** `v1.4.1-document-flow-polish`
+**Версия:** `v1.4.2-clinical-popup-and-diary-polish`
 
 **Final user-flow gate:** Windows CI теперь проверяет не только Python-код и сборку, но и реальный Tk UI, TkDND и запуск уже собранного EXE. Официальный GitHub Release вынесен в отдельный fail-closed workflow: он требует Authenticode-сертификат и не публикует неподписанный EXE.
 

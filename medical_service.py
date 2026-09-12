@@ -14,7 +14,7 @@ from typing import Dict, List, Optional, Sequence, Tuple
 from medical_constants import DOCUMENT_LABELS, DOCUMENT_ORDER, OUTPUT_SUFFIXES
 from medical_docx_reader import extract_docx_text
 from medical_formatting import available_path, parse_date, safe_filename, strip_leading_epi_label
-from medical_models import PatientData, normalize_admission_occurrence
+from medical_models import PatientData, normalize_admission_occurrence, normalize_yes_no
 from medical_parser import MedicalTextParser
 from medical_paths import bundled_template_path
 from medical_renderer import MedicalDocumentRenderer
@@ -195,6 +195,45 @@ class MedicalDocumentService:
         if selected_set & treatment_docs:
             data.treatment_plan = self._require_text(data.treatment_plan, "лечение")
 
+        explicit_option_docs = {"primary", "admission_doctor_referral"}
+        if selected_set & explicit_option_docs:
+            sick_decision = normalize_yes_no(data.expert_sick_leave_needed)
+            if not sick_decision:
+                sick_decision = normalize_yes_no(data.sick_leave)
+            if not sick_decision:
+                raise ValueError("Укажите, нужен ли больничный лист.")
+            data.expert_sick_leave_needed = sick_decision
+            if sick_decision == "да":
+                data.expert_sick_leave_from = self._normalize_required_date(
+                    data.expert_sick_leave_from, "Дата начала больничного"
+                )
+                self._ensure_date_not_before_admission(
+                    data.admission_date, data.expert_sick_leave_from, "Дата начала больничного"
+                )
+                data.sick_leave = f"нужен с {data.expert_sick_leave_from}"
+            else:
+                data.expert_sick_leave_from = ""
+                data.sick_leave = "не нужен"
+
+            disability_decision = normalize_yes_no(data.disability_needed)
+            if not disability_decision:
+                disability_decision = normalize_yes_no(data.disability)
+            if not disability_decision:
+                raise ValueError("Укажите, нужно ли оформление инвалидности.")
+            data.disability_needed = disability_decision
+            data.disability = "нужно" if disability_decision == "да" else "не нужно"
+
+        epi_docs = {"discharge", "commission", "vk_mse", "sick_leave_vk", "rvk"}
+        if selected_set & epi_docs:
+            epi_decision = normalize_yes_no(data.epi_present)
+            if not epi_decision:
+                epi_decision = "да" if data.epi_text.strip() else "нет"
+            data.epi_present = epi_decision
+            if epi_decision == "да" and not data.epi_text.strip():
+                raise ValueError("Для выбранных документов укажите файл ЭПИ или выберите «Нет».")
+            if epi_decision == "нет":
+                data.epi_text = ""
+
         occurrence_docs = {"primary", "discharge", "commission", "admission_doctor_referral", "rvk"}
         if occurrence_docs & selected_set:
             data.admission_occurrence = normalize_admission_occurrence(data.admission_occurrence)
@@ -278,6 +317,7 @@ class MedicalDocumentService:
         self._ensure_discharge_not_before_admission(data.admission_date, data.discharge_date)
         if epi_path:
             data.epi_text = self.load_epi_text(epi_path)
+            data.epi_present = "да"
         self._validate_and_normalize_selected_data(data, selected)
 
         output_path_root = self._resolve_output_dir(output_dir, primary_path.parent)

@@ -59,7 +59,8 @@ class ActionsMedicalFlowMixin:
             data.diagnosis = sanitize_diagnosis(popup_diag)
         elif ui_diag:
             data.diagnosis = sanitize_diagnosis(ui_diag)
-        if self.epi_path_var.get().strip():
+        data.epi_present = self._normalize_yes_no(self.epi_present_var.get())
+        if data.epi_present == "да" and self.epi_path_var.get().strip():
             data.epi_text = self.service.load_epi_text(self.epi_path_var.get().strip())
         else:
             data.epi_text = ""
@@ -75,6 +76,11 @@ class ActionsMedicalFlowMixin:
         data.expert_sick_leave_needed = self._normalize_yes_no(self.expert_sick_leave_needed_var.get())
         data.expert_sick_leave_from = self._normalize_date_for_ui(self.expert_sick_leave_from_var.get().strip())
         data.expert_sick_leave_number = self.expert_sick_leave_number_var.get().strip()
+        data.disability_needed = self._normalize_yes_no(self.disability_needed_var.get())
+        if data.disability_needed == "да":
+            data.disability = "нужно"
+        elif data.disability_needed == "нет":
+            data.disability = "не нужно"
         if data.expert_work_status == "да":
             data.work_org = data.expert_work_org
             data.position = data.expert_position

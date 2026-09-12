@@ -16,6 +16,16 @@ from medical_constants import DATE_FMT
 ADMISSION_OCCURRENCE_OPTIONS = ("первично", "повторно")
 
 
+def normalize_yes_no(value: str) -> str:
+    """Normalize doctor-facing yes/no decisions to one canonical value."""
+    normalized = " ".join(str(value or "").strip().lower().replace("ё", "е").split())
+    if normalized in {"да", "д", "yes", "y", "1", "+", "нужен", "нужна", "нужно", "работает"}:
+        return "да"
+    if normalized in {"нет", "н", "no", "n", "0", "-", "не нужен", "не нужна", "не нужно", "не работает"}:
+        return "нет"
+    return ""
+
+
 def normalize_admission_occurrence(value: str) -> str:
     """Return the canonical episode occurrence selected by the doctor."""
     normalized = " ".join(str(value or "").strip().lower().replace("ё", "е").split())
@@ -51,8 +61,11 @@ def clean_admission_detail(value: str) -> str:
     is represented by the canonical «первично/повторно» choice.
     """
     text = strip_admission_occurrence_prefix(value)
+    # This recommendation is not an admission-detail fact and must never be
+    # copied into generated documents, even when the source omitted punctuation
+    # before it (a common legacy-template formatting defect).
     text = re.sub(
-        r"(?i)(?:^|(?<=[.!?]))\s*целесообразна\s+госпитализация\b.*$",
+        r"(?i)\s*целесообразна\s+госпитализация\b.*$",
         "",
         text,
     )
@@ -84,6 +97,7 @@ class PatientData:
     expert_sick_leave_needed: str = ""  # да / нет
     expert_sick_leave_from: str = ""
     expert_sick_leave_number: str = ""
+    disability_needed: str = ""  # да / нет
     disability: str = ""
     rvk_referral: str = ""
     admission: str = ""
@@ -106,6 +120,7 @@ class PatientData:
 
     admission_date: str = ""
     discharge_date: str = ""
+    epi_present: str = ""  # да / нет
     epi_text: str = ""
     input_document_kind: str = ""
 

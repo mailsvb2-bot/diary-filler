@@ -126,10 +126,11 @@ class AppInitializationMixin:
         self.expert_work_status_var = tk.StringVar()  # да/нет: работает ли пациент
         self.expert_work_org_var = tk.StringVar()
         self.expert_position_var = tk.StringVar()
-        self.expert_sick_leave_needed_var = tk.StringVar(value="нет")  # да/нет
+        self.expert_sick_leave_needed_var = tk.StringVar()  # да/нет; врач подтверждает для текущего случая
         self.expert_sick_leave_from_var = tk.StringVar()
         self.expert_sick_leave_number_var = tk.StringVar()
-        self.expert_sick_leave_display_var = tk.StringVar(value="нет")
+        self.disability_needed_var = tk.StringVar()  # да/нет
+        self.expert_sick_leave_display_var = tk.StringVar(value="—")
         self._primary_work_org_default = ""
         self._primary_work_position_default = ""
         self._work_details_manually_edited = False
@@ -182,6 +183,7 @@ class AppInitializationMixin:
         # Медицинские документы.
         self.navigation_path_var = tk.StringVar()
         self.epi_path_var = tk.StringVar()
+        self.epi_present_var = tk.StringVar()  # да/нет, подтверждается в popup
         self.strict_mode_var = tk.BooleanVar(value=True)
 
         # Общий список создаваемых сущностей: медицинские документы + дневники.

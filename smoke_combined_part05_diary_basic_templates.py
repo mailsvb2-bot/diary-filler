@@ -54,7 +54,7 @@ diary_text = "\n".join("\t".join(cell.text for cell in row.cells) for row in Doc
 assert "Пациентка была спокойна" in diary_text
 assert "не предъявляла" in diary_text
 
-# Compact diary print layout: exact margins, 8 pt text, 3 cm after each signature block.
+# Compact diary print layout: exact margins, 8 pt text, about three compact lines after each signature block.
 table_diary_doc = Document(result.created_files[0])
 for section in table_diary_doc.sections:
     assert abs(section.left_margin.cm - 1.5) < 0.03, section.left_margin.cm
@@ -72,9 +72,9 @@ for table in table_diary_doc.tables:
             if signature_paragraphs:
                 last_signature = signature_paragraphs[-1]
                 assert last_signature.paragraph_format.space_after is not None
-                assert abs(last_signature.paragraph_format.space_after.cm - 3.0) < 0.05, last_signature.paragraph_format.space_after.cm
+                assert 0 <= last_signature.paragraph_format.space_after.pt <= 24.1, last_signature.paragraph_format.space_after.pt
 
-# Blank paragraphs between doctor/head signatures must not receive the 3 cm inter-diary gap.
+# Blank paragraphs between doctor/head signatures must not receive the inter-diary gap.
 from diary_table_cells import _format_paragraphs
 separated_signature_doc = Document()
 first_signature = separated_signature_doc.add_paragraph("Лечащий врач Балаганин С.В.")
@@ -84,7 +84,26 @@ _format_paragraphs(separated_signature_doc.paragraphs)
 assert first_signature.paragraph_format.space_after is not None
 assert abs(first_signature.paragraph_format.space_after.pt) < 0.05, first_signature.paragraph_format.space_after.pt
 assert last_signature.paragraph_format.space_after is not None
-assert abs(last_signature.paragraph_format.space_after.cm - 3.0) < 0.05, last_signature.paragraph_format.space_after.cm
+assert abs(last_signature.paragraph_format.space_after.pt - 24.0) < 0.1, last_signature.paragraph_format.space_after.pt
+
+# Legacy templates may already contain many empty paragraphs. The formatter must
+# cap the physical + synthetic gap at three compact lines instead of preserving
+# a large hole after signatures.
+excess_blank_doc = Document()
+excess_signature = excess_blank_doc.add_paragraph("Лечащий врач Балаганин С.В.")
+for _ in range(5):
+    excess_blank_doc.add_paragraph("")
+excess_blank_doc.add_paragraph("12.06.26 следующий дневник")
+_format_paragraphs(excess_blank_doc.paragraphs)
+paragraphs_after_trim = excess_blank_doc.paragraphs
+excess_index = next(i for i, p in enumerate(paragraphs_after_trim) if "Лечащий врач" in p.text)
+physical_blanks = 0
+for p in paragraphs_after_trim[excess_index + 1:]:
+    if p.text.strip():
+        break
+    physical_blanks += 1
+assert physical_blanks == 3, physical_blanks
+assert abs(excess_signature.paragraph_format.space_after.pt) < 0.05, excess_signature.paragraph_format.space_after.pt
 
 # --- Diary gender source smoke: UI filename may be male, source document is female ---
 result_filename_male = fill_diary_batch(
@@ -167,7 +186,7 @@ for index, paragraph in enumerate(contract_output.paragraphs):
     next_is_signature = index + 1 < len(contract_output.paragraphs) and ("Лечащий врач" in contract_output.paragraphs[index + 1].text or "Зав.отделением" in contract_output.paragraphs[index + 1].text)
     if not next_is_signature:
         assert paragraph.paragraph_format.space_after is not None
-        assert abs(paragraph.paragraph_format.space_after.cm - 3.0) < 0.05, paragraph.paragraph_format.space_after.cm
+        assert 0 <= paragraph.paragraph_format.space_after.pt <= 24.1, paragraph.paragraph_format.space_after.pt
 
 
 # --- Admission date regression: title date is admission, FIO-near date is birth ---
@@ -326,6 +345,7 @@ app4.expert_work_status_var = _Var("да")
 app4.expert_work_org_var = _Var("ООО")
 app4.expert_position_var = _Var("врач")
 app4.expert_sick_leave_needed_var = _Var("да")
+app4.disability_needed_var = _Var("нет")
 app4.expert_sick_leave_from_var = _Var("15.04.2026")
 app4.expert_sick_leave_number_var = _Var("1")
 app4.vk_mse_work_org_var = _Var("ООО")
@@ -374,7 +394,13 @@ assert "filedialog.askopenfilename" not in choose_src
 assert "filedialog.askopenfilenames" not in choose_src
 assert "Выберите папку «Даты» с шаблонами 01–31" in choose_src
 
-
+status_start = main_source.index("    def choose_status_files")
+status_end = main_source.index("    def _diary_template_label_text", status_start)
+status_src = main_source[status_start:status_end]
+assert "filedialog.askdirectory" in status_src
+assert "filedialog.askopenfilename" not in status_src
+assert "filedialog.askopenfilenames" not in status_src
+assert "Выберите папку «Тексты» с DOCX по диагнозам" in status_src
 
 # --- Diary text auto-selection by diagnosis filename ---
 from diary_text_selection import (

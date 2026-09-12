@@ -24,9 +24,10 @@ PATIENT_SESSION_ALWAYS_VAR_DEFAULTS = (
     ("expert_work_status_var", ""),
     ("expert_work_org_var", ""),
     ("expert_position_var", ""),
-    ("expert_sick_leave_needed_var", "нет"),
+    ("expert_sick_leave_needed_var", ""),
     ("expert_sick_leave_from_var", ""),
     ("expert_sick_leave_number_var", ""),
+    ("disability_needed_var", ""),
     ("vk_mse_work_org_var", ""),
     ("vk_mse_position_var", ""),
     ("sick_leave_vk_work_org_var", ""),
@@ -55,6 +56,7 @@ PATIENT_SESSION_SWITCH_ONLY_VAR_DEFAULTS = (
     ("commission_date_var", ""),
     ("commission_number_var", ""),
     ("epi_path_var", ""),
+    ("epi_present_var", ""),
 )
 
 PATIENT_SESSION_ALWAYS_ATTR_DEFAULTS = (
@@ -280,10 +282,12 @@ class FilesMixin:
         path = filedialog.askopenfilename(
             title="Выберите файл ЭПИ",
             initialdir=self._dialog_initial_dir(DIR_EPI),
-            filetypes=[("Word DOCX", "*.docx"), ("Text", "*.txt"), ("All files", "*.*")],
+            filetypes=[("Word DOCX/DOCM", "*.docx *.docm"), ("Text", "*.txt"), ("All files", "*.*")],
         )
         if path:
             self.epi_path_var.set(path)
+            if hasattr(self, "epi_present_var"):
+                self.epi_present_var.set("да")
             self._remember_dialog_directory(DIR_EPI, path)
             self.reparse_navigation(silent=True)
 
@@ -390,13 +394,12 @@ class FilesMixin:
             return True
 
         if ask_folder:
-            selected = filedialog.askopenfilename(
-                title="Выберите любой DOCX из папки с текстами дневников",
+            selected_folder = filedialog.askdirectory(
+                title="Выберите папку «Тексты» с DOCX по диагнозам",
                 initialdir=self._dialog_initial_dir(DIR_DIARY_TEXTS),
-                filetypes=[("Word DOCX", "*.docx *.docm"), ("All files", "*.*")],
             )
-            if selected:
-                folder = Path(selected).parent
+            if selected_folder:
+                folder = Path(selected_folder)
                 self.diary_texts_dir = str(folder)
                 self._remember_dialog_directory(DIR_DIARY_TEXTS, str(folder), selected_is_dir=True)
                 found = find_diary_text_file_for_diagnosis(folder, diagnosis)
@@ -408,41 +411,45 @@ class FilesMixin:
                     self._redraw_selection_controls()
                     self._log(f"\n✅ Автоматически выбран текст дневников по диагнозу: {found.name}.\n")
                     return True
-                # Если совпадения нет, выбранный файл остаётся ручным fallback.
-                self.status_files = [str(selected)]
-                self._diary_text_files_auto_selected = False
-                self._update_diary_text_label(success=True)
+                self.status_files = []
+                self._diary_text_files_auto_selected = True
+                self._update_diary_text_label(success=False)
                 self._redraw_selection_controls()
-                return True
+                messagebox.showwarning(
+                    "Текст по диагнозу не найден",
+                    f"В папке «{folder.name}» не найден DOCX, подходящий к диагнозу: {diagnosis}.",
+                )
         return False
 
     def choose_status_files(self) -> None:
-        paths = filedialog.askopenfilenames(
-            title="Выберите файл(ы) с текстами дневников или любой DOCX из папки диагнозов",
+        """Choose the actual diagnosis-text folder, not an arbitrary DOCX pointer."""
+        selected_folder = filedialog.askdirectory(
+            title="Выберите папку «Тексты» с DOCX по диагнозам",
             initialdir=self._dialog_initial_dir(DIR_DIARY_TEXTS),
-            filetypes=[("Word DOCX", "*.docx *.docm"), ("All files", "*.*")],
         )
-        if not paths:
+        if not selected_folder:
             return
-        selected_paths = list(paths)
-        self.diary_texts_dir = str(Path(selected_paths[0]).parent)
-        self._remember_dialog_directory(DIR_DIARY_TEXTS, selected_paths[0])
-
-        # Новый контракт: если в выбранной папке файлы дневников названы
-        # диагнозами, после чтения первичного документа выбираем DOCX по
-        # diagnosis_var. Если диагноз ещё не прочитан, выбранный файл считается
-        # временным указателем на папку и потом может быть заменён автоматически.
-        had_diagnosis = bool(self.diagnosis_var.get().strip() or getattr(getattr(self, "data", None), "diagnosis", ""))
+        folder = Path(selected_folder)
+        self.diary_texts_dir = str(folder)
+        self._remember_dialog_directory(DIR_DIARY_TEXTS, str(folder), selected_is_dir=True)
         self.status_files = []
         self._diary_text_files_auto_selected = True
-        if not self._auto_select_diary_text_by_diagnosis(ask_folder=False):
-            self.status_files = selected_paths
-            self._diary_text_files_auto_selected = not had_diagnosis
-            self._update_diary_text_label(success=True)
+
+        diagnosis = self.diagnosis_var.get().strip() or getattr(getattr(self, "data", None), "diagnosis", "")
+        if diagnosis and self._auto_select_diary_text_by_diagnosis(ask_folder=False):
+            pass
+        else:
+            self._update_diary_text_label(success=bool(folder_has_diary_text_candidates(folder)))
             self._redraw_selection_controls()
-            self._log(f"\n✅ Выбраны тексты дневников: {len(self.status_files)} файл(ов).\n")
-        if self.status_files and not self.output_dir_var.get().strip():
-            self._set_output_dir_auto(Path(self.status_files[0]).parent)
+            if diagnosis:
+                messagebox.showwarning(
+                    "Текст по диагнозу не найден",
+                    f"В папке «{folder.name}» не найден DOCX, подходящий к диагнозу: {diagnosis}.",
+                )
+            else:
+                self._log("\nℹ️ Папка текстов выбрана. DOCX будет подобран автоматически после распознавания диагноза.\n")
+        if not self.output_dir_var.get().strip():
+            self._set_output_dir_auto(folder)
 
     def _diary_template_label_text(self) -> str:
         max_chars = 42 if getattr(self, "_compact_ui", False) else 78

@@ -309,6 +309,8 @@ assert "18.06.2026" in compact_text and "19.06.2026" in compact_text and "20.06.
 dupe_out = OUT / "duplicate_selected_docs"
 dupe_data = service.parse_primary_document(nav)
 dupe_data.admission_occurrence = "первично"
+dupe_data.expert_sick_leave_needed = "нет"
+dupe_data.disability_needed = "нет"
 dupe_data.commission_date = "18062026"
 dupe_data.commission_number = "12"
 dupe_created, _dupe_data = service.create_documents(
@@ -378,8 +380,76 @@ try:
 except ValueError as exc:
     assert "раньше" in str(exc), str(exc)
 
+missing_sick_choice = service.parse_primary_document(nav)
+missing_sick_choice.admission_occurrence = "первично"
+missing_sick_choice.sick_leave = ""
+missing_sick_choice.expert_sick_leave_needed = ""
+missing_sick_choice.disability_needed = "нет"
+try:
+    service.create_documents(
+        navigation_path=nav,
+        output_dir=OUT / "missing_sick_leave_choice",
+        selected_docs=["primary"],
+        override_data=missing_sick_choice,
+    )
+    raise AssertionError("primary must require explicit sick-leave decision")
+except ValueError as exc:
+    assert "нужен ли больничный" in str(exc), str(exc)
+
+missing_disability_choice = service.parse_primary_document(nav)
+missing_disability_choice.admission_occurrence = "первично"
+missing_disability_choice.expert_sick_leave_needed = "нет"
+missing_disability_choice.sick_leave = "не нужен"
+missing_disability_choice.disability = ""
+missing_disability_choice.disability_needed = ""
+try:
+    service.create_documents(
+        navigation_path=nav,
+        output_dir=OUT / "missing_disability_choice",
+        selected_docs=["primary"],
+        override_data=missing_disability_choice,
+    )
+    raise AssertionError("primary must require explicit disability decision")
+except ValueError as exc:
+    assert "оформление инвалидности" in str(exc), str(exc)
+
+missing_sick_date = service.parse_primary_document(nav)
+missing_sick_date.admission_occurrence = "первично"
+missing_sick_date.expert_sick_leave_needed = "да"
+missing_sick_date.expert_sick_leave_from = ""
+missing_sick_date.disability_needed = "нет"
+try:
+    service.create_documents(
+        navigation_path=nav,
+        output_dir=OUT / "missing_sick_leave_start",
+        selected_docs=["primary"],
+        override_data=missing_sick_date,
+    )
+    raise AssertionError("positive sick-leave choice must require start date")
+except ValueError as exc:
+    assert "Дата начала больничного" in str(exc), str(exc)
+
+missing_epi_text = service.parse_primary_document(nav)
+missing_epi_text.commission_date = "18.06.2026"
+missing_epi_text.commission_number = "9"
+missing_epi_text.admission_occurrence = "первично"
+missing_epi_text.epi_present = "да"
+missing_epi_text.epi_text = ""
+try:
+    service.create_documents(
+        navigation_path=nav,
+        output_dir=OUT / "epi_yes_without_file",
+        selected_docs=["commission"],
+        override_data=missing_epi_text,
+    )
+    raise AssertionError("EPI=yes must require actual EPI text")
+except ValueError as exc:
+    assert "файл ЭПИ" in str(exc), str(exc)
+
 single_kind_data = service.parse_primary_document(nav)
 single_kind_data.admission_occurrence = "первично"
+single_kind_data.expert_sick_leave_needed = "нет"
+single_kind_data.disability_needed = "нет"
 single_kind_created, _single_kind_data = service.create_documents(
     navigation_path=nav,
     output_dir=OUT / "single_kind_string",
@@ -390,6 +460,8 @@ assert len(single_kind_created) == 1 and single_kind_created[0].name.endswith("�
 
 none_output_data = service.parse_primary_document(nav)
 none_output_data.admission_occurrence = "первично"
+none_output_data.expert_sick_leave_needed = "нет"
+none_output_data.disability_needed = "нет"
 none_output_created, _none_output_data = service.create_documents(
     navigation_path=nav,
     output_dir=None,
@@ -625,6 +697,8 @@ file_output_target = OUT / "not_a_directory_output.txt"
 file_output_target.write_text("I am a file, not an output directory", encoding="utf-8")
 file_output_data = service.parse_primary_document(nav)
 file_output_data.admission_occurrence = "первично"
+file_output_data.expert_sick_leave_needed = "нет"
+file_output_data.disability_needed = "нет"
 try:
     service.create_documents(
         navigation_path=nav,
@@ -638,6 +712,8 @@ except ValueError as exc:
 
 label_selected_data = service.parse_primary_document(nav)
 label_selected_data.admission_occurrence = "первично"
+label_selected_data.expert_sick_leave_needed = "нет"
+label_selected_data.disability_needed = "нет"
 label_selected_created, _label_selected_data = service.create_documents(
     navigation_path=nav,
     output_dir=OUT / "label_selected_docs",
