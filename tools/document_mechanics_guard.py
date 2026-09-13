@@ -74,7 +74,7 @@ def main() -> None:
         base = _base_ref()
         changed = [
             line.strip().replace("\\", "/")
-            for line in _git("diff", "--name-only", "--diff-filter=ACMRT", base, "HEAD").splitlines()
+            for line in _git("diff", "--name-only", "--diff-filter=ACDMRT", base, "HEAD").splitlines()
             if line.strip()
         ]
     except (subprocess.CalledProcessError, FileNotFoundError) as exc:
