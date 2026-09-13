@@ -70,10 +70,14 @@ _DESKTOP_INTAKE_QUIET_SECONDS = 1.5
 _DESKTOP_INTAKE_GUI_POLL_MS = 1600
 _DESKTOP_INTAKE_HEARTBEAT_MS = 1800
 _DESKTOP_INTAKE_HEARTBEAT_MAX_AGE_SECONDS = 6.0
+_DESKTOP_INTAKE_AGENT_HEARTBEAT_MAX_AGE_SECONDS = 7.0
+_DESKTOP_INTAKE_AGENT_HEALTHCHECK_MS = 5000
 _DESKTOP_INTAKE_AGENT_POLL_SECONDS = 2.0
 _DESKTOP_INTAKE_AGENT_RELAUNCH_COOLDOWN_SECONDS = 30.0
 _DESKTOP_INTAKE_AGENT_MUTEX_HANDOFF_SECONDS = 8.0
 _DESKTOP_INTAKE_AGENT_MUTEX_NAME = "Local\\MedicalDiaryAutofillDesktopIntakeAgent"
+_DESKTOP_INTAKE_RUN_VALUE_NAME = "MedicalDiaryAutofill Intake"
+_DESKTOP_INTAKE_RUN_KEY = r"Software\Microsoft\Windows\CurrentVersion\Run"
 _DESKTOP_INTAKE_MAX_LOG_BYTES = 128 * 1024
 _DESKTOP_INTAKE_HANDOFF_SCHEMA = 1
 
@@ -201,13 +205,50 @@ def desktop_intake_is_candidate_word_file(path: str | Path) -> bool:
 
 
 def desktop_intake_is_primary_document(path: str | Path) -> bool:
+    """Use the canonical parser first; legacy score is only a compatibility fallback.
+
+    The watcher must not maintain a second, stricter definition of a primary
+    document than the application itself.  Otherwise a DOCX that the normal UI
+    parses correctly can be silently ignored before the GUI is even launched.
+    """
     candidate = Path(path)
     if not candidate.is_file() or not desktop_intake_is_candidate_word_file(candidate):
         return False
     try:
         from medical_docx_reader import extract_docx_text
+        from medical_parser import MedicalTextParser
 
-        return desktop_intake_primary_score(extract_docx_text(candidate)) >= 5
+        text = extract_docx_text(candidate)
+        normalized = _desktop_normalized_text(text)
+        if any(marker in normalized for marker in _DESKTOP_INTAKE_EXCLUDED_MARKERS):
+            return False
+        data = MedicalTextParser().parse_docx(candidate)
+        kind = _desktop_normalized_text(data.input_document_kind)
+        if kind in {
+            "первичный осмотр",
+            "направление на госпитализацию",
+            "первичный документ пациента",
+        }:
+            return True
+
+        # Some real primary forms have no literal "Первичный осмотр" title but
+        # are still parsed successfully by diary-filler.  Require patient identity
+        # plus several canonical fields instead of rejecting such files solely on
+        # an intake-only phrase score.
+        clinical_signals = sum(
+            bool(value)
+            for value in (
+                data.birth,
+                data.admission_date,
+                data.diagnosis,
+                data.complaints,
+                data.mental_status,
+                data.treatment_plan,
+            )
+        )
+        if data.fio and clinical_signals >= 2:
+            return True
+        return desktop_intake_primary_score(text) >= 5
     except Exception:
         return False
 
@@ -610,6 +651,43 @@ def _desktop_gui_heartbeat_path() -> Path:
     return _desktop_runtime_dir() / "desktop-intake-gui.heartbeat"
 
 
+def _desktop_agent_heartbeat_path() -> Path:
+    return _desktop_runtime_dir() / "desktop-intake-agent.heartbeat"
+
+
+def _desktop_touch_agent_heartbeat() -> None:
+    tmp: Path | None = None
+    try:
+        path = _desktop_agent_heartbeat_path()
+        tmp = path.with_suffix(".tmp")
+        payload = {
+            "schema": 1,
+            "timestamp": time.time(),
+            "identity": _desktop_current_agent_identity(),
+        }
+        tmp.write_text(json.dumps(payload), encoding="ascii")
+        os.replace(tmp, path)
+    except OSError:
+        if tmp is not None:
+            try:
+                tmp.unlink(missing_ok=True)
+            except OSError:
+                pass
+
+
+def _desktop_agent_is_active() -> bool:
+    try:
+        payload = json.loads(_desktop_agent_heartbeat_path().read_text(encoding="ascii"))
+        if not isinstance(payload, dict) or payload.get("schema") != 1:
+            return False
+        if str(payload.get("identity") or "") != _desktop_current_agent_identity():
+            return False
+        value = float(payload.get("timestamp"))
+    except (OSError, ValueError, TypeError, json.JSONDecodeError):
+        return False
+    return 0.0 <= time.time() - value <= _DESKTOP_INTAKE_AGENT_HEARTBEAT_MAX_AGE_SECONDS
+
+
 def _desktop_touch_gui_heartbeat() -> None:
     tmp: Path | None = None
     try:
@@ -777,9 +855,56 @@ def _desktop_install_agent_autostart() -> bool:
         return False
 
 
+def _desktop_install_agent_run_key() -> bool:
+    """Add a second per-user logon route; the named mutex de-duplicates agents."""
+    if os.name != "nt" or os.environ.get("CI", "").strip():
+        return False
+    try:
+        import winreg
+
+        desired = subprocess.list2cmdline(_desktop_runtime_command(DESKTOP_INTAKE_AGENT_ARGUMENT))
+        with winreg.CreateKeyEx(
+            winreg.HKEY_CURRENT_USER,
+            _DESKTOP_INTAKE_RUN_KEY,
+            0,
+            winreg.KEY_QUERY_VALUE | winreg.KEY_SET_VALUE,
+        ) as key:
+            try:
+                current, _kind = winreg.QueryValueEx(key, _DESKTOP_INTAKE_RUN_VALUE_NAME)
+            except FileNotFoundError:
+                current = ""
+            if str(current or "") != desired:
+                winreg.SetValueEx(key, _DESKTOP_INTAKE_RUN_VALUE_NAME, 0, winreg.REG_SZ, desired)
+        return True
+    except (OSError, ImportError):
+        return False
+
+
+def _desktop_remove_agent_run_key() -> None:
+    if os.name != "nt":
+        return
+    try:
+        import winreg
+
+        with winreg.OpenKey(
+            winreg.HKEY_CURRENT_USER,
+            _DESKTOP_INTAKE_RUN_KEY,
+            0,
+            winreg.KEY_SET_VALUE,
+        ) as key:
+            try:
+                winreg.DeleteValue(key, _DESKTOP_INTAKE_RUN_VALUE_NAME)
+            except FileNotFoundError:
+                pass
+    except (OSError, ImportError):
+        pass
+
+
 def _desktop_start_agent_process() -> bool:
     if os.name != "nt" or os.environ.get("CI", "").strip():
         return False
+    if _desktop_agent_is_active():
+        return True
     try:
         _desktop_write_agent_handoff()
         _desktop_hidden_popen(_desktop_runtime_command(DESKTOP_INTAKE_AGENT_ARGUMENT))
@@ -870,8 +995,10 @@ def run_desktop_intake_agent() -> int:
     recently_launched: dict[str, float] = {}
     try:
         root = desktop_intake_ensure_root()
+        _desktop_touch_agent_heartbeat()
         _desktop_agent_log("agent started")
         while True:
+            _desktop_touch_agent_heartbeat()
             if _desktop_agent_is_retired():
                 _desktop_agent_log("agent retired after application update")
                 return 0
@@ -936,10 +1063,11 @@ def _desktop_process_primary(app, source_path: str | Path) -> bool:
             pass
         return True
     except Exception as exc:
+        _desktop_agent_log(f"GUI intake processing failed after {type(exc).__name__}")
         _desktop_show_intake_error(
             app,
             "Не удалось обработать первичный документ из папки «Выписанные пациенты».\n\n"
-            f"{type(exc).__name__}: {exc}",
+            f"Тип ошибки: {type(exc).__name__}",
         )
         return False
 
@@ -952,6 +1080,30 @@ def _desktop_schedule_heartbeat(app) -> None:
         app.root.after(_DESKTOP_INTAKE_HEARTBEAT_MS, lambda: _desktop_schedule_heartbeat(app))
     except Exception:
         return
+
+
+def _desktop_schedule_agent_health(app) -> None:
+    """Self-heal a failed initial watcher spawn while the GUI is alive."""
+    try:
+        if not app.root.winfo_exists():
+            return
+        if not _desktop_agent_is_active():
+            if _desktop_start_agent_process():
+                _desktop_agent_log("agent healthcheck requested restart")
+            else:
+                _desktop_agent_log("agent healthcheck restart failed")
+        app.root.after(
+            _DESKTOP_INTAKE_AGENT_HEALTHCHECK_MS,
+            lambda: _desktop_schedule_agent_health(app),
+        )
+    except Exception:
+        try:
+            app.root.after(
+                _DESKTOP_INTAKE_AGENT_HEALTHCHECK_MS,
+                lambda: _desktop_schedule_agent_health(app),
+            )
+        except Exception:
+            pass
 
 
 def _desktop_poll_intake(app, intake_root: Path) -> None:
@@ -998,12 +1150,14 @@ def start_desktop_intake_runtime(app, *, initial_primary: str | Path | None = No
         _desktop_touch_gui_heartbeat()
         intake_root = desktop_intake_ensure_root()
         _desktop_install_agent_autostart()
+        _desktop_install_agent_run_key()
         _desktop_start_agent_process()
     except Exception:
         return
 
     app._desktop_intake_processing = False
     _desktop_schedule_heartbeat(app)
+    app.root.after(1200, lambda: _desktop_schedule_agent_health(app))
 
     if initial_primary:
         app._desktop_intake_processing = True

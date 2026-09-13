@@ -33,6 +33,8 @@ from startup import (
     DESKTOP_INTAKE_AGENT_ARGUMENT,
     DESKTOP_INTAKE_PRIMARY_ARGUMENT,
     _create_root,
+    _desktop_agent_is_active,
+    _desktop_remove_agent_run_key,
     _startup_log_path,
     _write_startup_error,
     desktop_intake_root_path,
@@ -174,7 +176,36 @@ def _self_check_rows() -> list[tuple[str, bool, str]]:
         else None
     )
     startup_ok = bool(startup_script and startup_script.is_file())
-    rows.append(("Фоновое наблюдение", startup_ok, "автозагрузка настроена" if startup_ok else "автозагрузка не найдена"))
+    run_key_ok = False
+    if os.name == "nt":
+        try:
+            import winreg
+
+            with winreg.OpenKey(
+                winreg.HKEY_CURRENT_USER,
+                r"Software\Microsoft\Windows\CurrentVersion\Run",
+            ) as key:
+                value, _kind = winreg.QueryValueEx(key, "MedicalDiaryAutofill Intake")
+                run_key_ok = bool(str(value or "").strip())
+        except Exception:
+            run_key_ok = False
+    autostart_ok = startup_ok or run_key_ok
+    routes = []
+    if startup_ok:
+        routes.append("Startup")
+    if run_key_ok:
+        routes.append("HKCU Run")
+    rows.append((
+        "Фоновое наблюдение",
+        autostart_ok,
+        f"автозагрузка настроена: {', '.join(routes)}" if autostart_ok else "автозагрузка не найдена",
+    ))
+    agent_active = _desktop_agent_is_active()
+    rows.append((
+        "Фоновый агент сейчас",
+        agent_active,
+        "активен" if agent_active else "не отвечает; при открытой программе будет перезапущен автоматически",
+    ))
 
     handoff = runtime / "desktop-intake-agent-handoff.json"
     handoff_ok = False
@@ -267,6 +298,7 @@ def _intake_uninstall_retire_agent() -> None:
             startup_script.unlink(missing_ok=True)
         except OSError:
             pass
+    _desktop_remove_agent_run_key()
 
     # The watcher polls its handoff every two seconds. Give a running old agent
     # a bounded opportunity to observe the retirement marker before setup removes

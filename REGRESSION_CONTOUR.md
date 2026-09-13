@@ -19,6 +19,7 @@ This is intentionally stricter than a normal unit test: for safety/support work,
 - the diagnostic self-check remains technical-only and does not parse patient documents;
 - the normal packaged GUI/EXE release checks are still present;
 - startup/support diagnostics redact the private `--intake-primary` value and use stable technical error codes;
+- packaged Windows intake E2E closes the GUI, drops a real DOCX into `Выписанные пациенты`, and requires watcher-driven `--intake-primary` relaunch plus patient-subfolder move;
 - the canonical smoke user flow is replayed and its generated medical + diary DOCX are compared with checked-in semantic/visual golden fingerprints.
 
 ## Commands

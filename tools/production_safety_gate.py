@@ -80,6 +80,7 @@ def assert_installer_contract() -> None:
     installer = read("installer/MedicalDiaryAutofill.iss")
     installer_build = read("BUILD_WINDOWS_INSTALLER.bat")
     installer_smoke = read("tools/windows_installer_smoke.ps1")
+    intake_e2e = read("tools/windows_desktop_intake_e2e.ps1")
     main_source = read("main.py")
 
     required = (
@@ -94,10 +95,22 @@ def assert_installer_contract() -> None:
         fail("installer contract is incomplete: " + ", ".join(missing))
     if 'UNINSTALL_INTAKE_ARGUMENT = "--uninstall-intake-agent"' not in main_source:
         fail("packaged EXE cannot retire the watcher during uninstall")
+    if "_desktop_remove_agent_run_key()" not in main_source:
+        fail("uninstall no longer removes the watcher HKCU Run entry")
+    if "desktop-intake-agent.heartbeat" not in installer:
+        fail("installer no longer cleans the watcher heartbeat")
     if "dist\\MedicalDiaryAutofill.exe" not in installer_build or "ISCC" not in installer_build:
         fail("installer build script is not bound to the packaged EXE")
     if "WINDOWS INSTALLER SMOKE OK" not in installer_smoke or "unins*.exe" not in installer_smoke:
         fail("installer smoke does not prove install/uninstall")
+    for marker in (
+        "WINDOWS DESKTOP INTAKE AUTOLAUNCH E2E OK",
+        "--intake-agent",
+        "--intake-primary",
+        "primary DOCX moved into patient subfolder",
+    ):
+        if marker not in intake_e2e:
+            fail(f"desktop intake packaged-EXE E2E lost marker: {marker}")
     if "filesandordirs" in installer.casefold():
         fail("installer uses broad recursive uninstall deletion")
 
@@ -183,6 +196,7 @@ def assert_ci_wiring() -> None:
         "python tools/gender_generation_regression_matrix.py",
         "python gui_runtime_check.py",
         "python verify_built_exe.py",
+        "windows_desktop_intake_e2e.ps1",
         "BUILD_WINDOWS_INSTALLER.bat",
         "windows_installer_smoke.ps1",
         "MedicalDiaryAutofill-Windows-Installer",
