@@ -60,6 +60,26 @@ function Wait-Until {
         if (& $Condition) { return }
         Start-Sleep -Milliseconds 300
     } while ([DateTime]::UtcNow -lt $deadline)
+    Write-Host "INTAKE E2E timeout diagnostics: $Description"
+    try {
+        $records = @(Get-AppProcessRecords)
+        foreach ($record in $records) {
+            $isAgent = [bool]([string]$record.CommandLine -match '--intake-agent')
+            $isPrimary = [bool]([string]$record.CommandLine -match '--intake-primary')
+            Write-Host "  process pid=$($record.ProcessId) agent=$isAgent primary=$isPrimary"
+        }
+        Write-Host "  fixture_present=$(Test-Path -LiteralPath $fixture)"
+        if (Test-Path -LiteralPath $agentHeartbeat) {
+            Write-Host "  agent_heartbeat=$(Get-Content -LiteralPath $agentHeartbeat -Raw)"
+        }
+        if (Test-Path -LiteralPath $agentLog) {
+            Write-Host '  agent_log_begin'
+            Get-Content -LiteralPath $agentLog | Select-Object -Last 40 | ForEach-Object { Write-Host "    $_" }
+            Write-Host '  agent_log_end'
+        }
+    } catch {
+        Write-Host "  diagnostics_failed=$($_.Exception.GetType().Name)"
+    }
     throw "Timed out waiting for: $Description"
 }
 
@@ -118,12 +138,31 @@ try {
         throw 'HKCU Run watcher entry does not contain --intake-agent'
     }
 
+    $agentTimestampBeforeClose = 0.0
+    try {
+        $hbBeforeClose = Get-Content -LiteralPath $agentHeartbeat -Raw | ConvertFrom-Json
+        $agentTimestampBeforeClose = [double]$hbBeforeClose.timestamp
+    } catch {}
+
     if (-not $initialGui.HasExited) {
         try { $null = $initialGui.CloseMainWindow() } catch {}
         if (-not $initialGui.WaitForExit(2500)) {
-            $initialGui.Kill($true)
+            # The production window is frameless (Tk overrideredirect), so
+            # CloseMainWindow may be a no-op. Kill only the GUI process here:
+            # Kill($true) would also kill the detached intake-agent child and
+            # turn this E2E into a false negative.
+            $initialGui.Kill()
             $initialGui.WaitForExit()
         }
+    }
+
+    Wait-Until -Description 'intake-agent survives GUI close and refreshes heartbeat' -TimeoutSeconds 15 -Condition {
+        $agents = @((Get-AppProcessRecords) | Where-Object { $_.CommandLine -match '--intake-agent' })
+        if ($agents.Count -lt 1 -or -not (Test-Path -LiteralPath $agentHeartbeat)) { return $false }
+        try {
+            $hb = Get-Content -LiteralPath $agentHeartbeat -Raw | ConvertFrom-Json
+            return ([double]$hb.timestamp -gt $agentTimestampBeforeClose)
+        } catch { return $false }
     }
 
     $builder = Join-Path $testRoot 'make_intake_fixture.py'
