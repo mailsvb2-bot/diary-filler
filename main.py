@@ -70,10 +70,11 @@ def _first_launch_onboarding(app) -> None:
                 except OSError as exc:
                     app._desktop_intake_enabled_for_session = False
                     app._set_desktop_intake_preference(False)
+                    code, _safe_details = _support_write_startup_failure(exc, stage="intake")
                     messagebox.showwarning(
                         "Выписанные пациенты",
                         "Не удалось создать папку «Выписанные пациенты». Ручной режим остаётся доступен.\n\n"
-                        f"{type(exc).__name__}: {exc}",
+                        f"Код ошибки: {code}",
                         parent=app.root,
                     )
         else:
