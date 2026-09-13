@@ -136,8 +136,10 @@ def assert_privacy_and_replay_contract() -> None:
 def assert_ci_wiring() -> None:
     workflow = read(".github/workflows/windows-build.yml")
     build = read("build_exe_windows.bat")
+    guard = read("tools/document_mechanics_guard.py")
     for marker in (
         "fetch-depth: 0",
+        "github.event.pull_request.base.sha || github.event.before",
         "python tools/document_mechanics_guard.py",
         "python tools/production_safety_gate.py",
         "python tools/privacy_diagnostics_check.py",
@@ -150,6 +152,9 @@ def assert_ci_wiring() -> None:
     ):
         if marker not in workflow:
             fail(f"Windows CI lost safety marker: {marker}")
+
+    if '"--diff-filter=ACDMRT"' not in guard:
+        fail("document mechanics guard no longer rejects protected-file deletions")
 
     build_has_safety_gate = (
         "python tools\\production_safety_gate.py" in build
