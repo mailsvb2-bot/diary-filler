@@ -40,7 +40,7 @@ jobs:
 
       - name: Guard document mechanics
         env:
-          DOCUMENT_MECHANICS_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          DOCUMENT_MECHANICS_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: python tools/document_mechanics_guard.py
 
       - name: Run production safety gate
