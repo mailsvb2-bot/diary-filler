@@ -49,6 +49,7 @@ def verify_user_flow() -> None:
         "по 11.06.2026",
         "В 3 отделение КДП поступает первично добровольно",
         "Лечение: терапия из пользовательского popup",
+        "Рекомендовано: наблюдение у районного психиатра, приём препаратов",
     )
     for marker in required_primary:
         if marker not in primary_text:
@@ -56,6 +57,8 @@ def verify_user_flow() -> None:
     for marker in required_discharge:
         if marker not in discharge_text:
             raise SystemExit(f"FULL PATIENT REPLAY FAILED: discharge lost marker {marker!r}")
+    if "академического отпуска" in discharge_text.lower():
+        raise SystemExit("FULL PATIENT REPLAY FAILED: stale academic-leave recommendation leaked into discharge DOCX")
 
     commission = _require(
         OUT / "user_contract_commission_popup_date" / "created" / "Петров Пётр Петрович Совместный осмотр.docx"
@@ -63,6 +66,9 @@ def verify_user_flow() -> None:
     commission_doc = Document(commission)
     if not commission_doc.paragraphs or not commission_doc.paragraphs[0].text.startswith("21.06.2026 г. 10:00"):
         raise SystemExit("FULL PATIENT REPLAY FAILED: popup commission date did not reach DOCX header")
+    commission_text = _doc_text(commission)
+    if "предъявляет жалобы на" in commission_text.lower():
+        raise SystemExit("FULL PATIENT REPLAY FAILED: legacy standalone complaint tail leaked into commission DOCX")
 
     rollback = OUT / "user_contract_atomic_rollback" / "created"
     if rollback.exists() and list(rollback.glob("*.docx")):
