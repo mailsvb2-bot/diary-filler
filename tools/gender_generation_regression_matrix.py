@@ -82,11 +82,17 @@ def _build_synthetic_document(gender: str):
     doc = Document()
     expectations: list[tuple[int, str]] = []
     ordered_pairs = sorted(GENDER_WORD_PAIRS, key=lambda pair: max(len(pair[0]), len(pair[1])), reverse=True)
+    seen_sources: set[str] = set()
 
-    # Every configured pair must survive a cross-run replacement. This directly
-    # covers words split by Word formatting boundaries.
+    # Every historically reachable source form must survive a cross-run
+    # replacement. Duplicate source forms intentionally keep the first rule in
+    # historical order (for example female forms shared by е/ё male variants).
     for index, pair in enumerate(ordered_pairs):
         source, target = _source_target(pair, gender)
+        source_key = source.casefold()
+        if source_key in seen_sources:
+            continue
+        seen_sources.add(source_key)
         _add_split_case(doc, f"PAIR-{index}", source, target, expectations)
 
         # Representative boundary-negative cases prove the cheap containment
@@ -103,8 +109,8 @@ def _build_synthetic_document(gender: str):
                 expected_target = _preserve_case(variant, target)
                 _add_split_case(doc, f"{variant_name}-{index}", variant, expected_target, expectations)
 
-    # One dense paragraph exercises sequential/cascading semantics over all
-    # rules together rather than only isolated pair cases.
+    # One dense paragraph includes every configured source, including duplicates,
+    # and therefore exercises exact sequential/cascading order across the full rule set.
     dense_sources = [_source_target(pair, gender)[0] for pair in ordered_pairs]
     doc.add_paragraph("DENSE " + " | ".join(dense_sources))
 
