@@ -10,6 +10,8 @@ from diary_service import DiaryService
 from medical_constants import DOCUMENT_ORDER
 from medical_docx_reader import extract_docx_text
 from medical_formatting import format_staff_instrumental_short_name, format_staff_short_name
+from medical_gender import normalize_staff_references_in_document
+from medical_models import PatientData
 from settings_mixin import SettingsMixin
 from tools.generation_performance_profile import _make_fixture
 
@@ -85,6 +87,32 @@ def _assert_medical_documents(root: Path) -> None:
     assert "Врач психиатр Орлов О.О." in admission
 
 
+def _assert_staff_replacement_scope() -> None:
+    doc = Document()
+    doc.add_paragraph("Ф.И.О.: Можарова Е.А.")
+    doc.add_paragraph("Пациентка Можарова Е.А. сообщает о тревоге; Зуйкова А.А. указана в анамнезе семьи.")
+    doc.add_paragraph("Зав. отделением Можарова Е.А.")
+    doc.add_paragraph("10.06.2026 Первичный осмотр с зав. отд. Можаровой Е.А.")
+    doc.add_paragraph("Председатель ВК Зуйкова А.А.")
+    doc.add_paragraph("Врач-психиатр Балаганин С.В.")
+
+    data = PatientData(
+        doctor="Орлов Олег Олегович",
+        head="Соколова Светлана Сергеевна",
+        deputy_chief="Кузнецова Кира Константиновна",
+    )
+    normalize_staff_references_in_document(doc, data)
+    lines = [paragraph.text for paragraph in doc.paragraphs]
+
+    assert lines[0] == "Ф.И.О.: Можарова Е.А.", lines
+    assert "Пациентка Можарова Е.А." in lines[1], lines
+    assert "Зуйкова А.А. указана в анамнезе семьи" in lines[1], lines
+    assert lines[2] == "Зав. отделением Соколова С.С.", lines
+    assert "Первичный осмотр с зав. отд. Соколовой С.С." in lines[3], lines
+    assert lines[4] == "Председатель ВК Кузнецова К.К.", lines
+    assert lines[5] == "Врач-психиатр Орлов О.О.", lines
+
+
 def _assert_diaries(root: Path) -> None:
     statuses = root / "statuses.docx"
     status_doc = Document()
@@ -124,6 +152,7 @@ def main() -> None:
         root = Path(tmp)
         _assert_name_formatting()
         _assert_settings(root)
+        _assert_staff_replacement_scope()
         _assert_medical_documents(root)
         _assert_diaries(root)
     print("STAFF PROFILE REGRESSION OK: settings + 7 medical documents + production diary")

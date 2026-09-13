@@ -154,7 +154,11 @@ def normalize_facility_references_in_document(doc: DocxDocument) -> None:
 
 
 def normalize_staff_references_in_document(doc: DocxDocument, data: PatientData) -> None:
-    """Replace historical template staff names when the saved profile differs."""
+    """Replace historical template staff names only in explicit staff-role fields.
+
+    Never scan arbitrary patient/clinical text for surnames: a patient can legally
+    have the same surname/initials as one of the historical template employees.
+    """
     configured = {
         "doctor": format_staff_short_name(data.doctor),
         "head": format_staff_short_name(data.head),
@@ -162,27 +166,48 @@ def normalize_staff_references_in_document(doc: DocxDocument, data: PatientData)
         "deputy": format_staff_short_name(data.deputy_chief),
         "deputy_instrumental": format_staff_instrumental_short_name(data.deputy_chief),
     }
-    replacements = []
+    doctor_role = r"(?:Лечащий\s+врач|Врач[\s-]*психиатр)"
+    head_role = r"(?:Зав(?:едующ(?:ий|ая)|\.)?\s*(?:отделени(?:ем|я)|отд\.?))"
+    deputy_role = r"(?:Зам(?:еститель|\.)?\s*(?:глав(?:ного)?|гл)\.?\s+врача|Председатель\s+ВК)"
+
+    replacements: list[tuple[str, str, str]] = []
     if configured["doctor"] and configured["doctor"] != "Балаганин С.В":
-        replacements.append((r"Балаганин\s+С\.В\.?", configured["doctor"]))
+        replacements.append((doctor_role, r"Балаганин\s+С\.В\.?", configured["doctor"]))
     if configured["head"] and configured["head"] != "Можарова Е.А.":
         replacements.extend([
-            (r"Можарова\s+Е\.А\.?", configured["head"]),
-            (r"Можаровой\s+Е\.А\.?", configured["head_instrumental"]),
+            (head_role, r"Можарова\s+Е\.А\.?", configured["head"]),
+            (head_role, r"Можаровой\s+Е\.А\.?", configured["head_instrumental"]),
         ])
     if configured["deputy"] and configured["deputy"] != "Зуйкова А.А.":
         replacements.extend([
-            (r"Зуйкова\s+А\.А\.?", configured["deputy"]),
-            (r"Зуйковой\s+А\.А\.?", configured["deputy_instrumental"]),
+            (deputy_role, r"Зуйкова\s+А\.А\.?", configured["deputy"]),
+            (deputy_role, r"Зуйковой\s+А\.А\.?", configured["deputy_instrumental"]),
         ])
     if not replacements:
         return
+
+    compiled = [
+        (
+            re.compile(
+                rf"(?P<role>{role})(?P<separator>[\t :–—-]+)(?P<legacy>{legacy})",
+                re.IGNORECASE,
+            ),
+            replacement,
+        )
+        for role, legacy, replacement in replacements
+        if replacement
+    ]
     for paragraph in list(iter_all_paragraphs(doc)):
         if not (paragraph.text or "").strip():
             continue
-        for pattern, replacement in replacements:
-            if replacement:
-                replace_paragraph_regex_preserving_runs(paragraph, pattern, replacement, flags=re.IGNORECASE)
+        for pattern, replacement in compiled:
+            replace_paragraph_regex_preserving_runs(
+                paragraph,
+                pattern,
+                lambda match, replacement=replacement: (
+                    f"{match.group('role')}{match.group('separator')}{replacement}"
+                ),
+            )
 
 
 def finalize_medical_document(doc: DocxDocument, data: PatientData) -> None:
