@@ -1,0 +1,179 @@
+"""Static fail-closed checks for the outer production-safety/support layer."""
+from __future__ import annotations
+
+import ast
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+MAX_RUNTIME_PYTHON_FILES = 125
+RELEASE_ONLY_ENTRYPOINTS = {"gui_runtime_check.py", "verify_built_exe.py"}
+
+
+def fail(message: str) -> None:
+    raise SystemExit("PRODUCTION SAFETY GATE FAILED: " + message)
+
+
+def read(path: str) -> str:
+    target = ROOT / path
+    if not target.is_file():
+        fail(f"missing required file: {path}")
+    return target.read_text(encoding="utf-8", errors="replace")
+
+
+def assert_runtime_budget() -> None:
+    root_python = sorted(ROOT.glob("*.py"))
+    runtime = [path for path in root_python if path.name not in RELEASE_ONLY_ENTRYPOINTS]
+    if len(runtime) > MAX_RUNTIME_PYTHON_FILES:
+        fail(f"runtime Python budget increased: {len(runtime)} > {MAX_RUNTIME_PYTHON_FILES}")
+
+
+def assert_behavior_contracts() -> None:
+    behavior = read("USER_BEHAVIOR_CONTRACT.md")
+    regression = read("REGRESSION_CONTOUR.md")
+    if "must **not replace, fork or silently alter the document-creation mechanics**" not in behavior:
+        fail("behavior contract lost the no-second-mechanics rule")
+    if "_apply_primary_document_path(...)" not in behavior:
+        fail("behavior contract lost the canonical desktop-intake handoff")
+    if "document_mechanics_guard.py" not in regression:
+        fail("regression contour no longer requires the mechanics guard")
+
+
+def assert_intake_boundary() -> None:
+    startup = read("startup.py")
+    required = (
+        "nothing below generates or edits medical documents",
+        "app._apply_primary_document_path(str(moved_primary), prompt_for_referral=True)",
+        "The medical/diary generation engine stays",
+    )
+    missing = [marker for marker in required if marker not in startup]
+    if missing:
+        fail("desktop intake boundary drifted: " + ", ".join(missing))
+
+
+def assert_self_check_is_outer_only() -> None:
+    source = read("main.py")
+    if 'SELF_CHECK_ARGUMENT = "--self-check"' not in source:
+        fail("packaged technical self-check is missing")
+    tree = ast.parse(source, filename="main.py")
+    self_check_functions = {
+        node.name: ast.get_source_segment(source, node) or ""
+        for node in tree.body
+        if isinstance(node, ast.FunctionDef) and node.name.startswith("_self_check")
+    }
+    if not self_check_functions:
+        fail("self-check functions are missing")
+    body = "\n".join(self_check_functions.values())
+    forbidden = (
+        "MedicalDocumentService",
+        "extract_docx_text",
+        "parse_primary_document",
+        "create_selected_outputs",
+        "_create_medical_documents_impl",
+        "_create_diaries_impl",
+    )
+    leaked = [name for name in forbidden if name in body]
+    if leaked:
+        fail("technical self-check entered document mechanics: " + ", ".join(leaked))
+
+
+def assert_installer_contract() -> None:
+    installer = read("installer/MedicalDiaryAutofill.iss")
+    installer_build = read("BUILD_WINDOWS_INSTALLER.bat")
+    installer_smoke = read("tools/windows_installer_smoke.ps1")
+    main_source = read("main.py")
+
+    required = (
+        "PrivilegesRequired=lowest",
+        "DefaultDirName={localappdata}\\MedicalDiaryAutofill",
+        "--uninstall-intake-agent",
+        "[UninstallDelete]",
+        "InitializeUninstall",
+    )
+    missing = [marker for marker in required if marker not in installer]
+    if missing:
+        fail("installer contract is incomplete: " + ", ".join(missing))
+    if 'UNINSTALL_INTAKE_ARGUMENT = "--uninstall-intake-agent"' not in main_source:
+        fail("packaged EXE cannot retire the watcher during uninstall")
+    if "dist\\MedicalDiaryAutofill.exe" not in installer_build or "ISCC" not in installer_build:
+        fail("installer build script is not bound to the packaged EXE")
+    if "WINDOWS INSTALLER SMOKE OK" not in installer_smoke or "unins*.exe" not in installer_smoke:
+        fail("installer smoke does not prove install/uninstall")
+    if "filesandordirs" in installer.casefold():
+        fail("installer uses broad recursive uninstall deletion")
+
+
+def assert_privacy_and_replay_contract() -> None:
+    main_source = read("main.py")
+    privacy = read("tools/privacy_diagnostics_check.py")
+    replay = read("tools/full_patient_replay_check.py")
+    golden = read("tools/golden_docx_regression.py")
+    manifest = read("tests/golden_docx_manifest.json")
+
+    required_main = (
+        "def _support_error_code",
+        "def _support_sanitize_diagnostics",
+        "def _support_write_startup_failure",
+        "<REDACTED_PRIMARY>",
+        "Код ошибки: {code}",
+    )
+    missing = [marker for marker in required_main if marker not in main_source]
+    if missing:
+        fail("privacy-safe startup diagnostics are incomplete: " + ", ".join(missing))
+    if "PRIVACY DIAGNOSTICS OK" not in privacy:
+        fail("privacy diagnostics executable contract is missing")
+    for marker in ("smoke_test.py", "verify_golden", "FULL PATIENT REPLAY OK"):
+        if marker not in replay:
+            fail(f"full patient replay lost canonical marker: {marker}")
+    for marker in ("GOLDEN_RELATIVE_PATHS", "docx_fingerprint", "GOLDEN DOCX OK"):
+        if marker not in golden:
+            fail(f"golden DOCX regression lost marker: {marker}")
+    if manifest.count("sha256"):
+        fail("golden DOCX manifest must contain raw hashes only, not executable metadata")
+    if manifest.count(":") < 8:
+        fail("golden DOCX manifest does not cover the canonical medical+diary set")
+
+
+def assert_ci_wiring() -> None:
+    workflow = read(".github/workflows/windows-build.yml")
+    build = read("build_exe_windows.bat")
+    guard = read("tools/document_mechanics_guard.py")
+    for marker in (
+        "fetch-depth: 0",
+        "github.event.pull_request.base.sha || github.event.before",
+        "python tools/document_mechanics_guard.py",
+        "python tools/production_safety_gate.py",
+        "python tools/privacy_diagnostics_check.py",
+        "python tools/full_patient_replay_check.py",
+        "python gui_runtime_check.py",
+        "python verify_built_exe.py",
+        "BUILD_WINDOWS_INSTALLER.bat",
+        "windows_installer_smoke.ps1",
+        "MedicalDiaryAutofill-Windows-Installer",
+    ):
+        if marker not in workflow:
+            fail(f"Windows CI lost safety marker: {marker}")
+
+    if '"--diff-filter=ACDMRT"' not in guard:
+        fail("document mechanics guard no longer rejects protected-file deletions")
+
+    build_has_safety_gate = (
+        "python tools\\production_safety_gate.py" in build
+        or "python tools/production_safety_gate.py" in build
+    )
+    if not build_has_safety_gate:
+        fail("local Windows EXE build bypasses production safety gate")
+
+
+def main() -> None:
+    assert_runtime_budget()
+    assert_behavior_contracts()
+    assert_intake_boundary()
+    assert_self_check_is_outer_only()
+    assert_installer_contract()
+    assert_privacy_and_replay_contract()
+    assert_ci_wiring()
+    print("PRODUCTION SAFETY GATE OK")
+
+
+if __name__ == "__main__":
+    main()

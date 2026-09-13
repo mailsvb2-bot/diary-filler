@@ -8,8 +8,10 @@ numbered diary-template discovery, drag-and-drop, and creation actions.
 
 from __future__ import annotations
 
+import json
 import os
 import sys
+import time
 import traceback
 from pathlib import Path
 from tkinter import messagebox
@@ -33,9 +35,13 @@ from startup import (
     _create_root,
     _startup_log_path,
     _write_startup_error,
+    desktop_intake_root_path,
     run_desktop_intake_agent,
     start_desktop_intake_runtime,
 )
+
+SELF_CHECK_ARGUMENT = "--self-check"
+UNINSTALL_INTAKE_ARGUMENT = "--uninstall-intake-agent"
 
 
 def _startup_probe_result_path() -> Path | None:
@@ -73,6 +79,201 @@ def _run_startup_probe() -> None:
             pass
 
 
+def _self_check_runtime_dir() -> Path:
+    base = os.environ.get("LOCALAPPDATA", "").strip() or os.environ.get("APPDATA", "").strip()
+    return (Path(base) if base else Path.home() / ".medical_diary_autofill") / "MedicalDiaryAutofill"
+
+
+def _self_check_settings_ok() -> tuple[bool, str]:
+    base = os.environ.get("APPDATA", "").strip()
+    settings = (Path(base) if base else Path.home()) / "MedicalDiaryAutofill" / "settings.json"
+    if not settings.exists():
+        return True, "настройки ещё не созданы"
+    try:
+        payload = json.loads(settings.read_text(encoding="utf-8"))
+    except Exception:
+        return False, "settings.json повреждён"
+    if not isinstance(payload, dict):
+        return False, "settings.json имеет неверный формат"
+    unexpected = sorted(set(payload) - {"folders", "printer"})
+    if unexpected:
+        return False, "settings.json содержит неожиданные технические ключи"
+    return True, "структура безопасна"
+
+
+def _self_check_rows() -> list[tuple[str, bool, str]]:
+    """Inspect technical installation state only; never open patient documents."""
+    rows: list[tuple[str, bool, str]] = []
+    rows.append(("Программа", True, f"версия {APP_VERSION}"))
+
+    try:
+        intake = desktop_intake_root_path()
+        rows.append(("Выписанные пациенты", intake.is_dir(), "папка доступна" if intake.is_dir() else "папка пока не создана"))
+    except Exception:
+        rows.append(("Выписанные пациенты", False, "не удалось определить Desktop"))
+
+    settings_ok, settings_message = _self_check_settings_ok()
+    rows.append(("Технические настройки", settings_ok, settings_message))
+
+    try:
+        import tkinterdnd2  # noqa: F401
+        rows.append(("Drag-and-drop", True, "TkDND доступен"))
+    except Exception:
+        rows.append(("Drag-and-drop", False, "TkDND недоступен; ручной выбор файлов остаётся рабочим"))
+
+    runtime = _self_check_runtime_dir()
+    appdata = os.environ.get("APPDATA", "").strip()
+    startup_script = (
+        Path(appdata) / "Microsoft" / "Windows" / "Start Menu" / "Programs" / "Startup" / "MedicalDiaryAutofill Intake.vbs"
+        if appdata
+        else None
+    )
+    startup_ok = bool(startup_script and startup_script.is_file())
+    rows.append(("Фоновое наблюдение", startup_ok, "автозагрузка настроена" if startup_ok else "автозагрузка не найдена"))
+
+    handoff = runtime / "desktop-intake-agent-handoff.json"
+    handoff_ok = False
+    if handoff.is_file():
+        try:
+            payload = json.loads(handoff.read_text(encoding="utf-8"))
+            handoff_ok = (
+                isinstance(payload, dict)
+                and payload.get("schema") == 1
+                and isinstance(payload.get("identity"), str)
+                and bool(payload.get("identity"))
+                and isinstance(payload.get("gui_command"), list)
+                and bool(payload.get("gui_command"))
+            )
+        except Exception:
+            handoff_ok = False
+    rows.append(("Watcher handoff", handoff_ok, "состояние корректно" if handoff_ok else "состояние ещё не создано или повреждено"))
+
+    agent_log = runtime / "desktop-intake-agent.log"
+    rows.append(("Технический журнал watcher", True, "создан" if agent_log.is_file() else "пока не создан"))
+    return rows
+
+
+def _self_check_report() -> str:
+    lines = ["ПРОВЕРКА MEDICALDIARYAUTOFILL", ""]
+    for name, ok, detail in _self_check_rows():
+        lines.append(f"{'✅' if ok else '⚠'} {name}: {detail}")
+    lines.extend([
+        "",
+        "Проверка не читает медицинские документы и не меняет механику их создания.",
+        "При проблеме фонового наблюдения программу по-прежнему можно использовать вручную.",
+    ])
+    return "\n".join(lines)
+
+
+def _self_check_write_report(report: str) -> Path | None:
+    try:
+        runtime = _self_check_runtime_dir()
+        runtime.mkdir(parents=True, exist_ok=True)
+        path = runtime / "self-check.txt"
+        tmp = path.with_suffix(".tmp")
+        tmp.write_text(report + "\n", encoding="utf-8")
+        os.replace(tmp, path)
+        return path
+    except Exception:
+        return None
+
+
+def _self_check_run() -> None:
+    report = _self_check_report()
+    path = _self_check_write_report(report)
+    try:
+        print(report)
+    except Exception:
+        pass
+    try:
+        suffix = f"\n\nОтчёт: {path}" if path is not None else ""
+        messagebox.showinfo("Проверить программу", report + suffix)
+    except Exception:
+        pass
+
+
+def _intake_uninstall_startup_script() -> Path | None:
+    appdata = os.environ.get("APPDATA", "").strip()
+    if not appdata:
+        return None
+    return Path(appdata) / "Microsoft" / "Windows" / "Start Menu" / "Programs" / "Startup" / "MedicalDiaryAutofill Intake.vbs"
+
+
+def _intake_uninstall_retire_agent() -> None:
+    """Retire the outer watcher without touching patient folders or documents."""
+    if os.name != "nt":
+        return
+
+    runtime = _self_check_runtime_dir()
+    runtime.mkdir(parents=True, exist_ok=True)
+    handoff = runtime / "desktop-intake-agent-handoff.json"
+    tmp = handoff.with_suffix(".tmp")
+    payload = {
+        "schema": 1,
+        "identity": f"retired-uninstall-{time.time_ns()}",
+        "gui_command": [str(Path(sys.executable).resolve())],
+    }
+    tmp.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+    os.replace(tmp, handoff)
+
+    startup_script = _intake_uninstall_startup_script()
+    if startup_script is not None:
+        try:
+            startup_script.unlink(missing_ok=True)
+        except OSError:
+            pass
+
+    # The watcher polls its handoff every two seconds. Give a running old agent
+    # a bounded opportunity to observe the retirement marker before setup removes
+    # the executable and the remaining technical files.
+    time.sleep(2.6)
+    try:
+        (runtime / "desktop-intake-gui.heartbeat").unlink(missing_ok=True)
+    except OSError:
+        pass
+
+
+def _support_error_code(stage: str, exc: BaseException) -> str:
+    """Stable support code without patient names, document text or file paths."""
+    stage_key = "".join(ch for ch in str(stage or "runtime").upper() if ch.isalnum())[:12] or "RUNTIME"
+    exc_key = "".join(ch for ch in type(exc).__name__.upper() if ch.isalnum())[:20] or "ERROR"
+    return f"MDA-{stage_key}-{exc_key}"
+
+
+def _support_sanitize_diagnostics(details: str) -> str:
+    """Remove user/profile/temp paths and private intake arguments from support text."""
+    import re
+
+    text = str(details or "")
+    replacements = []
+    for name in ("USERPROFILE", "HOME", "APPDATA", "LOCALAPPDATA", "TEMP", "TMP"):
+        value = os.environ.get(name, "").strip()
+        if value:
+            replacements.append(value)
+    replacements.append(str(Path.home()))
+    for raw in sorted({item for item in replacements if item}, key=len, reverse=True):
+        text = text.replace(raw, "<USER_PATH>")
+        text = text.replace(raw.replace("\\", "/"), "<USER_PATH>")
+        text = text.replace(raw.replace("/", "\\"), "<USER_PATH>")
+
+    text = re.sub(
+        r"(?i)(--intake-primary(?:=|\s+))(?:(?:\"[^\"]*\")|(?:'[^']*')|(?:\S+))",
+        r"\1<REDACTED_PRIMARY>",
+        text,
+    )
+    return text
+
+
+def _support_write_startup_failure(exc: BaseException, *, stage: str = "startup") -> tuple[str, str]:
+    """Write bounded technical diagnostics without reading any medical document."""
+    code = _support_error_code(stage, exc)
+    raw = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
+    safe = _support_sanitize_diagnostics(raw)
+    payload = f"code={code}\nerror_type={type(exc).__name__}\n\n{safe}"
+    _write_startup_error(payload[:128 * 1024])
+    return code, safe
+
+
 def _intake_primary_argument(argv: list[str]) -> str:
     """Read the private agent hand-off argument without changing normal CLI behavior."""
     for index, value in enumerate(argv):
@@ -90,7 +291,15 @@ def main() -> None:
             _run_startup_probe()
             return
 
-        # The watcher is only another startup mode of the same EXE.  It never
+        if UNINSTALL_INTAKE_ARGUMENT in sys.argv[1:]:
+            _intake_uninstall_retire_agent()
+            return
+
+        if SELF_CHECK_ARGUMENT in sys.argv[1:]:
+            _self_check_run()
+            return
+
+        # The watcher is only another startup mode of the same EXE. It never
         # creates medical documents; it only opens the normal GUI for a primary.
         if DESKTOP_INTAKE_AGENT_ARGUMENT in sys.argv[1:]:
             exit_code = run_desktop_intake_agent()
@@ -109,15 +318,16 @@ def main() -> None:
         )
         root.mainloop()
     except Exception as exc:  # pragma: no cover - safety net for Windows double-click start
-        details = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
-        _write_startup_error(details)
+        code, safe_details = _support_write_startup_failure(exc, stage="startup")
         if probe_mode:
-            _write_startup_probe_result("FAIL\n" + details)
+            _write_startup_probe_result("FAIL\n" + f"code={code}\n" + safe_details)
         else:
             try:
                 messagebox.showerror(
                     "Ошибка запуска",
-                    f"Программа не запустилась. Подробности записаны в файл:\n{_startup_log_path()}\n\n{exc}",
+                    "Программа не запустилась. "
+                    f"Код ошибки: {code}\n"
+                    f"Технический отчёт: {_startup_log_path()}",
                 )
             except Exception:
                 pass

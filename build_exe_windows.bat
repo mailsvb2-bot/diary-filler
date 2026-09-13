@@ -17,7 +17,7 @@ if errorlevel 1 (
 )
 
 if not exist .venv_build (
-  echo [1/5] Создаю виртуальное окружение сборки...
+  echo [1/6] Создаю виртуальное окружение сборки...
   python -m venv .venv_build
   if errorlevel 1 (
     echo [ОШИБКА] Не удалось создать виртуальное окружение.
@@ -33,7 +33,7 @@ if errorlevel 1 (
   exit /b 1
 )
 
-echo [2/5] Обновляю pip...
+echo [2/6] Обновляю pip...
 python -m pip install --upgrade pip
 if errorlevel 1 (
   echo [ОШИБКА] Не удалось обновить pip.
@@ -41,7 +41,7 @@ if errorlevel 1 (
   exit /b 1
 )
 
-echo [3/5] Устанавливаю сборочные зависимости...
+echo [3/6] Устанавливаю сборочные зависимости...
 python -m pip install -r requirements_build.txt
 if errorlevel 1 (
   echo [ОШИБКА] Не удалось установить зависимости сборки.
@@ -49,7 +49,15 @@ if errorlevel 1 (
   exit /b 1
 )
 
-echo [4/5] Проверяю release-gate...
+echo [4/6] Проверяю production-safety gate...
+python tools\production_safety_gate.py
+if errorlevel 1 (
+  echo [ОШИБКА] Production-safety gate не прошёл. EXE не собираю.
+  if "%CI%"=="" pause
+  exit /b 1
+)
+
+echo [5/6] Проверяю release-gate...
 python release_check.py
 if errorlevel 1 (
   echo [ОШИБКА] Release-gate не прошёл. EXE не собираю.
@@ -57,7 +65,7 @@ if errorlevel 1 (
   exit /b 1
 )
 
-echo [5/5] Собираю один EXE через PyInstaller...
+echo [6/6] Собираю один EXE через PyInstaller...
 set ADD_TEMPLATES=
 if exist templates (
   set ADD_TEMPLATES=--add-data "templates;templates"
