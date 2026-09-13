@@ -107,6 +107,7 @@ def assert_privacy_and_replay_contract() -> None:
     privacy = read("tools/privacy_diagnostics_check.py")
     replay = read("tools/full_patient_replay_check.py")
     golden = read("tools/golden_docx_regression.py")
+    gender_matrix = read("tools/gender_generation_regression_matrix.py")
     manifest = read("tests/golden_docx_manifest.json")
 
     required_main = (
@@ -127,6 +128,15 @@ def assert_privacy_and_replay_contract() -> None:
     for marker in ("GOLDEN_RELATIVE_PATHS", "docx_fingerprint", "GOLDEN DOCX OK"):
         if marker not in golden:
             fail(f"golden DOCX regression lost marker: {marker}")
+    for marker in (
+        "_reference_adapt_document_to_patient_gender",
+        "GENDER_WORD_PAIRS",
+        "DOCUMENT_ORDER",
+        "docx_fingerprint",
+        "GENDER GENERATION REGRESSION MATRIX OK",
+    ):
+        if marker not in gender_matrix:
+            fail(f"gender generation regression matrix lost marker: {marker}")
     if manifest.count("sha256"):
         fail("golden DOCX manifest must contain raw hashes only, not executable metadata")
     if manifest.count(":") < 8:
@@ -144,6 +154,7 @@ def assert_ci_wiring() -> None:
         "python tools/production_safety_gate.py",
         "python tools/privacy_diagnostics_check.py",
         "python tools/full_patient_replay_check.py",
+        "python tools/gender_generation_regression_matrix.py",
         "python gui_runtime_check.py",
         "python verify_built_exe.py",
         "BUILD_WINDOWS_INSTALLER.bat",
