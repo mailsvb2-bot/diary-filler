@@ -63,7 +63,7 @@ def _source_target(pair: tuple[str, str], gender: str) -> tuple[str, str]:
     return (female, male) if gender == "male" else (male, female)
 
 
-def _add_split_case(doc, label: str, source: str, target: str, expectations: list[tuple[int, str]]) -> None:
+def _add_split_case(doc, label: str, source: str, must_change: list[tuple[int, str]]) -> None:
     paragraph = doc.add_paragraph()
     prefix = f"{label} START "
     suffix = " END"
@@ -75,58 +75,66 @@ def _add_split_case(doc, label: str, source: str, target: str, expectations: lis
     second.italic = True
     tail = paragraph.add_run(suffix)
     tail.underline = True
-    expectations.append((len(doc.paragraphs) - 1, prefix + target + suffix))
+    must_change.append((len(doc.paragraphs) - 1, prefix + source + suffix))
 
 
 def _build_synthetic_document(gender: str):
     doc = Document()
-    expectations: list[tuple[int, str]] = []
+    must_change: list[tuple[int, str]] = []
+    must_stay: list[tuple[int, str]] = []
     ordered_pairs = sorted(GENDER_WORD_PAIRS, key=lambda pair: max(len(pair[0]), len(pair[1])), reverse=True)
     seen_sources: set[str] = set()
 
     # Every historically reachable source form must survive a cross-run
-    # replacement. Duplicate source forms intentionally keep the first rule in
-    # historical order (for example female forms shared by е/ё male variants).
+    # replacement. Duplicate source forms intentionally keep only one synthetic
+    # case because the historical ordered algorithm itself determines which of
+    # multiple е/ё targets wins. Exact parity is checked against that algorithm.
     for index, pair in enumerate(ordered_pairs):
-        source, target = _source_target(pair, gender)
+        source, _target = _source_target(pair, gender)
         source_key = source.casefold()
         if source_key in seen_sources:
             continue
         seen_sources.add(source_key)
-        _add_split_case(doc, f"PAIR-{index}", source, target, expectations)
+        _add_split_case(doc, f"PAIR-{index}", source, must_change)
 
         # Representative boundary-negative cases prove the cheap containment
         # prefilter cannot turn a non-match into a match.
         if index % 11 == 0:
             text = f"BOUND-{index} x{source}y"
             doc.add_paragraph(text)
-            expectations.append((len(doc.paragraphs) - 1, text))
+            must_stay.append((len(doc.paragraphs) - 1, text))
 
-        # Representative case-preservation cases exercise the exact historical
-        # uppercase/title-case behavior in addition to the all-lower pair matrix.
+        # Representative case-preservation cases exercise title/uppercase forms.
         if index % 13 == 0:
             for variant_name, variant in (("TITLE", source[:1].upper() + source[1:]), ("UPPER", source.upper())):
-                expected_target = _preserve_case(variant, target)
-                _add_split_case(doc, f"{variant_name}-{index}", variant, expected_target, expectations)
+                _add_split_case(doc, f"{variant_name}-{index}", variant, must_change)
 
     # One dense paragraph includes every configured source, including duplicates,
     # and therefore exercises exact sequential/cascading order across the full rule set.
     dense_sources = [_source_target(pair, gender)[0] for pair in ordered_pairs]
-    doc.add_paragraph("DENSE " + " | ".join(dense_sources))
+    dense_text = "DENSE " + " | ".join(dense_sources)
+    doc.add_paragraph(dense_text)
+    must_change.append((len(doc.paragraphs) - 1, dense_text))
 
     # Diagnosis paragraphs are intentionally protected from gender rewriting.
     diagnosis_text = "Диагноз: " + " | ".join(dense_sources)
     doc.add_paragraph(diagnosis_text)
-    expectations.append((len(doc.paragraphs) - 1, diagnosis_text))
-    return doc, expectations
+    must_stay.append((len(doc.paragraphs) - 1, diagnosis_text))
+    return doc, must_change, must_stay
 
 
-def _verify_expectations(doc, expectations: list[tuple[int, str]], gender: str) -> None:
-    for index, expected in expectations:
+def _verify_synthetic_contract(doc, must_change: list[tuple[int, str]], must_stay: list[tuple[int, str]], gender: str) -> None:
+    for index, original in must_change:
+        actual = doc.paragraphs[index].text
+        if actual == original:
+            raise SystemExit(
+                f"GENDER MATRIX FAILED: expected a historical gender replacement for {gender} paragraph {index}"
+            )
+    for index, expected in must_stay:
         actual = doc.paragraphs[index].text
         if actual != expected:
             raise SystemExit(
-                "GENDER MATRIX FAILED: unexpected synthetic text for "
+                "GENDER MATRIX FAILED: protected/boundary text changed for "
                 f"{gender} paragraph {index}: expected {expected!r}, actual {actual!r}"
             )
 
@@ -134,13 +142,13 @@ def _verify_expectations(doc, expectations: list[tuple[int, str]], gender: str) 
 def _verify_synthetic_parity(root: Path) -> int:
     checked = 0
     for gender, fio in (("female", "Иванова Ирина Ивановна"), ("male", "Петров Пётр Петрович")):
-        optimized, expectations = _build_synthetic_document(gender)
-        reference, _ = _build_synthetic_document(gender)
+        optimized, must_change, must_stay = _build_synthetic_document(gender)
+        reference, _, _ = _build_synthetic_document(gender)
         data = PatientData(fio=fio, output_fio=fio)
 
         medical_gender.adapt_document_to_patient_gender(optimized, data)
         _reference_adapt_document_to_patient_gender(reference, data)
-        _verify_expectations(optimized, expectations, gender)
+        _verify_synthetic_contract(optimized, must_change, must_stay, gender)
 
         optimized_path = root / f"synthetic-{gender}-optimized.docx"
         reference_path = root / f"synthetic-{gender}-reference.docx"
@@ -148,7 +156,7 @@ def _verify_synthetic_parity(root: Path) -> int:
         reference.save(reference_path)
         if docx_fingerprint(optimized_path) != docx_fingerprint(reference_path):
             raise SystemExit(f"GENDER MATRIX FAILED: optimized/reference run structure differs for {gender}")
-        checked += len(expectations)
+        checked += len(must_change) + len(must_stay)
     return checked
 
 
