@@ -39,6 +39,7 @@ Filename: "{app}\{#MyAppExeName}"; Description: "Запустить MedicalDiary
 [UninstallDelete]
 Type: files; Name: "{autostartup}\MedicalDiaryAutofill Intake.vbs"
 Type: files; Name: "{localappdata}\MedicalDiaryAutofill\desktop-intake-gui.heartbeat"
+Type: files; Name: "{localappdata}\MedicalDiaryAutofill\desktop-intake-agent.heartbeat"
 Type: files; Name: "{localappdata}\MedicalDiaryAutofill\desktop-intake-agent-handoff.json"
 Type: files; Name: "{localappdata}\MedicalDiaryAutofill\desktop-intake-agent.log"
 Type: files; Name: "{localappdata}\MedicalDiaryAutofill\self-check.txt"

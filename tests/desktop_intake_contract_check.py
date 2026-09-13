@@ -3,8 +3,11 @@ from __future__ import annotations
 
 import sys
 import tempfile
+import time
 from datetime import date
 from pathlib import Path
+
+from docx import Document
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
@@ -61,6 +64,52 @@ def _assert_primary_detection_contract() -> None:
     assert not startup.desktop_intake_is_candidate_word_file("~$Первичный.docx")
     assert not startup.desktop_intake_is_candidate_word_file("ЭПИ.pdf")
 
+
+
+def _assert_canonical_primary_parser_contract() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        canonical = root / "patient.docx"
+        doc = Document()
+        doc.add_paragraph("12.05.2026")
+        doc.add_paragraph("Ф.И.О.: Иванов Иван Иванович")
+        doc.add_paragraph("Дата рождения: 01.01.1980")
+        doc.add_paragraph("В 3 отделение КДП поступает первично")
+        doc.add_paragraph("Анамнез жизни: без особенностей")
+        doc.add_paragraph("Психический статус: контактен")
+        doc.add_paragraph("Диагноз: F20.0")
+        doc.save(canonical)
+        assert startup.desktop_intake_is_primary_document(canonical), "canonical parser primary was rejected"
+
+        discharge = root / "discharge.docx"
+        doc = Document()
+        doc.add_paragraph("Выписной эпикриз")
+        doc.add_paragraph("Ф.И.О.: Иванов Иван Иванович")
+        doc.add_paragraph("Дата рождения: 01.01.1980")
+        doc.add_paragraph("Диагноз: F20.0")
+        doc.add_paragraph("Лечение: терапия")
+        doc.save(discharge)
+        assert not startup.desktop_intake_is_primary_document(discharge), "discharge must stay excluded"
+
+
+def _assert_agent_heartbeat_contract() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        runtime = Path(tmp)
+        original_runtime_dir = startup._desktop_runtime_dir
+        try:
+            startup._desktop_runtime_dir = lambda: runtime  # type: ignore[assignment]
+            assert startup._desktop_agent_is_active() is False
+            startup._desktop_touch_agent_heartbeat()
+            assert startup._desktop_agent_is_active() is True
+            heartbeat = runtime / "desktop-intake-agent.heartbeat"
+            heartbeat.write_text(
+                '{"schema": 1, "timestamp": %s, "identity": "%s"}'
+                % (time.time() - 60, startup._desktop_current_agent_identity()),
+                encoding="ascii",
+            )
+            assert startup._desktop_agent_is_active() is False
+        finally:
+            startup._desktop_runtime_dir = original_runtime_dir  # type: ignore[assignment]
 
 def _assert_top_level_only_and_safe_move() -> None:
     with tempfile.TemporaryDirectory() as tmp:
@@ -146,8 +195,10 @@ def _assert_agent_update_and_encoding_contract() -> None:
 def main() -> None:
     _assert_naming_contract()
     _assert_primary_detection_contract()
+    _assert_canonical_primary_parser_contract()
     _assert_top_level_only_and_safe_move()
     _assert_agent_update_and_encoding_contract()
+    _assert_agent_heartbeat_contract()
     print("desktop intake contract: PASS")
 
 

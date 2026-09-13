@@ -105,6 +105,10 @@ jobs:
       - name: Verify packaged EXE startup and TkDND
         run: python verify_built_exe.py
 
+      - name: Run packaged desktop intake auto-launch E2E
+        shell: pwsh
+        run: ./tools/windows_desktop_intake_e2e.ps1 -AppPath ./dist/MedicalDiaryAutofill.exe
+
       - name: Ensure Inno Setup 6
         shell: pwsh
         run: |
