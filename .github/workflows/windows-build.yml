@@ -59,6 +59,8 @@ jobs:
         run: python tools/full_patient_replay_check.py
 
       - name: Profile canonical document generation
+        env:
+          PYTHONPATH: .
         run: python tools/generation_performance_profile.py --runs 3 --json-out generation_performance_profile.json
 
       - name: Upload generation performance profile
