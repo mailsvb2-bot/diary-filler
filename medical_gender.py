@@ -76,10 +76,25 @@ def adapt_document_to_patient_gender(doc: DocxDocument, data: PatientData) -> No
     «Находился на лечении...» -> «Находилась на лечении...» для женской фамилии.
     Диагнозные строки оставляем как есть: диагноз — отдельная медицинская сущность,
     а не грамматическое описание пациента.
+
+    Performance note: the replacement contract remains strictly sequential, but
+    regex work is skipped when the current paragraph cannot contain the source
+    token. This preserves the old cascading semantics while avoiding tens of
+    thousands of no-op run-preserving scans per generated комплект.
     """
     gender = patient_gender(data)
     if gender not in {"male", "female"}:
         return
+
+    pairs = sorted(GENDER_WORD_PAIRS, key=lambda pair: max(len(pair[0]), len(pair[1])), reverse=True)
+    prepared_pairs: list[tuple[str, re.Pattern[str], str]] = []
+    for male, female in pairs:
+        source, target = (female, male) if gender == "male" else (male, female)
+        pattern = re.compile(
+            rf"(?<![A-Za-zА-Яа-яЁё]){re.escape(source)}(?![A-Za-zА-Яа-яЁё])",
+            re.IGNORECASE,
+        )
+        prepared_pairs.append((source.casefold(), pattern, target))
 
     for paragraph in list(iter_all_paragraphs(doc)):
         original = paragraph.text or ""
@@ -91,18 +106,22 @@ def adapt_document_to_patient_gender(doc: DocxDocument, data: PatientData) -> No
             continue
         # Apply the same pair rules directly to runs so a local gender change
         # does not flatten bold/italic/underlined fragments elsewhere in the paragraph.
-        pairs = sorted(GENDER_WORD_PAIRS, key=lambda pair: max(len(pair[0]), len(pair[1])), reverse=True)
-        for male, female in pairs:
-            source, target = (female, male) if gender == "male" else (male, female)
-            pattern = re.compile(
-                rf"(?<![A-Za-zА-Яа-яЁё]){re.escape(source)}(?![A-Za-zА-Яа-яЁё])",
-                re.IGNORECASE,
-            )
-            replace_paragraph_regex_preserving_runs(
+        # The cheap casefold containment check is only a negative filter: every
+        # possible match still goes through the exact historical regex/replacer.
+        current_folded = original.casefold()
+        for source_folded, pattern, target in prepared_pairs:
+            if source_folded not in current_folded:
+                continue
+            changed = replace_paragraph_regex_preserving_runs(
                 paragraph,
                 pattern,
                 lambda match, target=target: _preserve_case_for_document(match.group(0), target),
             )
+            if changed:
+                # A replacement can theoretically introduce the source token of a
+                # later rule, so refresh the prefilter text and preserve the exact
+                # sequential/cascading behavior of the previous implementation.
+                current_folded = (paragraph.text or "").casefold()
 
 
 
