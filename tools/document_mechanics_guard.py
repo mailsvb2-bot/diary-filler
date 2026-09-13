@@ -1,7 +1,7 @@
 """Fail CI when infrastructure work touches the working document mechanics.
 
 This guard intentionally protects source ownership, not just behavior observed by
-a test.  Production-safety work must move outward instead of editing the parser,
+a test. Production-safety work must move outward instead of editing the parser,
 renderers, popup/data flow or medical/diary generation routes.
 """
 from __future__ import annotations
@@ -10,33 +10,34 @@ import fnmatch
 import os
 from pathlib import Path
 import subprocess
-import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 
+# Deliberately broad. Safety/support/installer work has no reason to edit these
+# paths. A future explicit document-mechanics task must be reviewed separately.
 PROTECTED_PATTERNS = (
-    "actions_creation_orchestrator.py",
+    "actions_creation*.py",
     "actions_diary_flow.py",
     "actions_medical_flow.py",
+    "actions_navigation.py",
+    "actions_selection.py",
+    "actions_template_checks.py",
+    "actions_ui_state.py",
+    "app.py",
+    "app_config.py",
+    "app_initialization.py",
+    "diagnosis_widget.py",
     "dialog_*.py",
     "files_mixin.py",
-    "medical_documents.py",
-    "medical_formatting.py",
-    "medical_paths.py",
-    "medical_service.py",
-    "medical_parser*.py",
-    "medical_renderer*.py",
-    "medical_docx_editor*.py",
-    "diary_batch.py",
-    "diary_constants.py",
-    "diary_dates.py",
-    "diary_schedule.py",
-    "diary_service.py",
-    "diary_text_parser.py",
-    "diary_text_selection.py",
-    "diary_writer*.py",
-    "diary_table*.py",
+    "icd10_*.py",
+    "medical_*.py",
+    "diary_*.py",
+    "shared_dates.py",
+    "shared_paths.py",
     "embedded_templates.py",
+    "layout_action_bar.py",
+    "layout_checklist.py",
+    "layout_sources.py",
 )
 
 

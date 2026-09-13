@@ -76,6 +76,32 @@ def assert_self_check_is_outer_only() -> None:
         fail("technical self-check entered document mechanics: " + ", ".join(leaked))
 
 
+def assert_installer_contract() -> None:
+    installer = read("installer/MedicalDiaryAutofill.iss")
+    installer_build = read("BUILD_WINDOWS_INSTALLER.bat")
+    installer_smoke = read("tools/windows_installer_smoke.ps1")
+    main_source = read("main.py")
+
+    required = (
+        "PrivilegesRequired=lowest",
+        "DefaultDirName={localappdata}\\MedicalDiaryAutofill",
+        "--uninstall-intake-agent",
+        "[UninstallDelete]",
+        "InitializeUninstall",
+    )
+    missing = [marker for marker in required if marker not in installer]
+    if missing:
+        fail("installer contract is incomplete: " + ", ".join(missing))
+    if 'UNINSTALL_INTAKE_ARGUMENT = "--uninstall-intake-agent"' not in main_source:
+        fail("packaged EXE cannot retire the watcher during uninstall")
+    if "dist\\MedicalDiaryAutofill.exe" not in installer_build or "ISCC" not in installer_build:
+        fail("installer build script is not bound to the packaged EXE")
+    if "WINDOWS INSTALLER SMOKE OK" not in installer_smoke or "unins*.exe" not in installer_smoke:
+        fail("installer smoke does not prove install/uninstall")
+    if "filesandordirs" in installer.casefold():
+        fail("installer uses broad recursive uninstall deletion")
+
+
 def assert_ci_wiring() -> None:
     workflow = read(".github/workflows/windows-build.yml")
     build = read("build_exe_windows.bat")
@@ -85,6 +111,9 @@ def assert_ci_wiring() -> None:
         "python tools/production_safety_gate.py",
         "python gui_runtime_check.py",
         "python verify_built_exe.py",
+        "BUILD_WINDOWS_INSTALLER.bat",
+        "windows_installer_smoke.ps1",
+        "MedicalDiaryAutofill-Windows-Installer",
     ):
         if marker not in workflow:
             fail(f"Windows CI lost safety marker: {marker}")
@@ -102,6 +131,7 @@ def main() -> None:
     assert_behavior_contracts()
     assert_intake_boundary()
     assert_self_check_is_outer_only()
+    assert_installer_contract()
     assert_ci_wiring()
     print("PRODUCTION SAFETY GATE OK")
 

@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+import time
 import traceback
 from pathlib import Path
 from tkinter import messagebox
@@ -40,6 +41,7 @@ from startup import (
 )
 
 SELF_CHECK_ARGUMENT = "--self-check"
+UNINSTALL_INTAKE_ARGUMENT = "--uninstall-intake-agent"
 
 
 def _startup_probe_result_path() -> Path | None:
@@ -190,6 +192,47 @@ def _self_check_run() -> None:
         pass
 
 
+def _intake_uninstall_startup_script() -> Path | None:
+    appdata = os.environ.get("APPDATA", "").strip()
+    if not appdata:
+        return None
+    return Path(appdata) / "Microsoft" / "Windows" / "Start Menu" / "Programs" / "Startup" / "MedicalDiaryAutofill Intake.vbs"
+
+
+def _intake_uninstall_retire_agent() -> None:
+    """Retire the outer watcher without touching patient folders or documents."""
+    if os.name != "nt":
+        return
+
+    runtime = _self_check_runtime_dir()
+    runtime.mkdir(parents=True, exist_ok=True)
+    handoff = runtime / "desktop-intake-agent-handoff.json"
+    tmp = handoff.with_suffix(".tmp")
+    payload = {
+        "schema": 1,
+        "identity": f"retired-uninstall-{time.time_ns()}",
+        "gui_command": [str(Path(sys.executable).resolve())],
+    }
+    tmp.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+    os.replace(tmp, handoff)
+
+    startup_script = _intake_uninstall_startup_script()
+    if startup_script is not None:
+        try:
+            startup_script.unlink(missing_ok=True)
+        except OSError:
+            pass
+
+    # The watcher polls its handoff every two seconds. Give a running old agent
+    # a bounded opportunity to observe the retirement marker before setup removes
+    # the executable and the remaining technical files.
+    time.sleep(2.6)
+    try:
+        (runtime / "desktop-intake-gui.heartbeat").unlink(missing_ok=True)
+    except OSError:
+        pass
+
+
 def _intake_primary_argument(argv: list[str]) -> str:
     """Read the private agent hand-off argument without changing normal CLI behavior."""
     for index, value in enumerate(argv):
@@ -207,11 +250,15 @@ def main() -> None:
             _run_startup_probe()
             return
 
+        if UNINSTALL_INTAKE_ARGUMENT in sys.argv[1:]:
+            _intake_uninstall_retire_agent()
+            return
+
         if SELF_CHECK_ARGUMENT in sys.argv[1:]:
             _self_check_run()
             return
 
-        # The watcher is only another startup mode of the same EXE.  It never
+        # The watcher is only another startup mode of the same EXE. It never
         # creates medical documents; it only opens the normal GUI for a primary.
         if DESKTOP_INTAKE_AGENT_ARGUMENT in sys.argv[1:]:
             exit_code = run_desktop_intake_agent()
