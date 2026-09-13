@@ -465,6 +465,7 @@ def _build_contract_app(*, primary_path: Path, output_dir: Path, selected: tuple
     app._diary_template_folder_contains_cache = {}
     app.data = app.service.parse_primary_document(primary_path)
     app._log_buffer = []
+    app._settings = {}
     app._last_preview_text = ""
     app._suspend_user_edit_tracking = False
     app._manual_output_dir = True
