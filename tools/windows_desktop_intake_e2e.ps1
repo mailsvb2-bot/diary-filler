@@ -146,23 +146,28 @@ try {
 
     if (-not $initialGui.HasExited) {
         try { $null = $initialGui.CloseMainWindow() } catch {}
-        if (-not $initialGui.WaitForExit(2500)) {
-            # The production window is frameless (Tk overrideredirect), so
-            # CloseMainWindow may be a no-op. Kill only the GUI process here:
-            # Kill($true) would also kill the detached intake-agent child and
-            # turn this E2E into a false negative.
-            $initialGui.Kill()
-            $initialGui.WaitForExit()
-        }
+        $null = $initialGui.WaitForExit(2500)
     }
 
-    Wait-Until -Description 'intake-agent survives GUI close and refreshes heartbeat' -TimeoutSeconds 15 -Condition {
-        $agents = @((Get-AppProcessRecords) | Where-Object { $_.CommandLine -match '--intake-agent' })
-        if ($agents.Count -lt 1 -or -not (Test-Path -LiteralPath $agentHeartbeat)) { return $false }
+    # PyInstaller one-file can leave a GUI child after the launcher process exits.
+    # Stop every non-agent process for this exact EXE, but never kill the watcher.
+    foreach ($record in @(Get-AppProcessRecords | Where-Object { $_.CommandLine -notmatch '--intake-agent' })) {
+        try { Stop-Process -Id $record.ProcessId -Force -ErrorAction SilentlyContinue } catch {}
+    }
+    Wait-Until -Description 'all GUI processes closed while intake-agent stays alive' -TimeoutSeconds 15 -Condition {
+        $records = @(Get-AppProcessRecords)
+        $agents = @($records | Where-Object { $_.CommandLine -match '--intake-agent' })
+        $nonAgents = @($records | Where-Object { $_.CommandLine -notmatch '--intake-agent' })
+        if ($agents.Count -lt 1 -or $nonAgents.Count -ne 0 -or -not (Test-Path -LiteralPath $agentHeartbeat)) { return $false }
         try {
             $hb = Get-Content -LiteralPath $agentHeartbeat -Raw | ConvertFrom-Json
             return ([double]$hb.timestamp -gt $agentTimestampBeforeClose)
         } catch { return $false }
+    }
+
+    $launchLogCountBeforeDrop = 0
+    if (Test-Path -LiteralPath $agentLog) {
+        $launchLogCountBeforeDrop = @((Get-Content -LiteralPath $agentLog) | Where-Object { $_ -match 'primary detected; GUI launch requested' }).Count
     }
 
     $builder = Join-Path $testRoot 'make_intake_fixture.py'
@@ -187,8 +192,12 @@ d.save(p)
         throw 'Failed to create primary DOCX fixture for watcher E2E'
     }
 
-    Wait-Until -Description 'watcher-triggered GUI process with --intake-primary' -TimeoutSeconds 40 -Condition {
-        @((Get-AppProcessRecords) | Where-Object { $_.CommandLine -match '--intake-primary' }).Count -ge 1
+    Wait-Until -Description 'watcher-triggered GUI launch request and non-agent app process' -TimeoutSeconds 40 -Condition {
+        $records = @(Get-AppProcessRecords)
+        $nonAgents = @($records | Where-Object { $_.CommandLine -notmatch '--intake-agent' })
+        if ($nonAgents.Count -lt 1 -or -not (Test-Path -LiteralPath $agentLog)) { return $false }
+        $launchLogCount = @((Get-Content -LiteralPath $agentLog) | Where-Object { $_ -match 'primary detected; GUI launch requested' }).Count
+        return ($launchLogCount -gt $launchLogCountBeforeDrop)
     }
     Wait-Until -Description 'primary DOCX moved into patient subfolder' -TimeoutSeconds 20 -Condition {
         if (Test-Path -LiteralPath $fixture) { return $false }
