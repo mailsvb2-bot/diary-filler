@@ -30,6 +30,8 @@ class DiaryService:
         repeat_statuses: bool = True,
         force_final_diary: bool = True,
         write_report: bool = False,
+        doctor_name: str = "",
+        department_head_name: str = "",
     ) -> DiaryBatchResult:
         return create_text_diaries(
             status_files=status_files,
@@ -42,4 +44,6 @@ class DiaryService:
             repeat_statuses=repeat_statuses,
             force_final_diary=force_final_diary,
             write_report=write_report,
+            doctor_name=doctor_name,
+            department_head_name=department_head_name,
         )

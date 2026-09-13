@@ -199,6 +199,50 @@ def format_rvk_referral_decision(status: str, commissariat: str = "", fallback: 
     return normalize_text(fallback)
 
 
+
+_STAFF_INITIALS_TOKEN_RE = re.compile(r"^(?:[A-Za-zА-ЯЁ]\.?){1,2}$", re.IGNORECASE)
+
+def format_staff_short_name(value: str) -> str:
+    text = normalize_text(value)
+    if not text:
+        return ""
+    tokens = text.split()
+    if len(tokens) >= 3:
+        return f"{tokens[0]} {tokens[1][0].upper()}.{tokens[2][0].upper()}."
+    if len(tokens) == 2:
+        if _STAFF_INITIALS_TOKEN_RE.fullmatch(tokens[1]):
+            return text
+        return f"{tokens[0]} {tokens[1][0].upper()}."
+    return text
+
+def _staff_instrumental_surname(surname: str) -> str:
+    low = surname.lower().replace("ё", "е")
+    if low.endswith(("ова", "ева", "ина", "ына")):
+        return surname[:-1] + "ой"
+    if low.endswith("ская"):
+        return surname[:-4] + "ской"
+    if low.endswith("цкая"):
+        return surname[:-4] + "цкой"
+    if low.endswith("ая"):
+        return surname[:-2] + "ой"
+    if low.endswith(("ов", "ев", "ин", "ын")):
+        return surname + "ым"
+    if low.endswith("ский"):
+        return surname[:-4] + "ским"
+    if low.endswith("цкий"):
+        return surname[:-4] + "цким"
+    if low.endswith(("ый", "ой")):
+        return surname[:-2] + "ым"
+    return surname
+
+def format_staff_instrumental_short_name(value: str) -> str:
+    short = format_staff_short_name(value)
+    if not short:
+        return ""
+    parts = short.split(maxsplit=1)
+    surname = _staff_instrumental_surname(parts[0])
+    return f"{surname} {parts[1]}" if len(parts) == 2 else surname
+
 def russian_day_word(days: int) -> str:
     if 11 <= days % 100 <= 14:
         return "дней"

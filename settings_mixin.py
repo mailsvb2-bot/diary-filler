@@ -15,6 +15,16 @@ _PERSISTENT_FOLDER_KEYS = {
 }
 _SESSION_ONLY_FOLDER_KEYS = {DIR_OUTPUT, DIR_PRIMARY_DOCUMENTS, DIR_EPI}
 
+_STAFF_PROFILE_KEY = "staff_profile"
+_STAFF_PROFILE_FIELDS = ("doctor", "department_head", "deputy_chief")
+_STAFF_PROFILE_DEFAULTS = {
+    "doctor": "Балаганин С.В",
+    "department_head": "Можарова Е.А.",
+    "deputy_chief": "Зуйкова А.А.",
+}
+_STAFF_PROFILE_MAX_LENGTH = 160
+_DESKTOP_INTAKE_KEY = "desktop_intake_enabled"
+
 
 class SettingsMixin:
     def _get_settings_path(self) -> Path:
@@ -26,7 +36,7 @@ class SettingsMixin:
         """Сохранить битый settings.json рядом, чтобы новый запуск не падал.
 
         В settings.json хранятся только технические удобства: переиспользуемые
-        папки текстов/шаблонов дневников и выбранный принтер. Данные пациентов туда не пишутся. Если
+        технические настройки и профиль сотрудников отделения. Данные пациентов туда не пишутся. Если
         файл оказался повреждён из-за аварийного завершения Windows/диска,
         программа стартует с пустыми настройками и оставляет копию для разбора.
         """
@@ -63,6 +73,18 @@ class SettingsMixin:
                     printer = str(data.get("printer", "")).strip()
                     if printer:
                         safe["printer"] = printer
+                    if isinstance(data.get(_DESKTOP_INTAKE_KEY), bool):
+                        safe[_DESKTOP_INTAKE_KEY] = bool(data[_DESKTOP_INTAKE_KEY])
+                    staff_raw = data.get(_STAFF_PROFILE_KEY)
+                    if isinstance(staff_raw, dict):
+                        profile = {}
+                        for key in _STAFF_PROFILE_FIELDS:
+                            value = " ".join(str(staff_raw.get(key, "")).split())[:_STAFF_PROFILE_MAX_LENGTH].strip()
+                            if value:
+                                profile[key] = value
+                        if staff_raw.get("configured") is True and all(profile.get(k) for k in _STAFF_PROFILE_FIELDS):
+                            profile["configured"] = True
+                            safe[_STAFF_PROFILE_KEY] = profile
                     return safe
                 # JSON может быть синтаксически валидным, но иметь неверный
                 # тип (например, список после ручной правки). Такой файл тоже
@@ -81,7 +103,7 @@ class SettingsMixin:
         Production-контракт: история пациентов, диагнозы, даты лечения, пути
         созданных документов и содержимое медицинских файлов никогда не
         сохраняются в settings.json. На диск уходят только переиспользуемые
-        папки текстов/шаблонов дневников и выбранный принтер.
+        технические настройки и профиль сотрудников отделения.
         """
         payload: dict = {}
         folders_raw = self._settings.get("folders")
@@ -100,6 +122,20 @@ class SettingsMixin:
         printer = str(self._settings.get("printer", "")).strip()
         if printer:
             payload["printer"] = printer
+        intake_enabled = self._settings.get(_DESKTOP_INTAKE_KEY)
+        if isinstance(intake_enabled, bool):
+            payload[_DESKTOP_INTAKE_KEY] = intake_enabled
+        staff_raw = self._settings.get(_STAFF_PROFILE_KEY)
+        if isinstance(staff_raw, dict) and staff_raw.get("configured") is True:
+            profile = {"configured": True}
+            for key in _STAFF_PROFILE_FIELDS:
+                value = " ".join(str(staff_raw.get(key, "")).split())[:_STAFF_PROFILE_MAX_LENGTH].strip()
+                if not value:
+                    profile = {}
+                    break
+                profile[key] = value
+            if profile:
+                payload[_STAFF_PROFILE_KEY] = profile
         return payload
 
     def _save_settings(self) -> None:
@@ -119,6 +155,101 @@ class SettingsMixin:
                     tmp_path.unlink()
             except Exception:
                 pass
+
+    def _staff_profile_defaults(self) -> dict[str, str]:
+        return dict(_STAFF_PROFILE_DEFAULTS)
+
+    def _staff_profile_is_configured(self) -> bool:
+        profile = self._settings.get(_STAFF_PROFILE_KEY)
+        return bool(
+            isinstance(profile, dict)
+            and profile.get("configured") is True
+            and all(str(profile.get(key, "")).strip() for key in _STAFF_PROFILE_FIELDS)
+        )
+
+    def _effective_staff_profile(self) -> dict[str, str]:
+        result = self._staff_profile_defaults()
+        profile = self._settings.get(_STAFF_PROFILE_KEY)
+        if isinstance(profile, dict):
+            for key in _STAFF_PROFILE_FIELDS:
+                value = " ".join(str(profile.get(key, "")).split())[:_STAFF_PROFILE_MAX_LENGTH].strip()
+                if value:
+                    result[key] = value
+        return result
+
+    def _set_staff_profile(self, *, doctor: str, department_head: str, deputy_chief: str) -> bool:
+        values = {
+            "doctor": " ".join(str(doctor or "").split())[:_STAFF_PROFILE_MAX_LENGTH].strip(),
+            "department_head": " ".join(str(department_head or "").split())[:_STAFF_PROFILE_MAX_LENGTH].strip(),
+            "deputy_chief": " ".join(str(deputy_chief or "").split())[:_STAFF_PROFILE_MAX_LENGTH].strip(),
+        }
+        if not all(values.values()):
+            return False
+        self._settings[_STAFF_PROFILE_KEY] = {**values, "configured": True}
+        self._save_settings()
+        return True
+
+    def _desktop_intake_preference(self) -> bool | None:
+        value = self._settings.get(_DESKTOP_INTAKE_KEY)
+        return value if isinstance(value, bool) else None
+
+    def _set_desktop_intake_preference(self, enabled: bool) -> None:
+        self._settings[_DESKTOP_INTAKE_KEY] = bool(enabled)
+        self._save_settings()
+
+    def _apply_staff_profile_to_patient_data(self, data):
+        profile = self._effective_staff_profile()
+        data.doctor = profile["doctor"]
+        data.head = profile["department_head"]
+        data.deputy_chief = profile["deputy_chief"]
+        return data
+
+    def _prompt_staff_profile(self, *, first_run: bool = False) -> bool:
+        from tkinter import messagebox, simpledialog
+
+        defaults = self._effective_staff_profile()
+        if first_run:
+            messagebox.showinfo(
+                "Первый запуск — сотрудники",
+                "Укажите сотрудников один раз. Эти данные будут использоваться "
+                "в дневниках, эпикризах, актах, ВК и остальных создаваемых документах.\n\n"
+                "Можно вводить полное ФИО или фамилию с инициалами.",
+                parent=self.root,
+            )
+        prompts = (
+            ("doctor", "ФИО лечащего врача", defaults["doctor"]),
+            ("department_head", "ФИО заведующего отделением", defaults["department_head"]),
+            ("deputy_chief", "ФИО заместителя главного врача", defaults["deputy_chief"]),
+        )
+        values = {}
+        for key, label, default in prompts:
+            while True:
+                value = simpledialog.askstring(
+                    "Сотрудники отделения", f"{label}:", initialvalue=default, parent=self.root
+                )
+                if value is None:
+                    return False
+                value = " ".join(value.split()).strip()
+                if value:
+                    values[key] = value
+                    break
+                messagebox.showwarning(
+                    "Сотрудники отделения", "Поле не должно быть пустым.", parent=self.root
+                )
+        if not self._set_staff_profile(
+            doctor=values["doctor"],
+            department_head=values["department_head"],
+            deputy_chief=values["deputy_chief"],
+        ):
+            return False
+        if not first_run:
+            messagebox.showinfo(
+                "Сотрудники отделения",
+                "ФИО сотрудников сохранены. Новые значения будут использоваться "
+                "во всех следующих создаваемых документах и дневниках.",
+                parent=self.root,
+            )
+        return True
 
     def _settings_folders(self) -> dict:
         folders = self._settings.get("folders")

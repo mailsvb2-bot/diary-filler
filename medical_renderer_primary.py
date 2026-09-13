@@ -19,6 +19,8 @@ from medical_formatting import (
     format_date_with_russian_year_suffix,
     format_military_commissariat_area,
     format_registration_text,
+    format_staff_instrumental_short_name,
+    format_staff_short_name,
     treatment_period_text,
 )
 from medical_gender import finalize_medical_document
@@ -44,7 +46,10 @@ class MedicalRendererPrimaryMixin:
         editor = DocxBlockEditor(doc)
 
         header_date = data.admission_date or "Дата"
-        header = f"{header_date} 10:00      Первичный осмотр с зав. отд. Можаровой Е.А."
+        header = (
+            f"{header_date} 10:00      Первичный осмотр с зав. отд. "
+            f"{format_staff_instrumental_short_name(data.head)}"
+        )
         editor.replace_first_matching_paragraph(["Дата, время"], header)
         editor.replace_block(["История болезни №"], "История болезни №", data.case_number, PRIMARY_MARKERS, preserve_when_empty=False, allow_empty=True)
         editor.replace_block(["Ф.И.О.", "ФИО"], "Ф.И.О.:", data.fio, PRIMARY_MARKERS, allow_empty=True)
@@ -92,8 +97,8 @@ class MedicalRendererPrimaryMixin:
             include_return_to_work=False,
             replace_existing=False,
         )
-        editor.replace_block(["Врач психиатр", "Врач-психиатр"], "Врач психиатр", data.doctor, PRIMARY_MARKERS, allow_empty=True)
-        editor.replace_block(["Зав. отделением", "Зав. отд."], "Зав. отделением", data.head, PRIMARY_MARKERS, allow_empty=True)
+        editor.replace_block(["Врач психиатр", "Врач-психиатр"], "Врач психиатр", format_staff_short_name(data.doctor), PRIMARY_MARKERS, allow_empty=True)
+        editor.replace_block(["Зав. отделением", "Зав. отд."], "Зав. отделением", format_staff_short_name(data.head), PRIMARY_MARKERS, allow_empty=True)
         self._remove_trailing_clinical_leakage(doc, data)
         finalize_medical_document(doc, data)
         doc.save(str(output_path))
@@ -164,7 +169,11 @@ class MedicalRendererPrimaryMixin:
         if not recommendation_done:
             doc.add_paragraph(DISCHARGE_RECOMMENDATION_TEXT)
 
-        signature = f"  Зав. отд. {data.head}                                                                                                 Врач-психиатр\t{data.doctor}"
+        signature = (
+            f"  Зав. отд. {format_staff_short_name(data.head)}"
+            f"                                                                                                 "
+            f"Врач-психиатр\t{format_staff_short_name(data.doctor)}"
+        )
         editor.replace_first_matching_paragraph(["Зав. отд.", "Врач-психиатр"], signature)
         self._move_discharge_outcome_before_signatures(doc)
         finalize_medical_document(doc, data)

@@ -116,6 +116,7 @@ class ActionsMedicalFlowMixin:
         )
         data.commission_date = self.commission_date_var.get().strip()
         data.commission_number = self.commission_number_var.get().strip()
+        self._apply_staff_profile_to_patient_data(data)
         return data
 
     def _capture_generation_patient_data(self, *, require_primary: bool) -> PatientData:
@@ -181,6 +182,7 @@ class ActionsMedicalFlowMixin:
         )
         if diagnosis:
             data.diagnosis = sanitize_diagnosis(diagnosis)
+        self._apply_staff_profile_to_patient_data(data)
         return copy.deepcopy(data)
 
     def _create_medical_documents_impl(

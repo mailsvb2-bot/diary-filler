@@ -71,6 +71,7 @@ class ActionsDiaryFlowMixin:
                 "В первичном документе должна быть строка или имя файла вида: 12.01.2026 Первичный осмотр."
             )
         out_dir = str(output_dir_override if output_dir_override is not None else self._result_output_dir())
+        staff_profile = self._effective_staff_profile()
         from diary_service import DiaryService
         result = DiaryService().create_text_diaries(
             status_files=self.status_files,
@@ -89,6 +90,8 @@ class ActionsDiaryFlowMixin:
             repeat_statuses=self.repeat_statuses_var.get(),
             force_final_diary=self.force_final_diary_var.get(),
             write_report=self._diagnostic_reports_enabled(),
+            doctor_name=(patient_data_snapshot.doctor if patient_data_snapshot is not None else staff_profile["doctor"]),
+            department_head_name=(patient_data_snapshot.head if patient_data_snapshot is not None else staff_profile["department_head"]),
         )
         if log_created:
             self._log("\n✅ Дневники заполнены:\n")

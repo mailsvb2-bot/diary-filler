@@ -991,6 +991,8 @@ def start_desktop_intake_runtime(app, *, initial_primary: str | Path | None = No
         return
     if os.environ.get("MEDICAL_AUTOFILL_DISABLE_DESKTOP_INTAKE", "").strip() == "1":
         return
+    if getattr(app, "_desktop_intake_enabled_for_session", True) is False:
+        return
 
     try:
         _desktop_touch_gui_heartbeat()

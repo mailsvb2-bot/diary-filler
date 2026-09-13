@@ -280,12 +280,18 @@ class WindowMixin:
         self._bind_window_drag(title)
         self._bind_window_drag(subtitle)
 
-        # Оставляем только системные кнопки окна. Зачёркнутые иконки настроек/справки убраны.
         controls = tk.Frame(header, bg=DEEP)
         controls.grid(row=0, column=1, sticky="ne", pady=(0, self._px(18 if self._compact_ui else 22, 7)))
-        self._window_control_button(controls, "−", self._minimize_window).grid(row=0, column=0)
-        self._window_control_button(controls, "□", self._toggle_maximize).grid(row=0, column=1)
-        self._window_control_button(controls, "×", self.root.destroy, danger=True).grid(row=0, column=2)
+        staff_button = tk.Button(
+            controls, text="Сотрудники", command=lambda: self._prompt_staff_profile(first_run=False),
+            bg=DEEP, fg=MUTED, activebackground=BG_2, activeforeground=ACCENT,
+            relief="flat", bd=0, padx=self._px(8, 5),
+            font=self._font(9 if self._compact_ui else 10), cursor="hand2",
+        )
+        staff_button.grid(row=0, column=0, padx=(0, self._px(8, 4)))
+        self._window_control_button(controls, "−", self._minimize_window).grid(row=0, column=1)
+        self._window_control_button(controls, "□", self._toggle_maximize).grid(row=0, column=2)
+        self._window_control_button(controls, "×", self.root.destroy, danger=True).grid(row=0, column=3)
 
     def _header_icon_button(self, parent, text: str, command) -> tk.Button:
         return tk.Button(

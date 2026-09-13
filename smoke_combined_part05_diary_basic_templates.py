@@ -226,6 +226,7 @@ for hospital_day in [2, 3, 4, 7]:
 snapshot_dates_doc.save(snapshot_dates)
 
 snapshot_app = CombinedMedicalDiaryApp.__new__(CombinedMedicalDiaryApp)
+snapshot_app._settings = {}
 snapshot_app.navigation_path_var = _Var("")
 snapshot_app.patient_name_var = _Var("Чужое ФИО из живого UI")
 snapshot_app.admission_date_var = _Var("31.12.2099")

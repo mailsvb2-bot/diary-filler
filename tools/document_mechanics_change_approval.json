@@ -1,9 +1,16 @@
 {
   "schema_version": 1,
-  "base_sha": "3b0e8314f07e957ff3e8041aa3f26d7a9fa7fd78",
-  "reason": "User-reported document correction: discharge must own the canonical recommendation text, and legacy standalone complaint tails must not survive generated medical documents. Full replay and golden DOCX regression are required.",
+  "base_sha": "935367c4ad9b6d90a93709e59819f586f9957ccf",
+  "reason": "Explicit user-requested document mechanics change: persist treating doctor, department head, and deputy chief profiles; apply them to all medical documents and production diaries; add first-run onboarding and editable staff UI. Full replay, golden DOCX, staff regression, GUI, EXE, and installer CI are required.",
   "approved_blobs": {
-    "medical_renderer_labs.py": "614915f15b89419d00c3bdbdba2b98451fdf8192",
-    "medical_renderer_primary.py": "e7c591b994af1f33ca94223e1b720343e6311a75"
+    "actions_diary_flow.py": "426b587519122fc4b709a21db79341bff1b484e6",
+    "actions_medical_flow.py": "e53d9c8b7d979dc63c6b1f63d263d1d6b0d76fb5",
+    "diary_batch.py": "498ddda41c483cc9ecfe7f65d1359dd30a0b8e63",
+    "diary_service.py": "e7d687fb91ee331abd0ba62c248a1dabbcb2e046",
+    "medical_formatting.py": "eb24f4c5ce7f025f6fc2dd2d2a8c52bac22a3caa",
+    "medical_gender.py": "1bc6e7c332167a061bf39130f32a1cd5da02fa61",
+    "medical_models.py": "bb55b3f543cc2b2b874f84fb677a0a2d3904dafe",
+    "medical_renderer_commission.py": "aa3d86f232d4731fb64a920e743457fe803e0de3",
+    "medical_renderer_primary.py": "5ccef4865bd40bdfe535dc68cf5983fbcf691612"
   }
 }

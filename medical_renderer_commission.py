@@ -17,6 +17,8 @@ from medical_formatting import (
     format_date_with_russian_year_suffix,
     format_military_commissariat_area,
     format_registration_text,
+    format_staff_instrumental_short_name,
+    format_staff_short_name,
     treatment_period_text,
 )
 from medical_gender import finalize_medical_document
@@ -43,7 +45,8 @@ class MedicalRendererCommissionMixin:
         commission_date = format_date_with_russian_year_suffix(data.commission_date)
         header = (
             f"{commission_date} 10:00      "
-            f"Совместный осмотр с зам глав врача Зуйковой А.А. № {data.commission_number}"
+            f"Совместный осмотр с зам глав врача "
+            f"{format_staff_instrumental_short_name(data.deputy_chief)} № {data.commission_number}"
         ).rstrip()
         for paragraph in doc.paragraphs:
             if "совместный осмотр" in normalize_match(paragraph.text):
@@ -174,6 +177,6 @@ class MedicalRendererCommissionMixin:
             )
         if not referral_done:
             doc.add_paragraph(target_referral_line)
-        editor.replace_block(["Врач психиатр", "Врач-психиатр"], "Врач психиатр", data.doctor, PRIMARY_MARKERS, allow_empty=True)
+        editor.replace_block(["Врач психиатр", "Врач-психиатр"], "Врач психиатр", format_staff_short_name(data.doctor), PRIMARY_MARKERS, allow_empty=True)
         finalize_medical_document(doc, data)
         doc.save(str(output_path))
