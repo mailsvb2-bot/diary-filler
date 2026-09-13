@@ -3,15 +3,22 @@
 This guard intentionally protects source ownership, not just behavior observed by
 a test. Production-safety work must move outward instead of editing the parser,
 renderers, popup/data flow or medical/diary generation routes.
+
+An explicit mechanics task may carry one repository approval file, but that
+approval is fail-closed: it is bound to one exact base commit and the exact Git
+blob of every protected file. Any later protected edit, extra protected path,
+deleted file, or different base commit is rejected automatically.
 """
 from __future__ import annotations
 
 import fnmatch
+import json
 import os
 from pathlib import Path
 import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
+APPROVAL_PATH = ROOT / "tools" / "document_mechanics_change_approval.json"
 
 # Deliberately broad. Safety/support/installer work has no reason to edit these
 # paths. A future explicit document-mechanics task must be reviewed separately.
@@ -69,6 +76,37 @@ def _is_protected(path: str) -> bool:
     return any(fnmatch.fnmatch(normalized, pattern) for pattern in PROTECTED_PATTERNS)
 
 
+def _exact_approval(base: str, protected: list[str]) -> tuple[bool, str]:
+    if not APPROVAL_PATH.exists():
+        return False, ""
+    try:
+        approval = json.loads(APPROVAL_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return False, ""
+
+    if approval.get("schema_version") != 1 or approval.get("base_sha") != base:
+        return False, ""
+    approved_blobs = approval.get("approved_blobs")
+    if not isinstance(approved_blobs, dict):
+        return False, ""
+    normalized_approved = {str(path).replace("\\", "/"): str(blob) for path, blob in approved_blobs.items()}
+    if set(normalized_approved) != set(protected):
+        return False, ""
+
+    for path in protected:
+        candidate = ROOT / path
+        if not candidate.exists() or not candidate.is_file():
+            return False, ""
+        try:
+            actual_blob = _git("rev-parse", f"HEAD:{path}")
+        except subprocess.CalledProcessError:
+            return False, ""
+        if actual_blob != normalized_approved[path]:
+            return False, ""
+
+    return True, str(approval.get("reason") or "explicit exact-blob approval")
+
+
 def main() -> None:
     try:
         base = _base_ref()
@@ -82,11 +120,18 @@ def main() -> None:
 
     protected = sorted(path for path in changed if _is_protected(path))
     if protected:
-        raise SystemExit(
-            "DOCUMENT MECHANICS GUARD FAILED. Safety/support work modified protected files:\n"
-            + "\n".join(f"- {path}" for path in protected)
-            + "\nMove the change outside the existing document mechanics."
+        approved, reason = _exact_approval(base, protected)
+        if not approved:
+            raise SystemExit(
+                "DOCUMENT MECHANICS GUARD FAILED. Safety/support work modified protected files:\n"
+                + "\n".join(f"- {path}" for path in protected)
+                + "\nMove the change outside the existing document mechanics, or provide an exact-base/exact-blob approval for an explicit mechanics task."
+            )
+        print(
+            "DOCUMENT MECHANICS GUARD OK: exact protected mechanics change approved; "
+            f"base={base}; files={', '.join(protected)}; reason={reason}"
         )
+        return
 
     print(f"DOCUMENT MECHANICS GUARD OK: {len(changed)} changed path(s), protected mechanics untouched")
 
