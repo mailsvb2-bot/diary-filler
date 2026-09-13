@@ -1,8 +1,9 @@
 {
   "schema_version": 1,
-  "base_sha": "d239ffa408cad55087aef8e41ac38accc5ae5bc1",
-  "reason": "Performance-only optimization of gender adaptation after Windows profiling; document output must remain identical under full replay and golden DOCX regression.",
+  "base_sha": "3b0e8314f07e957ff3e8041aa3f26d7a9fa7fd78",
+  "reason": "User-reported document correction: discharge must own the canonical recommendation text, and legacy standalone complaint tails must not survive generated medical documents. Full replay and golden DOCX regression are required.",
   "approved_blobs": {
-    "medical_gender.py": "14da87d412f8b25f12ab876b719f0d33d9ec4752"
+    "medical_renderer_labs.py": "614915f15b89419d00c3bdbdba2b98451fdf8192",
+    "medical_renderer_primary.py": "e7c591b994af1f33ca94223e1b720343e6311a75"
   }
 }
