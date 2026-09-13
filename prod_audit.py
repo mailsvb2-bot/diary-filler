@@ -752,6 +752,8 @@ def _assert_joint_diary_semantics_contract() -> None:
     batch = _read("diary_batch.py")
     constants = _read("diary_constants.py")
     actions = _read("actions_diary_flow.py")
+    medical_flow = _read("actions_medical_flow.py")
+    settings = _read("settings_mixin.py")
 
     required_constants = (
         'DIARY_JOINT_HEAD_EXAM_TITLE = "Совместный осмотр с зав. отделением"',
@@ -773,8 +775,28 @@ def _assert_joint_diary_semantics_contract() -> None:
             _fail(f"semantic joint-diary implementation misses: {required}")
     if "_signature_lines_from_diary_sources" in batch:
         _fail("source-template signatures may not decide production joint-exam semantics")
-    if "doctor_name=" in actions or "head_name=" in actions:
-        _fail("patient/input signature fields leaked back into canonical diary signing roles")
+
+    # Staff names are now an explicit reusable application profile. They may
+    # customize signatures, but must not be inferred from patient text, diary
+    # source templates, or arbitrary live UI fields. The frozen patient snapshot
+    # is overwritten from SettingsMixin before the production diary call.
+    required_profile_contract = (
+        (settings, 'data.doctor = profile["doctor"]'),
+        (settings, 'data.head = profile["department_head"]'),
+        (settings, 'data.deputy_chief = profile["deputy_chief"]'),
+        (actions, "staff_profile = self._effective_staff_profile()"),
+        (actions, 'doctor_name=(patient_data_snapshot.doctor if patient_data_snapshot is not None else staff_profile["doctor"])'),
+        (actions, 'department_head_name=(patient_data_snapshot.head if patient_data_snapshot is not None else staff_profile["department_head"])'),
+        (batch, 'doctor_name: str = ""'),
+        (batch, 'department_head_name: str = ""'),
+        (batch, "format_staff_short_name(doctor_name)"),
+        (batch, "format_staff_short_name(department_head_name)"),
+    )
+    for source, marker in required_profile_contract:
+        if marker not in source:
+            _fail(f"saved staff profile is not wired into diary signatures: {marker}")
+    if medical_flow.count("self._apply_staff_profile_to_patient_data(data)") < 2:
+        _fail("generation snapshots no longer overwrite parsed/input staff with the saved staff profile")
 
     from datetime import date
     import diary_batch as diary_batch_module
