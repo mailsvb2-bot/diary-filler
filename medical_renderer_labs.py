@@ -122,15 +122,23 @@ class MedicalRendererLabsMixin:
                     continue
                 text = normalize_match(paragraph.text)
 
-            # Keep the canonical «Жалобы...:» block.  Legacy primary documents
-            # sometimes append a second prose sentence such as «Пациентка
-            # предъявляет жалобы на ...» after the last clinical section.
+            # Keep the canonical «Жалобы...:» block.  Legacy templates can also
+            # contain a second, standalone prose sentence at the document tail:
+            # «Пациент(ка) предъявляет жалобы на ...».  That sentence is never a
+            # canonical field in generated documents, so remove a standalone copy
+            # deterministically instead of depending on similarity to current data.
             if text.startswith(("жалобы на момент осмотра:", "жалобы при поступлении:", "жалобы:")):
+                continue
+            if cls._TRAILING_COMPLAINT_RE.fullmatch(paragraph.text or ""):
+                remove_paragraph(paragraph)
                 continue
             if complaint_core and cls._complaint_core(paragraph.text) == complaint_core:
                 remove_paragraph(paragraph)
                 continue
 
+            # For a legacy sentence embedded at the end of a larger paragraph,
+            # preserve the old conservative behavior: remove it only when it is
+            # equivalent to the canonical complaints value.
             trailing = cls._TRAILING_COMPLAINT_RE.search(paragraph.text)
             if trailing and complaint_core and cls._complaints_equivalent(trailing.group("body"), complaint_core):
                 replace_paragraph_regex_preserving_runs(paragraph, cls._TRAILING_COMPLAINT_RE, "")
