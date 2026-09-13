@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "base_sha": "d239ffa408cad55087aef8e41ac38accc5ae5bc1",
+  "reason": "Performance-only optimization of gender adaptation after Windows profiling; document output must remain identical under full replay and golden DOCX regression.",
+  "approved_blobs": {
+    "medical_gender.py": "14da87d412f8b25f12ab876b719f0d33d9ec4752"
+  }
+}
