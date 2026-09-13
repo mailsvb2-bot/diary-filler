@@ -143,6 +143,31 @@ def assert_privacy_and_replay_contract() -> None:
         fail("golden DOCX manifest does not cover the canonical medical+diary set")
 
 
+def assert_staff_profile_contract() -> None:
+    settings = read("settings_mixin.py")
+    main_source = read("main.py")
+    window = read("window_mixin.py")
+    medical_flow = read("actions_medical_flow.py")
+    diary_flow = read("actions_diary_flow.py")
+    regression = read("tools/staff_profile_regression.py")
+    required = (
+        (settings, "def _prompt_staff_profile"),
+        (settings, "def _set_staff_profile"),
+        (settings, '"deputy_chief"'),
+        (main_source, "def _first_launch_onboarding"),
+        (main_source, "Создать на рабочем столе папку «Выписанные пациенты»?"),
+        (main_source, "_prompt_staff_profile(first_run=True)"),
+        (window, 'text="Сотрудники"'),
+        (medical_flow, "_apply_staff_profile_to_patient_data(data)"),
+        (diary_flow, "doctor_name="),
+        (diary_flow, "department_head_name="),
+        (regression, "STAFF PROFILE REGRESSION OK"),
+    )
+    missing = [marker for source, marker in required if marker not in source]
+    if missing:
+        fail("staff profile contract is incomplete: " + ", ".join(missing))
+
+
 def assert_ci_wiring() -> None:
     workflow = read(".github/workflows/windows-build.yml")
     build = read("build_exe_windows.bat")
@@ -154,6 +179,7 @@ def assert_ci_wiring() -> None:
         "python tools/production_safety_gate.py",
         "python tools/privacy_diagnostics_check.py",
         "python tools/full_patient_replay_check.py",
+        "python tools/staff_profile_regression.py",
         "python tools/gender_generation_regression_matrix.py",
         "python gui_runtime_check.py",
         "python verify_built_exe.py",
@@ -182,6 +208,7 @@ def main() -> None:
     assert_self_check_is_outer_only()
     assert_installer_contract()
     assert_privacy_and_replay_contract()
+    assert_staff_profile_contract()
     assert_ci_wiring()
     print("PRODUCTION SAFETY GATE OK")
 

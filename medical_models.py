@@ -210,6 +210,7 @@ class PatientData:
 
     doctor: str = "Балаганин С.В"
     head: str = "Можарова Е.А."
+    deputy_chief: str = "Зуйкова А.А."
 
     warnings: List[str] = field(default_factory=list)
 

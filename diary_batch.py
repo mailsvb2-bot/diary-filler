@@ -28,6 +28,7 @@ from diary_constants import (
     FINAL_DIARY_TEXT,
 )
 from shared_gender import adapt_text_to_patient_gender, detect_gender_from_patient_name
+from medical_formatting import format_staff_short_name
 from diary_models import DiaryBatchResult
 from shared_paths import available_path, make_diary_output_name, safe_filename_part
 from diary_table_columns import find_day_column, find_hospitalization_day_column, find_month_year_column
@@ -307,6 +308,9 @@ def _build_text_diary_entries(
 def _write_text_diary_docx(
     path: Path,
     entries: Sequence[TextDiaryEntry],
+    *,
+    doctor_name: str = "",
+    department_head_name: str = "",
 ) -> None:
     """Render semantic diary entries without deciding their clinical meaning.
 
@@ -315,8 +319,13 @@ def _write_text_diary_docx(
     are always right-aligned, matching the doctor's requested paper layout.
     """
     doc = Document()
-    doctor_signature = DIARY_TREATING_DOCTOR_SIGNATURE
-    head_signature = DIARY_DEPARTMENT_HEAD_SIGNATURE
+    doctor_short = format_staff_short_name(doctor_name)
+    head_short = format_staff_short_name(department_head_name)
+    doctor_signature = (
+        f"Лечащий врач {doctor_short if doctor_short.endswith('.') else doctor_short + '.'}"
+        if doctor_short else DIARY_TREATING_DOCTOR_SIGNATURE
+    )
+    head_signature = f"Зав.отделением {head_short}" if head_short else DIARY_DEPARTMENT_HEAD_SIGNATURE
 
     for entry in entries:
         if doc.paragraphs:
@@ -358,6 +367,8 @@ def _fill_text_diary_batch(
     write_report: bool,
     admission_value: str,
     discharge_value: str,
+    doctor_name: str = "",
+    department_head_name: str = "",
 ) -> DiaryBatchResult:
     if admission_date_value is None:
         raise ValueError("Для текстовых дневников нужна полная дата поступления.")
@@ -394,7 +405,7 @@ def _fill_text_diary_batch(
     with TemporaryDirectory(prefix=".diary-autofill-", dir=str(result_dir)) as tmp_dir:
         tmp_root = Path(tmp_dir)
         staged_doc = tmp_root / "diary.docx"
-        _write_text_diary_docx(staged_doc, entries)
+        _write_text_diary_docx(staged_doc, entries, doctor_name=doctor_name, department_head_name=department_head_name)
         staged_report: Path | None = None
         if write_report:
             staged_report = tmp_root / report_name
@@ -458,6 +469,8 @@ def create_text_diaries(
     repeat_statuses: bool = True,
     force_final_diary: bool = True,
     write_report: bool = False,
+    doctor_name: str = "",
+    department_head_name: str = "",
 ) -> DiaryBatchResult:
     """Production text-diary entry point.
 
@@ -501,6 +514,8 @@ def create_text_diaries(
         write_report=write_report,
         admission_value=admission_value,
         discharge_value=discharge_value,
+        doctor_name=doctor_name,
+        department_head_name=department_head_name,
     )
 
 
@@ -522,6 +537,8 @@ def fill_diary_batch(
     open_result_folder: bool = False,
     write_report: bool = False,
     text_output: bool = False,
+    doctor_name: str = "",
+    department_head_name: str = "",
 ) -> DiaryBatchResult:
     if text_output:
         return create_text_diaries(
@@ -535,6 +552,8 @@ def fill_diary_batch(
             repeat_statuses=repeat_statuses,
             force_final_diary=force_final_diary,
             write_report=write_report,
+            doctor_name=doctor_name,
+            department_head_name=department_head_name,
         )
 
     if not diary_files:

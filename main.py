@@ -44,6 +44,50 @@ SELF_CHECK_ARGUMENT = "--self-check"
 UNINSTALL_INTAKE_ARGUMENT = "--uninstall-intake-agent"
 
 
+def _first_launch_onboarding(app) -> None:
+    """Ask once for the intake folder and reusable staff names."""
+    if os.name != "nt" or os.environ.get("CI", "").strip():
+        return
+    try:
+        intake_root = desktop_intake_root_path()
+        preference = app._desktop_intake_preference()
+        if intake_root.is_dir():
+            app._desktop_intake_enabled_for_session = True
+            if preference is not True:
+                app._set_desktop_intake_preference(True)
+        elif preference is None:
+            create_folder = messagebox.askyesno(
+                "Первый запуск",
+                "Создать на рабочем столе папку «Выписанные пациенты»?\n\n"
+                "Если выбрать «Нет», программа всё равно будет работать вручную.",
+                parent=app.root,
+            )
+            app._desktop_intake_enabled_for_session = bool(create_folder)
+            app._set_desktop_intake_preference(bool(create_folder))
+            if create_folder:
+                try:
+                    intake_root.mkdir(parents=True, exist_ok=True)
+                except OSError as exc:
+                    app._desktop_intake_enabled_for_session = False
+                    app._set_desktop_intake_preference(False)
+                    messagebox.showwarning(
+                        "Выписанные пациенты",
+                        "Не удалось создать папку «Выписанные пациенты». Ручной режим остаётся доступен.\n\n"
+                        f"{type(exc).__name__}: {exc}",
+                        parent=app.root,
+                    )
+        else:
+            app._desktop_intake_enabled_for_session = bool(preference)
+    except Exception:
+        app._desktop_intake_enabled_for_session = False
+
+    if not app._staff_profile_is_configured():
+        try:
+            app._prompt_staff_profile(first_run=True)
+        except Exception:
+            pass
+
+
 def _startup_probe_result_path() -> Path | None:
     value = os.environ.get("MEDICAL_AUTOFILL_STARTUP_PROBE_RESULT", "").strip()
     return Path(value) if value else None
@@ -95,7 +139,7 @@ def _self_check_settings_ok() -> tuple[bool, str]:
         return False, "settings.json повреждён"
     if not isinstance(payload, dict):
         return False, "settings.json имеет неверный формат"
-    unexpected = sorted(set(payload) - {"folders", "printer"})
+    unexpected = sorted(set(payload) - {"folders", "printer", "desktop_intake_enabled", "staff_profile"})
     if unexpected:
         return False, "settings.json содержит неожиданные технические ключи"
     return True, "структура безопасна"
@@ -309,6 +353,7 @@ def main() -> None:
 
         root = _create_root()
         app = CombinedMedicalDiaryApp(root)
+        _first_launch_onboarding(app)
 
         # Hard boundary: the convenience layer ultimately hands the path to the
         # application's pre-existing _apply_primary_document_path(...) flow.

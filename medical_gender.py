@@ -12,6 +12,7 @@ from docx.document import Document as DocxDocument
 
 from shared_gender import GENDER_WORD_PAIRS, adapt_text_to_patient_gender, detect_gender_from_patient_name
 from medical_constants import TARGET_MEDICAL_FACILITY
+from medical_formatting import format_staff_instrumental_short_name, format_staff_short_name
 from medical_docx_editor import (
     apply_readable_section_spacing,
     iter_all_paragraphs,
@@ -152,9 +153,42 @@ def normalize_facility_references_in_document(doc: DocxDocument) -> None:
             replace_paragraph_regex_preserving_runs(paragraph, pattern, replacement, flags=re.IGNORECASE)
 
 
+def normalize_staff_references_in_document(doc: DocxDocument, data: PatientData) -> None:
+    """Replace historical template staff names when the saved profile differs."""
+    configured = {
+        "doctor": format_staff_short_name(data.doctor),
+        "head": format_staff_short_name(data.head),
+        "head_instrumental": format_staff_instrumental_short_name(data.head),
+        "deputy": format_staff_short_name(data.deputy_chief),
+        "deputy_instrumental": format_staff_instrumental_short_name(data.deputy_chief),
+    }
+    replacements = []
+    if configured["doctor"] and configured["doctor"] != "Балаганин С.В":
+        replacements.append((r"Балаганин\s+С\.В\.?", configured["doctor"]))
+    if configured["head"] and configured["head"] != "Можарова Е.А.":
+        replacements.extend([
+            (r"Можарова\s+Е\.А\.?", configured["head"]),
+            (r"Можаровой\s+Е\.А\.?", configured["head_instrumental"]),
+        ])
+    if configured["deputy"] and configured["deputy"] != "Зуйкова А.А.":
+        replacements.extend([
+            (r"Зуйкова\s+А\.А\.?", configured["deputy"]),
+            (r"Зуйковой\s+А\.А\.?", configured["deputy_instrumental"]),
+        ])
+    if not replacements:
+        return
+    for paragraph in list(iter_all_paragraphs(doc)):
+        if not (paragraph.text or "").strip():
+            continue
+        for pattern, replacement in replacements:
+            if replacement:
+                replace_paragraph_regex_preserving_runs(paragraph, pattern, replacement, flags=re.IGNORECASE)
+
+
 def finalize_medical_document(doc: DocxDocument, data: PatientData) -> None:
     """Общие финальные правки перед сохранением любого медицинского документа."""
     normalize_facility_references_in_document(doc)
+    normalize_staff_references_in_document(doc, data)
     adapt_document_to_patient_gender(doc, data)
     if not data.epi_text:
         remove_epi_mentions_from_document(doc)
