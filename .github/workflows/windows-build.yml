@@ -46,11 +46,17 @@ jobs:
       - name: Run production safety gate
         run: python tools/production_safety_gate.py
 
+      - name: Run privacy-safe diagnostics contract
+        run: python tools/privacy_diagnostics_check.py
+
       - name: Run production audit
         run: python prod_audit.py
 
       - name: Run release gate
         run: python release_check.py
+
+      - name: Run full patient replay and golden DOCX regression
+        run: python tools/full_patient_replay_check.py
 
       - name: Run desktop intake contract
         run: python tests/desktop_intake_contract_check.py

@@ -233,6 +233,47 @@ def _intake_uninstall_retire_agent() -> None:
         pass
 
 
+def _support_error_code(stage: str, exc: BaseException) -> str:
+    """Stable support code without patient names, document text or file paths."""
+    stage_key = "".join(ch for ch in str(stage or "runtime").upper() if ch.isalnum())[:12] or "RUNTIME"
+    exc_key = "".join(ch for ch in type(exc).__name__.upper() if ch.isalnum())[:20] or "ERROR"
+    return f"MDA-{stage_key}-{exc_key}"
+
+
+def _support_sanitize_diagnostics(details: str) -> str:
+    """Remove user/profile/temp paths and private intake arguments from support text."""
+    import re
+
+    text = str(details or "")
+    replacements = []
+    for name in ("USERPROFILE", "HOME", "APPDATA", "LOCALAPPDATA", "TEMP", "TMP"):
+        value = os.environ.get(name, "").strip()
+        if value:
+            replacements.append(value)
+    replacements.append(str(Path.home()))
+    for raw in sorted({item for item in replacements if item}, key=len, reverse=True):
+        text = text.replace(raw, "<USER_PATH>")
+        text = text.replace(raw.replace("\\", "/"), "<USER_PATH>")
+        text = text.replace(raw.replace("/", "\\"), "<USER_PATH>")
+
+    text = re.sub(
+        r"(?i)(--intake-primary(?:=|\s+))(?:(?:\"[^\"]*\")|(?:'[^']*')|(?:\S+))",
+        r"\1<REDACTED_PRIMARY>",
+        text,
+    )
+    return text
+
+
+def _support_write_startup_failure(exc: BaseException, *, stage: str = "startup") -> tuple[str, str]:
+    """Write bounded technical diagnostics without reading any medical document."""
+    code = _support_error_code(stage, exc)
+    raw = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
+    safe = _support_sanitize_diagnostics(raw)
+    payload = f"code={code}\nerror_type={type(exc).__name__}\n\n{safe}"
+    _write_startup_error(payload[:128 * 1024])
+    return code, safe
+
+
 def _intake_primary_argument(argv: list[str]) -> str:
     """Read the private agent hand-off argument without changing normal CLI behavior."""
     for index, value in enumerate(argv):
@@ -277,15 +318,16 @@ def main() -> None:
         )
         root.mainloop()
     except Exception as exc:  # pragma: no cover - safety net for Windows double-click start
-        details = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
-        _write_startup_error(details)
+        code, safe_details = _support_write_startup_failure(exc, stage="startup")
         if probe_mode:
-            _write_startup_probe_result("FAIL\n" + details)
+            _write_startup_probe_result("FAIL\n" + f"code={code}\n" + safe_details)
         else:
             try:
                 messagebox.showerror(
                     "Ошибка запуска",
-                    f"Программа не запустилась. Подробности записаны в файл:\n{_startup_log_path()}\n\n{exc}",
+                    "Программа не запустилась. "
+                    f"Код ошибки: {code}\n"
+                    f"Технический отчёт: {_startup_log_path()}",
                 )
             except Exception:
                 pass

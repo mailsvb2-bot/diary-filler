@@ -17,15 +17,19 @@ This is intentionally stricter than a normal unit test: for safety/support work,
 - the runtime Python-file architecture budget is not raised;
 - desktop intake still ends at the existing `_apply_primary_document_path(...)` boundary;
 - the diagnostic self-check remains technical-only and does not parse patient documents;
-- the normal packaged GUI/EXE release checks are still present.
+- the normal packaged GUI/EXE release checks are still present;
+- startup/support diagnostics redact the private `--intake-primary` value and use stable technical error codes;
+- the canonical smoke user flow is replayed and its generated medical + diary DOCX are compared with checked-in semantic/visual golden fingerprints.
 
 ## Commands
 
 ```bash
 python tools/document_mechanics_guard.py
 python tools/production_safety_gate.py
+python tools/privacy_diagnostics_check.py
 python prod_audit.py
 python release_check.py
+python tools/full_patient_replay_check.py
 ```
 
 The existing Windows workflow additionally runs the real Tk GUI smoke, builds the EXE and verifies the packaged executable.

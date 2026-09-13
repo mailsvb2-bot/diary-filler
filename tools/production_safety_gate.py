@@ -102,6 +102,37 @@ def assert_installer_contract() -> None:
         fail("installer uses broad recursive uninstall deletion")
 
 
+def assert_privacy_and_replay_contract() -> None:
+    main_source = read("main.py")
+    privacy = read("tools/privacy_diagnostics_check.py")
+    replay = read("tools/full_patient_replay_check.py")
+    golden = read("tools/golden_docx_regression.py")
+    manifest = read("tests/golden_docx_manifest.json")
+
+    required_main = (
+        "def _support_error_code",
+        "def _support_sanitize_diagnostics",
+        "def _support_write_startup_failure",
+        "<REDACTED_PRIMARY>",
+        "Код ошибки: {code}",
+    )
+    missing = [marker for marker in required_main if marker not in main_source]
+    if missing:
+        fail("privacy-safe startup diagnostics are incomplete: " + ", ".join(missing))
+    if "PRIVACY DIAGNOSTICS OK" not in privacy:
+        fail("privacy diagnostics executable contract is missing")
+    for marker in ("smoke_test.py", "verify_golden", "FULL PATIENT REPLAY OK"):
+        if marker not in replay:
+            fail(f"full patient replay lost canonical marker: {marker}")
+    for marker in ("GOLDEN_RELATIVE_PATHS", "docx_fingerprint", "GOLDEN DOCX OK"):
+        if marker not in golden:
+            fail(f"golden DOCX regression lost marker: {marker}")
+    if manifest.count("sha256"):
+        fail("golden DOCX manifest must contain raw hashes only, not executable metadata")
+    if manifest.count(":") < 8:
+        fail("golden DOCX manifest does not cover the canonical medical+diary set")
+
+
 def assert_ci_wiring() -> None:
     workflow = read(".github/workflows/windows-build.yml")
     build = read("build_exe_windows.bat")
@@ -109,6 +140,8 @@ def assert_ci_wiring() -> None:
         "fetch-depth: 0",
         "python tools/document_mechanics_guard.py",
         "python tools/production_safety_gate.py",
+        "python tools/privacy_diagnostics_check.py",
+        "python tools/full_patient_replay_check.py",
         "python gui_runtime_check.py",
         "python verify_built_exe.py",
         "BUILD_WINDOWS_INSTALLER.bat",
@@ -132,6 +165,7 @@ def main() -> None:
     assert_intake_boundary()
     assert_self_check_is_outer_only()
     assert_installer_contract()
+    assert_privacy_and_replay_contract()
     assert_ci_wiring()
     print("PRODUCTION SAFETY GATE OK")
 
