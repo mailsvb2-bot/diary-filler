@@ -70,6 +70,18 @@ jobs:
           path: generation_performance_profile.json
           if-no-files-found: error
 
+      - name: Profile renderer finalization hotspots
+        env:
+          PYTHONPATH: .
+        run: python tools/generation_finalize_profile.py
+
+      - name: Upload renderer finalization profile
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+        with:
+          name: MedicalDiaryAutofill-Generation-Finalization-Profile
+          path: generation_finalize_profile.json
+          if-no-files-found: error
+
       - name: Run desktop intake contract
         run: python tests/desktop_intake_contract_check.py
 
