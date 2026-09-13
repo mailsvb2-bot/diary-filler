@@ -30,13 +30,6 @@ def assert_runtime_budget() -> None:
 def assert_behavior_contracts() -> None:
     behavior = read("USER_BEHAVIOR_CONTRACT.md")
     regression = read("REGRESSION_CONTOUR.md")
-    for marker in (
-        "must **not replace, fork or silently alter the document-creation mechanics**",
-        "_apply_primary_document_path(...)_path_placeholder",
-    ):
-        # The second marker is normalized below; keeping this loop explicit makes
-        # accidental weakening of the contract visible in code review.
-        pass
     if "must **not replace, fork or silently alter the document-creation mechanics**" not in behavior:
         fail("behavior contract lost the no-second-mechanics rule")
     if "_apply_primary_document_path(...)" not in behavior:
@@ -95,7 +88,12 @@ def assert_ci_wiring() -> None:
     ):
         if marker not in workflow:
             fail(f"Windows CI lost safety marker: {marker}")
-    if "python tools/production_safety_gate.py" not in build:
+
+    build_has_safety_gate = (
+        "python tools\\production_safety_gate.py" in build
+        or "python tools/production_safety_gate.py" in build
+    )
+    if not build_has_safety_gate:
         fail("local Windows EXE build bypasses production safety gate")
 
 
