@@ -6,6 +6,7 @@ import tempfile
 import time
 from datetime import date
 from pathlib import Path
+from types import SimpleNamespace
 
 from docx import Document
 
@@ -13,6 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+import main as app_main
 import startup
 
 
@@ -65,7 +67,6 @@ def _assert_primary_detection_contract() -> None:
     assert not startup.desktop_intake_is_candidate_word_file("ЭПИ.pdf")
 
 
-
 def _assert_canonical_primary_parser_contract() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
@@ -92,6 +93,41 @@ def _assert_canonical_primary_parser_contract() -> None:
         assert not startup.desktop_intake_is_primary_document(discharge), "discharge must stay excluded"
 
 
+def _assert_onboarding_repairs_missing_intake_root() -> None:
+    """A stale false setting must not permanently suppress the normal intake folder."""
+
+    class AppStub:
+        def __init__(self) -> None:
+            self.root = None
+            self.preference = False
+            self._desktop_intake_enabled_for_session = False
+
+        def _desktop_intake_preference(self) -> bool:
+            return self.preference
+
+        def _set_desktop_intake_preference(self, enabled: bool) -> None:
+            self.preference = bool(enabled)
+
+        def _staff_profile_is_configured(self) -> bool:
+            return True
+
+    with tempfile.TemporaryDirectory() as tmp:
+        intake_root = Path(tmp) / startup.DESKTOP_INTAKE_FOLDER_NAME
+        original_os = app_main.os
+        original_resolver = app_main.desktop_intake_root_path
+        try:
+            app_main.os = SimpleNamespace(name="nt", environ={})  # type: ignore[assignment]
+            app_main.desktop_intake_root_path = lambda: intake_root  # type: ignore[assignment]
+            app = AppStub()
+            app_main._first_launch_onboarding(app)
+            assert intake_root.is_dir(), "normal Windows onboarding did not recreate intake root"
+            assert app._desktop_intake_enabled_for_session is True
+            assert app.preference is True, "legacy false intake preference was not healed"
+        finally:
+            app_main.desktop_intake_root_path = original_resolver  # type: ignore[assignment]
+            app_main.os = original_os  # type: ignore[assignment]
+
+
 def _assert_agent_heartbeat_contract() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         runtime = Path(tmp)
@@ -110,6 +146,7 @@ def _assert_agent_heartbeat_contract() -> None:
             assert startup._desktop_agent_is_active() is False
         finally:
             startup._desktop_runtime_dir = original_runtime_dir  # type: ignore[assignment]
+
 
 def _assert_top_level_only_and_safe_move() -> None:
     with tempfile.TemporaryDirectory() as tmp:
@@ -196,6 +233,7 @@ def main() -> None:
     _assert_naming_contract()
     _assert_primary_detection_contract()
     _assert_canonical_primary_parser_contract()
+    _assert_onboarding_repairs_missing_intake_root()
     _assert_top_level_only_and_safe_move()
     _assert_agent_update_and_encoding_contract()
     _assert_agent_heartbeat_contract()
