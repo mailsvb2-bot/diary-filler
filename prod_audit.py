@@ -15,8 +15,8 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
-TARGET_VERSION = "1.4.4"
-TARGET_VERSION_LABEL = "v1.4.4-date-linking-and-tail-cleanup"
+TARGET_VERSION = "1.4.9"
+TARGET_VERSION_LABEL = "v1.4.9-session-safety"
 MAX_PYTHON_FILES = 125
 MAX_TINY_PYTHON_FILES = 25
 # Release/CI probes are executable quality gates, not runtime architecture.
@@ -120,9 +120,15 @@ def _assert_version_sync() -> None:
     pyproject = _read("pyproject.toml")
     app_config = _read("app_config.py")
     version_info = _read("version_info.txt")
+    installer_build = _read("BUILD_WINDOWS_INSTALLER.bat")
+    installer_iss = _read("installer/MedicalDiaryAutofill.iss")
+    windows_workflow = _read(".github/workflows/windows-build.yml")
+    ci_gate_lock = _read("tools/ci_gate_lock.py")
     readme = _read("README.md")
     release_notes = _read("RELEASE_NOTES.md")
 
+    installer_name = f"MedicalDiaryAutofill-Setup-{TARGET_VERSION}.exe"
+    installer_path = f"dist/{installer_name}"
     checks = {
         "pyproject.toml version": f'version = "{TARGET_VERSION}"' in pyproject,
         "app_config APP_VERSION": TARGET_VERSION_LABEL in app_config,
@@ -134,6 +140,12 @@ def _assert_version_sync() -> None:
                 f"prodvers=({', '.join(TARGET_VERSION.split('.'))}, 0)",
             )
         ),
+        "installer build version": f"/DMyAppVersion={TARGET_VERSION}" in installer_build,
+        "installer build output name": installer_build.count(installer_name) >= 2,
+        "Inno default version": f'#define MyAppVersion "{TARGET_VERSION}"' in installer_iss,
+        "Windows workflow installer smoke": f"-InstallerPath ./{installer_path}" in windows_workflow,
+        "Windows workflow installer artifact": windows_workflow.count(installer_path) >= 2,
+        "CI gate installer path": f"-InstallerPath ./{installer_path}" in ci_gate_lock,
         "README version": TARGET_VERSION_LABEL in readme,
         "RELEASE_NOTES top version": release_notes.lstrip().startswith(f"# Release notes — {TARGET_VERSION_LABEL}"),
     }

@@ -1,3 +1,14 @@
+# Release notes — v1.4.9-session-safety
+
+## v1.4.9-session-safety
+
+- Версия программы, EXE и installer синхронизирована как `1.4.9` / `v1.4.9-session-safety` после восстановления безопасного desktop-intake lifecycle и защиты границы пациента.
+- В сборку входят надёжный uninstall, создание и сохранение пользовательской папки `Выписанные пациенты`, self-heal удалённой папки, Desktop/OneDrive rebind и retirement старого watcher после обновления EXE.
+- Поле `Диагноз` в UI остаётся окончательным источником диагноза для генерации; ручной выбор `Тексты` принадлежит только текущему пациенту, а автоматический выбор пересчитывается по зафиксированному диагнозу.
+- Обязательная patient-session regression-матрица не допускает перенос ЭПИ, `Даты`, `Тексты`, РВК/ВК/комиссионных реквизитов, popup/manual state и frozen `PatientData` от пациента A к пациенту B.
+- `prod_audit.py` теперь fail-closed проверяет runtime/EXE metadata, Inno default, installer build script, Windows workflow и `ci_gate_lock`; рассинхрон версии installer больше не может пройти release gate.
+- Механика генерации остаётся под document-mechanics guard, full patient replay и golden DOCX regression; release-bump не меняет рендереры, парсеры или шаблоны.
+
 # Release notes — v1.4.4-date-linking-and-tail-cleanup
 
 ## v1.4.4-date-linking-and-tail-cleanup
