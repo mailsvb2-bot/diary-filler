@@ -170,24 +170,34 @@ def _assert_agent_update_and_encoding_contract() -> None:
         runtime = Path(tmp)
         current = runtime / "new" / "MedicalDiaryAutofill.exe"
         current.parent.mkdir()
-        current.write_bytes(b"stub")
+        current.write_bytes(b"current-build")
         old = runtime / "old" / "MedicalDiaryAutofill.exe"
         old.parent.mkdir()
-        old.write_bytes(b"stub")
+        old.write_bytes(b"old-build")
 
         original_runtime_dir = startup._desktop_runtime_dir
         original_native_command = startup._desktop_native_gui_command
+        original_identity_cache = startup._DESKTOP_AGENT_IDENTITY_CACHE
         try:
             startup._desktop_runtime_dir = lambda: runtime  # type: ignore[assignment]
-            startup._desktop_native_gui_command = lambda: [str(current)]  # type: ignore[assignment]
+
+            current_command = [str(current)]
+            current_identity = startup._desktop_build_agent_identity(current_command)
+            startup._desktop_native_gui_command = lambda: current_command  # type: ignore[assignment]
+            startup._DESKTOP_AGENT_IDENTITY_CACHE = current_identity
             startup._desktop_write_agent_handoff()
             assert startup._desktop_agent_is_retired() is False
-            assert startup._desktop_launch_command() == [str(current)]
+            assert startup._desktop_launch_command() == current_command
 
-            startup._desktop_native_gui_command = lambda: [str(old)]  # type: ignore[assignment]
+            old_command = [str(old)]
+            old_identity = startup._desktop_build_agent_identity(old_command)
+            assert old_identity != current_identity
+            startup._desktop_native_gui_command = lambda: old_command  # type: ignore[assignment]
+            startup._DESKTOP_AGENT_IDENTITY_CACHE = old_identity
             assert startup._desktop_agent_is_retired() is True
-            assert startup._desktop_launch_command() == [str(current)]
+            assert startup._desktop_launch_command() == current_command
         finally:
+            startup._DESKTOP_AGENT_IDENTITY_CACHE = original_identity_cache
             startup._desktop_runtime_dir = original_runtime_dir  # type: ignore[assignment]
             startup._desktop_native_gui_command = original_native_command  # type: ignore[assignment]
 
