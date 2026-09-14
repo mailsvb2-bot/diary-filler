@@ -42,6 +42,30 @@ try {
     $oldRunExists = $true
 } catch {}
 
+Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+public static class IntakeVisibleWindowProbe {
+    public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+    [DllImport("user32.dll")] public static extern bool EnumWindows(EnumWindowsProc callback, IntPtr extraData);
+    [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr hWnd);
+    [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint processId);
+    public static bool HasVisibleTopLevelWindow(int targetPid) {
+        bool found = false;
+        EnumWindows((hWnd, lParam) => {
+            uint pid;
+            GetWindowThreadProcessId(hWnd, out pid);
+            if (pid == (uint)targetPid && IsWindowVisible(hWnd)) {
+                found = true;
+                return false;
+            }
+            return true;
+        }, IntPtr.Zero);
+        return found;
+    }
+}
+'@
+
 function Get-AppProcessRecords {
     $resolved = [IO.Path]::GetFullPath($app)
     @(Get-CimInstance Win32_Process -Filter "Name = 'MedicalDiaryAutofill.exe'" -ErrorAction SilentlyContinue | Where-Object {
@@ -95,6 +119,15 @@ function Start-IsolatedApp {
     $psi.Environment['LOCALAPPDATA'] = $localAppData
     foreach ($arg in $Arguments) { $psi.ArgumentList.Add($arg) }
     return [Diagnostics.Process]::Start($psi)
+}
+
+function Test-AppHasVisibleWindow {
+    foreach ($record in @(Get-AppProcessRecords | Where-Object { $_.CommandLine -notmatch '--intake-agent' })) {
+        try {
+            if ([IntakeVisibleWindowProbe]::HasVisibleTopLevelWindow([int]$record.ProcessId)) { return $true }
+        } catch {}
+    }
+    return $false
 }
 
 function Stop-TestAppProcesses {
@@ -192,12 +225,13 @@ d.save(p)
         throw 'Failed to create primary DOCX fixture for watcher E2E'
     }
 
-    Wait-Until -Description 'watcher-triggered GUI launch request and non-agent app process' -TimeoutSeconds 40 -Condition {
+    Wait-Until -Description 'watcher-triggered launch request with a visible GUI window' -TimeoutSeconds 40 -Condition {
         $records = @(Get-AppProcessRecords)
         $nonAgents = @($records | Where-Object { $_.CommandLine -notmatch '--intake-agent' })
         if ($nonAgents.Count -lt 1 -or -not (Test-Path -LiteralPath $agentLog)) { return $false }
         $launchLogCount = @((Get-Content -LiteralPath $agentLog) | Where-Object { $_ -match 'primary detected; GUI launch requested' }).Count
-        return ($launchLogCount -gt $launchLogCountBeforeDrop)
+        if ($launchLogCount -le $launchLogCountBeforeDrop) { return $false }
+        return (Test-AppHasVisibleWindow)
     }
     Wait-Until -Description 'primary DOCX moved into patient subfolder' -TimeoutSeconds 20 -Condition {
         if (Test-Path -LiteralPath $fixture) { return $false }

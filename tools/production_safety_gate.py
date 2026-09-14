@@ -108,9 +108,19 @@ def assert_installer_contract() -> None:
         "--intake-agent",
         "--intake-primary",
         "primary DOCX moved into patient subfolder",
+        "IntakeVisibleWindowProbe",
+        "Test-AppHasVisibleWindow",
+        "visible GUI window",
     ):
         if marker not in intake_e2e:
             fail(f"desktop intake packaged-EXE E2E lost marker: {marker}")
+    if "def _activate_root_for_intake" not in main_source:
+        fail("desktop intake no longer has explicit pre-popup GUI activation")
+    intake_arg_pos = main_source.find("intake_primary = _intake_primary_argument")
+    activation_pos = main_source.find("_activate_root_for_intake(root)", intake_arg_pos)
+    runtime_pos = main_source.find("start_desktop_intake_runtime(", intake_arg_pos)
+    if intake_arg_pos < 0 or activation_pos < 0 or runtime_pos < 0 or activation_pos > runtime_pos:
+        fail("desktop intake must activate the GUI before intake runtime schedules primary parsing/popups")
     if "filesandordirs" in installer.casefold():
         fail("installer uses broad recursive uninstall deletion")
 
