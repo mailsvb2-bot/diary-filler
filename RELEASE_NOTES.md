@@ -1,4 +1,13 @@
-# Release notes — v1.4.7-desktop-rebind
+# Release notes — v1.4.8-watcher-update-handoff
+
+## v1.4.8-watcher-update-handoff
+
+- Исправлено обновление программы поверх существующей установки: старый скрытый watcher больше не считается актуальным только потому, что новый EXE установлен по тому же пути.
+- Identity watcher теперь привязан к фактической сборке, а не только к имени и пути EXE; старый процесс корректно завершает работу после handoff новой версии.
+- Добавлен regression-contract для замены EXE новой сборкой в точности по тому же пути без перезагрузки Windows.
+- Сохранены все исправления `Выписанные пациенты`: автоматическое создание, self-heal удалённой папки, динамический rebind при переносе Desktop/OneDrive и безопасное удаление приложения.
+- Механика генерации документов не изменялась; document-mechanics guard, полный patient replay и golden DOCX regression остаются обязательными.
+- Версия EXE, installer metadata, package metadata и CI-артефакта синхронизирована как `1.4.8` / `v1.4.8-watcher-update-handoff`.
 
 ## v1.4.7-desktop-rebind
 

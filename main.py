@@ -28,7 +28,7 @@ from app_config import (
     DIR_DIARY_TEMPLATES,
     DIR_NUMBERED_DIARY_TEMPLATES,
 )
-APP_VERSION = "v1.4.7-desktop-rebind"
+APP_VERSION = "v1.4.8-watcher-update-handoff"
 from startup import (
     DESKTOP_INTAKE_AGENT_ARGUMENT,
     DESKTOP_INTAKE_PRIMARY_ARGUMENT,
