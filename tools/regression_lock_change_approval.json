@@ -19,6 +19,7 @@
     "BUILD_WINDOWS_INSTALLER.bat": "f576fc2f0c61958a33d6ae221a49b281b6935572",
     "app_config.py": "8f062f4f26f4bf494f711d5c518758ed3e969c0b",
     "files_mixin.py": "29ed561447407191321d97daaff1b13ef7522947",
+    "gui_runtime_check.py": "8fb159fb576e06c5b709d4f99a59094ebf04bd82",
     "installer/MedicalDiaryAutofill.iss": "dcdc84982223454b586bc655291190d8bdfdb717",
     "layout_sources.py": "ae9ed7a0e046688aba4b13b13238fbd3a9ff340b",
     "main.py": "66d8a269ac82f445a44e489b37d122f94ffe0a6f",
