@@ -56,6 +56,9 @@ jobs:
       - name: Lock mandatory CI regression topology
         run: python tools/ci_gate_lock.py
 
+      - name: Verify regression lock coverage inventory
+        run: python tests/regression_surface_inventory.py
+
       - name: Run production safety gate
         run: python tools/production_safety_gate.py
 
