@@ -1,0 +1,82 @@
+name: Temporary 1.4.6 release metadata migration
+
+on:
+  push:
+    branches: [release/1.4.6-watcher-selfheal]
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    if: ${{ !contains(github.event.head_commit.message, '[release-146]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          ref: release/1.4.6-watcher-selfheal
+          fetch-depth: 0
+      - name: Synchronize 1.4.6 release metadata
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          replacements = {
+              'main.py': [
+                  ('APP_VERSION = "v1.4.5-intake-lifecycle"', 'APP_VERSION = "v1.4.6-watcher-selfheal"'),
+              ],
+              'prod_audit.py': [
+                  ('TARGET_VERSION = "1.4.5"', 'TARGET_VERSION = "1.4.6"'),
+                  ('TARGET_VERSION_LABEL = "v1.4.5-intake-lifecycle"', 'TARGET_VERSION_LABEL = "v1.4.6-watcher-selfheal"'),
+              ],
+              'pyproject.toml': [
+                  ('version = "1.4.5"', 'version = "1.4.6"'),
+              ],
+              'README.md': [
+                  ('**Версия:** `v1.4.5-intake-lifecycle`', '**Версия:** `v1.4.6-watcher-selfheal`'),
+              ],
+              'version_info.txt': [
+                  ('filevers=(1, 4, 5, 0)', 'filevers=(1, 4, 6, 0)'),
+                  ('prodvers=(1, 4, 5, 0)', 'prodvers=(1, 4, 6, 0)'),
+                  ("StringStruct('FileVersion', 'v1.4.5-intake-lifecycle')", "StringStruct('FileVersion', 'v1.4.6-watcher-selfheal')"),
+                  ("StringStruct('ProductVersion', 'v1.4.5-intake-lifecycle')", "StringStruct('ProductVersion', 'v1.4.6-watcher-selfheal')"),
+              ],
+              'BUILD_WINDOWS_INSTALLER.bat': [
+                  ('/DMyAppVersion=1.4.5', '/DMyAppVersion=1.4.6'),
+                  ('MedicalDiaryAutofill-Setup-1.4.5.exe', 'MedicalDiaryAutofill-Setup-1.4.6.exe'),
+              ],
+              'installer/MedicalDiaryAutofill.iss': [
+                  ('#define MyAppVersion "1.4.5"', '#define MyAppVersion "1.4.6"'),
+              ],
+              '.github/workflows/windows-build.yml': [
+                  ('MedicalDiaryAutofill-Setup-1.4.5.exe', 'MedicalDiaryAutofill-Setup-1.4.6.exe'),
+              ],
+          }
+
+          for filename, pairs in replacements.items():
+              path = Path(filename)
+              text = path.read_text(encoding='utf-8')
+              for old, new in pairs:
+                  count = text.count(old)
+                  if count < 1:
+                      raise AssertionError(f'{filename}: missing {old!r}')
+                  text = text.replace(old, new)
+              path.write_text(text, encoding='utf-8')
+
+          notes = Path('RELEASE_NOTES.md')
+          text = notes.read_text(encoding='utf-8')
+          old_head = '# Release notes — v1.4.5-intake-lifecycle\n\n'
+          assert text.startswith(old_head)
+          new_head = '''# Release notes — v1.4.6-watcher-selfheal\n\n## v1.4.6-watcher-selfheal\n\n- Живой Windows watcher теперь сам восстанавливает папку `Выписанные пациенты`, если пользователь или внешний процесс удалил её во время работы агента.\n- При временной ошибке доступа к Desktop watcher не завершается: он сохраняет heartbeat-контур и повторяет создание папки на следующем цикле.\n- Добавлен Windows regression-contract: папка удаляется во время работающего watcher, после чего тест требует её автоматического восстановления и продолжения наблюдения.\n- Механика генерации документов не изменялась; document-mechanics guard, полный patient replay и golden DOCX regression остаются обязательными.\n- Версия EXE, installer metadata, package metadata и CI-артефакта синхронизирована как `1.4.6` / `v1.4.6-watcher-selfheal`, чтобы self-heal сборка не смешивалась с `1.4.5`.\n\n'''
+          notes.write_text(new_head + text[len(old_head):], encoding='utf-8')
+          PY
+          python -m compileall -q main.py prod_audit.py
+          python prod_audit.py
+          python tools/production_safety_gate.py
+          git diff --check
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add .github/workflows/windows-build.yml BUILD_WINDOWS_INSTALLER.bat README.md RELEASE_NOTES.md installer/MedicalDiaryAutofill.iss main.py prod_audit.py pyproject.toml version_info.txt
+          git commit -m "Version watcher self-heal release as 1.4.6 [release-146]"
+          git push origin HEAD:release/1.4.6-watcher-selfheal
