@@ -25,6 +25,13 @@ if (-not (Test-Path $app)) {
     throw 'Installed MedicalDiaryAutofill.exe is missing'
 }
 
+# Do not count a successful copy as an installation smoke. Launch the exact
+# installed EXE in normal GUI mode and require a real visible top-level window.
+& (Join-Path $PSScriptRoot 'windows_visible_gui_smoke.ps1') -AppPath $app
+if ($LASTEXITCODE -ne 0) {
+    throw 'Installed application did not pass visible GUI smoke'
+}
+
 $uninstaller = Get-ChildItem -LiteralPath $installDir -Filter 'unins*.exe' -File | Select-Object -First 1
 if ($null -eq $uninstaller) {
     throw 'Inno Setup uninstaller is missing'
