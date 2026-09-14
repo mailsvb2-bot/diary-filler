@@ -28,7 +28,7 @@ from app_config import (
     DIR_DIARY_TEMPLATES,
     DIR_NUMBERED_DIARY_TEMPLATES,
 )
-APP_VERSION = "v1.4.6-watcher-selfheal"
+APP_VERSION = "v1.4.7-desktop-rebind"
 from startup import (
     DESKTOP_INTAKE_AGENT_ARGUMENT,
     DESKTOP_INTAKE_PRIMARY_ARGUMENT,
