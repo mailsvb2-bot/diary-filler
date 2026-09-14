@@ -15,7 +15,10 @@ concurrency:
 
 jobs:
   build:
-    runs-on: windows-latest
+    # Pin the release image instead of floating with windows-latest. This keeps
+    # the user EXE on the mature Windows Server 2022 toolchain and prevents an
+    # image migration (for example 2025) from silently changing release bytes.
+    runs-on: windows-2022
     timeout-minutes: 30
 
     steps:
@@ -105,6 +108,10 @@ jobs:
       - name: Verify packaged EXE startup and TkDND
         run: python verify_built_exe.py
 
+      - name: Verify normal double-click GUI is visible
+        shell: pwsh
+        run: ./tools/windows_visible_gui_smoke.ps1 -AppPath ./dist/MedicalDiaryAutofill.exe
+
       - name: Run packaged desktop intake auto-launch E2E
         shell: pwsh
         run: ./tools/windows_desktop_intake_e2e.ps1 -AppPath ./dist/MedicalDiaryAutofill.exe
@@ -124,7 +131,7 @@ jobs:
         shell: cmd
         run: BUILD_WINDOWS_INSTALLER.bat
 
-      - name: Smoke installed and uninstalled application
+      - name: Smoke installed, launched and uninstalled application
         shell: pwsh
         run: ./tools/windows_installer_smoke.ps1 -InstallerPath ./dist/MedicalDiaryAutofill-Setup-1.4.4.exe
 
