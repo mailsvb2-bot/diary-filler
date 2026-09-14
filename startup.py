@@ -740,9 +740,63 @@ def _desktop_native_gui_command() -> list[str]:
     return _desktop_runtime_command()
 
 
+def _desktop_agent_identity_file_digest(path: Path) -> str:
+    digest = hashlib.sha256()
+    try:
+        with path.open("rb") as stream:
+            for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                digest.update(chunk)
+        return f"sha256:{digest.hexdigest()}"
+    except OSError:
+        try:
+            stat = path.stat()
+            return f"stat:{stat.st_size}:{stat.st_mtime_ns}"
+        except OSError:
+            return "missing"
+
+
+def _desktop_build_agent_identity(command: list[str]) -> str:
+    """Bind an agent to the actual build loaded by this process, not only its path."""
+    digest = hashlib.sha256()
+    for item in command:
+        digest.update(item.encode("utf-8", errors="surrogatepass"))
+        digest.update(b"\0")
+
+    candidates: list[Path] = []
+    if command:
+        candidates.append(Path(command[0]))
+    if len(command) >= 2 and command[1].lower().endswith((".py", ".pyw")):
+        candidates.append(Path(command[1]))
+    if not getattr(sys, "frozen", False):
+        candidates.append(Path(__file__).resolve())
+
+    seen: set[str] = set()
+    for candidate in candidates:
+        try:
+            normalized = candidate.expanduser().absolute()
+        except OSError:
+            normalized = candidate
+        key = os.path.normcase(str(normalized))
+        if key in seen:
+            continue
+        seen.add(key)
+        digest.update(str(normalized).encode("utf-8", errors="surrogatepass"))
+        digest.update(b"\0")
+        digest.update(_desktop_agent_identity_file_digest(normalized).encode("ascii"))
+        digest.update(b"\0")
+    return digest.hexdigest()
+
+
+_DESKTOP_AGENT_IDENTITY_CACHE: str | None = None
+
+
 def _desktop_current_agent_identity() -> str:
-    raw = "\0".join(_desktop_native_gui_command()).encode("utf-8", errors="surrogatepass")
-    return hashlib.sha256(raw).hexdigest()
+    global _DESKTOP_AGENT_IDENTITY_CACHE
+    if _DESKTOP_AGENT_IDENTITY_CACHE is None:
+        _DESKTOP_AGENT_IDENTITY_CACHE = _desktop_build_agent_identity(
+            _desktop_native_gui_command()
+        )
+    return _DESKTOP_AGENT_IDENTITY_CACHE
 
 
 def _desktop_agent_handoff_path() -> Path:

@@ -170,11 +170,49 @@ def assert_gui_poll_rebinds_when_desktop_moves() -> None:
             startup.desktop_intake_root_path = original_root_path  # type: ignore[assignment]
 
 
+def assert_old_watcher_retires_after_in_place_update() -> None:
+    """Replacing the EXE at the same path must retire the old in-memory watcher."""
+    with tempfile.TemporaryDirectory() as tmp:
+        runtime = Path(tmp)
+        exe = runtime / "MedicalDiaryAutofill.exe"
+        exe.write_bytes(b"same-path-old-build")
+        command = [str(exe)]
+
+        original_runtime_dir = startup._desktop_runtime_dir
+        original_native_command = startup._desktop_native_gui_command
+        original_identity_cache = startup._DESKTOP_AGENT_IDENTITY_CACHE
+        try:
+            startup._desktop_runtime_dir = lambda: runtime  # type: ignore[assignment]
+            startup._desktop_native_gui_command = lambda: command  # type: ignore[assignment]
+
+            old_identity = startup._desktop_build_agent_identity(command)
+            startup._DESKTOP_AGENT_IDENTITY_CACHE = old_identity
+            assert startup._desktop_current_agent_identity() == old_identity
+
+            exe.write_bytes(b"same-path-new-build")
+            new_identity = startup._desktop_build_agent_identity(command)
+            assert old_identity != new_identity, (old_identity, new_identity)
+
+            startup._DESKTOP_AGENT_IDENTITY_CACHE = new_identity
+            startup._desktop_write_agent_handoff()
+            startup._DESKTOP_AGENT_IDENTITY_CACHE = old_identity
+
+            assert startup._desktop_agent_is_retired() is True
+            assert startup._desktop_launch_command() == command
+        finally:
+            startup._DESKTOP_AGENT_IDENTITY_CACHE = original_identity_cache
+            startup._desktop_native_gui_command = original_native_command  # type: ignore[assignment]
+            startup._desktop_runtime_dir = original_runtime_dir  # type: ignore[assignment]
+
+
 def main() -> None:
     assert_agent_recreates_deleted_intake_root()
     assert_agent_rebinds_when_desktop_moves()
     assert_gui_poll_rebinds_when_desktop_moves()
-    print("INTAKE LIFECYCLE REGRESSION OK: self-heal + Desktop rebind")
+    assert_old_watcher_retires_after_in_place_update()
+    print(
+        "INTAKE LIFECYCLE REGRESSION OK: self-heal + Desktop rebind + in-place watcher replacement"
+    )
 
 
 if __name__ == "__main__":
