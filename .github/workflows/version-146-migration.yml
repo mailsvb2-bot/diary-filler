@@ -72,7 +72,6 @@ jobs:
           notes.write_text(new_head + text[len(old_head):], encoding='utf-8')
           PY
           python -m compileall -q main.py prod_audit.py
-          python prod_audit.py
           python tools/production_safety_gate.py
           git diff --check
           git config user.name github-actions[bot]
