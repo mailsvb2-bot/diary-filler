@@ -44,7 +44,7 @@ jobs:
           gate = Path('tools/production_safety_gate.py')
           text = gate.read_text(encoding='utf-8')
           anchor = '''    if "def _activate_root_for_intake" not in main_source:\n'''
-          addition = '''    if 'if not root.is_dir():' not in startup or 'root = desktop_intake_ensure_root()' not in startup:\n        fail("live watcher no longer repairs a deleted intake root")\n'''
+          addition = '''    startup_source = read("startup.py")\n    if 'if not root.is_dir():' not in startup_source or 'root = desktop_intake_ensure_root()' not in startup_source:\n        fail("live watcher no longer repairs a deleted intake root")\n'''
           assert text.count(anchor) == 1, text.count(anchor)
           text = text.replace(anchor, addition + anchor, 1)
           gate.write_text(text, encoding='utf-8')
