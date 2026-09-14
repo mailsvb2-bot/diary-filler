@@ -27,10 +27,10 @@ if (-not (Test-Path $app)) {
 
 # Do not count a successful copy as an installation smoke. Launch the exact
 # installed EXE in normal GUI mode and require a real visible top-level window.
+# The child PowerShell script throws on failure; $ErrorActionPreference='Stop'
+# propagates that failure. Do not inspect $LASTEXITCODE here because a .ps1
+# invocation does not own/reset the native-process exit-code register.
 & (Join-Path $PSScriptRoot 'windows_visible_gui_smoke.ps1') -AppPath $app
-if ($LASTEXITCODE -ne 0) {
-    throw 'Installed application did not pass visible GUI smoke'
-}
 
 $uninstaller = Get-ChildItem -LiteralPath $installDir -Filter 'unins*.exe' -File | Select-Object -First 1
 if ($null -eq $uninstaller) {
