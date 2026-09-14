@@ -126,6 +126,9 @@ def assert_installer_contract() -> None:
     ):
         if marker not in intake_e2e:
             fail(f"desktop intake packaged-EXE E2E lost marker: {marker}")
+    startup_source = read("startup.py")
+    if 'if not root.is_dir():' not in startup_source or 'root = desktop_intake_ensure_root()' not in startup_source:
+        fail("live watcher no longer repairs a deleted intake root")
     if "def _activate_root_for_intake" not in main_source:
         fail("desktop intake no longer has explicit pre-popup GUI activation")
     intake_arg_pos = main_source.find("intake_primary = _intake_primary_argument")

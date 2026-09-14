@@ -1003,6 +1003,15 @@ def run_desktop_intake_agent() -> int:
                 _desktop_agent_log("agent retired after application update")
                 return 0
 
+            if not root.is_dir():
+                try:
+                    root = desktop_intake_ensure_root()
+                    _desktop_agent_log("intake root restored")
+                except OSError:
+                    _desktop_agent_log("intake root unavailable; retry scheduled")
+                    time.sleep(_DESKTOP_INTAKE_AGENT_POLL_SECONDS)
+                    continue
+
             now = time.time()
             recently_launched = {
                 signature: launched_at
