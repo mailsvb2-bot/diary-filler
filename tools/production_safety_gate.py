@@ -86,6 +86,8 @@ def assert_installer_contract() -> None:
     required = (
         "PrivilegesRequired=lowest",
         "DefaultDirName={localappdata}\\MedicalDiaryAutofill",
+        "[Dirs]",
+        'Name: "{userdesktop}\\Выписанные пациенты"; Flags: uninsneveruninstall',
         "[UninstallDelete]",
         "InitializeUninstall",
         "RegDeleteValue(",
@@ -109,12 +111,15 @@ def assert_installer_contract() -> None:
         "WINDOWS INSTALLER ACTIVE-WATCHER UNINSTALL SMOKE OK",
         "unins*.exe",
         "--intake-agent",
+        "Installer did not create Desktop\\Выписанные пациенты",
+        "Uninstaller removed Desktop\\Выписанные пациенты",
+        "Uninstaller removed a user-owned file from Desktop\\Выписанные пациенты",
         "MedicalDiaryAutofill process survived uninstall",
         "HKCU Run watcher entry survived uninstall",
         "Startup watcher script survived uninstall",
     ):
         if marker not in installer_smoke:
-            fail(f"installer smoke lost active-watcher uninstall marker: {marker}")
+            fail(f"installer smoke lost installed-lifecycle marker: {marker}")
     for marker in (
         "WINDOWS DESKTOP INTAKE AUTOLAUNCH E2E OK",
         "--intake-agent",
