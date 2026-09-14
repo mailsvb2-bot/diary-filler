@@ -19,6 +19,7 @@ from tkinter import messagebox
 from app import CombinedMedicalDiaryApp
 from app_config import (
     APP_TITLE,
+    APP_VERSION,
     DIARY_KIND,
     DIARY_LABEL,
     DIR_OUTPUT,
@@ -28,7 +29,6 @@ from app_config import (
     DIR_DIARY_TEMPLATES,
     DIR_NUMBERED_DIARY_TEMPLATES,
 )
-APP_VERSION = "v1.4.8-watcher-update-handoff"
 from startup import (
     DESKTOP_INTAKE_AGENT_ARGUMENT,
     DESKTOP_INTAKE_PRIMARY_ARGUMENT,
@@ -47,39 +47,42 @@ UNINSTALL_INTAKE_ARGUMENT = "--uninstall-intake-agent"
 
 
 def _first_launch_onboarding(app) -> None:
-    """Ensure desktop intake exists and ask once for reusable staff names."""
+    """Ask once for the intake folder and reusable staff names."""
     if os.name != "nt" or os.environ.get("CI", "").strip():
         return
-
-    intake_disabled = os.environ.get("MEDICAL_AUTOFILL_DISABLE_DESKTOP_INTAKE", "").strip() == "1"
-    if not intake_disabled:
-        try:
-            intake_root = desktop_intake_root_path()
-            preference = app._desktop_intake_preference()
-            try:
-                intake_root.mkdir(parents=True, exist_ok=True)
-            except OSError as exc:
-                app._desktop_intake_enabled_for_session = False
-                if preference is not False:
+    try:
+        intake_root = desktop_intake_root_path()
+        preference = app._desktop_intake_preference()
+        if intake_root.is_dir():
+            app._desktop_intake_enabled_for_session = True
+            if preference is not True:
+                app._set_desktop_intake_preference(True)
+        elif preference is None:
+            create_folder = messagebox.askyesno(
+                "Первый запуск",
+                "Создать на рабочем столе папку «Выписанные пациенты»?\n\n"
+                "Если выбрать «Нет», программа всё равно будет работать вручную.",
+                parent=app.root,
+            )
+            app._desktop_intake_enabled_for_session = bool(create_folder)
+            app._set_desktop_intake_preference(bool(create_folder))
+            if create_folder:
+                try:
+                    intake_root.mkdir(parents=True, exist_ok=True)
+                except OSError as exc:
+                    app._desktop_intake_enabled_for_session = False
                     app._set_desktop_intake_preference(False)
-                code, _safe_details = _support_write_startup_failure(exc, stage="intake")
-                messagebox.showwarning(
-                    "Выписанные пациенты",
-                    "Не удалось создать папку «Выписанные пациенты». Ручной режим остаётся доступен.\n\n"
-                    f"Код ошибки: {code}",
-                    parent=app.root,
-                )
-            else:
-                # The discharged-patient folder is part of the normal Windows
-                # workflow, not a one-time preference. Heal legacy `false`
-                # settings left by the old onboarding prompt or a transient
-                # first-run failure so deleting/reinstalling the folder cannot
-                # permanently disable the watcher.
-                app._desktop_intake_enabled_for_session = True
-                if preference is not True:
-                    app._set_desktop_intake_preference(True)
-        except Exception:
-            app._desktop_intake_enabled_for_session = False
+                    code, _safe_details = _support_write_startup_failure(exc, stage="intake")
+                    messagebox.showwarning(
+                        "Выписанные пациенты",
+                        "Не удалось создать папку «Выписанные пациенты». Ручной режим остаётся доступен.\n\n"
+                        f"Код ошибки: {code}",
+                        parent=app.root,
+                    )
+        else:
+            app._desktop_intake_enabled_for_session = bool(preference)
+    except Exception:
+        app._desktop_intake_enabled_for_session = False
 
     if not app._staff_profile_is_configured():
         try:

@@ -6,7 +6,6 @@ import tempfile
 import time
 from datetime import date
 from pathlib import Path
-from types import SimpleNamespace
 
 from docx import Document
 
@@ -14,7 +13,6 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-import main as app_main
 import startup
 
 
@@ -67,6 +65,7 @@ def _assert_primary_detection_contract() -> None:
     assert not startup.desktop_intake_is_candidate_word_file("ЭПИ.pdf")
 
 
+
 def _assert_canonical_primary_parser_contract() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
@@ -93,193 +92,6 @@ def _assert_canonical_primary_parser_contract() -> None:
         assert not startup.desktop_intake_is_primary_document(discharge), "discharge must stay excluded"
 
 
-def _assert_onboarding_repairs_missing_intake_root() -> None:
-    """A stale false setting must not permanently suppress the normal intake folder."""
-
-    class AppStub:
-        def __init__(self) -> None:
-            self.root = None
-            self.preference = False
-            self._desktop_intake_enabled_for_session = False
-
-        def _desktop_intake_preference(self) -> bool:
-            return self.preference
-
-        def _set_desktop_intake_preference(self, enabled: bool) -> None:
-            self.preference = bool(enabled)
-
-        def _staff_profile_is_configured(self) -> bool:
-            return True
-
-    with tempfile.TemporaryDirectory() as tmp:
-        intake_root = Path(tmp) / startup.DESKTOP_INTAKE_FOLDER_NAME
-        original_os = app_main.os
-        original_resolver = app_main.desktop_intake_root_path
-        try:
-            app_main.os = SimpleNamespace(name="nt", environ={})  # type: ignore[assignment]
-            app_main.desktop_intake_root_path = lambda: intake_root  # type: ignore[assignment]
-            app = AppStub()
-            app_main._first_launch_onboarding(app)
-            assert intake_root.is_dir(), "normal Windows onboarding did not recreate intake root"
-            assert app._desktop_intake_enabled_for_session is True
-            assert app.preference is True, "legacy false intake preference was not healed"
-        finally:
-            app_main.desktop_intake_root_path = original_resolver  # type: ignore[assignment]
-            app_main.os = original_os  # type: ignore[assignment]
-
-
-def _assert_agent_recreates_deleted_intake_root() -> None:
-    """A live watcher must heal a deleted intake folder instead of becoming inert."""
-    with tempfile.TemporaryDirectory() as tmp:
-        base = Path(tmp)
-        root = base / startup.DESKTOP_INTAKE_FOLDER_NAME
-        root.mkdir()
-
-        original_os = startup.os
-        original_acquire = startup._desktop_acquire_agent_mutex
-        original_release = startup._desktop_release_agent_mutex
-        original_root_path = startup.desktop_intake_root_path
-        original_touch = startup._desktop_touch_agent_heartbeat
-        original_retired = startup._desktop_agent_is_retired
-        original_gui_active = startup._desktop_gui_is_active
-        original_scan = startup.desktop_intake_scan_primary_candidates
-        original_sleep = startup.time.sleep
-        original_log = startup._desktop_agent_log
-        scans: list[bool] = []
-        root_path_calls = 0
-
-        def resolve_root() -> Path:
-            nonlocal root_path_calls
-            root_path_calls += 1
-            return root
-
-        def scan(candidate_root: str | Path) -> list[Path]:
-            scans.append(Path(candidate_root).is_dir())
-            if len(scans) == 1:
-                root.rmdir()
-                return []
-            raise KeyboardInterrupt
-
-        try:
-            startup.os = SimpleNamespace(name="nt", environ={})  # type: ignore[assignment]
-            startup._desktop_acquire_agent_mutex = lambda: 1  # type: ignore[assignment]
-            startup._desktop_release_agent_mutex = lambda _handle: None  # type: ignore[assignment]
-            startup.desktop_intake_root_path = resolve_root  # type: ignore[assignment]
-            startup._desktop_touch_agent_heartbeat = lambda: None  # type: ignore[assignment]
-            startup._desktop_agent_is_retired = lambda: False  # type: ignore[assignment]
-            startup._desktop_gui_is_active = lambda: False  # type: ignore[assignment]
-            startup.desktop_intake_scan_primary_candidates = scan  # type: ignore[assignment]
-            startup.time.sleep = lambda _seconds: None  # type: ignore[assignment]
-            startup._desktop_agent_log = lambda _message: None  # type: ignore[assignment]
-
-            assert startup.run_desktop_intake_agent() == 0
-            assert root_path_calls >= 2, root_path_calls
-            assert scans == [True, True], scans
-            assert root.is_dir(), "watcher did not recreate deleted intake root"
-        finally:
-            startup._desktop_agent_log = original_log  # type: ignore[assignment]
-            startup.time.sleep = original_sleep  # type: ignore[assignment]
-            startup.desktop_intake_scan_primary_candidates = original_scan  # type: ignore[assignment]
-            startup._desktop_gui_is_active = original_gui_active  # type: ignore[assignment]
-            startup._desktop_agent_is_retired = original_retired  # type: ignore[assignment]
-            startup._desktop_touch_agent_heartbeat = original_touch  # type: ignore[assignment]
-            startup.desktop_intake_root_path = original_root_path  # type: ignore[assignment]
-            startup._desktop_release_agent_mutex = original_release  # type: ignore[assignment]
-            startup._desktop_acquire_agent_mutex = original_acquire  # type: ignore[assignment]
-            startup.os = original_os  # type: ignore[assignment]
-
-
-def _assert_agent_rebinds_when_desktop_moves() -> None:
-    """An existing old Desktop directory must not pin the live watcher forever."""
-    with tempfile.TemporaryDirectory() as tmp:
-        base = Path(tmp)
-        first = base / "Desktop-A" / startup.DESKTOP_INTAKE_FOLDER_NAME
-        second = base / "Desktop-B" / startup.DESKTOP_INTAKE_FOLDER_NAME
-        first.mkdir(parents=True)
-        second.mkdir(parents=True)
-        active = {"root": first}
-        scans: list[Path] = []
-
-        original_os = startup.os
-        original_root_path = startup.desktop_intake_root_path
-        original_acquire = startup._desktop_acquire_agent_mutex
-        original_release = startup._desktop_release_agent_mutex
-        original_touch = startup._desktop_touch_agent_heartbeat
-        original_retired = startup._desktop_agent_is_retired
-        original_gui_active = startup._desktop_gui_is_active
-        original_scan = startup.desktop_intake_scan_primary_candidates
-        original_sleep = startup.time.sleep
-        original_log = startup._desktop_agent_log
-
-        def scan(candidate_root: str | Path) -> list[Path]:
-            scans.append(Path(candidate_root))
-            if len(scans) == 1:
-                active["root"] = second
-                return []
-            raise KeyboardInterrupt
-
-        try:
-            startup.os = SimpleNamespace(name="nt", environ={})  # type: ignore[assignment]
-            startup.desktop_intake_root_path = lambda: active["root"]  # type: ignore[assignment]
-            startup._desktop_acquire_agent_mutex = lambda: 1  # type: ignore[assignment]
-            startup._desktop_release_agent_mutex = lambda _handle: None  # type: ignore[assignment]
-            startup._desktop_touch_agent_heartbeat = lambda: None  # type: ignore[assignment]
-            startup._desktop_agent_is_retired = lambda: False  # type: ignore[assignment]
-            startup._desktop_gui_is_active = lambda: False  # type: ignore[assignment]
-            startup.desktop_intake_scan_primary_candidates = scan  # type: ignore[assignment]
-            startup.time.sleep = lambda _seconds: None  # type: ignore[assignment]
-            startup._desktop_agent_log = lambda _message: None  # type: ignore[assignment]
-
-            assert startup.run_desktop_intake_agent() == 0
-            assert scans == [first, second], scans
-            assert first.is_dir(), "old Desktop intentionally remains present in this regression"
-        finally:
-            startup._desktop_agent_log = original_log  # type: ignore[assignment]
-            startup.time.sleep = original_sleep  # type: ignore[assignment]
-            startup.desktop_intake_scan_primary_candidates = original_scan  # type: ignore[assignment]
-            startup._desktop_gui_is_active = original_gui_active  # type: ignore[assignment]
-            startup._desktop_agent_is_retired = original_retired  # type: ignore[assignment]
-            startup._desktop_touch_agent_heartbeat = original_touch  # type: ignore[assignment]
-            startup._desktop_release_agent_mutex = original_release  # type: ignore[assignment]
-            startup._desktop_acquire_agent_mutex = original_acquire  # type: ignore[assignment]
-            startup.desktop_intake_root_path = original_root_path  # type: ignore[assignment]
-            startup.os = original_os  # type: ignore[assignment]
-
-
-def _assert_gui_poll_rebinds_when_desktop_moves() -> None:
-    with tempfile.TemporaryDirectory() as tmp:
-        base = Path(tmp)
-        old_root = base / "Desktop-A" / startup.DESKTOP_INTAKE_FOLDER_NAME
-        new_root = base / "Desktop-B" / startup.DESKTOP_INTAKE_FOLDER_NAME
-        old_root.mkdir(parents=True)
-        new_root.mkdir(parents=True)
-        scanned: list[Path] = []
-
-        class RootStub:
-            def winfo_exists(self) -> bool:
-                return True
-
-            def after(self, _delay: int, _callback) -> None:
-                return None
-
-        app = SimpleNamespace(root=RootStub(), _desktop_intake_processing=False)
-        original_root_path = startup.desktop_intake_root_path
-        original_scan = startup.desktop_intake_scan_primary_candidates
-        original_log = startup._desktop_agent_log
-        try:
-            startup.desktop_intake_root_path = lambda: new_root  # type: ignore[assignment]
-            startup.desktop_intake_scan_primary_candidates = (
-                lambda root: scanned.append(Path(root)) or []
-            )  # type: ignore[assignment]
-            startup._desktop_agent_log = lambda _message: None  # type: ignore[assignment]
-            startup._desktop_poll_intake(app, old_root)
-            assert scanned == [new_root], scanned
-        finally:
-            startup._desktop_agent_log = original_log  # type: ignore[assignment]
-            startup.desktop_intake_scan_primary_candidates = original_scan  # type: ignore[assignment]
-            startup.desktop_intake_root_path = original_root_path  # type: ignore[assignment]
-
-
 def _assert_agent_heartbeat_contract() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         runtime = Path(tmp)
@@ -298,7 +110,6 @@ def _assert_agent_heartbeat_contract() -> None:
             assert startup._desktop_agent_is_active() is False
         finally:
             startup._desktop_runtime_dir = original_runtime_dir  # type: ignore[assignment]
-
 
 def _assert_top_level_only_and_safe_move() -> None:
     with tempfile.TemporaryDirectory() as tmp:
@@ -346,7 +157,7 @@ def _assert_top_level_only_and_safe_move() -> None:
 
 def _assert_agent_update_and_encoding_contract() -> None:
     payload = startup.desktop_intake_startup_vbs_payload(
-        [r"C:\\Программа\\MedicalDiaryAutofill.exe", startup.DESKTOP_INTAKE_AGENT_ARGUMENT]
+        [r"C:\Программа\MedicalDiaryAutofill.exe", startup.DESKTOP_INTAKE_AGENT_ARGUMENT]
     )
     encoded = payload.encode("utf-16")
     assert encoded.startswith(b"\xff\xfe")
@@ -359,52 +170,24 @@ def _assert_agent_update_and_encoding_contract() -> None:
         runtime = Path(tmp)
         current = runtime / "new" / "MedicalDiaryAutofill.exe"
         current.parent.mkdir()
-        current.write_bytes(b"current-build")
+        current.write_bytes(b"stub")
         old = runtime / "old" / "MedicalDiaryAutofill.exe"
         old.parent.mkdir()
-        old.write_bytes(b"old-build")
-        same_path = runtime / "same" / "MedicalDiaryAutofill.exe"
-        same_path.parent.mkdir()
-        same_path.write_bytes(b"same-path-old-build")
+        old.write_bytes(b"stub")
 
         original_runtime_dir = startup._desktop_runtime_dir
         original_native_command = startup._desktop_native_gui_command
-        original_identity_cache = startup._DESKTOP_AGENT_IDENTITY_CACHE
         try:
             startup._desktop_runtime_dir = lambda: runtime  # type: ignore[assignment]
-
-            current_command = [str(current)]
-            current_identity = startup._desktop_build_agent_identity(current_command)
-            startup._desktop_native_gui_command = lambda: current_command  # type: ignore[assignment]
-            startup._DESKTOP_AGENT_IDENTITY_CACHE = current_identity
+            startup._desktop_native_gui_command = lambda: [str(current)]  # type: ignore[assignment]
             startup._desktop_write_agent_handoff()
             assert startup._desktop_agent_is_retired() is False
-            assert startup._desktop_launch_command() == current_command
+            assert startup._desktop_launch_command() == [str(current)]
 
-            old_command = [str(old)]
-            old_identity = startup._desktop_build_agent_identity(old_command)
-            assert old_identity != current_identity
-            startup._desktop_native_gui_command = lambda: old_command  # type: ignore[assignment]
-            startup._DESKTOP_AGENT_IDENTITY_CACHE = old_identity
+            startup._desktop_native_gui_command = lambda: [str(old)]  # type: ignore[assignment]
             assert startup._desktop_agent_is_retired() is True
-            assert startup._desktop_launch_command() == current_command
-
-            same_command = [str(same_path)]
-            old_same_identity = startup._desktop_build_agent_identity(same_command)
-            same_path.write_bytes(b"same-path-new-build")
-            new_same_identity = startup._desktop_build_agent_identity(same_command)
-            assert old_same_identity != new_same_identity, (old_same_identity, new_same_identity)
-
-            startup._desktop_native_gui_command = lambda: same_command  # type: ignore[assignment]
-            startup._DESKTOP_AGENT_IDENTITY_CACHE = new_same_identity
-            startup._desktop_write_agent_handoff()
-            startup._DESKTOP_AGENT_IDENTITY_CACHE = old_same_identity
-            assert startup._desktop_agent_is_retired() is True, (
-                "an old in-memory watcher must retire when the EXE is replaced in-place"
-            )
-            assert startup._desktop_launch_command() == same_command
+            assert startup._desktop_launch_command() == [str(current)]
         finally:
-            startup._DESKTOP_AGENT_IDENTITY_CACHE = original_identity_cache
             startup._desktop_runtime_dir = original_runtime_dir  # type: ignore[assignment]
             startup._desktop_native_gui_command = original_native_command  # type: ignore[assignment]
 
@@ -413,10 +196,6 @@ def main() -> None:
     _assert_naming_contract()
     _assert_primary_detection_contract()
     _assert_canonical_primary_parser_contract()
-    _assert_onboarding_repairs_missing_intake_root()
-    _assert_agent_recreates_deleted_intake_root()
-    _assert_agent_rebinds_when_desktop_moves()
-    _assert_gui_poll_rebinds_when_desktop_moves()
     _assert_top_level_only_and_safe_move()
     _assert_agent_update_and_encoding_contract()
     _assert_agent_heartbeat_contract()

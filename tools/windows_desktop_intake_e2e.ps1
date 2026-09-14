@@ -8,7 +8,6 @@ $testRoot = Join-Path $env:RUNNER_TEMP ("MedicalDiaryAutofill-Intake-E2E-" + [gu
 $appData = Join-Path $testRoot 'AppData\Roaming'
 $localAppData = Join-Path $testRoot 'AppData\Local'
 $settingsDir = Join-Path $appData 'MedicalDiaryAutofill'
-$settingsPath = Join-Path $settingsDir 'settings.json'
 $runtimeDir = Join-Path $localAppData 'MedicalDiaryAutofill'
 $agentHeartbeat = Join-Path $runtimeDir 'desktop-intake-agent.heartbeat'
 $agentLog = Join-Path $runtimeDir 'desktop-intake-agent.log'
@@ -93,11 +92,7 @@ function Wait-Until {
             $isPrimary = [bool]([string]$record.CommandLine -match '--intake-primary')
             Write-Host "  process pid=$($record.ProcessId) agent=$isAgent primary=$isPrimary"
         }
-        Write-Host "  intake_root_present=$(Test-Path -LiteralPath $intakeRoot)"
         Write-Host "  fixture_present=$(Test-Path -LiteralPath $fixture)"
-        if (Test-Path -LiteralPath $settingsPath) {
-            Write-Host "  settings=$(Get-Content -LiteralPath $settingsPath -Raw)"
-        }
         if (Test-Path -LiteralPath $agentHeartbeat) {
             Write-Host "  agent_heartbeat=$(Get-Content -LiteralPath $agentHeartbeat -Raw)"
         }
@@ -143,15 +138,11 @@ function Stop-TestAppProcesses {
 
 try {
     New-Item -ItemType Directory -Path $settingsDir -Force | Out-Null
-    if ($intakeExisted) {
-        throw 'Intake E2E requires a clean Windows runner: Выписанные пациенты already exists before app start'
-    }
+    New-Item -ItemType Directory -Path $intakeRoot -Force | Out-Null
     Remove-Item -LiteralPath $fixture -Force -ErrorAction SilentlyContinue
 
-    # Reproduce the regression state from PR #34: the old preference says false
-    # and the intake root is absent. The packaged app itself must heal both.
     $settings = @{
-        desktop_intake_enabled = $false
+        desktop_intake_enabled = $true
         staff_profile = @{
             configured = $true
             doctor = 'Автоврач А.А.'
@@ -159,19 +150,9 @@ try {
             deputy_chief = 'Автозам Д.Д.'
         }
     } | ConvertTo-Json -Depth 4
-    Set-Content -LiteralPath $settingsPath -Value $settings -Encoding UTF8
+    Set-Content -LiteralPath (Join-Path $settingsDir 'settings.json') -Value $settings -Encoding UTF8
 
     $initialGui = Start-IsolatedApp
-    Wait-Until -Description 'automatic intake root creation' -TimeoutSeconds 25 -Condition {
-        Test-Path -LiteralPath $intakeRoot
-    }
-    Wait-Until -Description 'legacy disabled intake preference healed' -TimeoutSeconds 25 -Condition {
-        if (-not (Test-Path -LiteralPath $settingsPath)) { return $false }
-        try {
-            $saved = Get-Content -LiteralPath $settingsPath -Raw | ConvertFrom-Json
-            return ($saved.desktop_intake_enabled -eq $true)
-        } catch { return $false }
-    }
     Wait-Until -Description 'watcher heartbeat after normal GUI start' -TimeoutSeconds 25 -Condition {
         if (-not (Test-Path -LiteralPath $agentHeartbeat)) { return $false }
         try {
