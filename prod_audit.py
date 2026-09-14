@@ -15,8 +15,8 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
-TARGET_VERSION = "1.4.8"
-TARGET_VERSION_LABEL = "v1.4.8-watcher-update-handoff"
+TARGET_VERSION = "1.4.4"
+TARGET_VERSION_LABEL = "v1.4.4-date-linking-and-tail-cleanup"
 MAX_PYTHON_FILES = 125
 MAX_TINY_PYTHON_FILES = 25
 # Release/CI probes are executable quality gates, not runtime architecture.
@@ -118,14 +118,14 @@ def _python_files() -> list[Path]:
 
 def _assert_version_sync() -> None:
     pyproject = _read("pyproject.toml")
-    main_source = _read("main.py")
+    app_config = _read("app_config.py")
     version_info = _read("version_info.txt")
     readme = _read("README.md")
     release_notes = _read("RELEASE_NOTES.md")
 
     checks = {
         "pyproject.toml version": f'version = "{TARGET_VERSION}"' in pyproject,
-        "main APP_VERSION": f'APP_VERSION = "{TARGET_VERSION_LABEL}"' in main_source,
+        "app_config APP_VERSION": TARGET_VERSION_LABEL in app_config,
         "version_info label": TARGET_VERSION_LABEL in version_info,
         "version_info tuple": all(
             marker in version_info

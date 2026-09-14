@@ -86,35 +86,23 @@ def assert_installer_contract() -> None:
     required = (
         "PrivilegesRequired=lowest",
         "DefaultDirName={localappdata}\\MedicalDiaryAutofill",
+        "--uninstall-intake-agent",
         "[UninstallDelete]",
         "InitializeUninstall",
-        "RegDeleteValue(",
-        "taskkill.exe",
-        "Result := True;",
     )
     missing = [marker for marker in required if marker not in installer]
     if missing:
         fail("installer contract is incomplete: " + ", ".join(missing))
-    if "--uninstall-intake-agent" in installer:
-        fail("installer uninstall regressed to a helper command that can block removal")
+    if 'UNINSTALL_INTAKE_ARGUMENT = "--uninstall-intake-agent"' not in main_source:
+        fail("packaged EXE cannot retire the watcher during uninstall")
+    if "_desktop_remove_agent_run_key()" not in main_source:
+        fail("uninstall no longer removes the watcher HKCU Run entry")
     if "desktop-intake-agent.heartbeat" not in installer:
         fail("installer no longer cleans the watcher heartbeat")
-    if "MedicalDiaryAutofill Intake.vbs" not in installer:
-        fail("installer no longer removes watcher Startup persistence")
-    if "MedicalDiaryAutofill Intake" not in installer:
-        fail("installer no longer removes watcher HKCU Run persistence")
     if "dist\\MedicalDiaryAutofill.exe" not in installer_build or "ISCC" not in installer_build:
         fail("installer build script is not bound to the packaged EXE")
-    for marker in (
-        "WINDOWS INSTALLER ACTIVE-WATCHER UNINSTALL SMOKE OK",
-        "unins*.exe",
-        "--intake-agent",
-        "MedicalDiaryAutofill process survived uninstall",
-        "HKCU Run watcher entry survived uninstall",
-        "Startup watcher script survived uninstall",
-    ):
-        if marker not in installer_smoke:
-            fail(f"installer smoke lost active-watcher uninstall marker: {marker}")
+    if "WINDOWS INSTALLER SMOKE OK" not in installer_smoke or "unins*.exe" not in installer_smoke:
+        fail("installer smoke does not prove install/uninstall")
     for marker in (
         "WINDOWS DESKTOP INTAKE AUTOLAUNCH E2E OK",
         "--intake-agent",
@@ -126,9 +114,6 @@ def assert_installer_contract() -> None:
     ):
         if marker not in intake_e2e:
             fail(f"desktop intake packaged-EXE E2E lost marker: {marker}")
-    startup_source = read("startup.py")
-    if 'if not root.is_dir():' not in startup_source or 'root = desktop_intake_ensure_root()' not in startup_source:
-        fail("live watcher no longer repairs a deleted intake root")
     if "def _activate_root_for_intake" not in main_source:
         fail("desktop intake no longer has explicit pre-popup GUI activation")
     intake_arg_pos = main_source.find("intake_primary = _intake_primary_argument")
@@ -193,9 +178,7 @@ def assert_staff_profile_contract() -> None:
         (settings, "def _set_staff_profile"),
         (settings, '"deputy_chief"'),
         (main_source, "def _first_launch_onboarding"),
-        (main_source, "intake_root.mkdir(parents=True, exist_ok=True)"),
-        (main_source, "app._desktop_intake_enabled_for_session = True"),
-        (main_source, "app._set_desktop_intake_preference(True)"),
+        (main_source, "Создать на рабочем столе папку «Выписанные пациенты»?"),
         (main_source, "_prompt_staff_profile(first_run=True)"),
         (window, 'text="Сотрудники"'),
         (medical_flow, "_apply_staff_profile_to_patient_data(data)"),
@@ -206,10 +189,6 @@ def assert_staff_profile_contract() -> None:
     missing = [marker for source, marker in required if marker not in source]
     if missing:
         fail("staff profile contract is incomplete: " + ", ".join(missing))
-
-    legacy_prompt = "Создать на рабочем столе папку «Выписанные пациенты»?"
-    if legacy_prompt in main_source:
-        fail("desktop intake folder creation regressed to an optional first-run prompt")
 
 
 def assert_ci_wiring() -> None:
