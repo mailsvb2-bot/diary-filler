@@ -19,6 +19,7 @@ ROOT = Path(__file__).resolve().parents[1]
 QUICK = (
     "tools/regression_lock_check.py",
     "tools/ci_gate_lock.py",
+    "tests/regression_surface_inventory.py",
     "tools/production_safety_gate.py",
     "tools/privacy_diagnostics_check.py",
     "tests/desktop_intake_contract_check.py",
