@@ -9,6 +9,13 @@ $runKeyPath = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run'
 $runValueName = 'MedicalDiaryAutofill Intake'
 $startupScript = Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs\Startup\MedicalDiaryAutofill Intake.vbs'
 $runtimeDir = Join-Path $env:LOCALAPPDATA 'MedicalDiaryAutofill'
+$desktopDir = [Environment]::GetFolderPath('Desktop')
+if ([string]::IsNullOrWhiteSpace($desktopDir)) {
+    throw 'Windows Desktop path is unavailable'
+}
+$intakeDir = Join-Path $desktopDir 'Выписанные пациенты'
+$intakeExistedBefore = Test-Path -LiteralPath $intakeDir
+$preserveProbe = Join-Path $intakeDir '.installer-smoke-preserve.txt'
 
 function Stop-AppProcesses {
     Get-Process -Name 'MedicalDiaryAutofill' -ErrorAction SilentlyContinue | ForEach-Object {
@@ -36,6 +43,12 @@ try {
     if (-not (Test-Path $app)) {
         throw 'Installed MedicalDiaryAutofill.exe is missing'
     }
+    if (-not (Test-Path -LiteralPath $intakeDir -PathType Container)) {
+        throw 'Installer did not create Desktop\Выписанные пациенты'
+    }
+
+    # A user-owned file in the intake folder must survive application uninstall.
+    Set-Content -LiteralPath $preserveProbe -Value 'preserve intake folder' -Encoding UTF8
 
     $uninstaller = Get-ChildItem -LiteralPath $installDir -Filter 'unins*.exe' -File | Select-Object -First 1
     if ($null -eq $uninstaller) {
@@ -90,6 +103,12 @@ try {
     if (Test-Path -LiteralPath $startupScript) {
         throw 'Startup watcher script survived uninstall'
     }
+    if (-not (Test-Path -LiteralPath $intakeDir -PathType Container)) {
+        throw 'Uninstaller removed Desktop\Выписанные пациенты'
+    }
+    if (-not (Test-Path -LiteralPath $preserveProbe -PathType Leaf)) {
+        throw 'Uninstaller removed a user-owned file from Desktop\Выписанные пациенты'
+    }
 
     Write-Host 'WINDOWS INSTALLER ACTIVE-WATCHER UNINSTALL SMOKE OK'
 }
@@ -100,7 +119,14 @@ finally {
     if (Test-Path $installDir) {
         Remove-Item -LiteralPath $installDir -Recurse -Force -ErrorAction SilentlyContinue
     }
-    # Only technical runtime files are test residue. Patient folders/documents are never touched here.
+    Remove-Item -LiteralPath $preserveProbe -Force -ErrorAction SilentlyContinue
+    if (-not $intakeExistedBefore -and (Test-Path -LiteralPath $intakeDir -PathType Container)) {
+        $remaining = @(Get-ChildItem -LiteralPath $intakeDir -Force -ErrorAction SilentlyContinue)
+        if ($remaining.Count -eq 0) {
+            Remove-Item -LiteralPath $intakeDir -Force -ErrorAction SilentlyContinue
+        }
+    }
+    # Only technical runtime files are test residue. Real patient folders/documents are never touched here.
     foreach ($name in @(
         'desktop-intake-gui.heartbeat',
         'desktop-intake-agent.heartbeat',
