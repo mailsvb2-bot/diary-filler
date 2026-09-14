@@ -86,23 +86,35 @@ def assert_installer_contract() -> None:
     required = (
         "PrivilegesRequired=lowest",
         "DefaultDirName={localappdata}\\MedicalDiaryAutofill",
-        "--uninstall-intake-agent",
         "[UninstallDelete]",
         "InitializeUninstall",
+        "RegDeleteValue(",
+        "taskkill.exe",
+        "Result := True;",
     )
     missing = [marker for marker in required if marker not in installer]
     if missing:
         fail("installer contract is incomplete: " + ", ".join(missing))
-    if 'UNINSTALL_INTAKE_ARGUMENT = "--uninstall-intake-agent"' not in main_source:
-        fail("packaged EXE cannot retire the watcher during uninstall")
-    if "_desktop_remove_agent_run_key()" not in main_source:
-        fail("uninstall no longer removes the watcher HKCU Run entry")
+    if "--uninstall-intake-agent" in installer:
+        fail("installer uninstall regressed to a helper command that can block removal")
     if "desktop-intake-agent.heartbeat" not in installer:
         fail("installer no longer cleans the watcher heartbeat")
+    if "MedicalDiaryAutofill Intake.vbs" not in installer:
+        fail("installer no longer removes watcher Startup persistence")
+    if "MedicalDiaryAutofill Intake" not in installer:
+        fail("installer no longer removes watcher HKCU Run persistence")
     if "dist\\MedicalDiaryAutofill.exe" not in installer_build or "ISCC" not in installer_build:
         fail("installer build script is not bound to the packaged EXE")
-    if "WINDOWS INSTALLER SMOKE OK" not in installer_smoke or "unins*.exe" not in installer_smoke:
-        fail("installer smoke does not prove install/uninstall")
+    for marker in (
+        "WINDOWS INSTALLER ACTIVE-WATCHER UNINSTALL SMOKE OK",
+        "unins*.exe",
+        "--intake-agent",
+        "MedicalDiaryAutofill process survived uninstall",
+        "HKCU Run watcher entry survived uninstall",
+        "Startup watcher script survived uninstall",
+    ):
+        if marker not in installer_smoke:
+            fail(f"installer smoke lost active-watcher uninstall marker: {marker}")
     for marker in (
         "WINDOWS DESKTOP INTAKE AUTOLAUNCH E2E OK",
         "--intake-agent",
