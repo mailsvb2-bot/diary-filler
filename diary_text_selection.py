@@ -5,15 +5,19 @@ import zipfile
 from pathlib import Path
 
 
-def _is_docx_file(path: str | Path) -> bool:
+SUPPORTED_DIARY_TEXT_SUFFIXES = {".doc", ".docx", ".docm"}
+
+
+def _is_supported_word_file(path: str | Path) -> bool:
     try:
         p = Path(path)
         if not p.is_file() or p.name.startswith("~$"):
             return False
-        if p.suffix.lower() in {".docx", ".docm"}:
+        if p.suffix.lower() in SUPPORTED_DIARY_TEXT_SUFFIXES:
             return True
         if p.suffix:
             return False
+        # Preserve legacy extensionless OOXML support.
         with zipfile.ZipFile(p) as zf:
             names = set(zf.namelist())
         return "[Content_Types].xml" in names and "word/document.xml" in names
@@ -21,7 +25,14 @@ def _is_docx_file(path: str | Path) -> bool:
         return False
 
 
+# Compatibility alias for older tests/imports. The function now recognizes all
+# supported Word diagnosis-text files, including legacy .doc.
+def _is_docx_file(path: str | Path) -> bool:
+    return _is_supported_word_file(path)
+
+
 _ICD_PREFIX_RE = re.compile(r"^\s*[A-ZА-Я]\s*\d{1,3}\s*(?:[.,]\s*\d+)?\s*[-—–.:;)]*\s*", re.IGNORECASE)
+_ICD_CODE_RE = re.compile(r"(?<![A-ZА-Я0-9])[FФ]\s*\d{1,3}\s*(?:[.,]\s*\d+)?(?![A-ZА-Я0-9])", re.IGNORECASE)
 _COMMON_DIARY_NAME_WORDS = {
     "дневник",
     "дневники",
@@ -150,13 +161,16 @@ def normalize_diary_diagnosis_name(value: str) -> str:
     try:
         p = Path(text)
         # Не считаем формальный диагноз вида "F70.0 ..." именем файла только
-        # из-за точки в коде МКБ. Stem берём только для реальных DOCX/DOCM имён.
-        if p.suffix.lower() in {".docx", ".docm"}:
+        # из-за точки в коде МКБ. Stem берём только для реальных Word-имён.
+        if p.suffix.lower() in SUPPORTED_DIARY_TEXT_SUFFIXES:
             text = p.stem
     except Exception:
         pass
     text = text.replace("ё", "е").lower()
+    # Diary-template matching is deliberately verbal. ICD numbers are metadata
+    # and must not steer the choice when the doctor changed the diagnosis wording.
     text = _ICD_PREFIX_RE.sub("", text)
+    text = _ICD_CODE_RE.sub(" ", text)
     text = re.sub(r"\b(?:диагноз|основной диагноз|заключение|дневниковые записи)\b", " ", text, flags=re.IGNORECASE)
     text = re.sub(r"[№#]", " ", text)
     text = re.sub(r"[()\[\]{}]", " ", text)
@@ -184,7 +198,7 @@ def _semantic_keys(value: str) -> set[str]:
     keys.update(stem for stem in stems if stem and stem not in _STOP_DIARY_NAME_WORDS)
 
     # Мосты между формальными диагнозами и реальными именами файлов из папки.
-    if re.search(r"\bF\s*7[0-9]", raw, re.IGNORECASE) or "умствен" in text or "олигофрен" in text:
+    if "умствен" in text or "олигофрен" in text:
         keys.add("oligophrenia")
     if "астен" in text:
         keys.add("asthenia")
@@ -264,6 +278,25 @@ def _depression_severity(value: str) -> str:
     return ""
 
 
+def _safe_verbal_lexical_match(diagnosis: str, filename: str) -> bool:
+    """Accept a strong word/stem match even when word order differs.
+
+    ICD codes are removed before this comparison. Requiring at least two
+    significant verbal terms prevents a generic word such as «шизофрения»
+    from silently choosing an arbitrary neighbouring subtype.
+    """
+    diag_words = _significant_words(diagnosis)
+    name_words = _significant_words(filename)
+    diag_stems = {_stem_russian_word(word) for word in diag_words}
+    name_stems = {_stem_russian_word(word) for word in name_words}
+    overlap = len((diag_words & name_words) | (diag_stems & name_stems))
+    if overlap < 2:
+        return False
+    coverage_diag = overlap / max(1, len(diag_words))
+    coverage_name = overlap / max(1, len(name_words))
+    return coverage_diag >= 0.5 and coverage_name >= 0.6
+
+
 def _safe_legacy_diagnosis_fallback(diagnosis: str, filename: str, score: int) -> bool:
     """Allow only controlled legacy aliases when no direct filename match exists.
 
@@ -314,7 +347,7 @@ def iter_diary_text_docx_files(folder: str | Path, *, max_depth: int = 2) -> lis
             if child.is_dir():
                 walk(child, depth + 1)
                 continue
-            if not _is_docx_file(child):
+            if not _is_supported_word_file(child):
                 continue
             try:
                 key = str(child.resolve())
@@ -347,7 +380,8 @@ def find_diary_text_file_for_diagnosis(folder: str | Path, diagnosis: str) -> Pa
             continue
         direct_rank = _direct_diagnosis_name_rank(diagnosis, path.stem)
         if direct_rank == 0 and not _safe_legacy_diagnosis_fallback(diagnosis, path.stem, score):
-            continue
+            if not _safe_verbal_lexical_match(diagnosis, path.stem):
+                continue
         name_norm = normalize_diary_diagnosis_name(path.stem)
         name_keys = _semantic_keys(name_norm)
         length_gap = abs(len(name_norm) - len(diagnosis_norm))

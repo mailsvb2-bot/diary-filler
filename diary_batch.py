@@ -56,7 +56,12 @@ def fill_diary_file(*args, **kwargs):
     from diary_writer import fill_diary_file as legacy_fill_diary_file
     return legacy_fill_diary_file(*args, **kwargs)
 
-def _existing_docx_files(paths: Iterable[str | Path], label: str) -> list[Path]:
+def _existing_docx_files(
+    paths: Iterable[str | Path],
+    label: str,
+    *,
+    allow_legacy_doc: bool = False,
+) -> list[Path]:
     result: list[Path] = []
     seen: set[Path] = set()
     for raw_path in paths:
@@ -65,8 +70,15 @@ def _existing_docx_files(paths: Iterable[str | Path], label: str) -> list[Path]:
         path = Path(raw_path).expanduser()
         if not path.exists() or not path.is_file():
             raise FileNotFoundError(f"Не найден файл ({label}): {path}")
-        if path.suffix.lower() not in {".docx", ".docm"}:
-            raise ValueError(f"Неверный формат файла ({label}): {path.suffix or 'без расширения'}. Разрешено: .docx, .docm.")
+        allowed = {".docx", ".docm"}
+        if allow_legacy_doc:
+            allowed.add(".doc")
+        if path.suffix.lower() not in allowed:
+            allowed_text = ".doc, .docx, .docm" if allow_legacy_doc else ".docx, .docm"
+            raise ValueError(
+                f"Неверный формат файла ({label}): {path.suffix or 'без расширения'}. "
+                f"Разрешено: {allowed_text}."
+            )
         key = path.resolve()
         if key in seen:
             continue
@@ -93,7 +105,7 @@ def read_statuses_from_files(
 ) -> list[str]:
     statuses: list[str] = []
     seen: set[str] = set()
-    for path in _existing_docx_files(paths, "тексты дневников"):
+    for path in _existing_docx_files(paths, "тексты дневников", allow_legacy_doc=True):
         for status in extract_statuses_from_docx(path, deduplicate=not preserve_duplicates):
             status = status.strip()
             key = " ".join(status.lower().replace("ё", "е").split())
@@ -481,7 +493,11 @@ def create_text_diaries(
     if not diary_files:
         raise ValueError("Сначала выберите файлы-таблицы дневников, которые нужно заполнить.")
     diary_file_paths = _existing_docx_files(diary_files, "таблица дневников")
-    status_file_paths = _existing_docx_files(status_files, "тексты дневников") if status_files else []
+    status_file_paths = (
+        _existing_docx_files(status_files, "тексты дневников", allow_legacy_doc=True)
+        if status_files
+        else []
+    )
 
     # Preserve the historical validation boundary before requiring a full date.
     parse_admission_month_year(admission_value)
@@ -559,7 +575,11 @@ def fill_diary_batch(
     if not diary_files:
         raise ValueError("Сначала выберите файлы-таблицы дневников, которые нужно заполнить.")
     diary_file_paths = _existing_docx_files(diary_files, "таблица дневников")
-    status_file_paths = _existing_docx_files(status_files, "тексты дневников") if status_files else []
+    status_file_paths = (
+        _existing_docx_files(status_files, "тексты дневников", allow_legacy_doc=True)
+        if status_files
+        else []
+    )
     if not status_files and not fill_months and not force_final_diary:
         raise ValueError("Сначала выберите папку «Тексты» с DOCX по диагнозам, включите месяц/год или финальную запись выписки.")
 

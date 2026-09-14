@@ -51,6 +51,7 @@ def main() -> None:
 
         root = _create_root(require_dnd=True)
         original_askdirectory = files_mixin.filedialog.askdirectory
+        original_askopenfilename = files_mixin.filedialog.askopenfilename
         try:
             app = CombinedMedicalDiaryApp(root)
             # Mouse events on custom Canvas buttons are meaningful only after the
@@ -65,9 +66,11 @@ def main() -> None:
             assert hasattr(app, "drop_zone"), "Primary drop zone missing"
             assert hasattr(app, "diary_dates_button"), "Dates button missing"
             assert hasattr(app, "status_files_button"), "Texts button missing"
+            assert hasattr(app, "status_file_button"), "Manual Text file button missing"
             assert app.drop_zone.winfo_ismapped(), "Primary drop-zone is not mapped"
             assert app.diary_dates_button.winfo_ismapped(), "Dates button is not mapped"
             assert app.status_files_button.winfo_ismapped(), "Texts button is not mapped"
+            assert app.status_file_button.winfo_ismapped(), "Manual Text file button is not mapped"
 
             # Drive the actual visible primary drop-zone. Its click binding must
             # call the production navigation chooser; dormant compatibility
@@ -107,9 +110,25 @@ def main() -> None:
             assert Path(app.diary_texts_dir) == texts_dir
             assert app.status_files and Path(app.status_files[0]).name == "F41.2 Тестовый диагноз.docx"
 
+            # Manual override exposes legacy .doc as a real selectable Word file.
+            manual_doc = texts_dir / "шизофрения параноидная.doc"
+            manual_doc.write_bytes(b"legacy-doc-placeholder")
+            file_calls: list[str] = []
+
+            def choose_text_file(*_args, **kwargs):
+                file_calls.append(str(kwargs.get("filetypes", "")))
+                return str(manual_doc)
+
+            files_mixin.filedialog.askopenfilename = choose_text_file
+            _click(root, app.status_file_button)
+            assert file_calls and "*.doc *.docx *.docm" in file_calls[0], file_calls
+            assert app.status_files == [str(manual_doc)]
+            assert app._diary_text_files_auto_selected is False
+
             print("GUI RUNTIME CHECK OK")
         finally:
             files_mixin.filedialog.askdirectory = original_askdirectory
+            files_mixin.filedialog.askopenfilename = original_askopenfilename
             try:
                 root.destroy()
             except Exception:

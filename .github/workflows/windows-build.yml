@@ -77,6 +77,11 @@ jobs:
           PYTHONPATH: .
         run: python tools/gender_generation_regression_matrix.py
 
+      - name: Run diagnosis override and diary-text regression
+        env:
+          PYTHONPATH: .
+        run: python tests/diagnosis_override_regression.py
+
       - name: Profile canonical document generation
         env:
           PYTHONPATH: .

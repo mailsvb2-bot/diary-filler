@@ -35,7 +35,10 @@ class ActionsDiaryFlowMixin:
             )
         if not self.diary_files:
             raise ValueError("Выберите папку «Даты» с шаблонами дневников 01–31.")
-        if not self.status_files:
+        # An automatically selected text belongs to the diagnosis that selected it.
+        # If the doctor changed Diagnosis in the UI, refresh that automatic choice
+        # against the frozen generation snapshot. A manually chosen file is sticky.
+        if not self.status_files or getattr(self, "_diary_text_files_auto_selected", False):
             self._auto_select_diary_text_by_diagnosis(
                 ask_folder=False,
                 diagnosis_override=(
@@ -45,7 +48,7 @@ class ActionsDiaryFlowMixin:
         if not self.status_files:
             self.choose_status_files()
         if not self.status_files:
-            raise ValueError("Выберите папку «Тексты» с DOCX по диагнозам. Источник «Даты» задаёт календарь, а тексты подбираются по диагнозу.")
+            raise ValueError("Выберите Word-файл «Тексты» (.doc/.docx). Источник «Даты» задаёт календарь, а текст можно подобрать по диагнозу автоматически или выбрать вручную.")
         if patient_data_snapshot is None:
             diary_patient_name = self.patient_name_var.get().strip()
             source_patient_fio = ""

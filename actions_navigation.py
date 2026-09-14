@@ -40,8 +40,11 @@ class ActionsNavigationMixin:
             data.discharge_date = popup_discharge or ui_discharge
             if popup_discharge and self.discharge_date_var.get().strip() != popup_discharge:
                 self._set_ui_var(self.discharge_date_var, popup_discharge)
-            popup_diag = self._popup_diagnosis_override.strip() or self.diagnosis_var.get().strip()
-            if popup_diag and (self._popup_diagnosis_override.strip() or self._manual_diagnosis):
+            ui_diag = self.diagnosis_var.get().strip()
+            popup_diag = self._popup_diagnosis_override.strip()
+            if self._manual_diagnosis and ui_diag:
+                data.diagnosis = sanitize_diagnosis(ui_diag)
+            elif popup_diag:
                 data.diagnosis = sanitize_diagnosis(popup_diag)
             # Дата поступления берётся только из заголовка документа. Если
             # общий парсер где-то нашёл дату рождения, заголовочная дата
