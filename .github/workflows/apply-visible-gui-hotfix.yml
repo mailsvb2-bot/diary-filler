@@ -1,0 +1,48 @@
+name: Apply visible GUI hotfix
+on:
+  push:
+    branches:
+      - automation/visible-gui-helper
+permissions:
+  contents: write
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Apply exact patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "35a01bb2fb08b28e6634356e9fc9a28678b13c25"
+          cat > /tmp/visible.patch.gz.b64 <<'EOF'
+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
+EOF
+          base64 -d /tmp/visible.patch.gz.b64 > /tmp/visible.patch.gz
+          test "$(sha256sum /tmp/visible.patch.gz | awk '{print $1}')" = "35f14b2a2fdea80f050484a521accae9b1490b923296d5b82bd07317a1632887"
+          gzip -dc /tmp/visible.patch.gz > /tmp/visible.patch
+          test "$(sha256sum /tmp/visible.patch | awk '{print $1}')" = "5899b025e37e0c7ea06b9ed9a9c526d113bf62bf03c5c66e840e71e4f2cadb73"
+          git apply --check /tmp/visible.patch
+          git apply /tmp/visible.patch
+          test "$(git hash-object startup.py)" = "a8d8cb72723fd4d2011ee8a1d6ae9f9a3ae3db54"
+          test "$(git hash-object tools/production_safety_gate.py)" = "d3ec02cadc1758a3259554de666c1b51531da4e9"
+          test "$(git hash-object tools/windows_desktop_intake_e2e.ps1)" = "56cb7a4c7264e321ff33ddcc6eee00e655c22e14"
+          python -m py_compile startup.py tools/production_safety_gate.py
+          git diff --check
+      - name: Commit exact candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add startup.py tools/production_safety_gate.py tools/windows_desktop_intake_e2e.ps1
+          git commit -m "Ensure desktop intake opens a visible GUI"
+          test "$(git rev-parse HEAD^{tree})" = "41f102ddc72d5338c7199b035a657a6d5d8ca740"
+          git push origin HEAD:fix/desktop-intake-visible
+      - name: Remove helper branch
+        if: always()
+        shell: bash
+        run: git push origin --delete automation/visible-gui-helper || true
