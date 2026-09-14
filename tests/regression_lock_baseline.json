@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "e1335097e9e86ec73bd98c2b95fbc56923337e80",
-  "baseline_note": "Regression-only complete patient-session reset candidate e1335097e9e passed the full Windows CI contour in run 34880844903: regression locks, document mechanics guard, golden/full patient replay, staff and gender regressions, complete patient-session reset matrix, real Tk GUI, packaged EXE startup, watcher auto-launch, installer build and install/uninstall smoke. This metadata-only advance promotes that exact tested candidate to the known-good regression baseline.",
+  "baseline_ref": "f6e650783466ef28824a4296448024befe0c8665",
+  "baseline_note": "Release 1.4.9 session-safety candidate f6e650783466 passed the complete Windows CI contour in run 34885377561: regression locks, CI topology, document mechanics guard, strengthened version synchronization audit, release gate, golden/full patient replay, staff and gender regressions, diagnosis and complete patient-session reset regression, desktop intake/lifecycle, real Tk GUI, packaged EXE startup, watcher auto-launch, installer 1.4.9 build and active-watcher install/uninstall smoke. This metadata-only advance promotes that exact tested candidate to the known-good regression baseline.",
   "required_approval_evidence": [
     "ci_gate_lock"
   ],
