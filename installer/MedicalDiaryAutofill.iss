@@ -25,6 +25,12 @@ ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 SetupLogging=yes
 
+[Dirs]
+; The normal installed workflow must expose the intake folder immediately,
+; even before the first GUI launch. Patient data belongs to the user, so the
+; uninstaller must never remove this folder, including when it is empty.
+Name: "{userdesktop}\Выписанные пациенты"; Flags: uninsneveruninstall
+
 [Files]
 Source: "..\dist\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
 
