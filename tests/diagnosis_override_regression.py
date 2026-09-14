@@ -150,8 +150,6 @@ def _assert_all_medical_documents_receive_new_diagnosis(root: Path) -> None:
     texts = {path.name: extract_docx_text(path) for path in created}
     joined = "\n".join(texts.values())
     assert old not in joined, f"old diagnosis leaked into generated set: {old!r}"
-    # Every current document kind owns a diagnosis placement; assert the new
-    # verbal diagnosis is present in each generated file rather than merely once.
     for name, text in texts.items():
         assert "Параноидная шизофрения" in text, f"new UI diagnosis missing from {name}"
 
@@ -159,7 +157,6 @@ def _assert_all_medical_documents_receive_new_diagnosis(root: Path) -> None:
 def _assert_verbal_matching_and_word_formats(root: Path) -> None:
     folder = root / "Тексты"
     folder.mkdir()
-    # The ICD-looking filename deliberately points to the wrong verbal meaning.
     (folder / "F20.0 Органическое расстройство.docx").touch()
     (folder / "шизофрения параноидная.docx").touch()
     (folder / "органическое расстройство личности.doc").touch()
@@ -179,7 +176,6 @@ def _assert_verbal_matching_and_word_formats(root: Path) -> None:
     found = find_diary_text_file_for_diagnosis(folder, "F06.8 Органическое расстройство личности")
     assert found is not None and found.name == "органическое расстройство личности.doc", found
 
-    # Code-only input must not steer semantic diary selection.
     assert normalize_diary_diagnosis_name("F20.0") == ""
     assert find_diary_text_file_for_diagnosis(folder, "F20.0") is None
 
@@ -203,15 +199,12 @@ def _assert_auto_refresh_and_manual_pin(root: Path) -> None:
     assert app.status_files == [str(new_file)], app.status_files
     assert app._diary_text_files_auto_selected is True
 
-    # If the new diagnosis has no candidate, the stale automatic file must be
-    # cleared instead of silently surviving from the previous diagnosis.
     assert not app._auto_select_diary_text_by_diagnosis(
         diagnosis_override="Кататоническое состояние редкого типа",
         ask_folder=False,
     )
     assert app.status_files == [], app.status_files
 
-    # Manual choice is sticky and must not be replaced by diagnosis automation.
     app.status_files = [str(manual_file)]
     app._diary_text_files_auto_selected = False
     assert app._auto_select_diary_text_by_diagnosis(
@@ -227,22 +220,127 @@ def _assert_manual_text_is_patient_scoped(root: Path) -> None:
     manual_file.touch()
     app = _PatientSwitchHarness()
 
-    # Before the first primary document is loaded, an intentionally preselected
-    # text source is allowed to remain available for that first patient.
     app.status_files = [str(manual_file)]
     app._diary_text_files_auto_selected = False
     app._reset_primary_document_runtime_state(clear_patient_inputs=False)
     assert app.status_files == [str(manual_file)], app.status_files
     assert app._diary_text_files_auto_selected is False
 
-    # A real primary-document switch is a patient boundary. Manual text chosen
-    # for patient A must never leak into patient B; only reusable folder memory
-    # may survive so the new diagnosis can be selected afresh.
     app.status_files = [str(manual_file)]
     app._diary_text_files_auto_selected = False
     app._reset_primary_document_runtime_state(clear_patient_inputs=True)
     assert app.status_files == [], app.status_files
     assert app._diary_text_files_auto_selected is False
+
+
+def _assert_full_patient_switch_reset_matrix() -> None:
+    """Every high-risk patient-specific field must be owned by the reset contract."""
+    required_always_vars = {
+        "assigned_treatment_var",
+        "case_number_var",
+        "admission_occurrence_var",
+        "expert_work_status_var",
+        "expert_work_org_var",
+        "expert_position_var",
+        "expert_sick_leave_needed_var",
+        "expert_sick_leave_from_var",
+        "expert_sick_leave_number_var",
+        "disability_needed_var",
+        "psych_account_status_var",
+        "psych_account_since_year_var",
+        "rvk_referral_present_var",
+        "rvk_referral_commissariat_var",
+        "vk_mse_work_org_var",
+        "vk_mse_position_var",
+        "sick_leave_vk_work_org_var",
+        "sick_leave_vk_position_var",
+        "sick_leave_vk_work_position_var",
+    }
+    required_tracked_ui_vars = {
+        "patient_name_var",
+        "admission_date_var",
+        "discharge_date_var",
+        "diagnosis_var",
+    }
+    required_switch_vars = {
+        "rvk_act_number_var",
+        "rvk_military_commissariat_var",
+        "rvk_work_position_var",
+        "vk_date_var",
+        "vk_protocol_number_var",
+        "vk_protocol_date_var",
+        "sick_leave_vk_date_var",
+        "sick_leave_vk_protocol_number_var",
+        "sick_leave_vk_protocol_date_var",
+        "sick_leave_vk_commission_date_var",
+        "commission_date_var",
+        "commission_number_var",
+        "epi_path_var",
+        "epi_present_var",
+    }
+    required_always_attrs = {
+        "_primary_work_org_default",
+        "_primary_work_position_default",
+        "_work_details_manually_edited",
+        "_manual_patient_name",
+        "_manual_admission_date",
+        "_manual_discharge_date",
+        "_manual_diagnosis",
+        "_popup_diagnosis_override",
+        "_popup_discharge_date_override",
+    }
+    required_switch_attrs = {
+        "_last_committee_date",
+        "_last_protocol_date",
+        "_diary_text_files_auto_selected",
+        "_diary_files_auto_selected",
+    }
+    required_switch_lists = {"status_files", "diary_files"}
+
+    always_vars = dict(files_mixin.PATIENT_SESSION_ALWAYS_VAR_DEFAULTS)
+    tracked_ui_vars = dict(files_mixin.PATIENT_SESSION_TRACKED_UI_VAR_DEFAULTS)
+    switch_vars = dict(files_mixin.PATIENT_SESSION_SWITCH_ONLY_VAR_DEFAULTS)
+    always_attrs = dict(files_mixin.PATIENT_SESSION_ALWAYS_ATTR_DEFAULTS)
+    switch_attrs = dict(files_mixin.PATIENT_SESSION_SWITCH_ONLY_ATTR_DEFAULTS)
+    switch_lists = set(files_mixin.PATIENT_SESSION_SWITCH_ONLY_LIST_ATTRS)
+
+    assert required_always_vars <= set(always_vars), required_always_vars - set(always_vars)
+    assert required_tracked_ui_vars <= set(tracked_ui_vars), required_tracked_ui_vars - set(tracked_ui_vars)
+    assert required_switch_vars <= set(switch_vars), required_switch_vars - set(switch_vars)
+    assert required_always_attrs <= set(always_attrs), required_always_attrs - set(always_attrs)
+    assert required_switch_attrs <= set(switch_attrs), required_switch_attrs - set(switch_attrs)
+    assert required_switch_lists <= switch_lists, required_switch_lists - switch_lists
+
+    app = _PatientSwitchHarness()
+    for name in required_always_vars | required_tracked_ui_vars | required_switch_vars:
+        getattr(app, name).set("PATIENT_A_LEAK")
+    for name in required_always_attrs | required_switch_attrs:
+        default = always_attrs.get(name, switch_attrs.get(name))
+        setattr(app, name, True if isinstance(default, bool) else "PATIENT_A_LEAK")
+    app.status_files = ["patient-a-text.docx"]
+    app.diary_files = ["patient-a-dates.docx"]
+    app.data = PatientData(
+        fio="Пациент А",
+        admission_date="01.09.2026",
+        discharge_date="05.09.2026",
+        diagnosis="F99.9 Данные пациента А",
+    )
+
+    app._reset_primary_document_runtime_state(clear_patient_inputs=True)
+
+    for name in required_always_vars:
+        assert getattr(app, name).get() == always_vars[name], (name, getattr(app, name).get())
+    for name in required_tracked_ui_vars:
+        assert getattr(app, name).get() == tracked_ui_vars[name], (name, getattr(app, name).get())
+    for name in required_switch_vars:
+        assert getattr(app, name).get() == switch_vars[name], (name, getattr(app, name).get())
+    for name in required_always_attrs:
+        assert getattr(app, name) == always_attrs[name], (name, getattr(app, name))
+    for name in required_switch_attrs:
+        assert getattr(app, name) == switch_attrs[name], (name, getattr(app, name))
+    assert app.status_files == []
+    assert app.diary_files == []
+    assert app.data == PatientData(), app.data
 
 
 def _assert_manual_picker_accepts_doc(root: Path) -> None:
@@ -286,8 +384,6 @@ def _assert_legacy_doc_parser_route(root: Path) -> None:
         diary_text_parser._convert_legacy_doc_to_docx = original
     assert statuses and "Пациент спокоен" in statuses[0]
 
-    # The batch boundary must also admit .doc for text sources while keeping
-    # calendar templates on OOXML only.
     original_extract = diary_batch.extract_statuses_from_docx
     try:
         diary_batch.extract_statuses_from_docx = lambda *_args, **_kwargs: [
@@ -307,6 +403,7 @@ def _assert_legacy_doc_parser_route(root: Path) -> None:
 
 def main() -> None:
     _assert_ui_diagnosis_wins_snapshot()
+    _assert_full_patient_switch_reset_matrix()
     with TemporaryDirectory(prefix="diagnosis-override-regression-") as temp_dir:
         root = Path(temp_dir)
         _assert_all_medical_documents_receive_new_diagnosis(root)
@@ -317,7 +414,7 @@ def main() -> None:
         _assert_legacy_doc_parser_route(root)
     print(
         "DIAGNOSIS OVERRIDE REGRESSION OK: UI diagnosis + verbal matching + "
-        "manual .doc/.docx source + patient-scoped override"
+        "manual .doc/.docx source + complete patient-session reset matrix"
     )
 
 
