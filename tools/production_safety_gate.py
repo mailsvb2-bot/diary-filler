@@ -178,7 +178,9 @@ def assert_staff_profile_contract() -> None:
         (settings, "def _set_staff_profile"),
         (settings, '"deputy_chief"'),
         (main_source, "def _first_launch_onboarding"),
-        (main_source, "Создать на рабочем столе папку «Выписанные пациенты»?"),
+        (main_source, "intake_root.mkdir(parents=True, exist_ok=True)"),
+        (main_source, "app._desktop_intake_enabled_for_session = True"),
+        (main_source, "app._set_desktop_intake_preference(True)"),
         (main_source, "_prompt_staff_profile(first_run=True)"),
         (window, 'text="Сотрудники"'),
         (medical_flow, "_apply_staff_profile_to_patient_data(data)"),
@@ -189,6 +191,10 @@ def assert_staff_profile_contract() -> None:
     missing = [marker for source, marker in required if marker not in source]
     if missing:
         fail("staff profile contract is incomplete: " + ", ".join(missing))
+
+    legacy_prompt = "Создать на рабочем столе папку «Выписанные пациенты»?"
+    if legacy_prompt in main_source:
+        fail("desktop intake folder creation regressed to an optional first-run prompt")
 
 
 def assert_ci_wiring() -> None:
