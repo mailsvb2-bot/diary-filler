@@ -1,6 +1,6 @@
 # Медицинский автозаполнитель
 
-**Версия:** `v1.4.7-desktop-rebind`
+**Версия:** `v1.4.8-watcher-update-handoff`
 
 **Final user-flow gate:** Windows CI теперь проверяет не только Python-код и сборку, но и реальный Tk UI, TkDND и запуск уже собранного EXE. Официальный GitHub Release вынесен в отдельный fail-closed workflow: он требует Authenticode-сертификат и не публикует неподписанный EXE.
 
