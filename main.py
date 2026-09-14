@@ -19,7 +19,6 @@ from tkinter import messagebox
 from app import CombinedMedicalDiaryApp
 from app_config import (
     APP_TITLE,
-    APP_VERSION,
     DIARY_KIND,
     DIARY_LABEL,
     DIR_OUTPUT,
@@ -29,6 +28,7 @@ from app_config import (
     DIR_DIARY_TEMPLATES,
     DIR_NUMBERED_DIARY_TEMPLATES,
 )
+APP_VERSION = "v1.4.5-intake-lifecycle"
 from startup import (
     DESKTOP_INTAKE_AGENT_ARGUMENT,
     DESKTOP_INTAKE_PRIMARY_ARGUMENT,
