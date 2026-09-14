@@ -16,7 +16,10 @@ from docx import Document
 import diary_batch
 import diary_text_parser
 import files_mixin
+import actions_creation_orchestrator
 from actions_medical_flow import ActionsMedicalFlowMixin
+from actions_diary_flow import ActionsDiaryFlowMixin
+from actions_creation_orchestrator import ActionsCreationOrchestratorMixin
 from diary_text_selection import (
     find_diary_text_file_for_diagnosis,
     iter_diary_text_docx_files,
@@ -111,6 +114,96 @@ class _PatientSwitchHarness(FilesMixin):
 
     def _set_primary_drop_empty(self):
         pass
+
+
+class _DiaryFallbackHarness(ActionsDiaryFlowMixin):
+    def __init__(self):
+        self.navigation_path_var = _Var("")
+        self.diagnosis_var = _Var("F42.2 Смешанные навязчивые мысли и действия")
+        self.diary_files = ["dates.docx"]
+        self.status_files = []
+        self._diary_files_auto_selected = False
+        self._diary_text_files_auto_selected = False
+        self.diary_texts_dir = "C:/Тексты"
+        self.manual_offer = None
+
+    def _auto_select_diary_text_by_diagnosis(self, **_kwargs):
+        return False
+
+    def _offer_manual_diary_text_file(self, *, diagnosis="", initial_dir=None):
+        self.manual_offer = (diagnosis, str(initial_dir or ""))
+        return False
+
+
+class _PartialSetHarness(ActionsCreationOrchestratorMixin):
+    def __init__(self, output_dir: Path):
+        self.output_dir = output_dir
+        self.expert_sick_leave_needed_var = _Var("нет")
+        self.printer_var = _Var("")
+        self.open_result_folder_var = _Var(False)
+        self.logs: list[str] = []
+        self.status = ""
+        self.reports: list[dict] = []
+
+    def selected_medical_docs(self):
+        return ["primary"]
+
+    def diaries_selected(self):
+        return True
+
+    def _selected_output_names(self, selected_medical, selected_diaries):
+        return [*selected_medical, "diaries"] if selected_diaries else list(selected_medical)
+
+    def _prompt_shared_clinical_options_if_needed(self, _selected):
+        return True
+
+    def _prompt_common_output_requirements(self, **_kwargs):
+        return True
+
+    def _selected_docs_need_expert_anamnesis(self, _selected):
+        return False
+
+    def _prompt_assigned_treatment_if_needed(self, **_kwargs):
+        return True
+
+    def _start_progress(self):
+        pass
+
+    def _stop_progress(self):
+        pass
+
+    def _result_output_dir(self):
+        return self.output_dir
+
+    def _capture_generation_patient_data(self, **_kwargs):
+        return PatientData(
+            fio="Тестов Тест Тестович",
+            output_fio="Тестов Тест Тестович",
+            admission_date="01.09.2026",
+            discharge_date="05.09.2026",
+            diagnosis="F42.2 Смешанные навязчивые мысли и действия",
+        )
+
+    def _create_medical_documents_impl(self, _selected, *, output_dir_override, **_kwargs):
+        path = Path(output_dir_override) / "Первичный осмотр.docx"
+        path.write_bytes(b"medical-document-ok")
+        return [path]
+
+    def _create_diaries_impl(self, **_kwargs):
+        raise ValueError("Тексты дневников не выбраны")
+
+    def _write_creation_report(self, **kwargs):
+        self.reports.append(kwargs)
+        return None
+
+    def _open_output_folder_after_creation(self, **_kwargs):
+        return False
+
+    def _log(self, text):
+        self.logs.append(text)
+
+    def _set_status(self, text):
+        self.status = text
 
 
 def _assert_ui_diagnosis_wins_snapshot() -> None:
@@ -401,6 +494,91 @@ def _assert_legacy_doc_parser_route(root: Path) -> None:
         raise AssertionError("legacy .doc must not be accepted as a Dates template")
 
 
+def _assert_failed_auto_match_offers_manual_word_file(root: Path) -> None:
+    folder = root / "manual-fallback-texts"
+    folder.mkdir()
+    manual = folder / "нужный врачом шаблон.docx"
+    manual.touch()
+    app = _TextHarness(folder)
+    app.diagnosis_var.set("F42.2 Смешанные навязчивые мысли и действия")
+
+    original_dir = files_mixin.filedialog.askdirectory
+    original_file = files_mixin.filedialog.askopenfilename
+    original_yesno = files_mixin.messagebox.askyesno
+    captured: dict[str, object] = {"yesno": 0}
+    try:
+        files_mixin.filedialog.askdirectory = lambda **_kwargs: str(folder)
+
+        def fake_yesno(title, message, **_kwargs):
+            captured["yesno"] = int(captured["yesno"]) + 1
+            captured["title"] = title
+            captured["message"] = message
+            return True
+
+        def fake_file(*_args, **kwargs):
+            captured["file_kwargs"] = kwargs
+            return str(manual)
+
+        files_mixin.messagebox.askyesno = fake_yesno
+        files_mixin.filedialog.askopenfilename = fake_file
+        app.choose_status_files()
+    finally:
+        files_mixin.filedialog.askdirectory = original_dir
+        files_mixin.filedialog.askopenfilename = original_file
+        files_mixin.messagebox.askyesno = original_yesno
+
+    assert captured["yesno"] == 1, captured
+    assert "Выбрать нужный файл вручную" in str(captured.get("message", "")), captured
+    picker = captured.get("file_kwargs")
+    assert isinstance(picker, dict), captured
+    assert Path(str(picker.get("initialdir"))).resolve() == folder.resolve(), picker
+    assert "*.doc *.docx *.docm" in repr(picker.get("filetypes")), picker
+    assert app.status_files == [str(manual)], app.status_files
+    assert app._diary_text_files_auto_selected is False
+
+
+def _assert_diary_creation_path_offers_manual_fallback() -> None:
+    app = _DiaryFallbackHarness()
+    snapshot = PatientData(
+        fio="Тестов Тест Тестович",
+        admission_date="01.09.2026",
+        discharge_date="05.09.2026",
+        diagnosis="F42.2 Смешанные навязчивые мысли и действия",
+    )
+    try:
+        app._create_diaries_impl(patient_data_snapshot=snapshot)
+    except ValueError as exc:
+        assert "Тексты дневников не выбраны" in str(exc), exc
+    else:
+        raise AssertionError("diary flow must stop only after manual fallback was declined")
+    assert app.manual_offer is not None
+    assert app.manual_offer[0] == snapshot.diagnosis, app.manual_offer
+
+
+def _assert_diary_failure_keeps_medical_documents(root: Path) -> None:
+    output = root / "partial-set-output"
+    app = _PartialSetHarness(output)
+    original_warning = actions_creation_orchestrator.messagebox.showwarning
+    original_error = actions_creation_orchestrator.messagebox.showerror
+    warnings: list[tuple[str, str]] = []
+    errors: list[tuple[str, str]] = []
+    try:
+        actions_creation_orchestrator.messagebox.showwarning = lambda title, message, **_kwargs: warnings.append((title, message))
+        actions_creation_orchestrator.messagebox.showerror = lambda title, message, **_kwargs: errors.append((title, message))
+        app.create_selected_outputs(print_after=False)
+    finally:
+        actions_creation_orchestrator.messagebox.showwarning = original_warning
+        actions_creation_orchestrator.messagebox.showerror = original_error
+
+    saved = list(output.glob("Первичный осмотр*.docx"))
+    assert len(saved) == 1 and saved[0].read_bytes() == b"medical-document-ok", saved
+    assert not errors, errors
+    assert warnings and warnings[-1][0] == "Комплект создан частично", warnings
+    assert "Дневники" in warnings[-1][1] and "Тексты дневников не выбраны" in warnings[-1][1], warnings
+    assert app.reports and any("Дневники:" in item for item in (app.reports[-1].get("errors") or [])), app.reports
+    assert app.status == "Готово частично: доступные документы сохранены", app.status
+
+
 def main() -> None:
     _assert_ui_diagnosis_wins_snapshot()
     _assert_full_patient_switch_reset_matrix()
@@ -411,10 +589,13 @@ def main() -> None:
         _assert_auto_refresh_and_manual_pin(root)
         _assert_manual_text_is_patient_scoped(root)
         _assert_manual_picker_accepts_doc(root)
+        _assert_failed_auto_match_offers_manual_word_file(root)
+        _assert_diary_failure_keeps_medical_documents(root)
         _assert_legacy_doc_parser_route(root)
+    _assert_diary_creation_path_offers_manual_fallback()
     print(
         "DIAGNOSIS OVERRIDE REGRESSION OK: UI diagnosis + verbal matching + "
-        "manual .doc/.docx source + complete patient-session reset matrix"
+        "manual fallback + partial-set survival + .doc/.docx source + complete patient-session reset matrix"
     )
 
 

@@ -70,9 +70,17 @@ def verify_user_flow() -> None:
     if "предъявляет жалобы на" in commission_text.lower():
         raise SystemExit("FULL PATIENT REPLAY FAILED: legacy standalone complaint tail leaked into commission DOCX")
 
-    rollback = OUT / "user_contract_atomic_rollback" / "created"
-    if rollback.exists() and list(rollback.glob("*.docx")):
-        raise SystemExit("FULL PATIENT REPLAY FAILED: failed diary flow left partial medical output")
+    partial = OUT / "user_contract_atomic_rollback" / "created"
+    partial_docs = list(partial.glob("*.docx")) if partial.exists() else []
+    if len(partial_docs) != 2:
+        raise SystemExit(
+            "FULL PATIENT REPLAY FAILED: diary-only failure must preserve the two successfully generated medical documents"
+        )
+    partial_names = {path.name for path in partial_docs}
+    if not any("Первичный осмотр" in name for name in partial_names):
+        raise SystemExit("FULL PATIENT REPLAY FAILED: partial set lost Primary Inspection")
+    if not any("Выписной эпикриз" in name for name in partial_names):
+        raise SystemExit("FULL PATIENT REPLAY FAILED: partial set lost Discharge Epicrisis")
 
     diary = _require(OUT / "snapshot_diary_output" / "Снимок Пациента дневники.docx")
     diary_text = _doc_text(diary)

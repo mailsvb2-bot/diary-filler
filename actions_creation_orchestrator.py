@@ -279,7 +279,11 @@ class ActionsCreationOrchestratorMixin:
                             errors.append(f"Дневники: {exc}")
                             self._log(f"\n❌ Дневники: {exc}\n")
 
-                    if errors:
+                    # A diary-specific failure must not destroy medical documents
+                    # that were generated successfully in the same run. Commit the
+                    # available medical part and report the diary failure as partial
+                    # success. If nothing at all was prepared, keep the old hard fail.
+                    if errors and not staged_medical and staged_diary_result is None:
                         self._write_creation_report(
                             selected_medical=selected_medical,
                             selected_diaries=selected_diaries,
@@ -288,10 +292,10 @@ class ActionsCreationOrchestratorMixin:
                             errors=errors,
                         )
                         messagebox.showerror(
-                            "Комплект не создан",
-                            "Создание выбранного комплекта остановилось с ошибкой:\n\n"
+                            "Ничего не создано",
+                            "Создание выбранных документов остановилось с ошибкой:\n\n"
                             + "\n".join(errors)
-                            + "\n\nНовые документы не сохранены; подготовленные файлы отменены целиком.",
+                            + "\n\nНовых файлов нет.",
                         )
                         return
 
@@ -363,12 +367,24 @@ class ActionsCreationOrchestratorMixin:
             selected_diaries=selected_diaries,
             created_medical=created_medical,
             diary_result=diary_result,
-            errors=None,
+            errors=errors or None,
         )
+
+        if errors and created_files:
+            messagebox.showwarning(
+                "Комплект создан частично",
+                "Созданы и сохранены все документы, которые удалось подготовить.\n\n"
+                "Не создано:\n" + "\n".join(errors) +
+                "\n\nИсправьте источник дневников и при необходимости создайте только дневники повторно.",
+            )
 
         opened_folder = self._open_output_folder_after_creation(
             created_files=created_files,
             creation_report=creation_report,
         )
-        self._set_status("Готово: файлы сохранены")
-        self._log("\n✅ Готово: файлы сохранены.{}\n".format(" Папка результата открыта." if opened_folder else ""))
+        if errors:
+            self._set_status("Готово частично: доступные документы сохранены")
+            self._log("\n⚠️ Готово частично: доступные документы сохранены.{}\n".format(" Папка результата открыта." if opened_folder else ""))
+        else:
+            self._set_status("Готово: файлы сохранены")
+            self._log("\n✅ Готово: файлы сохранены.{}\n".format(" Папка результата открыта." if opened_folder else ""))

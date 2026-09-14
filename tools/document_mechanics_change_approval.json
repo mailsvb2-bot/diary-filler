@@ -1,8 +1,10 @@
 {
   "schema_version": 1,
-  "base_sha": "8d57b4e97b7243d28845a6ca45ab238f2135c064",
-  "reason": "Release-only version synchronization: app_config.py changes only APP_VERSION to v1.4.9-session-safety; document generation mechanics, parsers, renderers and templates are unchanged and must still pass the full golden/packaged Windows contour.",
+  "base_sha": "e16fb9fbe0bca737770c460a77f2271cb6389bf4",
+  "reason": "Explicit user-requested diary fallback mechanics: after failed automatic diagnosis-text matching offer a concrete Word-file picker, and preserve successfully generated medical documents when only diary generation fails. Renderers, parsers and templates remain unchanged and canonical golden DOCX must remain identical.",
   "approved_blobs": {
-    "app_config.py": "2fe217faca38e972b6b5b5e5d677ccbd61c235c5"
+    "actions_creation_orchestrator.py": "566817bb5717201ca68bfb667c45d99cb39d9ca4",
+    "actions_diary_flow.py": "61aa1108088d3bb48bef601c529d64b8980937c2",
+    "files_mixin.py": "984e870541ead07f6565b6ec73f8eb3584c6e8ca"
   }
 }

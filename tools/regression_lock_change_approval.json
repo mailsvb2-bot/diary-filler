@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "f6e650783466ef28824a4296448024befe0c8665",
+  "reason": "User-reported diary-text fallback and partial-set survival fix, with exact regression coverage for manual Word selection and preservation of successfully generated medical documents.",
+  "required_evidence": [
+    "document_mechanics_guard",
+    "full_patient_replay",
+    "golden_docx",
+    "staff_profile_regression",
+    "gender_generation_matrix",
+    "desktop_intake_contract",
+    "intake_lifecycle_regression",
+    "packaged_desktop_intake_e2e",
+    "installer_uninstall_smoke",
+    "ci_gate_lock"
+  ],
+  "approved_blobs": {
+    "files_mixin.py": "984e870541ead07f6565b6ec73f8eb3584c6e8ca",
+    "actions_diary_flow.py": "61aa1108088d3bb48bef601c529d64b8980937c2",
+    "actions_creation_orchestrator.py": "566817bb5717201ca68bfb667c45d99cb39d9ca4",
+    "tests/diagnosis_override_regression.py": "6e7416b96d4addd4fe68da9d41e869d5fd1c577b",
+    "smoke_combined_part04_medical_generation.py": "cea99a2ec7def131699add424ea7b72a96a9adb2",
+    "tools/full_patient_replay_check.py": "6f49a2927c7f8c45a501181390b1cc39e0e40696",
+    "tools/document_mechanics_change_approval.json": "de693e9e41f2bba006eb202be01af87111c825c7"
+  }
+}
