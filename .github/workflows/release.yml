@@ -34,6 +34,7 @@ jobs:
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           ref: ${{ inputs.tag }}
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
@@ -49,10 +50,44 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r requirements_build.txt
 
-      - name: Run release and GUI gates
-        run: |
-          python release_check.py
-          python gui_runtime_check.py
+      - name: Lock known-good production and test surface
+        run: python tools/regression_lock_check.py
+
+      - name: Lock mandatory CI regression topology
+        run: python tools/ci_gate_lock.py
+
+      - name: Verify regression lock coverage inventory
+        run: python tests/regression_surface_inventory.py
+
+      - name: Run production safety gate
+        run: python tools/production_safety_gate.py
+
+      - name: Run privacy-safe diagnostics contract
+        run: python tools/privacy_diagnostics_check.py
+
+      - name: Run production audit
+        run: python prod_audit.py
+
+      - name: Run release gate
+        run: python release_check.py
+
+      - name: Run full patient replay and golden DOCX regression
+        run: python tools/full_patient_replay_check.py
+
+      - name: Run staff profile regression
+        run: python tools/staff_profile_regression.py
+
+      - name: Run gender generation regression matrix
+        run: python tools/gender_generation_regression_matrix.py
+
+      - name: Run desktop intake contract
+        run: python tests/desktop_intake_contract_check.py
+
+      - name: Run intake lifecycle regression
+        run: python tests/intake_lifecycle_regression.py
+
+      - name: Run real Tk GUI wiring smoke
+        run: python gui_runtime_check.py
 
       - name: Build EXE
         shell: cmd
@@ -80,6 +115,10 @@ jobs:
         run: |
           $env:MEDICAL_AUTOFILL_REQUIRE_SIGNED_EXE = "1"
           python verify_built_exe.py
+
+      - name: Run signed packaged desktop intake E2E
+        shell: pwsh
+        run: ./tools/windows_desktop_intake_e2e.ps1 -AppPath ./dist/MedicalDiaryAutofill.exe
 
       - name: Build clean source archive
         run: python make_release_zip.py

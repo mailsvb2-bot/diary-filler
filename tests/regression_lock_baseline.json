@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "ea13bf004e1e565844eb60cbb1ba52bac3d24d82",
+  "baseline_note": "Repository-wide regression locks, CI topology lock, release parity, regression-surface self-test and local regression suite installed on top of production main d21150dc without changing production behavior.",
+  "required_approval_evidence": [
+    "ci_gate_lock"
+  ],
+  "excluded_paths": []
+}
