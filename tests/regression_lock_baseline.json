@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "7a60b48f3f333c442facca50b95abfc6303f11f8",
-  "baseline_note": "Regression locks hardened so newly named executable, workflow, configuration and data files fail closed by type. Exact candidate 7a60b48f passed the complete Windows CI contour including golden documents, lifecycle, packaged auto-launch and installer/uninstall smoke before this metadata-only baseline advance.",
+  "baseline_ref": "c39fd17506b375c6a17d6160eba3d0e3c1b64bf6",
+  "baseline_note": "PR #52 merged candidate c39fd175 passed the complete post-merge Windows CI contour in run 34875759589: regression locks, document mechanics guard, golden/full patient replay, staff and gender regressions, diagnosis override and diary-text regression, real Tk GUI, packaged EXE startup, watcher auto-launch, installer build and install/uninstall smoke. This metadata-only advance promotes that exact tested tree to the known-good regression baseline.",
   "required_approval_evidence": [
     "ci_gate_lock"
   ],
