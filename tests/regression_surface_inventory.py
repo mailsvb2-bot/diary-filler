@@ -3,7 +3,8 @@
 This file deliberately tests categories rather than concrete Git blobs. The
 blob-level protection lives in tools/regression_lock_check.py; this test makes
 sure future edits cannot accidentally narrow that protection away from a major
-production surface.
+production surface or bypass it by introducing a newly named runtime/config/data
+file.
 """
 from __future__ import annotations
 
@@ -62,9 +63,28 @@ MUST_BE_LOCKED = (
     "version_info.txt",
 )
 
+# These names intentionally do not match any known production naming family.
+# They prove that future executable/config/data files are locked by type, not
+# merely because somebody remembered to add their exact names to a list.
+FUTURE_UNKNOWN_FILES_MUST_BE_LOCKED = (
+    "future_runtime_module.py",
+    "new_package/runtime_adapter.py",
+    "scripts/future_maintenance_hook.ps1",
+    "installer/future_helper.cmd",
+    "config/future_generation_rules.json",
+    "data/future_catalog.tsv",
+    "config/future_runtime.ini",
+    ".github/workflows/future-release.yaml",
+)
+
 MUST_STAY_MUTABLE_METADATA = (
     "tests/regression_lock_baseline.json",
     "tools/regression_lock_change_approval.json",
+)
+
+NON_RUNTIME_DOCUMENTATION = (
+    "README.md",
+    "docs/architecture.md",
 )
 
 
@@ -74,6 +94,13 @@ def main() -> None:
     if missed:
         raise SystemExit("REGRESSION SURFACE INVENTORY FAILED: unlocked critical paths:\n" + "\n".join(missed))
 
+    future_missed = [path for path in FUTURE_UNKNOWN_FILES_MUST_BE_LOCKED if not _is_critical(path, excluded)]
+    if future_missed:
+        raise SystemExit(
+            "REGRESSION SURFACE INVENTORY FAILED: future runtime/config/data files can bypass the lock:\n"
+            + "\n".join(future_missed)
+        )
+
     wrongly_locked = [path for path in MUST_STAY_MUTABLE_METADATA if _is_critical(path, excluded)]
     if wrongly_locked:
         raise SystemExit(
@@ -81,7 +108,18 @@ def main() -> None:
             + "\n".join(wrongly_locked)
         )
 
-    print(f"REGRESSION SURFACE INVENTORY OK: {len(MUST_BE_LOCKED)} representative critical paths are locked")
+    documentation_locked = [path for path in NON_RUNTIME_DOCUMENTATION if _is_critical(path, excluded)]
+    if documentation_locked:
+        raise SystemExit(
+            "REGRESSION SURFACE INVENTORY FAILED: ordinary documentation became production-locked:\n"
+            + "\n".join(documentation_locked)
+        )
+
+    total = len(MUST_BE_LOCKED) + len(FUTURE_UNKNOWN_FILES_MUST_BE_LOCKED)
+    print(
+        "REGRESSION SURFACE INVENTORY OK: "
+        f"{total} known/future critical-path probes are locked; ordinary docs remain mutable"
+    )
 
 
 if __name__ == "__main__":
