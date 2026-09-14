@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "d21150dc649bd4b218d699a100072ee56d2d947c",
+  "baseline_note": "Bootstrap placeholder; advance to the fully tested hardening candidate before merge.",
+  "required_approval_evidence": [
+    "ci_gate_lock"
+  ],
+  "excluded_paths": []
+}
