@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
-  "base_sha": "e16fb9fbe0bca737770c460a77f2271cb6389bf4",
-  "reason": "Explicit user-requested diary fallback mechanics: after failed automatic diagnosis-text matching offer a concrete Word-file picker, and preserve successfully generated medical documents when only diary generation fails. Renderers, parsers and templates remain unchanged and canonical golden DOCX must remain identical.",
+  "base_sha": "f8afb2d8d3e6a66e1a7df930de1684d7bee2492a",
+  "reason": "Explicit user-reported installed Windows regressions: restore post-install intake-folder and staff onboarding, make the diary Texts button open a visible .doc/.docx/.docm file picker, and harden watcher/GUI child-process startup without changing document renderers, parsers or templates. Version is advanced to 1.4.10 for an unambiguous replacement build.",
   "approved_blobs": {
-    "actions_creation_orchestrator.py": "566817bb5717201ca68bfb667c45d99cb39d9ca4",
-    "actions_diary_flow.py": "61aa1108088d3bb48bef601c529d64b8980937c2",
-    "files_mixin.py": "984e870541ead07f6565b6ec73f8eb3584c6e8ca"
+    "app_config.py": "8f062f4f26f4bf494f711d5c518758ed3e969c0b",
+    "files_mixin.py": "29ed561447407191321d97daaff1b13ef7522947",
+    "layout_sources.py": "ae9ed7a0e046688aba4b13b13238fbd3a9ff340b"
   }
 }

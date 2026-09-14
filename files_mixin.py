@@ -407,7 +407,7 @@ class FilesMixin:
 
         if ask_folder:
             selected_folder = filedialog.askdirectory(
-                title="Выберите папку «Тексты» с DOCX по диагнозам",
+                title="Выберите папку для автоматического поиска текстов по диагнозу",
                 initialdir=self._dialog_initial_dir(DIR_DIARY_TEXTS),
             )
             if selected_folder:
@@ -457,7 +457,7 @@ class FilesMixin:
     def choose_status_files(self) -> None:
         """Choose a diagnosis-text folder for automatic verbal matching."""
         selected_folder = filedialog.askdirectory(
-            title="Выберите папку «Тексты» с DOCX по диагнозам",
+            title="Выберите папку для автоматического поиска текстов по диагнозу",
             initialdir=self._dialog_initial_dir(DIR_DIARY_TEXTS),
         )
         if not selected_folder:
@@ -500,7 +500,7 @@ class FilesMixin:
             title="Выберите конкретный Word-файл с текстами дневников",
             initialdir=initial,
             filetypes=[
-                ("Word документы (.doc/.docx/.docm)", "*.doc *.docx *.docm"),
+                ("Word документы (.doc/.docx/.docm)", ("*.doc", "*.docx", "*.docm")),
                 ("Word DOC", "*.doc"),
                 ("Word DOCX", "*.docx"),
                 ("Word DOCM", "*.docm"),

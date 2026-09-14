@@ -16,6 +16,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 import startup
+import main as app_main
 
 
 def assert_agent_recreates_deleted_intake_root() -> None:
@@ -205,13 +206,169 @@ def assert_old_watcher_retires_after_in_place_update() -> None:
             startup._desktop_runtime_dir = original_runtime_dir  # type: ignore[assignment]
 
 
+
+def assert_pyinstaller_children_are_independent_and_gui_is_visible() -> None:
+    """Persistent watcher must not hold the GUI's _MEI dir; GUI launch must not be detached."""
+    captured: list[tuple[list[str], dict[str, object]]] = []
+    original_os = startup.os
+    original_popen = startup.subprocess.Popen
+    had_detached = hasattr(startup.subprocess, "DETACHED_PROCESS")
+    original_detached = getattr(startup.subprocess, "DETACHED_PROCESS", None)
+    had_group = hasattr(startup.subprocess, "CREATE_NEW_PROCESS_GROUP")
+    original_group = getattr(startup.subprocess, "CREATE_NEW_PROCESS_GROUP", None)
+    had_frozen = hasattr(startup.sys, "frozen")
+    original_frozen = getattr(startup.sys, "frozen", None)
+
+    class PopenStub:
+        pass
+
+    def fake_popen(command, **kwargs):
+        captured.append((list(command), dict(kwargs)))
+        return PopenStub()
+
+    try:
+        startup.os = SimpleNamespace(name="nt", environ={"BASE": "1"})  # type: ignore[assignment]
+        startup.subprocess.DETACHED_PROCESS = 0x00000008  # type: ignore[attr-defined]
+        startup.subprocess.CREATE_NEW_PROCESS_GROUP = 0x00000200  # type: ignore[attr-defined]
+        startup.sys.frozen = True  # type: ignore[attr-defined]
+        startup.subprocess.Popen = fake_popen  # type: ignore[assignment]
+        startup._desktop_hidden_popen(["app.exe", startup.DESKTOP_INTAKE_AGENT_ARGUMENT])
+        startup._desktop_visible_popen(["app.exe", startup.DESKTOP_INTAKE_PRIMARY_ARGUMENT, "patient.docx"])
+    finally:
+        startup.subprocess.Popen = original_popen  # type: ignore[assignment]
+        if had_detached:
+            startup.subprocess.DETACHED_PROCESS = original_detached  # type: ignore[attr-defined]
+        else:
+            delattr(startup.subprocess, "DETACHED_PROCESS")
+        if had_group:
+            startup.subprocess.CREATE_NEW_PROCESS_GROUP = original_group  # type: ignore[attr-defined]
+        else:
+            delattr(startup.subprocess, "CREATE_NEW_PROCESS_GROUP")
+        if had_frozen:
+            startup.sys.frozen = original_frozen  # type: ignore[attr-defined]
+        else:
+            delattr(startup.sys, "frozen")
+        startup.os = original_os  # type: ignore[assignment]
+
+    assert len(captured) == 2, captured
+    hidden = captured[0][1]
+    visible = captured[1][1]
+    assert hidden["env"]["PYINSTALLER_RESET_ENVIRONMENT"] == "1", hidden
+    assert visible["env"]["PYINSTALLER_RESET_ENVIRONMENT"] == "1", visible
+    detached = 0x00000008
+    assert int(hidden.get("creationflags", 0)) & detached == detached, hidden
+    assert int(visible.get("creationflags", 0)) & detached == 0, visible
+
+
+def assert_install_marker_forces_folder_and_staff_onboarding() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        intake = root / startup.DESKTOP_INTAKE_FOLDER_NAME
+        intake.mkdir()
+        marker = root / "onboarding-required.flag"
+        marker.write_text("1", encoding="ascii")
+        asked: list[str] = []
+
+        class AppStub:
+            def __init__(self) -> None:
+                self.root = None
+                self.preference = True
+                self._desktop_intake_enabled_for_session = True
+                self.staff_prompts = 0
+
+            def _desktop_intake_preference(self):
+                return self.preference
+
+            def _set_desktop_intake_preference(self, enabled):
+                self.preference = bool(enabled)
+
+            def _staff_profile_is_configured(self):
+                return True
+
+            def _prompt_staff_profile(self, *, first_run=False):
+                assert first_run is True
+                self.staff_prompts += 1
+                return True
+
+        app = AppStub()
+        original_os = app_main.os
+        original_marker = app_main._installation_onboarding_marker_path
+        original_root = app_main.desktop_intake_root_path
+        original_yesno = app_main.messagebox.askyesno
+        try:
+            app_main.os = SimpleNamespace(name="nt", environ={})  # type: ignore[assignment]
+            app_main._installation_onboarding_marker_path = lambda: marker  # type: ignore[assignment]
+            app_main.desktop_intake_root_path = lambda: intake  # type: ignore[assignment]
+            app_main.messagebox.askyesno = lambda title, message, **_kwargs: asked.append(message) or True
+            app_main._first_launch_onboarding(app)
+        finally:
+            app_main.messagebox.askyesno = original_yesno
+            app_main.desktop_intake_root_path = original_root  # type: ignore[assignment]
+            app_main._installation_onboarding_marker_path = original_marker  # type: ignore[assignment]
+            app_main.os = original_os  # type: ignore[assignment]
+
+        assert len(asked) == 1 and "Выписанные пациенты" in asked[0], asked
+        assert app.staff_prompts == 1, app.staff_prompts
+        assert app.preference is True and app._desktop_intake_enabled_for_session is True
+        assert not marker.exists(), "completed onboarding marker was not consumed"
+
+
+def assert_declining_folder_never_deletes_existing_user_folder() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        intake = root / startup.DESKTOP_INTAKE_FOLDER_NAME
+        intake.mkdir()
+        sentinel = intake / "user-file.txt"
+        sentinel.write_text("keep", encoding="utf-8")
+        marker = root / "onboarding-required.flag"
+        marker.write_text("1", encoding="ascii")
+        disabled = []
+
+        class AppStub:
+            root = None
+            _desktop_intake_enabled_for_session = True
+            def _desktop_intake_preference(self): return True
+            def _set_desktop_intake_preference(self, enabled): self.preference = bool(enabled)
+            def _staff_profile_is_configured(self): return True
+            def _prompt_staff_profile(self, *, first_run=False): return True
+
+        app = AppStub()
+        original_os = app_main.os
+        original_marker = app_main._installation_onboarding_marker_path
+        original_root = app_main.desktop_intake_root_path
+        original_yesno = app_main.messagebox.askyesno
+        original_disable = app_main._disable_desktop_intake_persistence
+        try:
+            app_main.os = SimpleNamespace(name="nt", environ={})  # type: ignore[assignment]
+            app_main._installation_onboarding_marker_path = lambda: marker  # type: ignore[assignment]
+            app_main.desktop_intake_root_path = lambda: intake  # type: ignore[assignment]
+            app_main.messagebox.askyesno = lambda *_args, **_kwargs: False
+            app_main._disable_desktop_intake_persistence = lambda: disabled.append(True)  # type: ignore[assignment]
+            app_main._first_launch_onboarding(app)
+        finally:
+            app_main._disable_desktop_intake_persistence = original_disable  # type: ignore[assignment]
+            app_main.messagebox.askyesno = original_yesno
+            app_main.desktop_intake_root_path = original_root  # type: ignore[assignment]
+            app_main._installation_onboarding_marker_path = original_marker  # type: ignore[assignment]
+            app_main.os = original_os  # type: ignore[assignment]
+
+        assert getattr(app, "preference", None) is False
+        assert app._desktop_intake_enabled_for_session is False
+        assert disabled == [True], disabled
+        assert sentinel.read_text(encoding="utf-8") == "keep"
+        assert not marker.exists(), "completed decline onboarding marker was not consumed"
+
+
 def main() -> None:
     assert_agent_recreates_deleted_intake_root()
     assert_agent_rebinds_when_desktop_moves()
     assert_gui_poll_rebinds_when_desktop_moves()
     assert_old_watcher_retires_after_in_place_update()
+    assert_pyinstaller_children_are_independent_and_gui_is_visible()
+    assert_install_marker_forces_folder_and_staff_onboarding()
+    assert_declining_folder_never_deletes_existing_user_folder()
     print(
-        "INTAKE LIFECYCLE REGRESSION OK: self-heal + Desktop rebind + in-place watcher replacement"
+        "INTAKE LIFECYCLE REGRESSION OK: self-heal + Desktop rebind + in-place watcher replacement + independent PyInstaller child runtime + install onboarding"
     )
 
 

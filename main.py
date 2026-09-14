@@ -35,6 +35,7 @@ from startup import (
     _create_root,
     _desktop_agent_is_active,
     _desktop_remove_agent_run_key,
+    _desktop_startup_script_path,
     _startup_log_path,
     _write_startup_error,
     desktop_intake_root_path,
@@ -46,18 +47,35 @@ SELF_CHECK_ARGUMENT = "--self-check"
 UNINSTALL_INTAKE_ARGUMENT = "--uninstall-intake-agent"
 
 
+def _installation_onboarding_marker_path() -> Path:
+    return Path(sys.executable).resolve().parent / "onboarding-required.flag"
+
+
+def _disable_desktop_intake_persistence() -> None:
+    """Disable future watcher starts when the doctor declines the intake folder."""
+    try:
+        path = _desktop_startup_script_path()
+        if path is not None:
+            path.unlink(missing_ok=True)
+    except OSError:
+        pass
+    _desktop_remove_agent_run_key()
+
+
 def _first_launch_onboarding(app) -> None:
-    """Ask once for the intake folder and reusable staff names."""
+    """Ask after each installation about intake and reusable staff names."""
     if os.name != "nt" or os.environ.get("CI", "").strip():
         return
+
+    marker = _installation_onboarding_marker_path()
+    force_after_install = marker.is_file()
+    onboarding_complete = True
+
     try:
         intake_root = desktop_intake_root_path()
         preference = app._desktop_intake_preference()
-        if intake_root.is_dir():
-            app._desktop_intake_enabled_for_session = True
-            if preference is not True:
-                app._set_desktop_intake_preference(True)
-        elif preference is None:
+        should_ask = force_after_install or preference is None
+        if should_ask:
             create_folder = messagebox.askyesno(
                 "Первый запуск",
                 "Создать на рабочем столе папку «Выписанные пациенты»?\n\n"
@@ -72,6 +90,7 @@ def _first_launch_onboarding(app) -> None:
                 except OSError as exc:
                     app._desktop_intake_enabled_for_session = False
                     app._set_desktop_intake_preference(False)
+                    onboarding_complete = False
                     code, _safe_details = _support_write_startup_failure(exc, stage="intake")
                     messagebox.showwarning(
                         "Выписанные пациенты",
@@ -79,15 +98,26 @@ def _first_launch_onboarding(app) -> None:
                         f"Код ошибки: {code}",
                         parent=app.root,
                     )
+            else:
+                # Never delete an existing user-owned folder; only disable watcher persistence.
+                _disable_desktop_intake_persistence()
         else:
             app._desktop_intake_enabled_for_session = bool(preference)
     except Exception:
         app._desktop_intake_enabled_for_session = False
+        onboarding_complete = False
 
-    if not app._staff_profile_is_configured():
+    if force_after_install or not app._staff_profile_is_configured():
         try:
-            app._prompt_staff_profile(first_run=True)
+            if not app._prompt_staff_profile(first_run=True):
+                onboarding_complete = False
         except Exception:
+            onboarding_complete = False
+
+    if force_after_install and onboarding_complete:
+        try:
+            marker.unlink(missing_ok=True)
+        except OSError:
             pass
 
 

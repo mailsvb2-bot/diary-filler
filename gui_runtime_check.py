@@ -66,11 +66,11 @@ def main() -> None:
             assert hasattr(app, "drop_zone"), "Primary drop zone missing"
             assert hasattr(app, "diary_dates_button"), "Dates button missing"
             assert hasattr(app, "status_files_button"), "Texts button missing"
-            assert hasattr(app, "status_file_button"), "Manual Text file button missing"
+            assert hasattr(app, "status_file_button"), "Diary text folder button missing"
             assert app.drop_zone.winfo_ismapped(), "Primary drop-zone is not mapped"
             assert app.diary_dates_button.winfo_ismapped(), "Dates button is not mapped"
             assert app.status_files_button.winfo_ismapped(), "Texts button is not mapped"
-            assert app.status_file_button.winfo_ismapped(), "Manual Text file button is not mapped"
+            assert app.status_file_button.winfo_ismapped(), "Diary text folder button is not mapped"
 
             # Drive the actual visible primary drop-zone. Its click binding must
             # call the production navigation chooser; dormant compatibility
@@ -95,35 +95,38 @@ def main() -> None:
             assert Path(app.diary_template_dir) == dates_dir
             assert app.diary_files and Path(app.diary_files[0]).name == "01.docx"
 
-            # User clicks «Тексты»: again exactly one folder dialog, then the
-            # diagnosis-specific DOCX is selected automatically from that folder.
+            # User clicks «Тексты»: the primary action is a concrete Word-file
+            # picker. This is the installed user path that must visibly expose
+            # .doc/.docx/.docm instead of opening a folder-only chooser.
             app.diagnosis_var.set("F41.2 Тестовый диагноз")
-            text_calls: list[str] = []
-
-            def choose_texts_folder(*_args, **_kwargs):
-                text_calls.append("askdirectory")
-                return str(texts_dir)
-
-            files_mixin.filedialog.askdirectory = choose_texts_folder
-            _click(root, app.status_files_button)
-            assert text_calls == ["askdirectory"], f"Unexpected Texts-dialog flow: {text_calls!r}"
-            assert Path(app.diary_texts_dir) == texts_dir
-            assert app.status_files and Path(app.status_files[0]).name == "F41.2 Тестовый диагноз.docx"
-
-            # Manual override exposes legacy .doc as a real selectable Word file.
-            manual_doc = texts_dir / "шизофрения параноидная.doc"
-            manual_doc.write_bytes(b"legacy-doc-placeholder")
             file_calls: list[str] = []
 
             def choose_text_file(*_args, **kwargs):
                 file_calls.append(str(kwargs.get("filetypes", "")))
-                return str(manual_doc)
+                return str(texts_dir / "F41.2 Тестовый диагноз.docx")
 
             files_mixin.filedialog.askopenfilename = choose_text_file
-            _click(root, app.status_file_button)
-            assert file_calls and "*.doc *.docx *.docm" in file_calls[0], file_calls
-            assert app.status_files == [str(manual_doc)]
+            _click(root, app.status_files_button)
+            assert len(file_calls) == 1, f"Unexpected Texts file-dialog flow: {file_calls!r}"
+            assert "*.doc" in file_calls[0] and "*.docx" in file_calls[0] and "*.docm" in file_calls[0], file_calls
+            assert app.status_files == [str(texts_dir / "F41.2 Тестовый диагноз.docx")]
             assert app._diary_text_files_auto_selected is False
+
+            # User clicks «Папка»: this is the separate directory chooser used
+            # only to enable automatic verbal diagnosis matching. It must not
+            # replace the direct Word-file semantics of the «Тексты» button.
+            folder_calls: list[str] = []
+
+            def choose_texts_folder(*_args, **_kwargs):
+                folder_calls.append("askdirectory")
+                return str(texts_dir)
+
+            files_mixin.filedialog.askdirectory = choose_texts_folder
+            _click(root, app.status_file_button)
+            assert folder_calls == ["askdirectory"], f"Unexpected Folder-dialog flow: {folder_calls!r}"
+            assert Path(app.diary_texts_dir) == texts_dir
+            assert app.status_files and Path(app.status_files[0]).name == "F41.2 Тестовый диагноз.docx"
+            assert app._diary_text_files_auto_selected is True
 
             print("GUI RUNTIME CHECK OK")
         finally:
