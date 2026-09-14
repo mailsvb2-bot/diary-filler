@@ -667,9 +667,9 @@ try:
     assert any(call[0] == "Совместный осмотр" for call in commission_popup_calls), commission_popup_calls
     assert not any(event[0] in {"warning", "error"} for event in _contract_messagebox_events), _contract_messagebox_events
 
-    # Whole-set transaction: medical generation may succeed internally, but if
-    # diaries then fail the final user folder must receive none of that staged
-    # medical output. This locks the top-level all-or-nothing user contract.
+    # Partial-set survival: a diary-only failure must not destroy medical
+    # documents that were prepared successfully in the same run.  The user can
+    # repair/select diary texts later and rerun only diaries.
     _contract_messagebox_events.clear()
     rollback_dir = OUT / "user_contract_atomic_rollback"
     if rollback_dir.exists():
@@ -726,10 +726,16 @@ try:
     assert rollback_popup_calls[0][0] == "Дополнительные данные"
     assert rollback_popup_calls[1][0] == "Данные для выписного эпикриза"
     assert rollback_output.exists(), rollback_output
-    assert not list(rollback_output.glob("*.docx")), list(rollback_output.glob("*.docx"))
+    rollback_docs = list(rollback_output.glob("*.docx"))
+    assert len(rollback_docs) == 2, rollback_docs
+    rollback_names = {path.name for path in rollback_docs}
+    assert any("Первичный осмотр" in name for name in rollback_names), rollback_names
+    assert any("Выписной эпикриз" in name for name in rollback_names), rollback_names
+    assert not any("Дневник" in name for name in rollback_names), rollback_names
     assert not list(rollback_output.glob(".medical-autofill-set-*")), list(rollback_output.iterdir())
-    assert ("error", "Комплект не создан") in _contract_messagebox_events, _contract_messagebox_events
-    assert rollback_app._opened_output_folders == [], rollback_app._opened_output_folders
+    assert ("warning", "Комплект создан частично") in _contract_messagebox_events, _contract_messagebox_events
+    assert not any(event[0] == "error" for event in _contract_messagebox_events), _contract_messagebox_events
+    assert rollback_app._opened_output_folders == [rollback_output], rollback_app._opened_output_folders
 
     _contract_messagebox_events.clear()
     cancel_dir = OUT / "user_contract_cancelled_popup"

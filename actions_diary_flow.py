@@ -46,9 +46,20 @@ class ActionsDiaryFlowMixin:
                 ),
             )
         if not self.status_files:
-            self.choose_status_files()
+            diagnosis_for_fallback = (
+                patient_data_snapshot.diagnosis
+                if patient_data_snapshot is not None
+                else self.diagnosis_var.get().strip()
+            )
+            self._offer_manual_diary_text_file(
+                diagnosis=diagnosis_for_fallback,
+                initial_dir=getattr(self, "diary_texts_dir", "") or None,
+            )
         if not self.status_files:
-            raise ValueError("Выберите Word-файл «Тексты» (.doc/.docx). Источник «Даты» задаёт календарь, а текст можно подобрать по диагнозу автоматически или выбрать вручную.")
+            raise ValueError(
+                "Тексты дневников не выбраны. Остальные документы можно создать без дневников; "
+                "для дневников выберите Word-файл .doc, .docx или .docm вручную."
+            )
         if patient_data_snapshot is None:
             diary_patient_name = self.patient_name_var.get().strip()
             source_patient_fio = ""
