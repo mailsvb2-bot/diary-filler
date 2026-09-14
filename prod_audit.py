@@ -15,8 +15,8 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
-TARGET_VERSION = "1.4.6"
-TARGET_VERSION_LABEL = "v1.4.6-watcher-selfheal"
+TARGET_VERSION = "1.4.7"
+TARGET_VERSION_LABEL = "v1.4.7-desktop-rebind"
 MAX_PYTHON_FILES = 125
 MAX_TINY_PYTHON_FILES = 25
 # Release/CI probes are executable quality gates, not runtime architecture.

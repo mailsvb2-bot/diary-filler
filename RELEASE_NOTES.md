@@ -1,4 +1,12 @@
-# Release notes — v1.4.6-watcher-selfheal
+# Release notes — v1.4.7-desktop-rebind
+
+## v1.4.7-desktop-rebind
+
+- Hidden Windows watcher теперь заново определяет актуальный Desktop в каждом цикле и автоматически переключается на новый `Выписанные пациенты`, если OneDrive или `User Shell Folders` перенесли рабочий стол уже после запуска программы.
+- Уже открытый GUI использует тот же динамический rebind и не остаётся привязанным к старой папке, даже если прежний Desktop-каталог физически продолжает существовать.
+- Сохранено восстановление удалённой папки `Выписанные пациенты`; удаление каталога и перенос самого Desktop теперь покрыты разными regression-contract сценариями.
+- Механика генерации документов не изменялась; document-mechanics guard, полный patient replay и golden DOCX regression остаются обязательными.
+- Версия EXE, installer metadata, package metadata и CI-артефакта синхронизирована как `1.4.7` / `v1.4.7-desktop-rebind`.
 
 ## v1.4.6-watcher-selfheal
 
