@@ -78,6 +78,41 @@ class _TextHarness(FilesMixin):
         self.events.append(text)
 
 
+class _PatientSwitchHarness(FilesMixin):
+    def __init__(self):
+        for name, default in (
+            files_mixin.PATIENT_SESSION_ALWAYS_VAR_DEFAULTS
+            + files_mixin.PATIENT_SESSION_TRACKED_UI_VAR_DEFAULTS
+            + files_mixin.PATIENT_SESSION_SWITCH_ONLY_VAR_DEFAULTS
+        ):
+            setattr(self, name, _Var(copy.deepcopy(default)))
+        for name, default in (
+            files_mixin.PATIENT_SESSION_ALWAYS_ATTR_DEFAULTS
+            + files_mixin.PATIENT_SESSION_SWITCH_ONLY_ATTR_DEFAULTS
+        ):
+            setattr(self, name, copy.deepcopy(default))
+        for name in files_mixin.PATIENT_SESSION_SWITCH_ONLY_LIST_ATTRS:
+            setattr(self, name, [])
+        self.diary_texts_dir = ""
+        self.diary_template_dir = ""
+        self.data = PatientData()
+
+    def _set_ui_var(self, var, value):
+        var.set(value)
+
+    def _update_expert_sick_leave_display(self):
+        pass
+
+    def _update_diary_text_label(self, **_kwargs):
+        pass
+
+    def _update_diary_template_label(self, **_kwargs):
+        pass
+
+    def _set_primary_drop_empty(self):
+        pass
+
+
 def _assert_ui_diagnosis_wins_snapshot() -> None:
     app = _SnapshotHarness()
     app.data = PatientData(fio="Иванов Иван Иванович", diagnosis="F99.9 Старый диагноз из первичного")
@@ -187,6 +222,29 @@ def _assert_auto_refresh_and_manual_pin(root: Path) -> None:
     assert app._diary_text_files_auto_selected is False
 
 
+def _assert_manual_text_is_patient_scoped(root: Path) -> None:
+    manual_file = root / "patient-a-manual-text.docx"
+    manual_file.touch()
+    app = _PatientSwitchHarness()
+
+    # Before the first primary document is loaded, an intentionally preselected
+    # text source is allowed to remain available for that first patient.
+    app.status_files = [str(manual_file)]
+    app._diary_text_files_auto_selected = False
+    app._reset_primary_document_runtime_state(clear_patient_inputs=False)
+    assert app.status_files == [str(manual_file)], app.status_files
+    assert app._diary_text_files_auto_selected is False
+
+    # A real primary-document switch is a patient boundary. Manual text chosen
+    # for patient A must never leak into patient B; only reusable folder memory
+    # may survive so the new diagnosis can be selected afresh.
+    app.status_files = [str(manual_file)]
+    app._diary_text_files_auto_selected = False
+    app._reset_primary_document_runtime_state(clear_patient_inputs=True)
+    assert app.status_files == [], app.status_files
+    assert app._diary_text_files_auto_selected is False
+
+
 def _assert_manual_picker_accepts_doc(root: Path) -> None:
     folder = root / "manual-picker"
     folder.mkdir()
@@ -254,9 +312,13 @@ def main() -> None:
         _assert_all_medical_documents_receive_new_diagnosis(root)
         _assert_verbal_matching_and_word_formats(root)
         _assert_auto_refresh_and_manual_pin(root)
+        _assert_manual_text_is_patient_scoped(root)
         _assert_manual_picker_accepts_doc(root)
         _assert_legacy_doc_parser_route(root)
-    print("DIAGNOSIS OVERRIDE REGRESSION OK: UI diagnosis + verbal matching + manual .doc/.docx source")
+    print(
+        "DIAGNOSIS OVERRIDE REGRESSION OK: UI diagnosis + verbal matching + "
+        "manual .doc/.docx source + patient-scoped override"
+    )
 
 
 if __name__ == "__main__":
