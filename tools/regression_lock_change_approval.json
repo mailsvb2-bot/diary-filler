@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "c39fd17506b375c6a17d6160eba3d0e3c1b64bf6",
+  "reason": "Regression-only coverage for patient-session boundaries: a manually selected diary text may remain before the first primary document but must be cleared when switching from patient A to patient B. Runtime and document generation are unchanged.",
+  "required_evidence": [
+    "document_mechanics_guard",
+    "full_patient_replay",
+    "golden_docx",
+    "staff_profile_regression",
+    "gender_generation_matrix",
+    "desktop_intake_contract",
+    "intake_lifecycle_regression",
+    "packaged_desktop_intake_e2e",
+    "installer_uninstall_smoke",
+    "ci_gate_lock",
+    "diagnosis_override_regression"
+  ],
+  "approved_blobs": {
+    "tests/diagnosis_override_regression.py": "eaeba4353c2894e49df3c593d6d0afbe6379fa3d"
+  }
+}
