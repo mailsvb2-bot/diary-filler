@@ -118,14 +118,14 @@ def _python_files() -> list[Path]:
 
 def _assert_version_sync() -> None:
     pyproject = _read("pyproject.toml")
-    release_version = _read("release_version.py")
+    main_source = _read("main.py")
     version_info = _read("version_info.txt")
     readme = _read("README.md")
     release_notes = _read("RELEASE_NOTES.md")
 
     checks = {
         "pyproject.toml version": f'version = "{TARGET_VERSION}"' in pyproject,
-        "release_version APP_VERSION": TARGET_VERSION_LABEL in release_version,
+        "main APP_VERSION": f'APP_VERSION = "{TARGET_VERSION_LABEL}"' in main_source,
         "version_info label": TARGET_VERSION_LABEL in version_info,
         "version_info tuple": all(
             marker in version_info

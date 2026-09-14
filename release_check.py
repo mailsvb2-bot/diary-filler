@@ -17,7 +17,6 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 REQUIRED_FILES = [
     "main.py",
-    "release_version.py",
     "medical_documents.py",
     "diary_filler.py",
     "diary_service.py",

@@ -28,7 +28,7 @@ from app_config import (
     DIR_DIARY_TEMPLATES,
     DIR_NUMBERED_DIARY_TEMPLATES,
 )
-from release_version import APP_VERSION
+APP_VERSION = "v1.4.5-intake-lifecycle"
 from startup import (
     DESKTOP_INTAKE_AGENT_ARGUMENT,
     DESKTOP_INTAKE_PRIMARY_ARGUMENT,
