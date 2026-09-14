@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "ea13bf004e1e565844eb60cbb1ba52bac3d24d82",
-  "baseline_note": "Repository-wide regression locks, CI topology lock, release parity, regression-surface self-test and local regression suite installed on top of production main d21150dc without changing production behavior.",
+  "baseline_ref": "7a60b48f3f333c442facca50b95abfc6303f11f8",
+  "baseline_note": "Regression locks hardened so newly named executable, workflow, configuration and data files fail closed by type. Exact candidate 7a60b48f passed the complete Windows CI contour including golden documents, lifecycle, packaged auto-launch and installer/uninstall smoke before this metadata-only baseline advance.",
   "required_approval_evidence": [
     "ci_gate_lock"
   ],
