@@ -1,4 +1,12 @@
-# Release notes — v1.4.5-intake-lifecycle
+# Release notes — v1.4.6-watcher-selfheal
+
+## v1.4.6-watcher-selfheal
+
+- Живой Windows watcher теперь сам восстанавливает папку `Выписанные пациенты`, если пользователь или внешний процесс удалил её во время работы агента.
+- При временной ошибке доступа к Desktop watcher не завершается: он сохраняет heartbeat-контур и повторяет создание папки на следующем цикле.
+- Добавлен Windows regression-contract: папка удаляется во время работающего watcher, после чего тест требует её автоматического восстановления и продолжения наблюдения.
+- Механика генерации документов не изменялась; document-mechanics guard, полный patient replay и golden DOCX regression остаются обязательными.
+- Версия EXE, installer metadata, package metadata и CI-артефакта синхронизирована как `1.4.6` / `v1.4.6-watcher-selfheal`, чтобы self-heal сборка не смешивалась с `1.4.5`.
 
 ## v1.4.5-intake-lifecycle
 
