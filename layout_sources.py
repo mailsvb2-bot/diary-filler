@@ -159,7 +159,7 @@ class LayoutSourcesMixin:
         display_canvas.grid(row=row, column=1, sticky="ew", padx=(self._px(16, 9), self._px(14, 8)), pady=self._px(4 if self._compact_ui else 5, 2))
         if kind == "status":
             self.status_files_label = display
-            command = self.choose_status_files
+            command = self.choose_status_file
         else:
             self.diary_files_label = display
             command = self.choose_diary_files
@@ -202,15 +202,15 @@ class LayoutSourcesMixin:
         self.status_files_button = self._small_neon_button(
             buttons,
             text="Тексты",
-            command=self.choose_status_files,
-            selected=lambda: bool(getattr(self, "diary_texts_dir", "")),
+            command=self.choose_status_file,
+            selected=lambda: bool(self.status_files),
         )
         self.status_files_button.grid(row=0, column=0, sticky="ew", padx=(0, self._px(3, 2)))
         self.status_file_button = self._small_neon_button(
             buttons,
-            text="Файл",
-            command=self.choose_status_file,
-            selected=lambda: bool(self.status_files) and not getattr(self, "_diary_text_files_auto_selected", False),
+            text="Папка",
+            command=self.choose_status_files,
+            selected=lambda: bool(getattr(self, "diary_texts_dir", "")),
         )
         self.status_file_button.grid(row=0, column=1, sticky="ew", padx=(self._px(3, 2), self._px(3, 2)))
         self.diary_dates_button = self._small_neon_button(

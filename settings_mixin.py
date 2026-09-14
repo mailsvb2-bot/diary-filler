@@ -219,7 +219,7 @@ class SettingsMixin:
         prompts = (
             ("doctor", "ФИО лечащего врача", defaults["doctor"]),
             ("department_head", "ФИО заведующего отделением", defaults["department_head"]),
-            ("deputy_chief", "ФИО заместителя главного врача", defaults["deputy_chief"]),
+            ("deputy_chief", "ФИО начмеда / заместителя главного врача", defaults["deputy_chief"]),
         )
         values = {}
         for key, label, default in prompts:

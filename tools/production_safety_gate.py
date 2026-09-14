@@ -86,8 +86,9 @@ def assert_installer_contract() -> None:
     required = (
         "PrivilegesRequired=lowest",
         "DefaultDirName={localappdata}\\MedicalDiaryAutofill",
-        "[Dirs]",
-        'Name: "{userdesktop}\\Выписанные пациенты"; Flags: uninsneveruninstall',
+        "onboarding-required.flag",
+        "CurStepChanged",
+        "SaveStringToFile",
         "[UninstallDelete]",
         "InitializeUninstall",
         "RegDeleteValue(",
@@ -99,6 +100,8 @@ def assert_installer_contract() -> None:
         fail("installer contract is incomplete: " + ", ".join(missing))
     if "--uninstall-intake-agent" in installer:
         fail("installer uninstall regressed to a helper command that can block removal")
+    if 'Name: "{userdesktop}\\Выписанные пациенты"' in installer:
+        fail("installer must not create Выписанные пациенты before the doctor's onboarding choice")
     if "desktop-intake-agent.heartbeat" not in installer:
         fail("installer no longer cleans the watcher heartbeat")
     if "MedicalDiaryAutofill Intake.vbs" not in installer:
@@ -111,7 +114,8 @@ def assert_installer_contract() -> None:
         "WINDOWS INSTALLER ACTIVE-WATCHER UNINSTALL SMOKE OK",
         "unins*.exe",
         "--intake-agent",
-        "Installer did not create Desktop\\Выписанные пациенты",
+        "Installer did not create onboarding-required.flag",
+        "Installer unexpectedly created Desktop\\Выписанные пациенты before onboarding",
         "Uninstaller removed Desktop\\Выписанные пациенты",
         "Uninstaller removed a user-owned file from Desktop\\Выписанные пациенты",
         "MedicalDiaryAutofill process survived uninstall",
@@ -133,6 +137,10 @@ def assert_installer_contract() -> None:
             fail(f"desktop intake packaged-EXE E2E lost marker: {marker}")
     if "def _activate_root_for_intake" not in main_source:
         fail("desktop intake no longer has explicit pre-popup GUI activation")
+    startup_source = read("startup.py")
+    for marker in ("PYINSTALLER_RESET_ENVIRONMENT", "def _desktop_visible_popen", "_desktop_visible_popen("):
+        if marker not in startup_source:
+            fail(f"desktop intake lost independent visible child-process marker: {marker}")
     intake_arg_pos = main_source.find("intake_primary = _intake_primary_argument")
     activation_pos = main_source.find("_activate_root_for_intake(root)", intake_arg_pos)
     runtime_pos = main_source.find("start_desktop_intake_runtime(", intake_arg_pos)

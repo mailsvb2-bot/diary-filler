@@ -1,6 +1,6 @@
 #define MyAppName "MedicalDiaryAutofill"
 #ifndef MyAppVersion
-  #define MyAppVersion "1.4.9"
+  #define MyAppVersion "1.4.10"
 #endif
 #define MyAppExeName "MedicalDiaryAutofill.exe"
 
@@ -25,12 +25,6 @@ ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 SetupLogging=yes
 
-[Dirs]
-; The normal installed workflow must expose the intake folder immediately,
-; even before the first GUI launch. Patient data belongs to the user, so the
-; uninstaller must never remove this folder, including when it is empty.
-Name: "{userdesktop}\Выписанные пациенты"; Flags: uninsneveruninstall
-
 [Files]
 Source: "..\dist\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
 
@@ -49,9 +43,19 @@ Type: files; Name: "{localappdata}\MedicalDiaryAutofill\desktop-intake-agent.hea
 Type: files; Name: "{localappdata}\MedicalDiaryAutofill\desktop-intake-agent-handoff.json"
 Type: files; Name: "{localappdata}\MedicalDiaryAutofill\desktop-intake-agent.log"
 Type: files; Name: "{localappdata}\MedicalDiaryAutofill\self-check.txt"
+Type: files; Name: "{app}\onboarding-required.flag"
 Type: dirifempty; Name: "{localappdata}\MedicalDiaryAutofill"
 
 [Code]
+procedure CurStepChanged(CurStep: TSetupStep);
+begin
+  if CurStep = ssPostInstall then
+  begin
+    { Force one visible onboarding after every install/upgrade. }
+    SaveStringToFile(ExpandConstant('{app}\onboarding-required.flag'), '1', False);
+  end;
+end;
+
 function InitializeUninstall(): Boolean;
 var
   ResultCode: Integer;

@@ -16,6 +16,7 @@ if ([string]::IsNullOrWhiteSpace($desktopDir)) {
 $intakeDir = Join-Path $desktopDir 'Выписанные пациенты'
 $intakeExistedBefore = Test-Path -LiteralPath $intakeDir
 $preserveProbe = Join-Path $intakeDir '.installer-smoke-preserve.txt'
+$onboardingMarker = Join-Path $installDir 'onboarding-required.flag'
 
 function Stop-AppProcesses {
     Get-Process -Name 'MedicalDiaryAutofill' -ErrorAction SilentlyContinue | ForEach-Object {
@@ -43,11 +44,15 @@ try {
     if (-not (Test-Path $app)) {
         throw 'Installed MedicalDiaryAutofill.exe is missing'
     }
-    if (-not (Test-Path -LiteralPath $intakeDir -PathType Container)) {
-        throw 'Installer did not create Desktop\Выписанные пациенты'
+    if (-not (Test-Path -LiteralPath $onboardingMarker -PathType Leaf)) {
+        throw 'Installer did not create onboarding-required.flag'
+    }
+    if (-not $intakeExistedBefore -and (Test-Path -LiteralPath $intakeDir -PathType Container)) {
+        throw 'Installer unexpectedly created Desktop\Выписанные пациенты before onboarding'
     }
 
-    # A user-owned file in the intake folder must survive application uninstall.
+    # Simulate the user accepting first-run creation. A user-owned file must survive uninstall.
+    New-Item -ItemType Directory -Path $intakeDir -Force | Out-Null
     Set-Content -LiteralPath $preserveProbe -Value 'preserve intake folder' -Encoding UTF8
 
     $uninstaller = Get-ChildItem -LiteralPath $installDir -Filter 'unins*.exe' -File | Select-Object -First 1
@@ -93,6 +98,9 @@ try {
     }
     if (Test-Path $app) {
         throw 'Application executable survived uninstall'
+    }
+    if (Test-Path -LiteralPath $onboardingMarker) {
+        throw 'Installer onboarding marker survived uninstall'
     }
     try {
         $leftoverRun = Get-ItemPropertyValue -Path $runKeyPath -Name $runValueName -ErrorAction Stop

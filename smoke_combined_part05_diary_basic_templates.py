@@ -405,7 +405,21 @@ status_src = main_source[status_start:status_end]
 assert "filedialog.askdirectory" in status_src
 assert "filedialog.askopenfilename" not in status_src
 assert "filedialog.askopenfilenames" not in status_src
-assert "Выберите папку «Тексты» с DOCX по диагнозам" in status_src
+assert "Выберите папку для автоматического поиска текстов по диагнозу" in status_src
+
+layout_sources = (ROOT / "layout_sources.py").read_text(encoding="utf-8")
+compact_start = layout_sources.index("    def _diary_compact_row")
+compact_tail = layout_sources[compact_start:]
+assert 'text="Тексты"' in compact_tail and 'command=self.choose_status_file' in compact_tail
+assert 'text="Папка"' in compact_tail and 'command=self.choose_status_files' in compact_tail
+assert 'text="Даты"' in compact_tail and 'command=self.choose_diary_files' in compact_tail
+
+file_start = main_source.index("    def choose_status_file")
+file_end = main_source.index("    def _update_diary_template_label", file_start)
+file_src = main_source[file_start:file_end]
+assert "filedialog.askopenfilename" in file_src
+for suffix in ("*.doc", "*.docx", "*.docm"):
+    assert suffix in file_src
 
 # --- Diary text auto-selection by diagnosis filename ---
 from diary_text_selection import (

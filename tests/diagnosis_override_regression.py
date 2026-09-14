@@ -458,7 +458,9 @@ def _assert_manual_picker_accepts_doc(root: Path) -> None:
     assert app.status_files == [str(legacy)]
     assert app.diary_texts_dir == str(folder)
     assert app._diary_text_files_auto_selected is False
-    assert "*.doc *.docx *.docm" in repr(captured.get("filetypes"))
+    filetypes_repr = repr(captured.get("filetypes"))
+    for suffix in ("*.doc", "*.docx", "*.docm"):
+        assert suffix in filetypes_repr, filetypes_repr
 
 
 def _assert_legacy_doc_parser_route(root: Path) -> None:
@@ -532,7 +534,8 @@ def _assert_failed_auto_match_offers_manual_word_file(root: Path) -> None:
     picker = captured.get("file_kwargs")
     assert isinstance(picker, dict), captured
     assert Path(str(picker.get("initialdir"))).resolve() == folder.resolve(), picker
-    assert "*.doc *.docx *.docm" in repr(picker.get("filetypes")), picker
+    filetypes_repr = repr(picker.get("filetypes"))
+    assert "*.doc" in filetypes_repr and "*.docx" in filetypes_repr and "*.docm" in filetypes_repr, picker
     assert app.status_files == [str(manual)], app.status_files
     assert app._diary_text_files_auto_selected is False
 
@@ -579,9 +582,20 @@ def _assert_diary_failure_keeps_medical_documents(root: Path) -> None:
     assert app.status == "Готово частично: доступные документы сохранены", app.status
 
 
+
+def _assert_diary_source_buttons_route_to_expected_picker() -> None:
+    source = (Path(__file__).resolve().parents[1] / "layout_sources.py").read_text(encoding="utf-8")
+    start = source.index("    def _diary_compact_row")
+    tail = source[start:]
+    assert 'text="Тексты"' in tail and 'command=self.choose_status_file' in tail, tail[:5000]
+    assert 'text="Папка"' in tail and 'command=self.choose_status_files' in tail, tail[:5000]
+    assert 'text="Даты"' in tail and 'command=self.choose_diary_files' in tail, tail[:5000]
+
+
 def main() -> None:
     _assert_ui_diagnosis_wins_snapshot()
     _assert_full_patient_switch_reset_matrix()
+    _assert_diary_source_buttons_route_to_expected_picker()
     with TemporaryDirectory(prefix="diagnosis-override-regression-") as temp_dir:
         root = Path(temp_dir)
         _assert_all_medical_documents_receive_new_diagnosis(root)
@@ -595,7 +609,7 @@ def main() -> None:
     _assert_diary_creation_path_offers_manual_fallback()
     print(
         "DIAGNOSIS OVERRIDE REGRESSION OK: UI diagnosis + verbal matching + "
-        "manual fallback + partial-set survival + .doc/.docx source + complete patient-session reset matrix"
+        "manual fallback + visible Word picker + partial-set survival + .doc/.docx source + complete patient-session reset matrix"
     )
 
 

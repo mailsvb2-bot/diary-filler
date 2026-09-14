@@ -860,17 +860,48 @@ def _desktop_agent_is_retired() -> bool:
     return str(handoff["identity"]) != _desktop_current_agent_identity()
 
 
+def _desktop_child_environment() -> dict[str, str]:
+    """Start persistent child copies with an independent PyInstaller runtime.
+
+    A one-file PyInstaller child otherwise inherits the parent's _MEI extraction
+    directory.  A long-lived watcher can then keep that directory locked after
+    the visible GUI exits, producing the real-world "Failed to remove temporary
+    directory" warning and making later relaunches less reliable.
+    """
+    env = dict(os.environ)
+    if getattr(sys, "frozen", False):
+        env["PYINSTALLER_RESET_ENVIRONMENT"] = "1"
+    return env
+
+
 def _desktop_hidden_popen(command: list[str]) -> subprocess.Popen[bytes]:
     kwargs: dict[str, object] = {
         "stdin": subprocess.DEVNULL,
         "stdout": subprocess.DEVNULL,
         "stderr": subprocess.DEVNULL,
         "close_fds": True,
+        "env": _desktop_child_environment(),
     }
     if os.name == "nt":
         flags = int(getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0))
         flags |= int(getattr(subprocess, "DETACHED_PROCESS", 0))
         kwargs["creationflags"] = flags
+    return subprocess.Popen(command, **kwargs)  # type: ignore[arg-type]
+
+
+def _desktop_visible_popen(command: list[str]) -> subprocess.Popen[bytes]:
+    """Launch the watcher-triggered GUI in the interactive user desktop."""
+    kwargs: dict[str, object] = {
+        "stdin": subprocess.DEVNULL,
+        "stdout": subprocess.DEVNULL,
+        "stderr": subprocess.DEVNULL,
+        "close_fds": True,
+        "env": _desktop_child_environment(),
+    }
+    if os.name == "nt":
+        # Do not use DETACHED_PROCESS for the visible GUI.  On older Windows
+        # builds that flag can produce a running process without a usable window.
+        kwargs["creationflags"] = int(getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0))
     return subprocess.Popen(command, **kwargs)  # type: ignore[arg-type]
 
 
@@ -1042,7 +1073,7 @@ def _desktop_source_signature(path: Path) -> str:
 
 def _desktop_launch_gui_for_primary(path: Path) -> bool:
     try:
-        _desktop_hidden_popen(
+        _desktop_visible_popen(
             [*_desktop_launch_command(), DESKTOP_INTAKE_PRIMARY_ARGUMENT, str(path.resolve())]
         )
         return True
