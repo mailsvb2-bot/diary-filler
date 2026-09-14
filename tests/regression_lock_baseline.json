@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "c39fd17506b375c6a17d6160eba3d0e3c1b64bf6",
-  "baseline_note": "PR #52 merged candidate c39fd175 passed the complete post-merge Windows CI contour in run 34875759589: regression locks, document mechanics guard, golden/full patient replay, staff and gender regressions, diagnosis override and diary-text regression, real Tk GUI, packaged EXE startup, watcher auto-launch, installer build and install/uninstall smoke. This metadata-only advance promotes that exact tested tree to the known-good regression baseline.",
+  "baseline_ref": "bdbfdd521c13f8900b5c84a23d19bc9040516296",
+  "baseline_note": "Regression-only patient-boundary candidate bdbfdd521c13 passed the complete Windows CI contour in run 34877530323: regression locks, document mechanics guard, golden/full patient replay, staff and gender regressions, diagnosis override including manual diary-text patient-session isolation, real Tk GUI, packaged EXE startup, watcher auto-launch, installer build and install/uninstall smoke. This metadata-only advance promotes that exact tested candidate to the known-good regression baseline.",
   "required_approval_evidence": [
     "ci_gate_lock"
   ],
