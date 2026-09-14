@@ -53,12 +53,15 @@ class ActionsMedicalFlowMixin:
         ui_discharge = self.discharge_date_var.get().strip()
         if popup_discharge or ui_discharge:
             data.discharge_date = popup_discharge or ui_discharge
+        # The visible Diagnosis field is the final clinical source of truth.
+        # A popup value is only a fallback used to seed the field; once the doctor
+        # edits the UI, generation must never resurrect the older popup/source value.
         popup_diag = self._popup_diagnosis_override.strip()
         ui_diag = self.diagnosis_var.get().strip()
-        if popup_diag:
-            data.diagnosis = sanitize_diagnosis(popup_diag)
-        elif ui_diag:
+        if ui_diag:
             data.diagnosis = sanitize_diagnosis(ui_diag)
+        elif popup_diag:
+            data.diagnosis = sanitize_diagnosis(popup_diag)
         data.epi_present = self._normalize_yes_no(self.epi_present_var.get())
         if data.epi_present == "да" and self.epi_path_var.get().strip():
             data.epi_text = self.service.load_epi_text(self.epi_path_var.get().strip())
@@ -175,9 +178,12 @@ class ActionsMedicalFlowMixin:
             parsed_discharge = parse_date(discharge)
             data.discharge_date = parsed_discharge.strftime("%d.%m.%Y") if parsed_discharge else discharge
 
+        # Freeze exactly what the doctor currently sees in the Diagnosis field.
+        # Popup/parser values only fill an empty field and cannot override a later
+        # manual correction. This one snapshot feeds both medical docs and diaries.
         diagnosis = (
-            self._popup_diagnosis_override.strip()
-            or self.diagnosis_var.get().strip()
+            self.diagnosis_var.get().strip()
+            or self._popup_diagnosis_override.strip()
             or data.diagnosis
         )
         if diagnosis:

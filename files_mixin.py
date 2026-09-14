@@ -8,6 +8,7 @@ import threading
 from app_config import *
 from medical_models import PatientData
 from diary_text_selection import (
+    SUPPORTED_DIARY_TEXT_SUFFIXES,
     find_diary_text_file_for_diagnosis,
     folder_has_diary_text_candidates,
 )
@@ -377,12 +378,19 @@ class FilesMixin:
                 diagnosis = getattr(self.data, "diagnosis", "") or ""
         else:
             diagnosis = str(diagnosis_override).strip()
-        if not diagnosis:
-            return False
-        # Ручной выбор нескольких файлов врачом сохраняем. Автоподбор может
-        # заменить только пустой выбор или прошлый автоматический выбор.
+        # A manual file is an explicit doctor override and always wins.
         if self.status_files and not getattr(self, "_diary_text_files_auto_selected", False):
             return True
+
+        # Automatic selections are diagnosis-owned. Clear the previous automatic
+        # file before searching so changing Diagnosis can never leave stale texts
+        # silently attached when no new match exists.
+        if getattr(self, "_diary_text_files_auto_selected", False):
+            self.status_files = []
+            self._update_diary_text_label(success=bool(getattr(self, "diary_texts_dir", "")))
+            self._redraw_selection_controls()
+        if not diagnosis:
+            return False
 
         for folder in self._candidate_diary_text_dirs():
             found = find_diary_text_file_for_diagnosis(folder, diagnosis)
@@ -421,12 +429,12 @@ class FilesMixin:
                 self._redraw_selection_controls()
                 messagebox.showwarning(
                     "Текст по диагнозу не найден",
-                    f"В папке «{folder.name}» не найден DOCX, подходящий к диагнозу: {diagnosis}.",
+                    f"В папке «{folder.name}» не найден Word-файл (.doc/.docx), подходящий к диагнозу: {diagnosis}.",
                 )
         return False
 
     def choose_status_files(self) -> None:
-        """Choose the actual diagnosis-text folder, not an arbitrary DOCX pointer."""
+        """Choose a diagnosis-text folder for automatic verbal matching."""
         selected_folder = filedialog.askdirectory(
             title="Выберите папку «Тексты» с DOCX по диагнозам",
             initialdir=self._dialog_initial_dir(DIR_DIARY_TEXTS),
@@ -448,10 +456,10 @@ class FilesMixin:
             if diagnosis:
                 messagebox.showwarning(
                     "Текст по диагнозу не найден",
-                    f"В папке «{folder.name}» не найден DOCX, подходящий к диагнозу: {diagnosis}.",
+                    f"В папке «{folder.name}» не найден Word-файл (.doc/.docx), подходящий к диагнозу: {diagnosis}.",
                 )
             else:
-                self._log("\nℹ️ Папка текстов выбрана. DOCX будет подобран автоматически после распознавания диагноза.\n")
+                self._log("\nℹ️ Папка текстов выбрана. Word-файл будет подобран автоматически после распознавания диагноза.\n")
         if not self.output_dir_var.get().strip():
             self._set_output_dir_auto(folder)
 
@@ -463,6 +471,37 @@ class FilesMixin:
         if getattr(self, "diary_template_dir", ""):
             return "Даты: " + self._truncate_label_text(Path(self.diary_template_dir).name, max_chars=max_chars)
         return "Даты: не выбраны"
+
+    def choose_status_file(self) -> None:
+        """Choose one concrete diary-text Word file and pin it for this patient."""
+        path_value = filedialog.askopenfilename(
+            title="Выберите конкретный Word-файл с текстами дневников",
+            initialdir=self._dialog_initial_dir(DIR_DIARY_TEXTS),
+            filetypes=[
+                ("Word DOC/DOCX", "*.doc *.docx *.docm"),
+                ("Word DOC", "*.doc"),
+                ("Word DOCX", "*.docx *.docm"),
+                ("Все файлы", "*.*"),
+            ],
+        )
+        if not path_value:
+            return
+        path = Path(path_value).expanduser()
+        if not path.is_file() or path.suffix.lower() not in SUPPORTED_DIARY_TEXT_SUFFIXES:
+            messagebox.showwarning(
+                "Неверный формат",
+                "Для текстов дневников выберите Word-файл .doc, .docx или .docm.",
+            )
+            return
+        self.diary_texts_dir = str(path.parent)
+        self.status_files = [str(path)]
+        self._diary_text_files_auto_selected = False
+        self._remember_dialog_directory(DIR_DIARY_TEXTS, str(path))
+        self._update_diary_text_label(success=True)
+        self._redraw_selection_controls()
+        self._log(f"\n✅ Вручную выбран файл текстов дневников: {path.name}. Автоподбор его не заменит для текущего пациента.\n")
+        if not self.output_dir_var.get().strip():
+            self._set_output_dir_auto(path.parent)
 
     def _update_diary_template_label(self, *, success: bool | None = None) -> None:
         if not hasattr(self, "diary_files_label"):

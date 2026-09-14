@@ -1,16 +1,15 @@
 {
   "schema_version": 1,
-  "base_sha": "935367c4ad9b6d90a93709e59819f586f9957ccf",
-  "reason": "Explicit user-requested document mechanics change: persist treating doctor, department head, and deputy chief profiles; apply them to all medical documents and production diaries; add first-run onboarding and editable staff UI. Full replay, golden DOCX, staff regression, GUI, EXE, and installer CI are required.",
+  "base_sha": "40f40ac227095261eb938bf041dd780e3bcac703",
+  "reason": "Explicit user-requested document mechanics change: the doctor-visible Diagnosis field is authoritative for every generated document and diary; automatic diary-text selection follows the edited verbal diagnosis, manual Word-file selection overrides automation, and diagnosis text sources support .doc/.docx/.docm without changing Dates template mechanics. Full golden replay, diagnosis override regression, staff/gender matrices, packaged Windows E2E, and installer/uninstall smoke are required.",
   "approved_blobs": {
-    "actions_diary_flow.py": "426b587519122fc4b709a21db79341bff1b484e6",
-    "actions_medical_flow.py": "e53d9c8b7d979dc63c6b1f63d263d1d6b0d76fb5",
-    "diary_batch.py": "498ddda41c483cc9ecfe7f65d1359dd30a0b8e63",
-    "diary_service.py": "e7d687fb91ee331abd0ba62c248a1dabbcb2e046",
-    "medical_formatting.py": "eb24f4c5ce7f025f6fc2dd2d2a8c52bac22a3caa",
-    "medical_gender.py": "1bc6e7c332167a061bf39130f32a1cd5da02fa61",
-    "medical_models.py": "bb55b3f543cc2b2b874f84fb677a0a2d3904dafe",
-    "medical_renderer_commission.py": "aa3d86f232d4731fb64a920e743457fe803e0de3",
-    "medical_renderer_primary.py": "5ccef4865bd40bdfe535dc68cf5983fbcf691612"
+    "actions_diary_flow.py": "eea74eae766577a418fdb79ccdc9d8b44e6d1d0c",
+    "actions_medical_flow.py": "816d7a3c0e824a5c4bbb9a8bf2b9b1288e3c1b75",
+    "actions_navigation.py": "ff0c3dc3f391e564a7e356453e2409b91a909ab4",
+    "diary_batch.py": "6e66d2e2304660a332e75f31abbd765c5afb8722",
+    "diary_text_parser.py": "071fd4a65727218570d4425285fe7094a9a852b1",
+    "diary_text_selection.py": "03397d31ca12005f9142656ea08566236e54d399",
+    "files_mixin.py": "0df58c11a9864b28702aad2de2948303578e4bbb",
+    "layout_sources.py": "223793f3561f309212f01447af6ccc6c6cbe7c09"
   }
 }

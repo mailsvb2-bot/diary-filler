@@ -198,17 +198,25 @@ class LayoutSourcesMixin:
         buttons.grid(row=row, column=2, sticky="ew", pady=self._px(2, 1))
         buttons.grid_columnconfigure(0, weight=1)
         buttons.grid_columnconfigure(1, weight=1)
+        buttons.grid_columnconfigure(2, weight=1)
         self.status_files_button = self._small_neon_button(
             buttons,
             text="Тексты",
             command=self.choose_status_files,
-            selected=lambda: bool(self.status_files),
+            selected=lambda: bool(getattr(self, "diary_texts_dir", "")),
         )
-        self.status_files_button.grid(row=0, column=0, sticky="ew", padx=(0, self._px(4, 2)))
+        self.status_files_button.grid(row=0, column=0, sticky="ew", padx=(0, self._px(3, 2)))
+        self.status_file_button = self._small_neon_button(
+            buttons,
+            text="Файл",
+            command=self.choose_status_file,
+            selected=lambda: bool(self.status_files) and not getattr(self, "_diary_text_files_auto_selected", False),
+        )
+        self.status_file_button.grid(row=0, column=1, sticky="ew", padx=(self._px(3, 2), self._px(3, 2)))
         self.diary_dates_button = self._small_neon_button(
             buttons,
             text="Даты",
             command=self.choose_diary_files,
             selected=lambda: bool(self.diary_files or getattr(self, "diary_template_dir", "")),
         )
-        self.diary_dates_button.grid(row=0, column=1, sticky="ew", padx=(self._px(4, 2), 0))
+        self.diary_dates_button.grid(row=0, column=2, sticky="ew", padx=(self._px(3, 2), 0))
