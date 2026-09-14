@@ -1,0 +1,71 @@
+name: Temporary dynamic intake root rebind
+
+on:
+  push:
+    branches: [fix/dynamic-intake-root-rebind]
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          fetch-depth: 0
+      - name: Patch outer intake runtime only
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          startup = Path('startup.py')
+          text = startup.read_text(encoding='utf-8')
+
+          old = '''def desktop_intake_ensure_root() -> Path:\n    root = desktop_intake_root_path()\n    root.mkdir(parents=True, exist_ok=True)\n    return root\n\n\n'''
+          new = '''def desktop_intake_ensure_root() -> Path:\n    root = desktop_intake_root_path()\n    root.mkdir(parents=True, exist_ok=True)\n    return root\n\n\ndef _desktop_rebind_intake_root(current_root: Path | None = None) -> tuple[Path, bool]:\n    \"\"\"Re-resolve Desktop so OneDrive/profile redirection is honored at runtime.\"\"\"\n    resolved = desktop_intake_root_path()\n    rebound = False\n    if current_root is not None:\n        current_key = str(Path(current_root).expanduser().absolute()).casefold()\n        resolved_key = str(resolved.expanduser().absolute()).casefold()\n        rebound = current_key != resolved_key\n    resolved.mkdir(parents=True, exist_ok=True)\n    return resolved, rebound\n\n\n'''
+          if old not in text:
+              raise SystemExit('ensure-root anchor not found')
+          text = text.replace(old, new, 1)
+
+          old = '''            if not root.is_dir():\n                try:\n                    root = desktop_intake_ensure_root()\n                    _desktop_agent_log(\"intake root restored\")\n                except OSError:\n                    _desktop_agent_log(\"intake root unavailable; retry scheduled\")\n                    time.sleep(_DESKTOP_INTAKE_AGENT_POLL_SECONDS)\n                    continue\n\n'''
+          new = '''            root_missing = not root.is_dir()\n            try:\n                root, rebound = _desktop_rebind_intake_root(root)\n                if rebound:\n                    _desktop_agent_log(\"intake root rebound to current Desktop\")\n                elif root_missing:\n                    _desktop_agent_log(\"intake root restored\")\n            except OSError:\n                _desktop_agent_log(\"intake root unavailable; retry scheduled\")\n                time.sleep(_DESKTOP_INTAKE_AGENT_POLL_SECONDS)\n                continue\n\n'''
+          if old not in text:
+              raise SystemExit('agent root anchor not found')
+          text = text.replace(old, new, 1)
+
+          old = '''def _desktop_poll_intake(app, intake_root: Path) -> None:\n    try:\n        if not app.root.winfo_exists():\n            return\n        if not getattr(app, \"_desktop_intake_processing\", False):\n            candidates = desktop_intake_scan_primary_candidates(intake_root)\n'''
+          new = '''def _desktop_poll_intake(app, intake_root: Path) -> None:\n    try:\n        if not app.root.winfo_exists():\n            return\n        intake_root, rebound = _desktop_rebind_intake_root(intake_root)\n        if rebound:\n            _desktop_agent_log(\"GUI intake root rebound to current Desktop\")\n        if not getattr(app, \"_desktop_intake_processing\", False):\n            candidates = desktop_intake_scan_primary_candidates(intake_root)\n'''
+          if old not in text:
+              raise SystemExit('GUI poll anchor not found')
+          text = text.replace(old, new, 1)
+          startup.write_text(text, encoding='utf-8')
+
+          tests = Path('tests/desktop_intake_contract_check.py')
+          t = tests.read_text(encoding='utf-8')
+          anchor = '''def _assert_agent_heartbeat_contract() -> None:\n'''
+          addition = '''def _assert_agent_rebinds_when_desktop_moves() -> None:\n    \"\"\"An existing old Desktop directory must not pin the live watcher forever.\"\"\"\n    with tempfile.TemporaryDirectory() as tmp:\n        base = Path(tmp)\n        first = base / \"Desktop-A\" / startup.DESKTOP_INTAKE_FOLDER_NAME\n        second = base / \"Desktop-B\" / startup.DESKTOP_INTAKE_FOLDER_NAME\n        first.mkdir(parents=True)\n        second.mkdir(parents=True)\n        active = {\"root\": first}\n        scans: list[Path] = []\n\n        original_os = startup.os\n        original_root_path = startup.desktop_intake_root_path\n        original_acquire = startup._desktop_acquire_agent_mutex\n        original_release = startup._desktop_release_agent_mutex\n        original_touch = startup._desktop_touch_agent_heartbeat\n        original_retired = startup._desktop_agent_is_retired\n        original_gui_active = startup._desktop_gui_is_active\n        original_scan = startup.desktop_intake_scan_primary_candidates\n        original_sleep = startup.time.sleep\n        original_log = startup._desktop_agent_log\n\n        def scan(candidate_root: str | Path) -> list[Path]:\n            scans.append(Path(candidate_root))\n            if len(scans) == 1:\n                active[\"root\"] = second\n                return []\n            raise KeyboardInterrupt\n\n        try:\n            startup.os = SimpleNamespace(name=\"nt\", environ={})  # type: ignore[assignment]\n            startup.desktop_intake_root_path = lambda: active[\"root\"]  # type: ignore[assignment]\n            startup._desktop_acquire_agent_mutex = lambda: 1  # type: ignore[assignment]\n            startup._desktop_release_agent_mutex = lambda _handle: None  # type: ignore[assignment]\n            startup._desktop_touch_agent_heartbeat = lambda: None  # type: ignore[assignment]\n            startup._desktop_agent_is_retired = lambda: False  # type: ignore[assignment]\n            startup._desktop_gui_is_active = lambda: False  # type: ignore[assignment]\n            startup.desktop_intake_scan_primary_candidates = scan  # type: ignore[assignment]\n            startup.time.sleep = lambda _seconds: None  # type: ignore[assignment]\n            startup._desktop_agent_log = lambda _message: None  # type: ignore[assignment]\n\n            assert startup.run_desktop_intake_agent() == 0\n            assert scans == [first, second], scans\n            assert first.is_dir(), \"old Desktop intentionally remains present in this regression\"\n        finally:\n            startup._desktop_agent_log = original_log  # type: ignore[assignment]\n            startup.time.sleep = original_sleep  # type: ignore[assignment]\n            startup.desktop_intake_scan_primary_candidates = original_scan  # type: ignore[assignment]\n            startup._desktop_gui_is_active = original_gui_active  # type: ignore[assignment]\n            startup._desktop_agent_is_retired = original_retired  # type: ignore[assignment]\n            startup._desktop_touch_agent_heartbeat = original_touch  # type: ignore[assignment]\n            startup._desktop_release_agent_mutex = original_release  # type: ignore[assignment]\n            startup._desktop_acquire_agent_mutex = original_acquire  # type: ignore[assignment]\n            startup.desktop_intake_root_path = original_root_path  # type: ignore[assignment]\n            startup.os = original_os  # type: ignore[assignment]\n\n\ndef _assert_gui_poll_rebinds_when_desktop_moves() -> None:\n    with tempfile.TemporaryDirectory() as tmp:\n        base = Path(tmp)\n        old_root = base / \"Desktop-A\" / startup.DESKTOP_INTAKE_FOLDER_NAME\n        new_root = base / \"Desktop-B\" / startup.DESKTOP_INTAKE_FOLDER_NAME\n        old_root.mkdir(parents=True)\n        new_root.mkdir(parents=True)\n        scanned: list[Path] = []\n\n        class RootStub:\n            def winfo_exists(self) -> bool:\n                return True\n\n            def after(self, _delay: int, _callback) -> None:\n                return None\n\n        app = SimpleNamespace(root=RootStub(), _desktop_intake_processing=False)\n        original_root_path = startup.desktop_intake_root_path\n        original_scan = startup.desktop_intake_scan_primary_candidates\n        original_log = startup._desktop_agent_log\n        try:\n            startup.desktop_intake_root_path = lambda: new_root  # type: ignore[assignment]\n            startup.desktop_intake_scan_primary_candidates = (\n                lambda root: scanned.append(Path(root)) or []\n            )  # type: ignore[assignment]\n            startup._desktop_agent_log = lambda _message: None  # type: ignore[assignment]\n            startup._desktop_poll_intake(app, old_root)\n            assert scanned == [new_root], scanned\n        finally:\n            startup._desktop_agent_log = original_log  # type: ignore[assignment]\n            startup.desktop_intake_scan_primary_candidates = original_scan  # type: ignore[assignment]\n            startup.desktop_intake_root_path = original_root_path  # type: ignore[assignment]\n\n\n'''
+          if addition not in t:
+              if anchor not in t:
+                  raise SystemExit('test insertion anchor not found')
+              t = t.replace(anchor, addition + anchor, 1)
+
+          old_main = '''    _assert_agent_recreates_deleted_intake_root()\n    _assert_top_level_only_and_safe_move()\n'''
+          new_main = '''    _assert_agent_recreates_deleted_intake_root()\n    _assert_agent_rebinds_when_desktop_moves()\n    _assert_gui_poll_rebinds_when_desktop_moves()\n    _assert_top_level_only_and_safe_move()\n'''
+          if old_main not in t:
+              raise SystemExit('test main anchor not found')
+          t = t.replace(old_main, new_main, 1)
+          tests.write_text(t, encoding='utf-8')
+          PY
+          python tests/desktop_intake_contract_check.py
+          git diff --check
+          if git diff --quiet; then
+            echo "No migration changes needed"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add startup.py tests/desktop_intake_contract_check.py
+          git commit -m "Rebind intake watcher when Desktop moves"
+          git push
