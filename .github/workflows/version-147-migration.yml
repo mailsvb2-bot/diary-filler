@@ -58,19 +58,16 @@ jobs:
           if not text.startswith("# Release notes — v1.4.7-desktop-rebind"):
               if not text.startswith(old_head):
                   raise SystemExit("RELEASE_NOTES.md: old head mismatch")
-              new_head = """# Release notes — v1.4.7-desktop-rebind
-
-## v1.4.7-desktop-rebind
-
-- Hidden Windows watcher теперь заново определяет актуальный Desktop в каждом цикле и автоматически переключается на новый `Выписанные пациенты`, если OneDrive или `User Shell Folders` перенесли рабочий стол уже после запуска программы.
-- Уже открытый GUI использует тот же динамический rebind и не остаётся привязанным к старой папке, даже если прежний Desktop-каталог физически продолжает существовать.
-- Сохранено восстановление удалённой папки `Выписанные пациенты`; удаление каталога и перенос самого Desktop теперь покрыты разными regression-contract сценариями.
-- Механика генерации документов не изменялась; document-mechanics guard, полный patient replay и golden DOCX regression остаются обязательными.
-- Версия EXE, installer metadata, package metadata и CI-артефакта синхронизирована как `1.4.7` / `v1.4.7-desktop-rebind`.
-
-## v1.4.6-watcher-selfheal
-
-"""
+              new_head = (
+                  "# Release notes — v1.4.7-desktop-rebind\n\n"
+                  "## v1.4.7-desktop-rebind\n\n"
+                  "- Hidden Windows watcher теперь заново определяет актуальный Desktop в каждом цикле и автоматически переключается на новый `Выписанные пациенты`, если OneDrive или `User Shell Folders` перенесли рабочий стол уже после запуска программы.\n"
+                  "- Уже открытый GUI использует тот же динамический rebind и не остаётся привязанным к старой папке, даже если прежний Desktop-каталог физически продолжает существовать.\n"
+                  "- Сохранено восстановление удалённой папки `Выписанные пациенты`; удаление каталога и перенос самого Desktop теперь покрыты разными regression-contract сценариями.\n"
+                  "- Механика генерации документов не изменялась; document-mechanics guard, полный patient replay и golden DOCX regression остаются обязательными.\n"
+                  "- Версия EXE, installer metadata, package metadata и CI-артефакта синхронизирована как `1.4.7` / `v1.4.7-desktop-rebind`.\n\n"
+                  "## v1.4.6-watcher-selfheal\n\n"
+              )
               p.write_text(new_head + text[len(old_head):], encoding="utf-8")
           PY
           git diff --check
