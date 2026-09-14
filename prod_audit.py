@@ -15,8 +15,8 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
-TARGET_VERSION = "1.4.4"
-TARGET_VERSION_LABEL = "v1.4.4-date-linking-and-tail-cleanup"
+TARGET_VERSION = "1.4.5"
+TARGET_VERSION_LABEL = "v1.4.5-intake-lifecycle"
 MAX_PYTHON_FILES = 125
 MAX_TINY_PYTHON_FILES = 25
 # Release/CI probes are executable quality gates, not runtime architecture.
