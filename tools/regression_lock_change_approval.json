@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "ea13bf004e1e565844eb60cbb1ba52bac3d24d82",
+  "reason": "Harden the regression classifier so future executable, workflow, configuration and data files cannot bypass the production lock merely by using an unfamiliar filename.",
+  "required_evidence": [
+    "document_mechanics_guard",
+    "full_patient_replay",
+    "golden_docx",
+    "staff_profile_regression",
+    "gender_generation_matrix",
+    "desktop_intake_contract",
+    "intake_lifecycle_regression",
+    "packaged_desktop_intake_e2e",
+    "installer_uninstall_smoke",
+    "ci_gate_lock"
+  ],
+  "approved_blobs": {
+    "tests/regression_surface_inventory.py": "c8fdf5b83581a8aadfbb00d8f68e5e7787b85fd1",
+    "tools/regression_lock_check.py": "443ba45f299dd5ebb54dcb0f89e5e01526511ad2"
+  }
+}
