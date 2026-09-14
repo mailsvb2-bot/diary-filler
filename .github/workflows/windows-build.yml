@@ -38,6 +38,12 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r requirements_build.txt
 
+      - name: Lock known-good production and test surface
+        run: python tools/regression_lock_check.py
+
+      - name: Lock mandatory CI regression topology
+        run: python tools/ci_gate_lock.py
+
       - name: Guard document mechanics
         env:
           DOCUMENT_MECHANICS_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
