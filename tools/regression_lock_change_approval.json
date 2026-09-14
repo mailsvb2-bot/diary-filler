@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "e882517273154165f1c4d4f1b34f34463e190b53",
+  "reason": "User-reported installed intake/onboarding and diary-source picker regressions, plus independent PyInstaller watcher/GUI runtime and synchronized 1.4.10 release metadata. Canonical document generation remains unchanged and must pass the complete Windows regression contour.",
+  "required_evidence": [
+    "document_mechanics_guard",
+    "full_patient_replay",
+    "golden_docx",
+    "staff_profile_regression",
+    "gender_generation_matrix",
+    "desktop_intake_contract",
+    "intake_lifecycle_regression",
+    "packaged_desktop_intake_e2e",
+    "installer_uninstall_smoke",
+    "ci_gate_lock"
+  ],
+  "approved_blobs": {
+    "BUILD_WINDOWS_INSTALLER.bat": "f576fc2f0c61958a33d6ae221a49b281b6935572",
+    "app_config.py": "8f062f4f26f4bf494f711d5c518758ed3e969c0b",
+    "files_mixin.py": "29ed561447407191321d97daaff1b13ef7522947",
+    "installer/MedicalDiaryAutofill.iss": "dcdc84982223454b586bc655291190d8bdfdb717",
+    "layout_sources.py": "ae9ed7a0e046688aba4b13b13238fbd3a9ff340b",
+    "main.py": "66d8a269ac82f445a44e489b37d122f94ffe0a6f",
+    "prod_audit.py": "54d42dc9478bc5c6ef65cd4de13fb5b701bca0fd",
+    "pyproject.toml": "9308a0f69e1a0ff07e11557391cbd827978f09de",
+    "settings_mixin.py": "939dc7c06cd9261f31a7c602d2da18aa9a355dd3",
+    "smoke_combined_part05_diary_basic_templates.py": "61482167bbb3acc6a3e776dd5a91319c96320356",
+    "startup.py": "1bf5b229a67c1e3b1cf2e4e0c1cc9b61d853be83",
+    "tests/diagnosis_override_regression.py": "bf4e8798a2108351e19bc2cf82a5173271d66e13",
+    "tests/intake_lifecycle_regression.py": "e7d45446695dd558a0264b5d66266cb64d8dd609",
+    "tools/ci_gate_lock.py": "1ec1a965e7e661cea17be14603c82b1e510ba87d",
+    "tools/document_mechanics_change_approval.json": "b5586526a43314d768f58fbd56b328f5ea89bcc4",
+    "tools/production_safety_gate.py": "63a6631a04842b4ecc29a78854c83535a223a18a",
+    "tools/windows_installer_smoke.ps1": "802c92f7579de6a2892199835a218bce4ebe31f6",
+    "version_info.txt": "8a8a4c0d689b51790857646b4e03066137dd1347"
+  }
+}
