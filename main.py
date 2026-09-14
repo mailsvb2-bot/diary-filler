@@ -361,6 +361,36 @@ def _intake_primary_argument(argv: list[str]) -> str:
     return ""
 
 
+def _activate_root_for_intake(root) -> None:
+    """Show watcher-started GUI before intake parsing or modal popups can run."""
+    try:
+        if not root.winfo_exists():
+            return
+        root.deiconify()
+        root.update_idletasks()
+        try:
+            root.attributes("-topmost", True)
+        except Exception:
+            pass
+        root.lift()
+        try:
+            root.focus_force()
+        except Exception:
+            pass
+        root.update_idletasks()
+
+        def release_topmost() -> None:
+            try:
+                if root.winfo_exists():
+                    root.attributes("-topmost", False)
+            except Exception:
+                pass
+
+        root.after(1400, release_topmost)
+    except Exception:
+        pass
+
+
 def main() -> None:
     probe_mode = os.environ.get("MEDICAL_AUTOFILL_STARTUP_PROBE", "").strip() == "1"
     try:
@@ -388,11 +418,18 @@ def main() -> None:
         app = CombinedMedicalDiaryApp(root)
         _first_launch_onboarding(app)
 
+        intake_primary = _intake_primary_argument(sys.argv[1:]) or None
+        if intake_primary:
+            # The intake path can open modal questions while applying the primary.
+            # Raise the frameless Tk root first so the user never gets a running
+            # process with an invisible window or hidden modal dialog.
+            _activate_root_for_intake(root)
+
         # Hard boundary: the convenience layer ultimately hands the path to the
         # application's pre-existing _apply_primary_document_path(...) flow.
         start_desktop_intake_runtime(
             app,
-            initial_primary=_intake_primary_argument(sys.argv[1:]) or None,
+            initial_primary=intake_primary,
         )
         root.mainloop()
     except Exception as exc:  # pragma: no cover - safety net for Windows double-click start
