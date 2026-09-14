@@ -1,15 +1,8 @@
 {
   "schema_version": 1,
-  "base_sha": "40f40ac227095261eb938bf041dd780e3bcac703",
-  "reason": "Explicit user-requested document mechanics change: the doctor-visible Diagnosis field is authoritative for every generated document and diary; automatic diary-text selection follows the edited verbal diagnosis, manual Word-file selection overrides automation, and diagnosis text sources support .doc/.docx/.docm without changing Dates template mechanics. Full golden replay, diagnosis override regression, staff/gender matrices, packaged Windows E2E, and installer/uninstall smoke are required.",
+  "base_sha": "8d57b4e97b7243d28845a6ca45ab238f2135c064",
+  "reason": "Release-only version synchronization: app_config.py changes only APP_VERSION to v1.4.9-session-safety; document generation mechanics, parsers, renderers and templates are unchanged and must still pass the full golden/packaged Windows contour.",
   "approved_blobs": {
-    "actions_diary_flow.py": "eea74eae766577a418fdb79ccdc9d8b44e6d1d0c",
-    "actions_medical_flow.py": "816d7a3c0e824a5c4bbb9a8bf2b9b1288e3c1b75",
-    "actions_navigation.py": "ff0c3dc3f391e564a7e356453e2409b91a909ab4",
-    "diary_batch.py": "6e66d2e2304660a332e75f31abbd765c5afb8722",
-    "diary_text_parser.py": "071fd4a65727218570d4425285fe7094a9a852b1",
-    "diary_text_selection.py": "03397d31ca12005f9142656ea08566236e54d399",
-    "files_mixin.py": "0df58c11a9864b28702aad2de2948303578e4bbb",
-    "layout_sources.py": "223793f3561f309212f01447af6ccc6c6cbe7c09"
+    "app_config.py": "2fe217faca38e972b6b5b5e5d677ccbd61c235c5"
   }
 }
