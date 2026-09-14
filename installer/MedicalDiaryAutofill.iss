@@ -49,16 +49,25 @@ Type: dirifempty; Name: "{localappdata}\MedicalDiaryAutofill"
 function InitializeUninstall(): Boolean;
 var
   ResultCode: Integer;
-  AppExe: String;
 begin
+  { Uninstall must never be blocked by a damaged/stale watcher. }
+  { Remove both persistence routes first, then stop every process of this app. }
+  RegDeleteValue(
+    HKCU,
+    'Software\Microsoft\Windows\CurrentVersion\Run',
+    'MedicalDiaryAutofill Intake'
+  );
+  DeleteFile(ExpandConstant('{userstartup}\MedicalDiaryAutofill Intake.vbs'));
+
+  { taskkill is best-effort: even "process not found" must not cancel uninstall. }
+  Exec(
+    ExpandConstant('{sys}\taskkill.exe'),
+    '/F /IM {#MyAppExeName}',
+    '',
+    SW_HIDE,
+    ewWaitUntilTerminated,
+    ResultCode
+  );
+
   Result := True;
-  AppExe := ExpandConstant('{app}\{#MyAppExeName}');
-  if FileExists(AppExe) then
-  begin
-    if (not Exec(AppExe, '--uninstall-intake-agent', ExpandConstant('{app}'), SW_HIDE, ewWaitUntilTerminated, ResultCode)) or (ResultCode <> 0) then
-    begin
-      SuppressibleMsgBox('Не удалось безопасно завершить фоновое наблюдение MedicalDiaryAutofill. Закройте программу и повторите удаление.', mbError, MB_OK, IDOK);
-      Result := False;
-    end;
-  end;
 end;
