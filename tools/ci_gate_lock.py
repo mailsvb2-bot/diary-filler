@@ -15,6 +15,7 @@ RELEASE_WORKFLOW = ROOT / ".github" / "workflows" / "release.yml"
 WINDOWS_REQUIRED_IN_ORDER = (
     "python tools/regression_lock_check.py",
     "python tools/ci_gate_lock.py",
+    "python tests/regression_surface_inventory.py",
     "python tools/document_mechanics_guard.py",
     "python tools/production_safety_gate.py",
     "python tools/privacy_diagnostics_check.py",
@@ -36,6 +37,7 @@ WINDOWS_REQUIRED_IN_ORDER = (
 RELEASE_REQUIRED_IN_ORDER = (
     "python tools/regression_lock_check.py",
     "python tools/ci_gate_lock.py",
+    "python tests/regression_surface_inventory.py",
     "python tools/production_safety_gate.py",
     "python tools/privacy_diagnostics_check.py",
     "python prod_audit.py",
@@ -56,6 +58,7 @@ RELEASE_REQUIRED_IN_ORDER = (
 REQUIRED_REPOSITORY_FILES = (
     "tests/golden_docx_manifest.json",
     "tests/regression_lock_baseline.json",
+    "tests/regression_surface_inventory.py",
     "tests/desktop_intake_contract_check.py",
     "tests/intake_lifecycle_regression.py",
     "tools/document_mechanics_guard.py",
