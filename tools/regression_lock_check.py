@@ -4,6 +4,10 @@ The lock compares every critical tracked file with a tested baseline commit. Any
 critical change, addition, or deletion fails closed unless an explicit approval
 is bound to the current baseline and to the exact candidate Git blobs.
 
+The classifier is deliberately fail-closed for executable, configuration and
+data file types. This prevents a future change from bypassing the lock merely by
+introducing a new helper/module/config file with an unfamiliar name.
+
 After an approved candidate has passed the full CI, advance
 ``tests/regression_lock_baseline.json`` in a separate metadata-only commit to
 the exact tested candidate commit and remove the temporary approval file.
@@ -21,11 +25,10 @@ APPROVAL_PATH = ROOT / "tools" / "regression_lock_change_approval.json"
 
 CRITICAL_PATTERNS = (
     ".github/workflows/*.yml",
-    "installer/*.iss",
-    "tools/*.py",
-    "tools/*.ps1",
-    "tests/*.py",
-    "tests/golden_docx_manifest.json",
+    ".github/workflows/*.yaml",
+    "installer/*",
+    "tools/*",
+    "tests/*",
     "actions_*.py",
     "app*.py",
     "diagnosis_widget.py",
@@ -58,6 +61,27 @@ CRITICAL_PATTERNS = (
     "pyproject.toml",
     "version_info.txt",
 )
+
+# Any newly introduced file with one of these suffixes is production-significant
+# by default, regardless of its name or directory. Keep this broad on purpose:
+# adding a new helper/config/data file must never be a way around the lock.
+CRITICAL_SUFFIXES = {
+    ".py",
+    ".pyw",
+    ".ps1",
+    ".bat",
+    ".cmd",
+    ".iss",
+    ".spec",
+    ".yml",
+    ".yaml",
+    ".toml",
+    ".ini",
+    ".cfg",
+    ".json",
+    ".tsv",
+    ".csv",
+}
 
 ALWAYS_EXCLUDED = {
     "tests/regression_lock_baseline.json",
@@ -110,7 +134,9 @@ def _is_critical(path: str, extra_excluded: set[str]) -> bool:
     path = path.replace("\\", "/")
     if path in ALWAYS_EXCLUDED or path in extra_excluded:
         return False
-    return any(fnmatch.fnmatch(path, pattern) for pattern in CRITICAL_PATTERNS)
+    if any(fnmatch.fnmatch(path, pattern) for pattern in CRITICAL_PATTERNS):
+        return True
+    return Path(path).suffix.lower() in CRITICAL_SUFFIXES
 
 
 def _tree_files(ref: str) -> set[str]:
