@@ -360,6 +360,18 @@ def desktop_intake_ensure_root() -> Path:
     return root
 
 
+def _desktop_rebind_intake_root(current_root: Path | None = None) -> tuple[Path, bool]:
+    """Re-resolve Desktop so OneDrive/profile redirection is honored at runtime."""
+    resolved = desktop_intake_root_path()
+    rebound = False
+    if current_root is not None:
+        current_key = str(Path(current_root).expanduser().absolute()).casefold()
+        resolved_key = str(resolved.expanduser().absolute()).casefold()
+        rebound = current_key != resolved_key
+    resolved.mkdir(parents=True, exist_ok=True)
+    return resolved, rebound
+
+
 def _desktop_normalize_folder_settings(settings: Mapping[str, Any] | None = None) -> dict[str, Any]:
     source = dict(settings or {})
     raw_parts = source.get("parts", DESKTOP_FOLDER_NAMING_DEFAULT["parts"])
@@ -1003,14 +1015,17 @@ def run_desktop_intake_agent() -> int:
                 _desktop_agent_log("agent retired after application update")
                 return 0
 
-            if not root.is_dir():
-                try:
-                    root = desktop_intake_ensure_root()
+            root_missing = not root.is_dir()
+            try:
+                root, rebound = _desktop_rebind_intake_root(root)
+                if rebound:
+                    _desktop_agent_log("intake root rebound to current Desktop")
+                elif root_missing:
                     _desktop_agent_log("intake root restored")
-                except OSError:
-                    _desktop_agent_log("intake root unavailable; retry scheduled")
-                    time.sleep(_DESKTOP_INTAKE_AGENT_POLL_SECONDS)
-                    continue
+            except OSError:
+                _desktop_agent_log("intake root unavailable; retry scheduled")
+                time.sleep(_DESKTOP_INTAKE_AGENT_POLL_SECONDS)
+                continue
 
             now = time.time()
             recently_launched = {
@@ -1119,6 +1134,9 @@ def _desktop_poll_intake(app, intake_root: Path) -> None:
     try:
         if not app.root.winfo_exists():
             return
+        intake_root, rebound = _desktop_rebind_intake_root(intake_root)
+        if rebound:
+            _desktop_agent_log("GUI intake root rebound to current Desktop")
         if not getattr(app, "_desktop_intake_processing", False):
             candidates = desktop_intake_scan_primary_candidates(intake_root)
             if candidates:
