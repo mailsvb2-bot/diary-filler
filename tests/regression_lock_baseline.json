@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "f6e650783466ef28824a4296448024befe0c8665",
-  "baseline_note": "Release 1.4.9 session-safety candidate f6e650783466 passed the complete Windows CI contour in run 34885377561: regression locks, CI topology, document mechanics guard, strengthened version synchronization audit, release gate, golden/full patient replay, staff and gender regressions, diagnosis and complete patient-session reset regression, desktop intake/lifecycle, real Tk GUI, packaged EXE startup, watcher auto-launch, installer 1.4.9 build and active-watcher install/uninstall smoke. This metadata-only advance promotes that exact tested candidate to the known-good regression baseline.",
+  "baseline_ref": "e882517273154165f1c4d4f1b34f34463e190b53",
+  "baseline_note": "User-reported diary fallback and partial-set survival candidate e88251727315 passed the complete Windows CI contour in run 34892014767: regression locks, document mechanics guard, release gate, golden/full patient replay, staff and gender regressions, diagnosis/manual-fallback/complete patient-session regression, real Tk GUI, packaged EXE startup, watcher auto-launch, installer build and active-watcher install/uninstall smoke. This metadata-only advance promotes that exact tested candidate to the known-good regression baseline.",
   "required_approval_evidence": [
     "ci_gate_lock"
   ],
