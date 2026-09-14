@@ -15,6 +15,7 @@
     "ci_gate_lock"
   ],
   "approved_blobs": {
+    ".github/workflows/windows-build.yml": "3d8787a49b43ac1c7b6ad700a8d3a9a466d1946e",
     "BUILD_WINDOWS_INSTALLER.bat": "f576fc2f0c61958a33d6ae221a49b281b6935572",
     "app_config.py": "8f062f4f26f4bf494f711d5c518758ed3e969c0b",
     "files_mixin.py": "29ed561447407191321d97daaff1b13ef7522947",
