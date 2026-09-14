@@ -95,6 +95,9 @@ jobs:
       - name: Run desktop intake contract
         run: python tests/desktop_intake_contract_check.py
 
+      - name: Run intake lifecycle regression
+        run: python tests/intake_lifecycle_regression.py
+
       - name: Run real Tk GUI wiring smoke
         run: python gui_runtime_check.py
 
