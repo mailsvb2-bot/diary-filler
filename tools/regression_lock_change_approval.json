@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "4cec6efe9d3059223c23c4acf60e276bb7443486",
+  "reason": "Focused FIO parser correction for DOCX tables that flatten an exact FIO label and its adjacent value into consecutive lines. The candidate accepts only a plausible standalone Cyrillic two/three-part name or surname plus initials immediately after the label, adds a real two-cell DOCX regression, and does not alter renderers, templates, document formatting, diary mechanics, or golden DOCX contracts.",
+  "required_evidence": [
+    "ci_gate_lock",
+    "document_mechanics_guard",
+    "full_patient_replay",
+    "golden_docx",
+    "staff_profile_regression",
+    "gender_generation_matrix",
+    "desktop_intake_contract",
+    "intake_lifecycle_regression",
+    "packaged_desktop_intake_e2e",
+    "installer_uninstall_smoke"
+  ],
+  "approved_blobs": {
+    "medical_parser_demographics.py": "1b0ae3dcce16e6c6a6009bfdec655149947fab4b",
+    "smoke_combined_part03_medical_parser_manual.py": "87dcc67806208f986e3d9109b9c7480a4d5f5b88",
+    "tools/document_mechanics_change_approval.json": "342e115c6c19e086aafd2c2bb38ef4157b8666ba"
+  }
+}
