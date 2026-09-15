@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "d6b97c617858717c7569c0ee4b12e0eb8b3d9e73",
-  "reason": "Explicit user-reported workstation regression: Diagnosis edited in the visible UI must become canonical immediately, automatic diary text selection must use only verbal diagnosis words against code-free physician filenames, the Texts folder must never be scanned as numeric Dates 01-31, and a valid Texts source must generate diaries without requiring a separate Dates folder. The candidate adds dedicated headless and real-Tk regression evidence while preserving medical renderers, embedded templates and golden document mechanics.",
+  "reason": "Explicit user-reported workstation regression: Diagnosis edited in the visible UI must become canonical immediately, automatic diary text selection must use only verbal diagnosis words against code-free physician filenames, the Texts folder must never be scanned as numeric Dates 01-31, and a valid Texts source must generate diaries without requiring a separate Dates folder. A separately configured Dates source remains optional. The candidate adds dedicated headless and real-Tk regression evidence while preserving medical renderers, embedded templates and golden document mechanics.",
   "required_evidence": [
     "ci_gate_lock",
     "document_mechanics_guard",
@@ -16,12 +16,12 @@
   ],
   "approved_blobs": {
     ".github/workflows/windows-build.yml": "ad9a98520e5770d9a5ba79ce8ad3c7b04ffa0f8d",
-    "actions_diary_flow.py": "d8ead354d719ca27457fc16ffc720c3269f5a864",
+    "actions_diary_flow.py": "180fe757d580cf1e0ac8c6fa3c8a12611ccd594c",
     "diagnosis_widget.py": "a24b86cfb43e7905e1052f39f06551e096ab1b0e",
     "diary_template_selection.py": "535d555f8d5c1b94f938df7f5e91a096ee8ebe35",
-    "diary_text_selection.py": "e41ccaee455ebd3e91c228e096e36f424c92e7c7",
+    "diary_text_selection.py": "bcda17070e631893f09f8c910363f4e114c7bf97",
     "gui_runtime_check.py": "9e74490284bd4dfe04c43cf1d9f80b6622142535",
     "tests/verbal_diary_source_regression.py": "3309ca918a871a02fa2f6e34e9cfa81dc9f50f26",
-    "tools/document_mechanics_change_approval.json": "df9e8527e091c66fc61aaa01354b8b024fa7c5ff"
+    "tools/document_mechanics_change_approval.json": "f3ae0ab38fd7d6c98833d0320dcf85f960b9eef1"
   }
 }
