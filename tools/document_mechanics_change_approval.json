@@ -1,9 +1,10 @@
 {
   "schema_version": 1,
   "base_sha": "9d6fcf62a40f3024f128d92f23d75f0d05072019",
-  "reason": "Explicit user-reported diagnosis-authority and diary-source regression: changing Diagnosis in the visible patient card must immediately become canonical; automatic diary text selection must match diagnosis WORDS against code-free Word filenames; ICD codes and all numeric fragments must not influence text matching; a folder owned by the Texts source must never be scanned as numeric 01-31 Dates; and a valid automatically or manually selected text source must be sufficient for generation because DiaryService can derive the clinical cadence from admission/discharge when explicit Dates are absent. An explicitly configured separate Dates source remains optional and may be refreshed from the frozen admission date. Manual text choices remain sticky. No medical parser, renderer, embedded template, document formatting rule, or golden DOCX contract is changed.",
+  "reason": "Explicit user-reported diagnosis-authority and diary-source regression: changing Diagnosis in the visible patient card must immediately become canonical from the StringVar write itself rather than depending on a later KeyRelease; automatic diary text selection must match diagnosis WORDS against code-free Word filenames; ICD codes and all numeric fragments must not influence text matching; a folder owned by the Texts source must never be scanned as numeric 01-31 Dates; and a valid automatically or manually selected text source must be sufficient for generation because DiaryService can derive the clinical cadence from admission/discharge when explicit Dates are absent. An explicitly configured separate Dates source remains optional and may be refreshed from the frozen admission date. Manual text choices remain sticky. No medical parser, renderer, embedded template, document formatting rule, or golden DOCX contract is changed.",
   "approved_blobs": {
     "actions_diary_flow.py": "180fe757d580cf1e0ac8c6fa3c8a12611ccd594c",
+    "actions_ui_state.py": "99aaf044fbb587eda31f830b09ef2a4bba650dfe",
     "diagnosis_widget.py": "a24b86cfb43e7905e1052f39f06551e096ab1b0e",
     "diary_template_selection.py": "535d555f8d5c1b94f938df7f5e91a096ee8ebe35",
     "diary_text_selection.py": "3bfbacac0292c230ef0a1aca6a00a2b91f20521a"
