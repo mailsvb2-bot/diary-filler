@@ -35,6 +35,11 @@ class MedicalParserDemographicsMixin:
         Значения из явно найденных отдельных строк не перетираются, кроме случая,
         когда в ФИО явно попал хвост с возрастом/адресом.
         """
+        if not data.fio:
+            split_fio = self._extract_split_fio_label_value(text)
+            if split_fio:
+                data.fio = split_fio
+
         candidates: List[str] = []
         if data.fio:
             candidates.append(data.fio)
@@ -61,6 +66,40 @@ class MedicalParserDemographicsMixin:
 
             if data.fio and data.birth and data.registered and not self._fio_value_looks_overgrown(data.fio):
                 break
+
+    @staticmethod
+    def _extract_split_fio_label_value(text: str) -> str:
+        """Read FIO when a DOCX table flattens label and value into adjacent lines.
+
+        A common Word layout stores ``Ф.И.О.`` in the left cell and the actual
+        name in the right cell. ``extract_docx_text`` intentionally preserves
+        cell boundaries as lines, so same-line alias parsing cannot see that
+        value. Accept only an exact FIO label followed by one plausible standalone
+        name; never search farther through the document or infer a name from a
+        filename.
+        """
+        lines = [normalize_text(line) for line in (text or "").splitlines()]
+        label_re = re.compile(
+            r"^(?:ф\.\s*и\.\s*о\.?|фио|фамилия\s+имя\s+отчество)\s*[:.\-]?\s*$",
+            flags=re.IGNORECASE,
+        )
+        name_part = r"[А-ЯЁ][А-ЯЁа-яё]+(?:-[А-ЯЁ][А-ЯЁа-яё]+)?"
+        full_name_re = re.compile(rf"^{name_part}\s+{name_part}(?:\s+{name_part})?$")
+        initials_re = re.compile(rf"^{name_part}\s+[А-ЯЁ]\.?\s*[А-ЯЁ]\.?$")
+
+        for index, line in enumerate(lines[:-1]):
+            if not label_re.fullmatch(line):
+                continue
+            for following in lines[index + 1:]:
+                candidate = clean_value(following)
+                if not candidate:
+                    continue
+                if looks_like_label(candidate):
+                    return ""
+                if full_name_re.fullmatch(candidate) or initials_re.fullmatch(candidate):
+                    return candidate
+                return ""
+        return ""
 
     @staticmethod
     def _fio_value_looks_overgrown(value: str) -> bool:
