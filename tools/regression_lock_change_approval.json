@@ -19,9 +19,9 @@
     "actions_diary_flow.py": "d8ead354d719ca27457fc16ffc720c3269f5a864",
     "diagnosis_widget.py": "a24b86cfb43e7905e1052f39f06551e096ab1b0e",
     "diary_template_selection.py": "535d555f8d5c1b94f938df7f5e91a096ee8ebe35",
-    "diary_text_selection.py": "1b3902bcfbdf6d5d5cde6c0c77b56e7885701926",
+    "diary_text_selection.py": "e41ccaee455ebd3e91c228e096e36f424c92e7c7",
     "gui_runtime_check.py": "9e74490284bd4dfe04c43cf1d9f80b6622142535",
     "tests/verbal_diary_source_regression.py": "3309ca918a871a02fa2f6e34e9cfa81dc9f50f26",
-    "tools/document_mechanics_change_approval.json": "c6d4828bb06ca714f01a074c0d47968bd244688b"
+    "tools/document_mechanics_change_approval.json": "df9e8527e091c66fc61aaa01354b8b024fa7c5ff"
   }
 }
