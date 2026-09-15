@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "7d0f3f0396aa847a3b918f45a10408153f493e8b",
+  "reason": "Explicit user-reported workstation regression: a manually selected diary-text Word file must remain authoritative even when the remembered Dates folder contains only diary-text files or no numbered 01–31 templates. The production diary service may derive its proven clinical date cadence ephemerally; no renderer/template mechanics are changed.",
+  "required_evidence": [
+    "document_mechanics_guard",
+    "full_patient_replay",
+    "golden_docx",
+    "staff_profile_regression",
+    "gender_generation_matrix",
+    "diagnosis_override_regression",
+    "desktop_intake_contract",
+    "intake_lifecycle_regression",
+    "packaged_desktop_intake_e2e",
+    "installer_uninstall_smoke",
+    "ci_gate_lock"
+  ],
+  "approved_blobs": {
+    "actions_diary_flow.py": "4d46085f8ff069690291636ede2496d854ebdf84",
+    "app_config.py": "c77ba0aa20ddb42be9ddb455b876dbf7db55f7da",
+    "diary_service.py": "a655f0e4662920e8d627e7b46151b4dbadad450d"
+  }
+}
