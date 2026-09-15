@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "d6b97c617858717c7569c0ee4b12e0eb8b3d9e73",
+  "reason": "Explicit user-reported workstation regression: Diagnosis edited in the visible UI must become canonical immediately, automatic diary text selection must use only verbal diagnosis words against code-free physician filenames, the Texts folder must never be scanned as numeric Dates 01-31, and a valid Texts source must generate diaries without requiring a separate Dates folder. The candidate adds dedicated headless and real-Tk regression evidence while preserving medical renderers, embedded templates and golden document mechanics.",
+  "required_evidence": [
+    "ci_gate_lock",
+    "document_mechanics_guard",
+    "full_patient_replay",
+    "golden_docx",
+    "staff_profile_regression",
+    "gender_generation_matrix",
+    "desktop_intake_contract",
+    "intake_lifecycle_regression",
+    "packaged_desktop_intake_e2e",
+    "installer_uninstall_smoke"
+  ],
+  "approved_blobs": {
+    ".github/workflows/windows-build.yml": "ad9a98520e5770d9a5ba79ce8ad3c7b04ffa0f8d",
+    "actions_diary_flow.py": "d8ead354d719ca27457fc16ffc720c3269f5a864",
+    "diagnosis_widget.py": "a24b86cfb43e7905e1052f39f06551e096ab1b0e",
+    "diary_template_selection.py": "535d555f8d5c1b94f938df7f5e91a096ee8ebe35",
+    "diary_text_selection.py": "1b3902bcfbdf6d5d5cde6c0c77b56e7885701926",
+    "gui_runtime_check.py": "9e74490284bd4dfe04c43cf1d9f80b6622142535",
+    "tests/verbal_diary_source_regression.py": "3309ca918a871a02fa2f6e34e9cfa81dc9f50f26",
+    "tools/document_mechanics_change_approval.json": "40e90771e180bac2caa1006cb6143f106062f4fc"
+  }
+}
