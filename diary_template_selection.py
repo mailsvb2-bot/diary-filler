@@ -83,12 +83,38 @@ class DiaryTemplateSelectionMixin:
         except Exception:
             return []
 
+    def _diary_text_folder_keys(self) -> set[str]:
+        """Folders owned by the WORD-based «Тексты» source.
+
+        They must never be scanned as numeric 01–31 sources. This strict type
+        boundary prevents a folder containing hundreds of files such as
+        «дневники на органичку.docx» from being searched for day 18/19.
+        """
+        keys: set[str] = set()
+        values = [getattr(self, "diary_texts_dir", "")]
+        try:
+            values.append(self._get_saved_directory(DIR_DIARY_TEXTS))
+        except Exception:
+            pass
+        for value in values:
+            if not value:
+                continue
+            try:
+                folder = Path(value).expanduser()
+                if folder.is_file():
+                    folder = folder.parent
+                keys.add(str(folder.resolve()))
+            except Exception:
+                keys.add(str(value))
+        return keys
+
     def _try_find_template_in_dirs(
         self,
         dirs: list[Path],
         candidates: list[tuple[int, str, datetime]],
     ) -> tuple[Path | None, int | None, str, datetime | None]:
         seen_dirs: set[str] = set()
+        text_folder_keys = self._diary_text_folder_keys()
         for folder in dirs:
             try:
                 folder_key = str(Path(folder).resolve())
@@ -97,6 +123,11 @@ class DiaryTemplateSelectionMixin:
             if folder_key in seen_dirs:
                 continue
             seen_dirs.add(folder_key)
+            # «Тексты» and «Даты» are different source types. Never inspect the
+            # diagnosis-word folder for numeric day templates, even if an old
+            # setting accidentally left the same path in diary_template_dir.
+            if folder_key in text_folder_keys:
+                continue
             for day, reason, template_date in candidates:
                 found = self._find_numbered_diary_template(folder, day)
                 if found:
@@ -216,11 +247,24 @@ class DiaryTemplateSelectionMixin:
                 initialdir=self._dialog_initial_dir(DIR_NUMBERED_DIARY_TEMPLATES, self._get_saved_directory(DIR_DIARY_TEMPLATES)),
             )
             if selected_folder:
-                folder = str(Path(selected_folder))
-                self._set_numbered_diary_template_dir(folder, auto_select=False, warn_if_missing=True)
-                found, day, reason, template_date = self._try_find_template_in_dirs([Path(folder)], day_candidates)
+                folder_path = Path(selected_folder)
+                try:
+                    folder_key = str(folder_path.resolve())
+                except Exception:
+                    folder_key = str(folder_path)
+                if folder_key in self._diary_text_folder_keys():
+                    messagebox.showwarning(
+                        "Это папка «Тексты»",
+                        "Эта папка используется для словесного подбора текстов по диагнозу. "
+                        "Программа не будет искать в ней номера 01–31. Если нужны отдельные «Даты», выберите другую папку.",
+                    )
+                    return False
+                folder = str(folder_path)
+                if not self._set_numbered_diary_template_dir(folder, auto_select=False, warn_if_missing=True):
+                    return False
+                found, day, reason, template_date = self._try_find_template_in_dirs([folder_path], day_candidates)
                 if found and day is not None and template_date is not None:
-                    self.diary_template_dir = str(Path(folder))
+                    self.diary_template_dir = str(folder_path)
                     self.diary_files = [str(found)]
                     self._diary_files_auto_selected = True
                     self._remember_numbered_diary_template_dir(folder)
