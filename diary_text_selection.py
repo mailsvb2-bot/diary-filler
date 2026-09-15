@@ -25,19 +25,26 @@ def _is_supported_word_file(path: str | Path) -> bool:
         return False
 
 
-# Compatibility alias for older tests/imports. The function now recognizes all
+# Compatibility alias for older tests/imports. The function recognizes all
 # supported Word diagnosis-text files, including legacy .doc.
 def _is_docx_file(path: str | Path) -> bool:
     return _is_supported_word_file(path)
 
 
-_ICD_PREFIX_RE = re.compile(r"^\s*[A-ZА-Я]\s*\d{1,3}\s*(?:[.,]\s*\d+)?\s*[-—–.:;)]*\s*", re.IGNORECASE)
-_ICD_CODE_RE = re.compile(r"(?<![A-ZА-Я0-9])[FФ]\s*\d{1,3}\s*(?:[.,]\s*\d+)?(?![A-ZА-Я0-9])", re.IGNORECASE)
+# ICD codes are metadata for the medical document. They are intentionally NOT
+# part of diary-text filename matching. The doctor's real folders contain names
+# such as «дневники на шизофреника.doc» and «дневники на органичку.docx».
+_ICD_CODE_RE = re.compile(
+    r"(?<![A-ZА-Я0-9])[FФ]?\s*\d{1,3}\s*(?:[.,]\s*\d+)?(?![A-ZА-Я0-9])",
+    re.IGNORECASE,
+)
 _COMMON_DIARY_NAME_WORDS = {
     "дневник",
     "дневники",
     "дневников",
     "дневниковые",
+    "запись",
+    "записи",
     "вэ",
     "ве",
     "веи",
@@ -46,11 +53,12 @@ _COMMON_DIARY_NAME_WORDS = {
     "текстов",
     "даты",
     "датами",
-    "с",
-    "со",
-    "на",
     "шаблон",
     "шаблоны",
+    "пациент",
+    "пациента",
+    "больной",
+    "больного",
 }
 _STOP_DIARY_NAME_WORDS = {
     "и",
@@ -65,6 +73,7 @@ _STOP_DIARY_NAME_WORDS = {
     "в",
     "во",
     "без",
+    "к",
     "г",
     "год",
     "лет",
@@ -75,34 +84,58 @@ _STOP_DIARY_NAME_WORDS = {
     "состояние",
     "болезнь",
     "болезни",
-    "легкое",
-    "легкая",
-    "легкой",
-    "умеренное",
-    "умеренная",
-    "смешанное",
-    "органическое",
-    "депрессивное",
 }
-_SPECIFIC_DIARY_KEYS = {"asthenia", "psychopathy", "observation"}
+
+# These keys bridge normal medical wording and the informal names that are
+# already present in the doctor's folder. Numbers/codes never create a key.
+_FAMILY_PATTERNS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("schizophrenia", ("шизофрен",)),
+    ("organic", ("органичес", "органич", "органик", "резидуал")),
+    ("depression", ("депресс",)),
+    ("oligophrenia", ("олигофрен", "умствен")),
+    ("asthenia", ("астен",)),
+    ("psychopathy", ("психопат",)),
+    ("anxiety", ("тревож",)),
+    ("panic", ("панич",)),
+    ("bipolar", ("биполяр",)),
+    ("mania", ("маниак", "мания")),
+    ("dementia", ("деменц",)),
+    ("autism", ("аутиз", "аутист")),
+    ("alcohol", ("алкогол",)),
+    ("epilepsy", ("эпилепт",)),
+    ("neurosis", ("невроз",)),
+    ("ptsd", ("посттравмат", "птср")),
+    ("somatoform", ("соматоформ",)),
+    ("obsessive", ("обсесс", "навязчив")),
+    ("personality", ("личност",)),
+    ("healthy", ("здоров", "норма")),
+    ("observation", ("обследован", "наблюден")),
+)
 
 
 def _stem_russian_word(word: str) -> str:
-    word = re.sub(r"[^a-zа-я0-9]+", "", word.lower().replace("ё", "е"))
+    word = re.sub(r"[^a-zа-я]+", "", word.lower().replace("ё", "е"))
     if len(word) <= 4:
         return word
-    # Небольшой безопасный stemmer для выравнивания русских окончаний:
-    # «олигофрены» и «олигофрения» должны стать близкими ключами.
+    # Small deterministic stemmer. It is deliberately conservative; informal
+    # aliases are handled separately by _family_key_for_word.
     for suffix in (
         "иями",
         "ями",
         "ами",
+        "остью",
         "ости",
         "ость",
         "ение",
         "ения",
         "ении",
-        "остью",
+        "скими",
+        "ского",
+        "скому",
+        "ский",
+        "ская",
+        "ское",
+        "ские",
         "ыми",
         "ими",
         "ной",
@@ -114,6 +147,8 @@ def _stem_russian_word(word: str) -> str:
         "ого",
         "его",
         "ему",
+        "ами",
+        "ями",
         "ая",
         "яя",
         "ое",
@@ -149,112 +184,165 @@ def _stem_russian_word(word: str) -> str:
 
 
 def normalize_diary_diagnosis_name(value: str) -> str:
-    """Normalize a diagnosis/file name for matching diary text DOCX files.
+    """Return only the verbal part used for diary-text filename matching.
 
-    Реальные файлы врача часто называются не ровно диагнозом, а так:
-    ``дневники ВЭ легкая депрессия с датами.docx``. Поэтому здесь убираем
-    технические слова и оставляем смысловую часть названия.
+    Examples:
+    ``F06.8 Органическое расстройство личности`` ->
+    ``органическое расстройство личности``.
+
+    ``дневники на органичку 2022.docx`` -> ``органичку``.
+
+    Every ICD code and every standalone number is discarded on purpose. The
+    lookup is a words-only operation; date-template numbers belong to a separate
+    input source and must never influence this matcher.
     """
     text = str(value or "").strip()
     if not text:
         return ""
     try:
         p = Path(text)
-        # Не считаем формальный диагноз вида "F70.0 ..." именем файла только
-        # из-за точки в коде МКБ. Stem берём только для реальных Word-имён.
         if p.suffix.lower() in SUPPORTED_DIARY_TEXT_SUFFIXES:
             text = p.stem
     except Exception:
         pass
+
     text = text.replace("ё", "е").lower()
-    # Diary-template matching is deliberately verbal. ICD numbers are metadata
-    # and must not steer the choice when the doctor changed the diagnosis wording.
-    text = _ICD_PREFIX_RE.sub("", text)
+    # Remove F-codes and bare numeric fragments before tokenization. A plain
+    # numeric diagnosis such as F20.0 therefore normalizes to an empty string.
     text = _ICD_CODE_RE.sub(" ", text)
-    text = re.sub(r"\b(?:диагноз|основной диагноз|заключение|дневниковые записи)\b", " ", text, flags=re.IGNORECASE)
+    text = re.sub(r"\b\d+(?:[.,]\d+)*\b", " ", text)
+    text = re.sub(
+        r"\b(?:диагноз|основной\s+диагноз|заключение|дневниковые\s+записи)\b",
+        " ",
+        text,
+        flags=re.IGNORECASE,
+    )
     text = re.sub(r"[№#]", " ", text)
     text = re.sub(r"[()\[\]{}]", " ", text)
     text = re.sub(r"[.,;:!?'\"/\\|_+*=<>~`]+", " ", text)
     text = re.sub(r"[-–—]+", " ", text)
-    words = [w for w in re.sub(r"\s+", " ", text).strip().split() if w]
-    words = [w for w in words if w not in _COMMON_DIARY_NAME_WORDS]
+    words = [word for word in re.sub(r"\s+", " ", text).strip().split() if word]
+    words = [word for word in words if word not in _COMMON_DIARY_NAME_WORDS]
     return " ".join(words).strip()
 
 
-def _significant_words(value: str) -> set[str]:
-    return {
-        word
-        for word in normalize_diary_diagnosis_name(value).split()
-        if len(word) >= 3 and word not in _COMMON_DIARY_NAME_WORDS and word not in _STOP_DIARY_NAME_WORDS
-    }
+def _significant_words(value: str) -> list[str]:
+    result: list[str] = []
+    for word in normalize_diary_diagnosis_name(value).split():
+        if len(word) < 3 or word in _COMMON_DIARY_NAME_WORDS or word in _STOP_DIARY_NAME_WORDS:
+            continue
+        if word not in result:
+            result.append(word)
+    return result
+
+
+def _family_key_for_word(word: str) -> str:
+    normalized = _stem_russian_word(word)
+    raw = word.lower().replace("ё", "е")
+    probe = f"{raw} {normalized}"
+    for family, needles in _FAMILY_PATTERNS:
+        if any(needle in probe for needle in needles):
+            return family
+    return ""
 
 
 def _semantic_keys(value: str) -> set[str]:
-    raw = str(value or "")
-    norm = normalize_diary_diagnosis_name(raw)
-    text = " " + norm + " "
     keys: set[str] = set()
-    stems = {_stem_russian_word(w) for w in norm.split() if len(w) >= 3}
-    keys.update(stem for stem in stems if stem and stem not in _STOP_DIARY_NAME_WORDS)
-
-    # Мосты между формальными диагнозами и реальными именами файлов из папки.
-    if "умствен" in text or "олигофрен" in text:
-        keys.add("oligophrenia")
-    if "астен" in text:
-        keys.add("asthenia")
-    if "психопат" in text or ("нарушен" in text and "поведен" in text):
-        keys.add("psychopathy")
-    if "депресс" in text or "депрессив" in text:
-        keys.add("depression")
-    if "органик" in text or "органичес" in text or "резидуаль" in text:
-        keys.add("organic")
-    if "здоров" in text or "норма" in text or "психически здоров" in text:
-        keys.add("healthy")
-    if "обследован" in text:
-        keys.add("observation")
+    for word in _significant_words(value):
+        stem = _stem_russian_word(word)
+        if stem:
+            keys.add(stem)
+        family = _family_key_for_word(word)
+        if family:
+            keys.add(family)
     return keys
 
 
-def diary_diagnosis_match_score(diagnosis: str, filename: str) -> int:
-    diag = normalize_diary_diagnosis_name(diagnosis)
-    name = normalize_diary_diagnosis_name(filename)
-    if not diag or not name:
-        return 0
-    if diag == name:
-        return 120
-    if diag in name or name in diag:
-        return 104
+def _common_prefix_length(left: str, right: str) -> int:
+    size = 0
+    for a, b in zip(left, right):
+        if a != b:
+            break
+        size += 1
+    return size
 
+
+def _words_equivalent(left: str, right: str) -> bool:
+    if left == right:
+        return True
+    left_stem = _stem_russian_word(left)
+    right_stem = _stem_russian_word(right)
+    if left_stem == right_stem:
+        return True
+    if min(len(left_stem), len(right_stem)) >= 5 and (
+        left_stem.startswith(right_stem) or right_stem.startswith(left_stem)
+    ):
+        return True
+    # Covers common real-folder forms such as «органическое» / «органичку».
+    if min(len(left_stem), len(right_stem)) >= 7 and _common_prefix_length(left_stem, right_stem) >= 6:
+        return True
+    left_family = _family_key_for_word(left)
+    right_family = _family_key_for_word(right)
+    return bool(left_family and left_family == right_family)
+
+
+def _verbal_match_stats(diagnosis: str, filename: str) -> tuple[int, int, int, int]:
+    diag_words = _significant_words(diagnosis)
+    name_words = _significant_words(filename)
+    if not diag_words or not name_words:
+        return 0, len(diag_words), len(name_words), 0
+
+    used: set[int] = set()
+    matched = 0
+    strongest = 0
+    for diag_word in diag_words:
+        best_index = -1
+        best_strength = 0
+        for index, name_word in enumerate(name_words):
+            if index in used or not _words_equivalent(diag_word, name_word):
+                continue
+            family_match = bool(
+                _family_key_for_word(diag_word)
+                and _family_key_for_word(diag_word) == _family_key_for_word(name_word)
+            )
+            strength = max(
+                len(_stem_russian_word(diag_word)),
+                len(_stem_russian_word(name_word)),
+                8 if family_match else 0,
+            )
+            if strength > best_strength:
+                best_strength = strength
+                best_index = index
+        if best_index >= 0:
+            used.add(best_index)
+            matched += 1
+            strongest = max(strongest, best_strength)
+    return matched, len(diag_words), len(name_words), strongest
+
+
+def _depression_severity(value: str) -> str:
+    norm = normalize_diary_diagnosis_name(value)
+    stems = {_stem_russian_word(word) for word in norm.split()}
+    if any(stem.startswith("легк") for stem in stems):
+        return "mild"
+    if any(stem.startswith("умерен") for stem in stems):
+        return "moderate"
+    if any(stem.startswith("тяжел") for stem in stems):
+        return "severe"
+    return ""
+
+
+def _contradictory_depression_severity(diagnosis: str, filename: str) -> bool:
     diag_keys = _semantic_keys(diagnosis)
-    name_keys = _semantic_keys(name)
-    semantic_overlap = diag_keys & name_keys
-    score = 0
-    if semantic_overlap:
-        score = 78 + min(18, len(semantic_overlap) * 6)
-        for key in ("asthenia", "psychopathy", "observation", "depression", "organic", "healthy"):
-            if key in diag_keys and key in name_keys:
-                score += 10
-            elif key in name_keys and key not in diag_keys:
-                score -= 8
-
-    diag_words = _significant_words(diag)
-    name_words = _significant_words(name)
-    diag_stems = {_stem_russian_word(w) for w in diag_words}
-    name_stems = {_stem_russian_word(w) for w in name_words}
-    overlap = len((diag_words & name_words) | (diag_stems & name_stems))
-    if diag_words and name_words and overlap:
-        coverage_diag = overlap / max(1, len(diag_words))
-        coverage_name = overlap / max(1, len(name_words))
-        coverage = min(coverage_diag, coverage_name)
-        lexical = 65 + int(coverage * 18) if (overlap >= 2 or coverage >= 0.5) else 0
-        score = max(score, lexical)
-
-    return max(0, score)
-
+    name_keys = _semantic_keys(filename)
+    if "depression" not in diag_keys or "depression" not in name_keys:
+        return False
+    diag_severity = _depression_severity(diagnosis)
+    name_severity = _depression_severity(filename)
+    return bool(diag_severity and name_severity and diag_severity != name_severity)
 
 
 def _direct_diagnosis_name_rank(diagnosis: str, filename: str) -> int:
-    """Prefer an actual diagnosis/name relation over any semantic fallback."""
     diag = normalize_diary_diagnosis_name(diagnosis)
     name = normalize_diary_diagnosis_name(filename)
     if not diag or not name:
@@ -266,62 +354,55 @@ def _direct_diagnosis_name_rank(diagnosis: str, filename: str) -> int:
     return 0
 
 
-def _depression_severity(value: str) -> str:
-    norm = normalize_diary_diagnosis_name(value)
-    stems = {_stem_russian_word(word) for word in norm.split()}
-    if any(stem.startswith("легк") for stem in stems):
-        return "mild"
-    if any(stem.startswith("умерен") for stem in stems):
-        return "moderate"
-    if any(stem.startswith(("тяжел", "тяжёл")) for stem in stems):
-        return "severe"
-    return ""
+def diary_diagnosis_match_score(diagnosis: str, filename: str) -> int:
+    """Score a WORD-ONLY relation between visible diagnosis and file name."""
+    diag = normalize_diary_diagnosis_name(diagnosis)
+    name = normalize_diary_diagnosis_name(filename)
+    if not diag or not name:
+        return 0
+    if _contradictory_depression_severity(diagnosis, filename):
+        return 0
+    if diag == name:
+        return 300
+    if diag in name or name in diag:
+        return 250
+
+    matched, diag_count, name_count, strongest = _verbal_match_stats(diagnosis, filename)
+    if matched <= 0 or strongest < 5:
+        return 0
+
+    # One distinctive verbal hit is intentionally sufficient. This is the real
+    # folder contract: «Органическое ...» may map to «дневники на органичку».
+    coverage_diag = matched / max(1, diag_count)
+    coverage_name = matched / max(1, name_count)
+    score = 100 + matched * 35 + int(coverage_diag * 35) + int(coverage_name * 40)
+
+    diag_families = {key for key in _semantic_keys(diagnosis) if key in {item[0] for item in _FAMILY_PATTERNS}}
+    name_families = {key for key in _semantic_keys(filename) if key in {item[0] for item in _FAMILY_PATTERNS}}
+    if diag_families & name_families:
+        score += 30
+    # Prefer the most specific filename and avoid choosing a file carrying many
+    # unrelated extra diagnostic words when a cleaner verbal match exists.
+    score -= max(0, name_count - matched) * 6
+    return max(0, score)
 
 
 def _safe_verbal_lexical_match(diagnosis: str, filename: str) -> bool:
-    """Accept a strong word/stem match even when word order differs.
-
-    ICD codes are removed before this comparison. Requiring at least two
-    significant verbal terms prevents a generic word such as «шизофрения»
-    from silently choosing an arbitrary neighbouring subtype.
-    """
-    diag_words = _significant_words(diagnosis)
-    name_words = _significant_words(filename)
-    diag_stems = {_stem_russian_word(word) for word in diag_words}
-    name_stems = {_stem_russian_word(word) for word in name_words}
-    overlap = len((diag_words & name_words) | (diag_stems & name_stems))
-    if overlap < 2:
-        return False
-    coverage_diag = overlap / max(1, len(diag_words))
-    coverage_name = overlap / max(1, len(name_words))
-    return coverage_diag >= 0.5 and coverage_name >= 0.6
+    """Compatibility helper: accept one strong word/family match, never a code."""
+    matched, _diag_count, _name_count, strongest = _verbal_match_stats(diagnosis, filename)
+    return matched >= 1 and strongest >= 5 and not _contradictory_depression_severity(diagnosis, filename)
 
 
 def _safe_legacy_diagnosis_fallback(diagnosis: str, filename: str, score: int) -> bool:
-    """Allow only controlled legacy aliases when no direct filename match exists.
+    """Compatibility helper for old callers/tests using informal folder names."""
+    if score <= 0:
+        return False
+    diag_families = {key for key in _semantic_keys(diagnosis) if key in {item[0] for item in _FAMILY_PATTERNS}}
+    name_families = {key for key in _semantic_keys(filename) if key in {item[0] for item in _FAMILY_PATTERNS}}
+    if diag_families and name_families and not (diag_families & name_families):
+        return False
+    return _safe_verbal_lexical_match(diagnosis, filename)
 
-    Old physician folders contain names such as ``олигофрены`` and
-    ``легкая органика``. They remain supported, but a merely related diagnosis
-    (for example severe depression for a mild depressive episode) must never be
-    selected automatically.
-    """
-    if score < 75:
-        return False
-    family_keys = {"oligophrenia", "asthenia", "psychopathy", "depression", "organic", "healthy", "observation"}
-    diag_family = _semantic_keys(diagnosis) & family_keys
-    name_family = _semantic_keys(filename) & family_keys
-    # Semantic fallback is reserved only for explicitly supported legacy aliases.
-    # Ordinary diagnoses (for example two different schizophrenia subtypes)
-    # must have a direct filename relation and may not match by generic words.
-    if not diag_family or not name_family or diag_family != name_family:
-        return False
-    if "depression" in diag_family:
-        diag_severity = _depression_severity(diagnosis)
-        name_severity = _depression_severity(filename)
-        if diag_severity or name_severity:
-            if diag_severity != name_severity:
-                return False
-    return True
 
 def iter_diary_text_docx_files(folder: str | Path, *, max_depth: int = 2) -> list[Path]:
     try:
@@ -363,30 +444,33 @@ def iter_diary_text_docx_files(folder: str | Path, *, max_depth: int = 2) -> lis
 
 
 def find_diary_text_file_for_diagnosis(folder: str | Path, diagnosis: str) -> Path | None:
-    """Find the diagnosis-owned diary text DOCX without guessing a neighbour diagnosis.
+    """Find a diary-text Word file by WORDS from the visible diagnosis only.
 
-    Exact/substring filename relations always win. Semantic aliases exist only
-    for known legacy physician filenames and are rejected when their clinical
-    family or depressive severity contradicts the requested diagnosis.
+    ICD codes, dates and other numbers are stripped before matching. The best
+    verbal filename wins; informal forms such as «шизофреника» and «органичку»
+    are supported. Numeric 01–31 diary-date templates are a different source and
+    are never selected by this function.
     """
     diagnosis_norm = normalize_diary_diagnosis_name(diagnosis)
     if not diagnosis_norm:
         return None
-    diagnosis_keys = _semantic_keys(diagnosis)
-    candidates: list[tuple[int, int, int, int, str, Path]] = []
+
+    candidates: list[tuple[int, int, int, str, Path]] = []
     for path in iter_diary_text_docx_files(folder):
+        name_norm = normalize_diary_diagnosis_name(path.stem)
+        if not name_norm:
+            continue
         score = diary_diagnosis_match_score(diagnosis, path.stem)
         if score <= 0:
             continue
         direct_rank = _direct_diagnosis_name_rank(diagnosis, path.stem)
-        if direct_rank == 0 and not _safe_legacy_diagnosis_fallback(diagnosis, path.stem, score):
-            if not _safe_verbal_lexical_match(diagnosis, path.stem):
-                continue
-        name_norm = normalize_diary_diagnosis_name(path.stem)
-        name_keys = _semantic_keys(name_norm)
+        matched, _diag_count, name_count, _strongest = _verbal_match_stats(diagnosis, path.stem)
+        if direct_rank == 0 and not _safe_verbal_lexical_match(diagnosis, path.stem):
+            continue
+        extra_words = max(0, name_count - matched)
         length_gap = abs(len(name_norm) - len(diagnosis_norm))
-        extra_specificity_penalty = len((name_keys - diagnosis_keys) & _SPECIFIC_DIARY_KEYS) * 20
-        candidates.append((-direct_rank, -score, extra_specificity_penalty, length_gap, path.name.lower(), path))
+        candidates.append((-score, -direct_rank, extra_words, length_gap, path.name.lower(), path))
+
     if not candidates:
         return None
     return sorted(candidates)[0][5]
