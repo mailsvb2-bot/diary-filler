@@ -26,6 +26,23 @@ assert compact_data2.fio == "Сидоров Сергей Петрович", comp
 assert compact_data2.birth == "1980 г.р", compact_data2.birth
 assert compact_data2.registered == "Нижний Новгород, ул. Тестовая, д. 1", compact_data2.registered
 
+# --- DOCX table regression: FIO label and value can live in adjacent cells ---
+split_fio_doc = OUT / "ФИО_раздельные_ячейки.docx"
+split_doc = Document()
+split_doc.add_paragraph("28.05.2026 Первичный осмотр")
+split_table = split_doc.add_table(rows=2, cols=2)
+split_table.cell(0, 0).text = "Ф.И.О."
+split_table.cell(0, 1).text = "Тестов М.А."
+split_table.cell(1, 0).text = "Год рождения"
+split_table.cell(1, 1).text = "1980"
+split_doc.add_paragraph("Жалобы: тревога")
+split_doc.add_paragraph("Психический статус: контактен")
+split_doc.add_paragraph("Диагноз: F41.2 Тестовый диагноз")
+split_doc.save(split_fio_doc)
+split_fio_data = service.parse_primary_document(split_fio_doc)
+assert split_fio_data.fio == "Тестов М.А.", split_fio_data.fio
+assert "Ф.И.О." not in split_fio_data.fio, split_fio_data.fio
+
 referral_kind = service.parser.parse_text("""
 10.06.2026 Первичный осмотр
 Целесообразна госпитализация пациентки в 3 отделение КДП
