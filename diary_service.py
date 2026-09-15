@@ -47,6 +47,19 @@ class DiaryService:
         doc.save(str(path))
         return path
 
+    @staticmethod
+    def _persistent_fallback_output_dir(
+        output_dir: str | Path | None,
+        status_files: Sequence[str | Path],
+    ) -> str | Path:
+        """Choose a persistent destination before creating the temporary Dates source."""
+        if output_dir is not None and str(output_dir).strip():
+            return output_dir
+        for raw_path in status_files:
+            if raw_path is not None and str(raw_path).strip():
+                return Path(raw_path).expanduser().parent
+        return Path.cwd()
+
     def create_text_diaries(
         self,
         *,
@@ -80,7 +93,10 @@ class DiaryService:
             )
 
         # No numbered date template: the explicitly selected text file remains
-        # authoritative. Generate only an ephemeral date source for the service.
+        # authoritative. Resolve output against persistent inputs before entering
+        # the temporary date-source directory, otherwise output_dir=None would
+        # write the finished diary into that directory and delete it on return.
+        persistent_output_dir = self._persistent_fallback_output_dir(output_dir, status_files)
         with TemporaryDirectory(prefix=".diary-date-source-") as tmp_dir:
             fallback = self._make_fallback_date_source(
                 Path(tmp_dir),
@@ -90,7 +106,7 @@ class DiaryService:
             return create_text_diaries(
                 status_files=status_files,
                 diary_files=[fallback],
-                output_dir=output_dir,
+                output_dir=persistent_output_dir,
                 patient_name=patient_name,
                 admission_value=admission_value,
                 gender_source_name=gender_source_name,
