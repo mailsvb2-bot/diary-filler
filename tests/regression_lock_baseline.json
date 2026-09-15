@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "d6b97c617858717c7569c0ee4b12e0eb8b3d9e73",
-  "baseline_note": "Explicitly tested diary-text authority candidate d6b97c617858 passed the complete Windows CI contour in run 34949591592: regression/CI locks, document mechanics guard, release gate, 8 canonical golden DOCX/full patient replay, staff and gender regressions, diagnosis/manual-text/session regressions, desktop intake and PyInstaller child-process lifecycle regressions, real Tk GUI wiring, packaged EXE startup, visible watcher auto-launch, installer build, and install/uninstall smoke. This metadata-only advance promotes that exact tested candidate to the known-good regression baseline.",
+  "baseline_ref": "95d514ba00151e61365db62dd32345c0ace36504",
+  "baseline_note": "PR #60 merged as 95d514ba00151e61365db62dd32345c0ace36504 and post-merge Windows CI run 34975668763 passed the complete 34-step contour: regression/CI locks, document mechanics guard, release gate, 8 canonical golden DOCX/full patient replay, staff and gender regressions, diagnosis override and words-only diary-source regressions, desktop intake and lifecycle regressions, real Tk GUI wiring, EXE build/startup with TkDND, packaged desktop intake auto-launch E2E, installer build, and install/uninstall smoke. This metadata-only advance promotes that exact tested main commit to the known-good regression baseline.",
   "required_approval_evidence": [
     "ci_gate_lock"
   ],
