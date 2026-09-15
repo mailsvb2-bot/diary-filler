@@ -1,6 +1,6 @@
 #define MyAppName "MedicalDiaryAutofill"
 #ifndef MyAppVersion
-  #define MyAppVersion "1.4.10"
+  #define MyAppVersion "1.4.11"
 #endif
 #define MyAppExeName "MedicalDiaryAutofill.exe"
 

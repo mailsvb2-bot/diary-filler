@@ -148,7 +148,7 @@ jobs:
 
       - name: Smoke installed and uninstalled application
         shell: pwsh
-        run: ./tools/windows_installer_smoke.ps1 -InstallerPath ./dist/MedicalDiaryAutofill-Setup-1.4.10.exe
+        run: ./tools/windows_installer_smoke.ps1 -InstallerPath ./dist/MedicalDiaryAutofill-Setup-1.4.11.exe
 
       - name: Build clean source archive
         run: python make_release_zip.py
@@ -164,7 +164,7 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
         with:
           name: MedicalDiaryAutofill-Windows-Installer
-          path: dist/MedicalDiaryAutofill-Setup-1.4.10.exe
+          path: dist/MedicalDiaryAutofill-Setup-1.4.11.exe
           if-no-files-found: error
 
       - name: Upload source release artifact

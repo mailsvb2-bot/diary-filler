@@ -1,6 +1,6 @@
 [project]
 name = "medical-diary-autofill"
-version = "1.4.10"
+version = "1.4.11"
 description = "Local Windows DOCX medical document and diary autofill utility"
 requires-python = ">=3.11,<3.14"
 readme = "README.md"
