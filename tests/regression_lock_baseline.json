@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "0e7f5df32bc4b8c4e4ddc4e7a6e7371227800816",
-  "baseline_note": "Release 1.4.11 diagnosis/diary-authority candidate 0e7f5df32bc4b8c4e4ddc4e7a6e7371227800816 passed the complete Windows CI contour in run 34980414587: regression/CI locks, document mechanics guard, production safety/privacy, release gate, 8 canonical golden DOCX/full patient replay, staff and gender regressions, diagnosis override and words-only diary-source regressions, generation/finalization profiling, desktop intake and lifecycle regressions, real Tk GUI wiring, EXE build/startup with TkDND, packaged desktop intake auto-launch E2E, installer 1.4.11 build, install/uninstall smoke, and release artifacts. This metadata-only advance promotes that exact tested candidate to the known-good regression baseline before the clean no-approval rerun.",
+  "baseline_ref": "ae914cc19d093c1a04074bece6ef404c67d15c1e",
+  "baseline_note": "Focused persistent fallback-output candidate ae914cc19d093c1a04074bece6ef404c67d15c1e passed the complete Windows CI contour in run 34985441769: regression/CI locks, exact document mechanics guard, production safety/privacy, release gate, 8 canonical golden DOCX/full patient replay, staff and gender regressions, diagnosis override and words-only diary-source regressions including the real output_dir=None persistence case, generation/finalization profiling, desktop intake and lifecycle regressions, real Tk GUI wiring, EXE build/startup with TkDND, packaged desktop intake auto-launch E2E, installer build, install/uninstall smoke, and release artifacts. This metadata-only advance promotes that exact tested candidate before the clean no-approval rerun.",
   "required_approval_evidence": [
     "ci_gate_lock"
   ],
