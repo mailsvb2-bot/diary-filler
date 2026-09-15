@@ -1,8 +1,11 @@
 {
   "schema_version": 1,
   "base_sha": "9d6fcf62a40f3024f128d92f23d75f0d05072019",
-  "reason": "Explicit user-reported diagnosis-authority regression: changing Diagnosis in the visible patient card must immediately become the canonical diagnosis for the current patient, replace stale parsed/popup diagnosis state, invalidate only automatically selected diary text from the previous diagnosis, and re-match diary text for the new diagnosis. Manual diary-text Word-file choices remain sticky. No parser, renderer, document template, or DOCX generation rule is changed.",
+  "reason": "Explicit user-reported diagnosis-authority and diary-source regression: changing Diagnosis in the visible patient card must immediately become canonical; automatic diary text selection must match the WORDS of the visible diagnosis against code-free Word filenames such as 'дневники на шизофреника.doc' and 'дневники на органичку.docx'; ICD codes and all numeric fragments must not influence text matching; a folder owned by the 'Тексты' source must never be scanned as numeric 01-31 'Даты'; and a valid automatically or manually selected text source must be sufficient for generation because DiaryService can derive the clinical cadence from admission/discharge when explicit Dates are absent. Manual text choices remain sticky. No medical parser, renderer, embedded template, document formatting rule, or golden DOCX contract is changed.",
   "approved_blobs": {
-    "diagnosis_widget.py": "a24b86cfb43e7905e1052f39f06551e096ab1b0e"
+    "actions_diary_flow.py": "d8ead354d719ca27457fc16ffc720c3269f5a864",
+    "diagnosis_widget.py": "a24b86cfb43e7905e1052f39f06551e096ab1b0e",
+    "diary_template_selection.py": "535d555f8d5c1b94f938df7f5e91a096ee8ebe35",
+    "diary_text_selection.py": "1b3902bcfbdf6d5d5cde6c0c77b56e7885701926"
   }
 }
