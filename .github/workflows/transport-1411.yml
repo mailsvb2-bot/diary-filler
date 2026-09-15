@@ -21,8 +21,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          base64 -d .transport/diary1411_nonworkflow.patch.gz.b64 > /tmp/candidate.patch.gz
-          echo 'a93f0f56f30572c6eb67eaa1f34fa4523b83f5e46bd2417e3b0fbffc9fc634a0  /tmp/candidate.patch.gz' | sha256sum -c -
+          base64 -d .transport/diary1411_transport2.patch.gz.b64 > /tmp/candidate.patch.gz
+          echo '328b4636485a52fffa73703df2fc44f4809e1f9a4adbbd90eeade11b5ae586a0  /tmp/candidate.patch.gz' | sha256sum -c -
           gzip -dc /tmp/candidate.patch.gz > /tmp/candidate.patch
           git apply --index --whitespace=nowarn /tmp/candidate.patch
           python - <<'PY'
@@ -36,13 +36,11 @@ jobs:
               'app_initialization.py':'bee76feb80e20759a3637ff7f7ecf8961c59d32c',
               'diary_batch.py':'2bc086405d8b34f738c3cef5516cd209525ac380',
               'diary_template_selection.py':'913a6ba598c960f72ccca04bceaa0882f787e126',
-              'installer/MedicalDiaryAutofill.iss':'d326121b2be1cdf0b08ba7da7716abc1b42a7d47',
               'prod_audit.py':'b04cca8d0c7be895759eed6c99e96496360122d7',
               'pyproject.toml':'65dee034aa1d757138bebdf219609ba12b8c861e',
               'tests/diagnosis_override_regression.py':'56de42f9620c84c0a8bf94d7292b92b906e0bfab',
               'tests/intake_lifecycle_regression.py':'43fdf11b8a4d6ce6e653480fc9bd28d0fe66d885',
               'tools/ci_gate_lock.py':'5bcef11d08a05dcbbf86807589857659b4c7d1d4',
-              'tools/document_mechanics_change_approval.json':'b5c574d74ddbd5849b6fcfa8b05253646508b4a4',
               'tools/production_safety_gate.py':'85e7174a5d3a37e6be58b4215ee63b46359110c3',
               'tools/regression_lock_change_approval.json':'d135340fb2d9e36e1d094d96c3358e1d3ee01622',
               'version_info.txt':'04bd9ca3f02f4adf4ab88c962930b99ebc1c7866',
