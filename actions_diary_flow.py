@@ -27,26 +27,15 @@ class ActionsDiaryFlowMixin:
                 "В первичном документе должна быть строка или имя файла вида: 12.01.2026 Первичный осмотр."
             )
 
-        # A doctor-selected Word text file is an explicit source-of-truth. It must
-        # never be blocked by, or replaced with, the optional numbered date set.
-        # The date templates are useful when present, but the production text
-        # diary route can derive its clinical cadence from admission/discharge.
-        manual_text_override = bool(
-            self.status_files and not getattr(self, "_diary_text_files_auto_selected", False)
-        )
-        if not self.diary_files or getattr(self, "_diary_files_auto_selected", False):
-            self._auto_select_numbered_diary_template(
-                ask_folder=not manual_text_override,
-                admission_value_override=(
-                    patient_data_snapshot.admission_date if patient_data_snapshot is not None else None
-                ),
-            )
-        if not self.diary_files and not manual_text_override:
-            raise ValueError("Выберите папку «Даты» с шаблонами дневников 01–31 или выберите Word-файл «Тексты» вручную.")
-
-        # An automatically selected text belongs to the diagnosis that selected it.
-        # If the doctor changed Diagnosis in the UI, refresh that automatic choice
-        # against the frozen generation snapshot. A manually chosen file is sticky.
+        # FIRST resolve the diary text from the visible/frozen diagnosis. The
+        # doctor's folder contains hundreds of Word files named by diagnosis
+        # words; it is NOT a 01–31 date-template folder. Therefore generation
+        # must never start by searching that folder for day numbers.
+        #
+        # An automatically selected text belongs to the diagnosis that selected
+        # it. If the doctor changed Diagnosis in the UI, refresh that automatic
+        # choice against the frozen generation snapshot. A manually chosen file
+        # remains sticky and is never replaced here.
         if not self.status_files or getattr(self, "_diary_text_files_auto_selected", False):
             self._auto_select_diary_text_by_diagnosis(
                 ask_folder=False,
@@ -69,6 +58,15 @@ class ActionsDiaryFlowMixin:
                 "Тексты дневников не выбраны. Остальные документы можно создать без дневников; "
                 "для дневников выберите Word-файл .doc, .docx или .docm вручную."
             )
+
+        # A selected text file — whether found automatically by diagnosis words or
+        # selected manually by the doctor — is sufficient for diary generation.
+        # Numbered «Даты» are optional. If the doctor explicitly selected them,
+        # keep using them; otherwise DiaryService derives the proven cadence from
+        # admission/discharge and creates only an ephemeral internal date source.
+        # Crucially, we do NOT auto-search 01–31 here, so a folder full of files
+        # such as «дневники на органичку.docx» is never scanned for 18/19/etc.
+
         if patient_data_snapshot is None:
             diary_patient_name = self.patient_name_var.get().strip()
             source_patient_fio = ""
