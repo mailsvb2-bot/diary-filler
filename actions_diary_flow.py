@@ -31,11 +31,6 @@ class ActionsDiaryFlowMixin:
         # doctor's folder contains hundreds of Word files named by diagnosis
         # words; it is NOT a 01–31 date-template folder. Therefore generation
         # must never start by searching that folder for day numbers.
-        #
-        # An automatically selected text belongs to the diagnosis that selected
-        # it. If the doctor changed Diagnosis in the UI, refresh that automatic
-        # choice against the frozen generation snapshot. A manually chosen file
-        # remains sticky and is never replaced here.
         if not self.status_files or getattr(self, "_diary_text_files_auto_selected", False):
             self._auto_select_diary_text_by_diagnosis(
                 ask_folder=False,
@@ -59,13 +54,22 @@ class ActionsDiaryFlowMixin:
                 "для дневников выберите Word-файл .doc, .docx или .docm вручную."
             )
 
-        # A selected text file — whether found automatically by diagnosis words or
-        # selected manually by the doctor — is sufficient for diary generation.
-        # Numbered «Даты» are optional. If the doctor explicitly selected them,
-        # keep using them; otherwise DiaryService derives the proven cadence from
-        # admission/discharge and creates only an ephemeral internal date source.
-        # Crucially, we do NOT auto-search 01–31 here, so a folder full of files
-        # such as «дневники на органичку.docx» is never scanned for 18/19/etc.
+        # Numbered «Даты» are OPTIONAL. Only touch that subsystem when a Dates
+        # source was explicitly configured earlier. This preserves existing
+        # users who really keep a separate 01–31 folder, while a diagnosis-word
+        # «Тексты» folder can never trigger a numeric lookup on its own.
+        explicit_dates_source = bool(
+            self.diary_files or getattr(self, "diary_template_dir", "")
+        )
+        if explicit_dates_source and (
+            not self.diary_files or getattr(self, "_diary_files_auto_selected", False)
+        ):
+            self._auto_select_numbered_diary_template(
+                ask_folder=False,
+                admission_value_override=(
+                    patient_data_snapshot.admission_date if patient_data_snapshot is not None else None
+                ),
+            )
 
         if patient_data_snapshot is None:
             diary_patient_name = self.patient_name_var.get().strip()
@@ -123,7 +127,7 @@ class ActionsDiaryFlowMixin:
             self._log(
                 f"Итого: файлов {result.processed_files}, дневников {result.filled_rows}, "
                 f"дат {result.month_cells_filled}, финальных записей {result.final_rows_filled}, "
-                f"удалено после выписки {result.removed_after_discharge_rows}.\n"
+                f"удалено после выписки {diary_result.removed_after_discharge_rows}.\n"
             )
         return result
 
