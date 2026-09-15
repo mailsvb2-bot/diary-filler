@@ -1,10 +1,8 @@
 {
   "schema_version": 1,
-  "base_sha": "036437efaa9aa58e29a88b143affdca66e6a2f8d",
-  "reason": "Explicit user-reported workstation regression: a manually selected diary-text Word file must remain authoritative even when the remembered Dates folder contains diary-text files instead of numbered 01–31 templates. The production service may derive the proven clinical date cadence ephemerally; no renderer or golden template mechanics are changed. The running window also exposes the exact existing 1.4.10 build identity.",
+  "base_sha": "9d6fcf62a40f3024f128d92f23d75f0d05072019",
+  "reason": "Explicit user-reported diagnosis-authority regression: changing Diagnosis in the visible patient card must immediately become the canonical diagnosis for the current patient, replace stale parsed/popup diagnosis state, invalidate only automatically selected diary text from the previous diagnosis, and re-match diary text for the new diagnosis. Manual diary-text Word-file choices remain sticky. No parser, renderer, document template, or DOCX generation rule is changed.",
   "approved_blobs": {
-    "actions_diary_flow.py": "4d46085f8ff069690291636ede2496d854ebdf84",
-    "app_config.py": "c77ba0aa20ddb42be9ddb455b876dbf7db55f7da",
-    "diary_service.py": "a655f0e4662920e8d627e7b46151b4dbadad450d"
+    "diagnosis_widget.py": "a24b86cfb43e7905e1052f39f06551e096ab1b0e"
   }
 }
