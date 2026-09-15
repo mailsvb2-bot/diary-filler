@@ -82,6 +82,11 @@ jobs:
           PYTHONPATH: .
         run: python tests/diagnosis_override_regression.py
 
+      - name: Run words-only diary source regression
+        env:
+          PYTHONPATH: .
+        run: python tests/verbal_diary_source_regression.py
+
       - name: Profile canonical document generation
         env:
           PYTHONPATH: .
