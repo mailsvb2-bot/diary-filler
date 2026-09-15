@@ -1,0 +1,64 @@
+name: Transport exact 1.4.11 candidate
+
+on:
+  push:
+    branches:
+      - fix/manual-diary-text-authority-1.4.11
+    paths:
+      - .github/workflows/transport-1411.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          fetch-depth: 0
+      - name: Reconstruct and apply exact candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          base64 -d .transport/diary1411_nonworkflow.patch.gz.b64 > /tmp/candidate.patch.gz
+          echo 'a93f0f56f30572c6eb67eaa1f34fa4523b83f5e46bd2417e3b0fbffc9fc634a0  /tmp/candidate.patch.gz' | sha256sum -c -
+          gzip -dc /tmp/candidate.patch.gz > /tmp/candidate.patch
+          git apply --index --whitespace=nowarn /tmp/candidate.patch
+          python - <<'PY'
+          import subprocess
+          expected = {
+              'BUILD_WINDOWS_INSTALLER.bat':'b1ab7ece04b606a067ad0df3dcf67c8acde8a4e5',
+              'README.md':'60b93e1df00c29d91fb28d8365d18217b7574809',
+              'RELEASE_NOTES.md':'bc9af396239c1a7cb9f11db3f2d349e634d1628f',
+              'actions_diary_flow.py':'55fce9005f5dc61ee5d1348770e79153abd45daf',
+              'app_config.py':'cfde2826ee11ab61dbd3f3c1e6c390b74c0091f8',
+              'app_initialization.py':'bee76feb80e20759a3637ff7f7ecf8961c59d32c',
+              'diary_batch.py':'2bc086405d8b34f738c3cef5516cd209525ac380',
+              'diary_template_selection.py':'913a6ba598c960f72ccca04bceaa0882f787e126',
+              'installer/MedicalDiaryAutofill.iss':'d326121b2be1cdf0b08ba7da7716abc1b42a7d47',
+              'prod_audit.py':'b04cca8d0c7be895759eed6c99e96496360122d7',
+              'pyproject.toml':'65dee034aa1d757138bebdf219609ba12b8c861e',
+              'tests/diagnosis_override_regression.py':'56de42f9620c84c0a8bf94d7292b92b906e0bfab',
+              'tests/intake_lifecycle_regression.py':'43fdf11b8a4d6ce6e653480fc9bd28d0fe66d885',
+              'tools/ci_gate_lock.py':'5bcef11d08a05dcbbf86807589857659b4c7d1d4',
+              'tools/document_mechanics_change_approval.json':'b5c574d74ddbd5849b6fcfa8b05253646508b4a4',
+              'tools/production_safety_gate.py':'85e7174a5d3a37e6be58b4215ee63b46359110c3',
+              'tools/regression_lock_change_approval.json':'d135340fb2d9e36e1d094d96c3358e1d3ee01622',
+              'version_info.txt':'04bd9ca3f02f4adf4ab88c962930b99ebc1c7866',
+              'window_mixin.py':'0792b21a7a5f1b13b0a84ab93182e4320069b1c3',
+          }
+          for path, want in expected.items():
+              got = subprocess.check_output(['git','rev-parse',f':{path}'], text=True).strip()
+              if got != want:
+                  raise SystemExit(f'blob mismatch {path}: {got} != {want}')
+          print(f'EXACT BLOB VERIFICATION OK: {len(expected)} files')
+          PY
+      - name: Commit and push exact non-workflow candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'BusinesMetro'
+          git config user.email 'mailsvb2@gmail.com'
+          git commit -m 'Make manually selected diary text authoritative'
+          git push origin HEAD:fix/manual-diary-text-authority-1.4.11
