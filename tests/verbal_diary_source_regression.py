@@ -10,6 +10,8 @@ from datetime import datetime
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+from docx import Document
+
 import diary_service
 from actions_diary_flow import ActionsDiaryFlowMixin
 from diary_template_selection import DiaryTemplateSelectionMixin
@@ -153,6 +155,30 @@ def _assert_selected_text_does_not_require_dates(root: Path) -> None:
     assert captured.get("diary_files") == [], captured
 
 
+def _assert_fallback_output_survives_temporary_date_source(root: Path) -> None:
+    text_dir = root / "persistent-text-source"
+    text_dir.mkdir()
+    text_file = text_dir / "дневники на органичку.docx"
+    doc = Document()
+    doc.add_paragraph("Состояние спокойное, поведение упорядоченное, продуктивной психопатологической симптоматики не выявляет.")
+    doc.save(str(text_file))
+
+    result = diary_service.DiaryService().create_text_diaries(
+        status_files=[text_file],
+        diary_files=[],
+        output_dir=None,
+        patient_name="Тестов Тест Тестович",
+        admission_value="18.05.2026",
+        discharge_value="25.05.2026",
+    )
+
+    assert result.created_files, result
+    for created in result.created_files:
+        assert created.exists(), f"fallback output disappeared with temporary Dates source: {created}"
+        assert created.parent.resolve() == text_dir.resolve(), created
+        assert ".diary-date-source-" not in str(created), created
+
+
 def _assert_text_folder_never_enters_numeric_scanner(root: Path) -> None:
     text_dir = root / "Тексты"
     text_dir.mkdir(exist_ok=True)
@@ -170,8 +196,9 @@ def main() -> None:
         root = Path(temp_dir)
         _assert_words_only_matching(root)
         _assert_selected_text_does_not_require_dates(root)
+        _assert_fallback_output_survives_temporary_date_source(root)
         _assert_text_folder_never_enters_numeric_scanner(root)
-    print("VERBAL DIARY SOURCE REGRESSION OK: words-only matching; Texts never scanned as numeric Dates")
+    print("VERBAL DIARY SOURCE REGRESSION OK: words-only matching; Texts never scanned as numeric Dates; fallback output persists")
 
 
 if __name__ == "__main__":
