@@ -127,7 +127,7 @@ class ActionsDiaryFlowMixin:
             self._log(
                 f"Итого: файлов {result.processed_files}, дневников {result.filled_rows}, "
                 f"дат {result.month_cells_filled}, финальных записей {result.final_rows_filled}, "
-                f"удалено после выписки {diary_result.removed_after_discharge_rows}.\n"
+                f"удалено после выписки {result.removed_after_discharge_rows}.\n"
             )
         return result
 
