@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "base_sha": "194934e7943cbc4a988a56ded1d6a73902de47ee",
-  "reason": "Release-only version synchronization: app_config.py changes only APP_VERSION from v1.4.10-intake-onboarding-autolaunch to v1.4.11-diagnosis-diary-authority. Document generation mechanics, parsers, renderers, templates and golden DOCX contracts are unchanged and must still pass the complete Windows regression contour.",
+  "base_sha": "dfa5749b39be4e610404fc46b2adae6facffa8b7",
+  "reason": "Explicit diary-service correctness fix: when numbered Dates are absent and output_dir is omitted, resolve the output destination from persistent user input before creating the ephemeral fallback Dates source. This prevents a successfully generated diary from being returned from a TemporaryDirectory that is deleted on service return. No diary wording, cadence, renderer, template, medical document, formatting, or golden DOCX contract is changed.",
   "approved_blobs": {
-    "app_config.py": "08efa183723636f8c0abeab9e264fae1e57e95a6"
+    "diary_service.py": "0f3e97067f7bcf8b06312ff4f863e7d2f3d4c1e6"
   }
 }
