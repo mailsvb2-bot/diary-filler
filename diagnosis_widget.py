@@ -3,6 +3,7 @@ from __future__ import annotations
 import tkinter as tk
 
 from app_config import *
+from medical_parser_sanitize import sanitize_diagnosis
 
 def _search_icd10_f(query: str, *, limit: int):
     from icd10_f import search_icd10_f as _real_search_icd10_f
@@ -15,8 +16,85 @@ def _format_diagnosis(item) -> str:
 
 
 class DiagnosisWidgetMixin:
+    def _commit_visible_diagnosis_change(self) -> None:
+        """Promote a doctor-edited visible diagnosis to the current patient state.
+
+        The Diagnosis entry is the clinical source of truth once the doctor edits
+        it.  Updating only the StringVar leaves older parsed/popup state and an
+        automatically selected diary-text file attached to the previous diagnosis.
+        Keep every downstream consumer aligned immediately, while preserving an
+        explicit manually chosen diary-text Word file as a sticky doctor override.
+        """
+        if getattr(self, "_suspend_user_edit_tracking", False):
+            return
+
+        visible = self.diagnosis_var.get().strip()
+        normalized = sanitize_diagnosis(visible) if visible else ""
+        self._manual_diagnosis = True
+        # Some compatibility paths still consult the popup override or self.data.
+        # Mirror the visible doctor choice there so no stale parsed diagnosis can
+        # reappear after reparse/popup/generation routing.
+        self._popup_diagnosis_override = normalized
+        if hasattr(self, "data"):
+            self.data.diagnosis = normalized
+
+        auto_selected = bool(getattr(self, "_diary_text_files_auto_selected", False))
+        if auto_selected:
+            # The old automatic text belongs to the old diagnosis and must stop
+            # looking selected immediately.  A manually pinned Word file is never
+            # cleared here.
+            self.status_files = []
+            if hasattr(self, "_update_diary_text_label"):
+                self._update_diary_text_label(
+                    success=bool(getattr(self, "diary_texts_dir", ""))
+                )
+            if hasattr(self, "_redraw_selection_controls"):
+                self._redraw_selection_controls()
+
+        pending = getattr(self, "_diagnosis_refresh_after_id", None)
+        if pending is not None:
+            try:
+                self.root.after_cancel(pending)
+            except Exception:
+                pass
+            self._diagnosis_refresh_after_id = None
+
+        # Empty diagnosis means "no automatic text source".  A manual text file,
+        # if any, remains intentionally pinned for the current patient.
+        if not normalized:
+            return
+        if self.status_files and not auto_selected:
+            return
+
+        def refresh_auto_text() -> None:
+            self._diagnosis_refresh_after_id = None
+            current = self.diagnosis_var.get().strip()
+            current = sanitize_diagnosis(current) if current else ""
+            if not current:
+                return
+            # If the doctor manually pinned a Word file while the debounce was
+            # pending, that explicit choice wins and must not be replaced.
+            if self.status_files and not getattr(self, "_diary_text_files_auto_selected", False):
+                return
+            try:
+                self._auto_select_diary_text_by_diagnosis(
+                    ask_folder=False,
+                    diagnosis_override=current,
+                )
+            except Exception:
+                # Reactive matching is convenience only.  Generation still has
+                # its own hard validation/fallback and must never crash while the
+                # doctor is typing in the diagnosis field.
+                return
+
+        try:
+            self._diagnosis_refresh_after_id = self.root.after(180, refresh_auto_text)
+        except Exception:
+            refresh_auto_text()
+
     def _on_diagnosis_selected(self, _event=None) -> None:
         self.diagnosis_var.set(self.diagnosis_var.get().strip())
+        self._commit_visible_diagnosis_change()
         self._hide_diagnosis_popup()
 
     def _on_diagnosis_key_release(self, event=None) -> None:
@@ -27,6 +105,7 @@ class DiagnosisWidgetMixin:
                 self._focus_diagnosis_popup(event)
                 return
 
+        self._commit_visible_diagnosis_change()
         query = self.diagnosis_var.get().strip()
         if not query:
             self._hide_diagnosis_popup()
@@ -48,6 +127,7 @@ class DiagnosisWidgetMixin:
 
     def _select_diagnosis_value(self, value: str) -> None:
         self.diagnosis_var.set(value.strip())
+        self._commit_visible_diagnosis_change()
         self.diagnosis_entry.icursor(tk.END)
         self._hide_diagnosis_popup()
         self.diagnosis_entry.focus_set()
@@ -138,6 +218,10 @@ class DiagnosisWidgetMixin:
         return "break"
 
     def _schedule_hide_diagnosis_popup(self, _event=None) -> None:
+        # FocusOut can also happen when moving into the suggestions list.  Only
+        # promote here when Tk's write trace has already marked a real doctor edit.
+        if getattr(self, "_manual_diagnosis", False):
+            self._commit_visible_diagnosis_change()
         self.root.after(180, self._hide_diagnosis_popup_if_focus_left)
 
     def _hide_diagnosis_popup_if_focus_left(self) -> None:
@@ -223,6 +307,7 @@ class DiagnosisWidgetMixin:
                 return
             value = listbox.get(selection[0])
             self.diagnosis_var.set(value)
+            self._commit_visible_diagnosis_change()
             self._hide_diagnosis_popup()
             win.destroy()
 
