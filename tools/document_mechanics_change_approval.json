@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "base_sha": "dfa5749b39be4e610404fc46b2adae6facffa8b7",
-  "reason": "Explicit diary-service correctness fix: when numbered Dates are absent and output_dir is omitted, resolve the output destination from persistent user input before creating the ephemeral fallback Dates source. This prevents a successfully generated diary from being returned from a TemporaryDirectory that is deleted on service return. No diary wording, cadence, renderer, template, medical document, formatting, or golden DOCX contract is changed.",
+  "base_sha": "1709f5986512cde6788c2561e85090e8595fa187",
+  "reason": "Explicit user-reported FIO parsing repair: a real DOCX table may store the exact FIO label in one cell and the patient name in the adjacent cell, which extract_docx_text preserves as consecutive lines. Recover only that narrowly defined structure when same-line FIO parsing left the field empty, accepting a standalone two/three-part Cyrillic name or surname plus initials. Never infer identity from a filename, never scan past the first non-empty value after the label, and leave all existing inline/compact parsing, renderers, templates, diary mechanics, formatting, and golden DOCX contracts unchanged.",
   "approved_blobs": {
-    "diary_service.py": "0f3e97067f7bcf8b06312ff4f863e7d2f3d4c1e6"
+    "medical_parser_demographics.py": "1b0ae3dcce16e6c6a6009bfdec655149947fab4b"
   }
 }
