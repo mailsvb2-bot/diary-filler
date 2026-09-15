@@ -2,10 +2,15 @@
 
 from __future__ import annotations
 
+from datetime import timedelta
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import Sequence
 
-from diary_batch import create_text_diaries
+from docx import Document
+
+from diary_batch import _clinical_diary_offsets, create_text_diaries
+from diary_dates import parse_full_date, parse_optional_discharge_date
 from diary_models import DiaryBatchResult
 
 
@@ -16,6 +21,31 @@ class DiaryService:
     production UI on one diary architecture while old integrations can continue
     using ``fill_diary_batch`` during the compatibility period.
     """
+
+    @staticmethod
+    def _make_fallback_date_source(
+        directory: Path,
+        *,
+        admission_value: str,
+        discharge_value: str,
+    ) -> Path:
+        """Create an ephemeral date source when no 01–31 set was supplied.
+
+        A manually selected diary-text Word file is the doctor's explicit source
+        of clinical wording. Numbered date files are optional calendar metadata;
+        when absent (or when a remembered folder contains only text files), use
+        the proven clinical cadence and never reject the selected text source.
+        The temporary DOCX is deleted immediately after generation.
+        """
+        admission = parse_full_date(admission_value)
+        discharge = parse_optional_discharge_date(discharge_value)
+        max_offset = (discharge - admission).days if discharge is not None else 7
+        path = directory / "generated-clinical-diary-dates.docx"
+        doc = Document()
+        for offset in _clinical_diary_offsets(max_offset):
+            doc.add_paragraph((admission + timedelta(days=offset)).strftime("%d.%m.%Y"))
+        doc.save(str(path))
+        return path
 
     def create_text_diaries(
         self,
@@ -33,17 +63,41 @@ class DiaryService:
         doctor_name: str = "",
         department_head_name: str = "",
     ) -> DiaryBatchResult:
-        return create_text_diaries(
-            status_files=status_files,
-            diary_files=diary_files,
-            output_dir=output_dir,
-            patient_name=patient_name,
-            admission_value=admission_value,
-            gender_source_name=gender_source_name,
-            discharge_value=discharge_value,
-            repeat_statuses=repeat_statuses,
-            force_final_diary=force_final_diary,
-            write_report=write_report,
-            doctor_name=doctor_name,
-            department_head_name=department_head_name,
-        )
+        if diary_files:
+            return create_text_diaries(
+                status_files=status_files,
+                diary_files=diary_files,
+                output_dir=output_dir,
+                patient_name=patient_name,
+                admission_value=admission_value,
+                gender_source_name=gender_source_name,
+                discharge_value=discharge_value,
+                repeat_statuses=repeat_statuses,
+                force_final_diary=force_final_diary,
+                write_report=write_report,
+                doctor_name=doctor_name,
+                department_head_name=department_head_name,
+            )
+
+        # No numbered date template: the explicitly selected text file remains
+        # authoritative. Generate only an ephemeral date source for the service.
+        with TemporaryDirectory(prefix=".diary-date-source-") as tmp_dir:
+            fallback = self._make_fallback_date_source(
+                Path(tmp_dir),
+                admission_value=admission_value,
+                discharge_value=discharge_value,
+            )
+            return create_text_diaries(
+                status_files=status_files,
+                diary_files=[fallback],
+                output_dir=output_dir,
+                patient_name=patient_name,
+                admission_value=admission_value,
+                gender_source_name=gender_source_name,
+                discharge_value=discharge_value,
+                repeat_statuses=repeat_statuses,
+                force_final_diary=force_final_diary,
+                write_report=write_report,
+                doctor_name=doctor_name,
+                department_head_name=department_head_name,
+            )

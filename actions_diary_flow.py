@@ -26,15 +26,24 @@ class ActionsDiaryFlowMixin:
                 "Не удалось найти дату поступления рядом с названием документа. "
                 "В первичном документе должна быть строка или имя файла вида: 12.01.2026 Первичный осмотр."
             )
+
+        # A doctor-selected Word text file is an explicit source-of-truth. It must
+        # never be blocked by, or replaced with, the optional numbered date set.
+        # The date templates are useful when present, but the production text
+        # diary route can derive its clinical cadence from admission/discharge.
+        manual_text_override = bool(
+            self.status_files and not getattr(self, "_diary_text_files_auto_selected", False)
+        )
         if not self.diary_files or getattr(self, "_diary_files_auto_selected", False):
             self._auto_select_numbered_diary_template(
-                ask_folder=True,
+                ask_folder=not manual_text_override,
                 admission_value_override=(
                     patient_data_snapshot.admission_date if patient_data_snapshot is not None else None
                 ),
             )
-        if not self.diary_files:
-            raise ValueError("Выберите папку «Даты» с шаблонами дневников 01–31.")
+        if not self.diary_files and not manual_text_override:
+            raise ValueError("Выберите папку «Даты» с шаблонами дневников 01–31 или выберите Word-файл «Тексты» вручную.")
+
         # An automatically selected text belongs to the diagnosis that selected it.
         # If the doctor changed Diagnosis in the UI, refresh that automatic choice
         # against the frozen generation snapshot. A manually chosen file is sticky.
