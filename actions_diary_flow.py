@@ -26,15 +26,18 @@ class ActionsDiaryFlowMixin:
                 "Не удалось найти дату поступления рядом с названием документа. "
                 "В первичном документе должна быть строка или имя файла вида: 12.01.2026 Первичный осмотр."
             )
+        # «Даты» are optional for the paragraph-based production diary when a
+        # discharge date is known: the proven clinical schedule is calculated
+        # from admission/discharge.  We still auto-use a valid 01–31 source when
+        # available, but never interrupt a doctor-pinned «Тексты» file with a
+        # forced folder picker.
         if not self.diary_files or getattr(self, "_diary_files_auto_selected", False):
             self._auto_select_numbered_diary_template(
-                ask_folder=True,
+                ask_folder=False,
                 admission_value_override=(
                     patient_data_snapshot.admission_date if patient_data_snapshot is not None else None
                 ),
             )
-        if not self.diary_files:
-            raise ValueError("Выберите папку «Даты» с шаблонами дневников 01–31.")
         # An automatically selected text belongs to the diagnosis that selected it.
         # If the doctor changed Diagnosis in the UI, refresh that automatic choice
         # against the frozen generation snapshot. A manually chosen file is sticky.
@@ -59,6 +62,11 @@ class ActionsDiaryFlowMixin:
             raise ValueError(
                 "Тексты дневников не выбраны. Остальные документы можно создать без дневников; "
                 "для дневников выберите Word-файл .doc, .docx или .docm вручную."
+            )
+        if not self.diary_files and log_created:
+            self._log(
+                "\nℹ️ Источник «Даты» 01–31 не выбран. Даты дневников будут рассчитаны "
+                "по дате поступления и выписки; вручную выбранные «Тексты» остаются эталоном.\n"
             )
         if patient_data_snapshot is None:
             diary_patient_name = self.patient_name_var.get().strip()

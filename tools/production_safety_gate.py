@@ -90,9 +90,11 @@ def assert_installer_contract() -> None:
         "CurStepChanged",
         "SaveStringToFile",
         "[UninstallDelete]",
+        "PrepareToInstall",
         "InitializeUninstall",
         "RegDeleteValue(",
         "taskkill.exe",
+        "desktop-intake-agent-handoff.json",
         "Result := True;",
     )
     missing = [marker for marker in required if marker not in installer]
@@ -100,6 +102,14 @@ def assert_installer_contract() -> None:
         fail("installer contract is incomplete: " + ", ".join(missing))
     if "--uninstall-intake-agent" in installer:
         fail("installer uninstall regressed to a helper command that can block removal")
+    if installer.count("taskkill.exe") < 2:
+        fail("installer must stop stale MedicalDiaryAutofill processes both before upgrade and before uninstall")
+    prepare_start = installer.find("function PrepareToInstall")
+    prepare_end = installer.find("procedure CurStepChanged", prepare_start)
+    prepare_block = installer[prepare_start:prepare_end] if prepare_start >= 0 and prepare_end > prepare_start else ""
+    for marker in ("MedicalDiaryAutofill Intake.vbs", "desktop-intake-agent.heartbeat", "desktop-intake-agent-handoff.json", "/F /IM {#MyAppExeName}"):
+        if marker not in prepare_block:
+            fail(f"installer pre-upgrade stale-watcher cleanup lost marker: {marker}")
     if 'Name: "{userdesktop}\\Выписанные пациенты"' in installer:
         fail("installer must not create Выписанные пациенты before the doctor's onboarding choice")
     if "desktop-intake-agent.heartbeat" not in installer:

@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "7d0f3f0396aa847a3b918f45a10408153f493e8b",
+  "reason": "User-reported work-PC regression: manually selected diary Texts must be authoritative without requiring legacy numbered Dates templates; Windows upgrades must retire stale watchers so an old installed runtime cannot survive the update. Release 1.4.11 adds exact regressions for both paths.",
+  "required_evidence": [
+    "document_mechanics_guard",
+    "full_patient_replay",
+    "golden_docx",
+    "staff_profile_regression",
+    "gender_generation_matrix",
+    "diagnosis_override_regression",
+    "desktop_intake_contract",
+    "intake_lifecycle_regression",
+    "packaged_desktop_intake_e2e",
+    "installer_uninstall_smoke",
+    "ci_gate_lock"
+  ],
+  "approved_blobs": {
+    ".github/workflows/windows-build.yml": "1b1445e60a58e3975e1b9cc7bdb04e8294f63b20",
+    "BUILD_WINDOWS_INSTALLER.bat": "b1ab7ece04b606a067ad0df3dcf67c8acde8a4e5",
+    "actions_diary_flow.py": "55fce9005f5dc61ee5d1348770e79153abd45daf",
+    "app_config.py": "cfde2826ee11ab61dbd3f3c1e6c390b74c0091f8",
+    "app_initialization.py": "bee76feb80e20759a3637ff7f7ecf8961c59d32c",
+    "diary_batch.py": "2bc086405d8b34f738c3cef5516cd209525ac380",
+    "diary_template_selection.py": "913a6ba598c960f72ccca04bceaa0882f787e126",
+    "installer/MedicalDiaryAutofill.iss": "d326121b2be1cdf0b08ba7da7716abc1b42a7d47",
+    "prod_audit.py": "b04cca8d0c7be895759eed6c99e96496360122d7",
+    "pyproject.toml": "65dee034aa1d757138bebdf219609ba12b8c861e",
+    "tests/diagnosis_override_regression.py": "56de42f9620c84c0a8bf94d7292b92b906e0bfab",
+    "tests/intake_lifecycle_regression.py": "43fdf11b8a4d6ce6e653480fc9bd28d0fe66d885",
+    "tools/ci_gate_lock.py": "5bcef11d08a05dcbbf86807589857659b4c7d1d4",
+    "tools/document_mechanics_change_approval.json": "b5c574d74ddbd5849b6fcfa8b05253646508b4a4",
+    "tools/production_safety_gate.py": "85e7174a5d3a37e6be58b4215ee63b46359110c3",
+    "version_info.txt": "04bd9ca3f02f4adf4ab88c962930b99ebc1c7866",
+    "window_mixin.py": "0792b21a7a5f1b13b0a84ab93182e4320069b1c3"
+  }
+}

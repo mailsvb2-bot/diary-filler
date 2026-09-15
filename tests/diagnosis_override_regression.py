@@ -135,6 +135,42 @@ class _DiaryFallbackHarness(ActionsDiaryFlowMixin):
         return False
 
 
+class _ManualTextAuthorityHarness(ActionsDiaryFlowMixin):
+    def __init__(self, manual_text: Path, output_dir: Path):
+        self.navigation_path_var = _Var("")
+        self.diagnosis_var = _Var("F42.2 Смешанные навязчивые мысли и действия")
+        self.diary_files: list[str] = []
+        self.status_files = [str(manual_text)]
+        self._diary_files_auto_selected = False
+        self._diary_text_files_auto_selected = False
+        self.diary_texts_dir = str(manual_text.parent)
+        self.repeat_statuses_var = _Var(True)
+        self.force_final_diary_var = _Var(True)
+        self.output_dir = output_dir
+        self.date_autoselect_calls: list[bool] = []
+        self.events: list[str] = []
+
+    def _auto_select_numbered_diary_template(self, *, ask_folder=False, **_kwargs):
+        self.date_autoselect_calls.append(bool(ask_folder))
+        return False
+
+    def _result_output_dir(self):
+        return self.output_dir
+
+    def _effective_staff_profile(self):
+        return {
+            "doctor": "Иванов И.И.",
+            "department_head": "Петров П.П.",
+            "deputy_chief": "Сидоров С.С.",
+        }
+
+    def _diagnostic_reports_enabled(self):
+        return False
+
+    def _log(self, text):
+        self.events.append(text)
+
+
 class _PartialSetHarness(ActionsCreationOrchestratorMixin):
     def __init__(self, output_dir: Path):
         self.output_dir = output_dir
@@ -558,6 +594,53 @@ def _assert_diary_creation_path_offers_manual_fallback() -> None:
     assert app.manual_offer[0] == snapshot.diagnosis, app.manual_offer
 
 
+def _assert_manual_text_is_authoritative_without_dates_source(root: Path) -> None:
+    folder = root / "manual-authority"
+    folder.mkdir()
+    manual = folder / "выбранный врачом эталон.docx"
+    doc = Document()
+    doc.add_paragraph("ЭТАЛОННЫЙ ТЕКСТ ВРАЧА: состояние ровное, контакту доступен.")
+    doc.add_paragraph("ЭТАЛОННЫЙ ТЕКСТ ВРАЧА: жалоб не предъявляет, поведение упорядочено.")
+    doc.save(manual)
+
+    app = _ManualTextAuthorityHarness(manual, folder / "out")
+    snapshot = PatientData(
+        fio="Иванов Иван Иванович",
+        output_fio="Иванов Иван Иванович",
+        admission_date="01.09.2026",
+        discharge_date="05.09.2026",
+        diagnosis="F42.2 Смешанные навязчивые мысли и действия",
+        doctor="Иванов И.И.",
+        head="Петров П.П.",
+    )
+    result = app._create_diaries_impl(
+        log_created=False,
+        patient_data_snapshot=snapshot,
+    )
+    assert app.date_autoselect_calls == [False], app.date_autoselect_calls
+    assert app.status_files == [str(manual)], app.status_files
+    assert len(result.created_files) == 1, result.created_files
+    text = "\n".join(paragraph.text for paragraph in Document(result.created_files[0]).paragraphs)
+    assert "ЭТАЛОННЫЙ ТЕКСТ ВРАЧА" in text, text
+    for expected_date in ("02.09.26", "03.09.26", "04.09.26", "05.09.26"):
+        assert expected_date in text, (expected_date, text)
+
+    # The production service must also accept the exact same manual text file
+    # without any 01-31 Word source when admission/discharge define the plan.
+    direct = diary_batch.create_text_diaries(
+        status_files=[manual],
+        diary_files=[],
+        output_dir=folder / "direct-out",
+        patient_name="Иванов Иван Иванович",
+        admission_value="01.09.2026",
+        discharge_value="05.09.2026",
+        doctor_name="Иванов И.И.",
+        department_head_name="Петров П.П.",
+    )
+    direct_text = "\n".join(paragraph.text for paragraph in Document(direct.created_files[0]).paragraphs)
+    assert "ЭТАЛОННЫЙ ТЕКСТ ВРАЧА" in direct_text, direct_text
+
+
 def _assert_diary_failure_keeps_medical_documents(root: Path) -> None:
     output = root / "partial-set-output"
     app = _PartialSetHarness(output)
@@ -604,12 +687,13 @@ def main() -> None:
         _assert_manual_text_is_patient_scoped(root)
         _assert_manual_picker_accepts_doc(root)
         _assert_failed_auto_match_offers_manual_word_file(root)
+        _assert_manual_text_is_authoritative_without_dates_source(root)
         _assert_diary_failure_keeps_medical_documents(root)
         _assert_legacy_doc_parser_route(root)
     _assert_diary_creation_path_offers_manual_fallback()
     print(
         "DIAGNOSIS OVERRIDE REGRESSION OK: UI diagnosis + verbal matching + "
-        "manual fallback + visible Word picker + partial-set survival + .doc/.docx source + complete patient-session reset matrix"
+        "manual fallback + manual-text authority without Dates + visible Word picker + partial-set survival + .doc/.docx source + complete patient-session reset matrix"
     )
 
 

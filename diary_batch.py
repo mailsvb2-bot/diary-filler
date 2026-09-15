@@ -220,12 +220,14 @@ def _text_diary_dates_from_sources(
             fallback_dates.append(candidate)
         source_dates = tuple(fallback_dates)
 
-    # Dokkomplekt_Universal medical diary contract: the normal clinical
-    # calendar is D0+1, D0+2, D0+3, D0+7, then twice weekly by alternating
-    # +3/+4 day steps.  Numbered 01-31 «Даты» files are compatibility/source
-    # material (including signatures), not a command to write every day.
-    # The discharge date is added separately as the single final diary entry.
-    if source_dates and discharge_date_value is not None and discharge_date_value > admission_date_value:
+    # Proven production contract: when a discharge date is known, the clinical
+    # calendar is deterministic from admission/discharge alone: D0+1, D0+2,
+    # D0+3, D0+7, then twice weekly by alternating +3/+4 day steps.  The
+    # numbered 01-31 «Даты» source remains a compatibility/manual override for
+    # cases without a discharge date; it must never block a doctor-pinned Word
+    # file with diary texts.  The discharge date itself is added separately as
+    # the single final diary entry.
+    if discharge_date_value is not None and discharge_date_value > admission_date_value:
         max_offset = (discharge_date_value - admission_date_value).days
         return tuple(
             admission_date_value + timedelta(days=offset)
@@ -396,8 +398,8 @@ def _fill_text_diary_batch(
     )
     if not dates and not same_day_final:
         raise ValueError(
-            "В выбранном источнике «Даты» не найдено дат дневников после поступления. "
-            "Проверьте файл 01–31 или выберите другой источник дат."
+            "Не удалось построить даты дневников. Укажите дату выписки либо выберите "
+            "источник «Даты» 01–31. Ручной Word-файл «Тексты» уже принят и не будет заменён."
         )
     entries, final_rows, gender_replacements = _build_text_diary_entries(
         statuses,
@@ -490,9 +492,11 @@ def create_text_diaries(
     production route. Legacy table-fill switches remain on ``fill_diary_batch``
     for backward compatibility and cannot steer the GUI into the table engine.
     """
-    if not diary_files:
-        raise ValueError("Сначала выберите файлы-таблицы дневников, которые нужно заполнить.")
-    diary_file_paths = _existing_docx_files(diary_files, "таблица дневников")
+    diary_file_paths = (
+        _existing_docx_files(diary_files, "источник дат дневников")
+        if diary_files
+        else []
+    )
     status_file_paths = (
         _existing_docx_files(status_files, "тексты дневников", allow_legacy_doc=True)
         if status_files
@@ -516,7 +520,12 @@ def create_text_diaries(
     if status_files and not statuses:
         raise ValueError("В выбранных файлах с текстами дневников не найдено подходящих текстов.")
 
-    result_dir = _resolve_output_dir(output_dir, diary_file_paths[0].parent)
+    fallback_dir = (
+        diary_file_paths[0].parent
+        if diary_file_paths
+        else (status_file_paths[0].parent if status_file_paths else Path.cwd())
+    )
+    result_dir = _resolve_output_dir(output_dir, fallback_dir)
     return _fill_text_diary_batch(
         diary_file_paths=diary_file_paths,
         statuses=statuses,

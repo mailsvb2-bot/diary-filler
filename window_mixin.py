@@ -271,7 +271,7 @@ class WindowMixin:
 
         subtitle = tk.Label(
             title_box,
-            text="Автоматическое заполнение медицинских документов",
+            text=f"Автоматическое заполнение медицинских документов  •  {APP_VERSION}",
             bg=DEEP,
             fg=MUTED,
             font=self._font(11 if self._compact_ui else 12),

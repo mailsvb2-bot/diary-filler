@@ -260,6 +260,23 @@ def assert_pyinstaller_children_are_independent_and_gui_is_visible() -> None:
     assert int(visible.get("creationflags", 0)) & detached == 0, visible
 
 
+def assert_installer_upgrade_retires_stale_watcher_before_copy() -> None:
+    installer = (ROOT / "installer" / "MedicalDiaryAutofill.iss").read_text(encoding="utf-8")
+    start = installer.index("function PrepareToInstall")
+    end = installer.index("procedure CurStepChanged", start)
+    block = installer[start:end]
+    required = (
+        "MedicalDiaryAutofill Intake",
+        "MedicalDiaryAutofill Intake.vbs",
+        "desktop-intake-agent.heartbeat",
+        "desktop-intake-agent-handoff.json",
+        "taskkill.exe",
+        "/F /IM {#MyAppExeName}",
+    )
+    missing = [marker for marker in required if marker not in block]
+    assert not missing, missing
+
+
 def assert_install_marker_forces_folder_and_staff_onboarding() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
@@ -365,10 +382,11 @@ def main() -> None:
     assert_gui_poll_rebinds_when_desktop_moves()
     assert_old_watcher_retires_after_in_place_update()
     assert_pyinstaller_children_are_independent_and_gui_is_visible()
+    assert_installer_upgrade_retires_stale_watcher_before_copy()
     assert_install_marker_forces_folder_and_staff_onboarding()
     assert_declining_folder_never_deletes_existing_user_folder()
     print(
-        "INTAKE LIFECYCLE REGRESSION OK: self-heal + Desktop rebind + in-place watcher replacement + independent PyInstaller child runtime + install onboarding"
+        "INTAKE LIFECYCLE REGRESSION OK: self-heal + Desktop rebind + in-place watcher replacement + pre-upgrade stale-watcher retirement + independent PyInstaller child runtime + install onboarding"
     )
 
 

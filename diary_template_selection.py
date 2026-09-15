@@ -185,6 +185,15 @@ class DiaryTemplateSelectionMixin:
         """
         if self.diary_files and not getattr(self, "_diary_files_auto_selected", False):
             return True
+        # Automatic date-template choices belong to the admission date that
+        # selected them. Never keep a stale 01–31 file when a new admission date
+        # no longer has a matching template. Manual date sources remain sticky.
+        if getattr(self, "_diary_files_auto_selected", False):
+            self.diary_files = []
+            if hasattr(self, "_update_diary_template_label"):
+                self._update_diary_template_label(success=bool(getattr(self, "diary_template_dir", "")))
+            if hasattr(self, "_redraw_selection_controls"):
+                self._redraw_selection_controls()
         admission_dt = self._admission_datetime_for_diary_template(admission_value_override)
         if not admission_dt:
             return False

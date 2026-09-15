@@ -239,7 +239,7 @@ class AppInitializationMixin:
         self._diagnosis_popup_matches: list[str] = []
 
     def _configure_root_window(self) -> None:
-        self.root.title(APP_TITLE)
+        self.root.title(f"{APP_TITLE} — {APP_VERSION}")
         # Стартовый размер окна — примерно 1/3 площади экрана.
         # Берём коэффициент sqrt(1/3) ≈ 0.577 по ширине и высоте,
         # чтобы сохранить внешний вид референса, но не открывать окно слишком большим.
