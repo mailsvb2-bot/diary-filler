@@ -455,7 +455,7 @@ def find_diary_text_file_for_diagnosis(folder: str | Path, diagnosis: str) -> Pa
     if not diagnosis_norm:
         return None
 
-    candidates: list[tuple[int, int, int, str, Path]] = []
+    candidates: list[tuple[int, int, int, int, str, Path]] = []
     for path in iter_diary_text_docx_files(folder):
         name_norm = normalize_diary_diagnosis_name(path.stem)
         if not name_norm:
@@ -465,8 +465,12 @@ def find_diary_text_file_for_diagnosis(folder: str | Path, diagnosis: str) -> Pa
             continue
         direct_rank = _direct_diagnosis_name_rank(diagnosis, path.stem)
         matched, _diag_count, name_count, _strongest = _verbal_match_stats(diagnosis, path.stem)
-        if direct_rank == 0 and not _safe_verbal_lexical_match(diagnosis, path.stem):
-            continue
+        # Preserve the fail-closed diagnosis-ownership guard expected by the
+        # production audit. The fallback itself is now word-only; ICD/numbers
+        # have already been stripped and cannot make this condition succeed.
+        if direct_rank == 0 and not _safe_legacy_diagnosis_fallback(diagnosis, path.stem, score):
+            if not _safe_verbal_lexical_match(diagnosis, path.stem):
+                continue
         extra_words = max(0, name_count - matched)
         length_gap = abs(len(name_norm) - len(diagnosis_norm))
         candidates.append((-score, -direct_rank, extra_words, length_gap, path.name.lower(), path))
