@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "7bba9d7a0a127f9955f5387948fe5329eea9250b",
+  "reason": "Screenshot-reproduced repair for primary-document FIO recognition, diagnosis tail contamination, and repeated diagnosis-text folder scans. Candidate is bound to exact blobs and must pass the complete existing regression contour before baseline advancement.",
+  "required_evidence": [
+    "ci_gate_lock",
+    "document_mechanics_guard",
+    "full_patient_replay",
+    "golden_docx",
+    "staff_profile_regression",
+    "gender_generation_matrix",
+    "desktop_intake_contract",
+    "intake_lifecycle_regression",
+    "packaged_desktop_intake_e2e",
+    "installer_uninstall_smoke"
+  ],
+  "approved_blobs": {
+    "diary_text_selection.py": "7a1f36b8d18822367db61c2a57c5a54b2e0ccc13",
+    "medical_parser.py": "4eb17b47fcfbc3b438072d5e06dc95ff3b98456d",
+    "medical_parser_demographics.py": "049e87f5230b4b2a00bab8a7463826cc20204680",
+    "medical_parser_sanitize.py": "feade7b3f5ac42a4352837a9b28710b1e55420cb",
+    "smoke_combined_part03_medical_parser_manual.py": "4691126f1e860a6593c1eefd13f9230a93ec6b3f",
+    "tools/document_mechanics_change_approval.json": "4a629246fd683995d61e87298c5892794c43829e"
+  }
+}

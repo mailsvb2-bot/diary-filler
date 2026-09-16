@@ -3,9 +3,18 @@ from __future__ import annotations
 import re
 import zipfile
 from pathlib import Path
+from time import monotonic
 
 
 SUPPORTED_DIARY_TEXT_SUFFIXES = {".doc", ".docx", ".docm"}
+
+# One user action can ask for the same diagnosis source several times while the
+# UI reparses and freezes a patient snapshot. Hundreds of Word files on a slow
+# Windows disk made those identical scans visible as UI stalls. Keep only a
+# very short-lived, directory-mtime-bound result cache: it deduplicates one UI
+# interaction but refreshes quickly and is invalidated by top-level folder edits.
+_DIARY_MATCH_CACHE_TTL_SECONDS = 2.0
+_DIARY_MATCH_CACHE: dict[tuple[str, str, int], tuple[float, str]] = {}
 
 
 def _is_supported_word_file(path: str | Path) -> bool:
@@ -382,6 +391,21 @@ def find_diary_text_file_for_diagnosis(folder: str | Path, diagnosis: str) -> Pa
     if not diagnosis_norm:
         return None
 
+    try:
+        root = Path(folder).expanduser()
+        folder_key = str(root.resolve())
+        folder_mtime = int(root.stat().st_mtime_ns)
+    except Exception:
+        root = Path(folder)
+        folder_key = str(root)
+        folder_mtime = 0
+    cache_key = (folder_key, diagnosis_norm, folder_mtime)
+    cached = _DIARY_MATCH_CACHE.get(cache_key)
+    now = monotonic()
+    if cached is not None and now - cached[0] <= _DIARY_MATCH_CACHE_TTL_SECONDS:
+        cached_path = cached[1]
+        return Path(cached_path) if cached_path else None
+
     candidates: list[tuple[int, int, int, int, str, Path]] = []
     for path in iter_diary_text_docx_files(folder):
         name_norm = normalize_diary_diagnosis_name(path.stem)
@@ -399,9 +423,42 @@ def find_diary_text_file_for_diagnosis(folder: str | Path, diagnosis: str) -> Pa
         candidates.append((-score, -direct_rank, extra_words, length_gap, path.name.lower(), path))
 
     if not candidates:
+        _DIARY_MATCH_CACHE[cache_key] = (now, "")
         return None
-    return sorted(candidates)[0][5]
+    found = sorted(candidates)[0][5]
+    # Bound memory even if many different diagnoses/folders are inspected.
+    if len(_DIARY_MATCH_CACHE) > 32:
+        _DIARY_MATCH_CACHE.clear()
+    _DIARY_MATCH_CACHE[cache_key] = (now, str(found))
+    return found
 
 
 def folder_has_diary_text_candidates(folder: str | Path) -> bool:
-    return bool(iter_diary_text_docx_files(folder, max_depth=1))
+    """Cheap existence probe; do not build/sort the whole hundreds-file list."""
+    try:
+        root = Path(folder).expanduser()
+        if not root.exists() or not root.is_dir():
+            return False
+    except Exception:
+        return False
+
+    def has_candidate(current: Path, depth: int) -> bool:
+        if depth > 1:
+            return False
+        try:
+            children = current.iterdir()
+        except Exception:
+            return False
+        for child in children:
+            name_low = child.name.strip().lower()
+            if name_low.startswith(".") or name_low in {"__pycache__", ".venv", "venv", "build", "dist"}:
+                continue
+            if child.is_dir():
+                if has_candidate(child, depth + 1):
+                    return True
+                continue
+            if _is_supported_word_file(child):
+                return True
+        return False
+
+    return has_candidate(root, 0)

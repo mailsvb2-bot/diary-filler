@@ -43,6 +43,18 @@ split_fio_data = service.parse_primary_document(split_fio_doc)
 assert split_fio_data.fio == "Тестов М.А.", split_fio_data.fio
 assert "Ф.И.О." not in split_fio_data.fio, split_fio_data.fio
 
+# Real-world label variants from primary DOCX forms must remain explicit;
+# never infer FIO from the filename.
+for fio_label in ("Ф.И.О. пациента", "ФИО пациента", "Ф.И.О. больного", "Фамилия, имя, отчество"):
+    parsed_fio_variant = service.parser.parse_text(f"{fio_label}: Васин М.В.\nДиагноз: F21 Шизотипическое расстройство")
+    assert parsed_fio_variant.fio == "Васин М.В.", (fio_label, parsed_fio_variant.fio)
+
+# Word can concatenate the next narrative sentence directly to diagnosis.
+assert sanitize_diagnosis(
+    "F21 Шизотипическое расстройствоНаходится на лечении в круглосуточном стационаре ПБ №2 "
+    "с 23.01.2026 по 10.03.2026Госпитализируется в стационар"
+) == "F21 Шизотипическое расстройство"
+
 referral_kind = service.parser.parse_text("""
 10.06.2026 Первичный осмотр
 Целесообразна госпитализация пациентки в 3 отделение КДП
