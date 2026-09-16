@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "base_sha": "02372de89b0f233cddd01d7a9c48220c998d040e",
-  "reason": "Renderer finalization performance task: skip regex replacement work only when a paragraph cannot possibly match any established facility-reference pattern, and precompile the same historical regexes once. Matching paragraphs still use the exact existing run-preserving replacement path; patient text is not cached; facility wording, templates, renderer sequencing, diary mechanics, and document formatting are unchanged. Full golden DOCX, patient replay, focused facility regression, performance profiling, desktop intake, packaged EXE/TkDND, and installer/uninstall evidence remain mandatory.",
+  "base_sha": "c74cb686b01e6638b017b92579e33e23bd5b58ab",
+  "reason": "Renderer marker-search performance task: precompute eligibility of immutable marker literals once per find_next_marker_index call. Paragraph text is still normalized fresh for every inspected paragraph, marker order and paragraph_matches_marker semantics are unchanged, and no document/patient text is cached.",
   "approved_blobs": {
-    "medical_gender.py": "5655fd426e29646e87477bba8057a0df5d507617"
+    "medical_docx_editor_markers.py": "820518221b8232298cc5591bc8ef4e4678f17097"
   }
 }

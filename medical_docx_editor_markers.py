@@ -16,14 +16,11 @@ class DocxEditorMarkersMixin:
 
     def find_next_marker_index(self, start: int, markers: Sequence[str], *, exclude: Sequence[str] = ()) -> Optional[int]:
         excluded = {normalize_match(m) for m in exclude}
+        eligible_markers = tuple(marker for marker in markers if normalize_match(marker) not in excluded)
         for i, paragraph in enumerate(self.paragraphs[start:], start=start):
             text = normalize_match(paragraph.text)
             if not text:
                 continue
-            for marker in markers:
-                norm_marker = normalize_match(marker)
-                if norm_marker in excluded:
-                    continue
-                if paragraph_matches_marker(text, marker):
-                    return i
+            if any(paragraph_matches_marker(text, marker) for marker in eligible_markers):
+                return i
         return None
