@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "base_sha": "d58e21aa387eab0ce12945a19dcc960e14668dd8",
-  "reason": "Renderer marker-search performance task: cache only normalization of repeated marker strings used by paragraph_matches_marker. Patient/document paragraph text is never cached, marker matching rules are unchanged, and the same normalize_match function remains the normalization authority on cache misses. Full golden DOCX, patient replay, staff/gender/diagnosis/diary regressions, performance profiling, desktop intake, packaged EXE/TkDND, and installer/uninstall evidence remain mandatory.",
+  "base_sha": "02372de89b0f233cddd01d7a9c48220c998d040e",
+  "reason": "Renderer finalization performance task: skip regex replacement work only when a paragraph cannot possibly match any established facility-reference pattern, and precompile the same historical regexes once. Matching paragraphs still use the exact existing run-preserving replacement path; patient text is not cached; facility wording, templates, renderer sequencing, diary mechanics, and document formatting are unchanged. Full golden DOCX, patient replay, focused facility regression, performance profiling, desktop intake, packaged EXE/TkDND, and installer/uninstall evidence remain mandatory.",
   "approved_blobs": {
-    "medical_docx_editor_utils.py": "02352a49ee1b704d03d9d53aac326b229d7e8a38"
+    "medical_gender.py": "5655fd426e29646e87477bba8057a0df5d507617"
   }
 }
