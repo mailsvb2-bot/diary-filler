@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "a23c47b76b50eb487407166b9528fa6120862a1d",
+  "reason": "Release-only synchronization for v1.4.13-fio-diagnosis-speed after PR #69 and PR #70 passed the full Windows contour; runtime document mechanics remain unchanged.",
+  "required_evidence": [
+    "ci_gate_lock",
+    "document_mechanics_guard",
+    "full_patient_replay",
+    "golden_docx",
+    "staff_profile_regression",
+    "gender_generation_matrix",
+    "desktop_intake_contract",
+    "intake_lifecycle_regression",
+    "packaged_desktop_intake_e2e",
+    "installer_uninstall_smoke"
+  ],
+  "approved_blobs": {
+    "BUILD_WINDOWS_INSTALLER.bat": "feb8a0a3f550b54a6481eccd723ee6d010b9022a",
+    "app_config.py": "ad46882c7cdecb6b62f2a5087a5461e42ca239e1",
+    "installer/MedicalDiaryAutofill.iss": "0ee7dfdb49910913e021efaaff7223413e080766",
+    "prod_audit.py": "8e7fb58a3dedb13bebea3127c3425d903a0dfb55",
+    "pyproject.toml": "52e5a6a34c162cec592b12ca7d0c1ec8fbee2ee9",
+    "tools/ci_gate_lock.py": "7807037f8c55561d66b2b5a9c6cd4ddf1c65fc26",
+    "tools/document_mechanics_change_approval.json": "0f14ac0240a5c630cc5f96b2335e4abe7bd57320",
+    "version_info.txt": "001f49d58566454b1bbbb96c7c14154dbb2c6abd",
+    ".github/workflows/windows-build.yml": "82b2e9321c5bd23cb577d69ebbec1f78096bb6ed"
+  }
+}
