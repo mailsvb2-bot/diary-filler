@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "base_sha": "4093ee7ad01ffe4f198c94b7ffdf21f11e9fa75a",
-  "reason": "Performance-only primary-title read optimization for the user-reported UI lag. Cache the strict admission-title result by resolved path, nanosecond mtime, and file size so repeated reads of one unchanged DOCX do not reopen Word/XML; any file change invalidates immediately. No parser semantics, renderer, template, diary cadence, clinical wording, formatting, or golden DOCX mechanics are changed.",
+  "base_sha": "c08b9f43c2fc08ae63766ca907a770bc32578ad5",
+  "reason": "Release-only version synchronization for v1.4.13-fio-diagnosis-speed. app_config.py changes only APP_VERSION; parser, renderer, template, diary generation, clinical wording, formatting and golden DOCX mechanics are unchanged.",
   "approved_blobs": {
-    "medical_docx_title_finder.py": "04ec40f180683788d60ce2ab18acccfd0f3c8d21"
+    "app_config.py": "ad46882c7cdecb6b62f2a5087a5461e42ca239e1"
   }
 }
