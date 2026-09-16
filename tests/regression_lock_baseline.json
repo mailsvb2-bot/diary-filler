@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "ac8ab9ab028014e3b055119594e549dacaa44715",
-  "baseline_note": "PR #75 merged as ac8ab9ab028014e3b055119594e549dacaa44715 after exact candidate Windows CI run 35105454605 and clean final-head run 35105974219 both passed the complete 34-step contour. Post-merge Windows CI run 35106495091 on main also passed 34/34, including regression/CI locks, document mechanics guard, production safety/privacy and audit, release gate, canonical golden DOCX/full patient replay, staff/gender/diagnosis/diary regressions, generation and renderer profiling, desktop intake/lifecycle, real Tk GUI wiring, EXE build/startup with TkDND, packaged desktop intake auto-launch E2E, installer build, install/uninstall smoke, clean source archive, and release artifacts. This metadata-only advance promotes the fully verified PR #75 merge commit to the known-good regression baseline.",
+  "baseline_ref": "dd138d4ac0e7b00e1166cc716eeada4b73896672",
+  "baseline_note": "PR #77 exact marker-normalization-cache candidate dd138d4ac0e7b00e1166cc716eeada4b73896672 passed Windows CI run 35111806509 with the complete 34-step contour, including canonical golden DOCX/full patient replay, staff/gender/diagnosis/diary regressions, desktop intake/lifecycle, real Tk, EXE/TkDND, packaged auto-launch and installer install/uninstall smoke. The measured generation median improved from the verified pre-change 664.848 ms to 524.269 ms (-21.1%); marker-search median improved from 219.192 ms to 153.695 ms (-29.9%); normalize_match calls fell from 15759 to 7675. This metadata advance promotes the exact tested performance candidate while preserving all document behavior evidence.",
   "required_approval_evidence": [
     "ci_gate_lock"
   ],
