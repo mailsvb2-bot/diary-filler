@@ -36,6 +36,20 @@ GENDER_ADAPTED_PATIENT_FIELDS = (
     "epi_text",
 )
 
+_FACILITY_REFERENCE_PATTERNS = (
+    re.compile(r"ГБУЗ\s*НО\s*ПБ\s*№\s*2", re.IGNORECASE),
+    re.compile(
+        r"ГБУЗНО\s*«?Психиатрическая\s+больница\s*№\s*2»?(?:\s*г\.\s*Н\.\s*Новгорода)?",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"ГБУЗ\s*НО\s*«?Психиатрическая\s+больница\s*№\s*2»?(?:\s*г\.\s*Н\.\s*Новгорода)?",
+        re.IGNORECASE,
+    ),
+    re.compile(r"отделени[ея]\s*№\s*3", re.IGNORECASE),
+)
+_FACILITY_REFERENCE_PREFILTERS = ("гбуз", "отделени")
+
 
 def _preserve_case_for_document(source: str, target: str) -> str:
     if source.isupper():
@@ -133,24 +147,28 @@ def normalize_facility_references_in_document(doc: DocxDocument) -> None:
     «ГБУЗ НО ПБ №2» либо «отделение №3», в результате должно быть
     «ГБУЗ НО «НКЦПЗ» диспансер №2». Отдельно нормализуем финальную фразу
     направления/осмотра приёмного покоя.
+
+    Performance note: cheap casefold containment checks are negative-only
+    prefilters. Every paragraph that can match an established facility regex
+    still goes through the exact historical run-preserving replacement path.
     """
     target = TARGET_MEDICAL_FACILITY
     for paragraph in list(iter_all_paragraphs(doc)):
         original = paragraph.text or ""
         if not original.strip():
             continue
-        normalized = normalize_match(original)
-        if normalized.startswith("направляется на лечение") or normalized.startswith("направляется в гбуз"):
-            set_paragraph_text(paragraph, f"Направляется в {target}")
+
+        folded = original.casefold()
+        if "направляется" in folded:
+            normalized = normalize_match(original)
+            if normalized.startswith("направляется на лечение") or normalized.startswith("направляется в гбуз"):
+                set_paragraph_text(paragraph, f"Направляется в {target}")
+                continue
+
+        if not any(token in folded for token in _FACILITY_REFERENCE_PREFILTERS):
             continue
-        replacements = [
-            (r"ГБУЗ\s*НО\s*ПБ\s*№\s*2", target),
-            (r"ГБУЗНО\s*«?Психиатрическая\s+больница\s*№\s*2»?(?:\s*г\.\s*Н\.\s*Новгорода)?", target),
-            (r"ГБУЗ\s*НО\s*«?Психиатрическая\s+больница\s*№\s*2»?(?:\s*г\.\s*Н\.\s*Новгорода)?", target),
-            (r"отделени[ея]\s*№\s*3", target),
-        ]
-        for pattern, replacement in replacements:
-            replace_paragraph_regex_preserving_runs(paragraph, pattern, replacement, flags=re.IGNORECASE)
+        for pattern in _FACILITY_REFERENCE_PATTERNS:
+            replace_paragraph_regex_preserving_runs(paragraph, pattern, target)
 
 
 def normalize_staff_references_in_document(doc: DocxDocument, data: PatientData) -> None:

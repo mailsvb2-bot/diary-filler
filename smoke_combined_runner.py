@@ -97,6 +97,50 @@ def _run_docx_cache_regression() -> None:
             docx_blocks.Document = original_document_loader
 
 
+def _run_facility_reference_regression() -> None:
+    """Prove facility prefilters preserve every established replacement route."""
+    from docx import Document
+
+    from medical_constants import TARGET_MEDICAL_FACILITY
+    from medical_gender import normalize_facility_references_in_document
+
+    sources_and_expected = (
+        ("ГБУЗ НО ПБ №2", TARGET_MEDICAL_FACILITY),
+        ("гбуз но пб № 2", TARGET_MEDICAL_FACILITY),
+        (
+            "ГБУЗНО «Психиатрическая больница № 2» г. Н. Новгорода",
+            TARGET_MEDICAL_FACILITY,
+        ),
+        (
+            "ГБУЗ НО «Психиатрическая больница №2» г. Н. Новгорода",
+            TARGET_MEDICAL_FACILITY,
+        ),
+        (
+            "Переведен в отделение №3 для продолжения лечения",
+            f"Переведен в {TARGET_MEDICAL_FACILITY} для продолжения лечения",
+        ),
+        (
+            "Из отделения № 3 переведен по профилю",
+            f"Из {TARGET_MEDICAL_FACILITY} переведен по профилю",
+        ),
+        ("Направляется на лечение в старое учреждение", f"Направляется в {TARGET_MEDICAL_FACILITY}"),
+        ("   Направляется   в ГБУЗ НО ПБ №2", f"Направляется в {TARGET_MEDICAL_FACILITY}"),
+        ("Психиатрическая помощь амбулаторно", "Психиатрическая помощь амбулаторно"),
+        ("отделение №4", "отделение №4"),
+        ("Без специальных слов", "Без специальных слов"),
+    )
+
+    doc = Document()
+    for source, _expected in sources_and_expected:
+        doc.add_paragraph(source)
+
+    normalize_facility_references_in_document(doc)
+
+    actual = tuple(paragraph.text for paragraph in doc.paragraphs)
+    expected = tuple(expected for _source, expected in sources_and_expected)
+    assert actual == expected, f"facility reference regression mismatch: {actual!r}"
+
+
 def run() -> None:
     root = Path(__file__).resolve().parent
     namespace = {"__name__": "__smoke_combined__", "__file__": str(root / "smoke_test_combined.py")}
@@ -105,3 +149,4 @@ def run() -> None:
         code = compile(part_path.read_text(encoding="utf-8"), str(part_path), "exec")
         exec(code, namespace, namespace)
     _run_docx_cache_regression()
+    _run_facility_reference_regression()
