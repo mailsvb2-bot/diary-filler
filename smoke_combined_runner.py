@@ -163,7 +163,6 @@ def _run_gender_regex_cache_regression() -> None:
     assert second_info.hits > first_info.hits
     assert second_info.maxsize == 512
 
-
 def _run_normalize_match_fast_path_regression() -> None:
     """Prove match-only normalization keeps established Unicode semantics."""
     from medical_text_utils import normalize_match
