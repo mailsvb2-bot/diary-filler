@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "2a287ea58668bcf1774eb86000258189bdcfe2e4",
-  "baseline_note": "PR #71 merged as 2a287ea58668bcf1774eb86000258189bdcfe2e4 and post-merge Windows CI run 35089593828 passed the complete 34-step contour: regression/CI locks, document mechanics guard, production safety/privacy and audit, release gate, 8 canonical golden DOCX/full patient replay, staff and gender regressions, diagnosis and diary-source regressions, generation/finalization profiling, desktop intake and lifecycle regressions, real Tk GUI wiring, EXE build/startup with TkDND, packaged desktop intake auto-launch E2E, installer build, install/uninstall smoke, clean source archive, and release artifacts. This metadata-only advance promotes the exact tested v1.4.13-fio-diagnosis-speed merge commit to the known-good regression baseline.",
+  "baseline_ref": "539a07568839609f4971a8ed3b589dea05ec1524",
+  "baseline_note": "PR #73 exact parser performance candidate 539a07568839609f4971a8ed3b589dea05ec1524 passed Windows CI run 35095455726 with the complete 34-step contour: regression/CI locks, document mechanics guard, production safety/privacy and audit, release gate, 8 canonical golden DOCX/full patient replay, staff and gender regressions, diagnosis and diary-source regressions, generation/finalization profiling, desktop intake and lifecycle regressions, real Tk GUI wiring, EXE build/startup with TkDND, packaged desktop intake auto-launch E2E, installer build, install/uninstall smoke, clean source archive, and release artifacts. This metadata-only advance promotes the exact tested inline-parser performance candidate before the clean no-approval run.",
   "required_approval_evidence": [
     "ci_gate_lock"
   ],
