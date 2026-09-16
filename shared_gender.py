@@ -221,6 +221,10 @@ GENDER_WORD_PAIRS: tuple[tuple[str, str], ...] = (
 )
 
 
+_GENDER_WORD_PAIRS_BY_LENGTH: tuple[tuple[str, str], ...] = tuple(
+    sorted(GENDER_WORD_PAIRS, key=lambda pair: max(len(pair[0]), len(pair[1])), reverse=True)
+)
+
 
 def _name_token(value: str) -> str:
     return re.sub(r"[^A-Za-zА-Яа-яЁё-]+", "", value).strip("-")
@@ -300,10 +304,9 @@ def adapt_text_to_patient_gender(text: str, gender: str | None) -> tuple[str, in
     """Adapt known gendered clinical words to the detected patient gender."""
     if gender not in {"male", "female"} or not text:
         return text, 0
-    pairs = sorted(GENDER_WORD_PAIRS, key=lambda pair: max(len(pair[0]), len(pair[1])), reverse=True)
     result = text
     replacements = 0
-    for male, female in pairs:
+    for male, female in _GENDER_WORD_PAIRS_BY_LENGTH:
         source, target = (female, male) if gender == "male" else (male, female)
         result, changed = _replace_gender_pair(result, source, target)
         replacements += changed
