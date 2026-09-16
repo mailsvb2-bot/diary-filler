@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "2a6899edd79a6ca0e564527fc982ad428c3940f9",
-  "reason": "Measured match-only normalization optimization: normalize_match now performs only the transformations that can affect its final canonical comparison output, avoiding redundant normalize_text regex cleanup while preserving dash folding, Unicode whitespace collapse, lowercase semantics, ё/е equivalence, trimming, document rendering, templates, diaries, and user workflow. Local old/new equivalence covered 50,141 randomized/Unicode cases plus 42,746 systematic whitespace/dash/case combinations with exact output equality; full combined smoke, 8 golden DOCX, full patient replay, and gender matrix passed locally. Full Windows golden/gender/packaging evidence remains mandatory.",
+  "reason": "Measured match-only normalization optimization: normalize_match now performs only the transformations that can affect its final canonical comparison output, avoiding redundant normalize_text regex cleanup while preserving dash folding, Unicode whitespace collapse, lowercase semantics, yo/e equivalence, trimming, document rendering, templates, diaries, and user workflow. Local old/new equivalence covered 50,141 randomized/Unicode cases plus 42,746 systematic whitespace/dash/case combinations with exact output equality; full combined smoke, 8 golden DOCX, full patient replay, and gender matrix passed locally. Full Windows golden/gender/packaging evidence remains mandatory.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
