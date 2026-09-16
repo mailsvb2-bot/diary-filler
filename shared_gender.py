@@ -7,6 +7,7 @@ implementation, while legacy facades may re-export these names for compatibility
 from __future__ import annotations
 
 import re
+from functools import lru_cache
 
 
 def _normalize_name_text(text: str) -> str:
@@ -276,8 +277,17 @@ def _preserve_case(source: str, target: str) -> str:
     return target
 
 
+@lru_cache(maxsize=512)
+def _gender_pair_pattern(source: str) -> re.Pattern[str]:
+    """Compile immutable gender-pair regexes once without caching patient text."""
+    return re.compile(
+        rf"(?<![A-Za-zА-Яа-яЁё]){re.escape(source)}(?![A-Za-zА-Яа-яЁё])",
+        re.IGNORECASE,
+    )
+
+
 def _replace_gender_pair(text: str, source: str, target: str) -> tuple[str, int]:
-    pattern = re.compile(rf"(?<![A-Za-zА-Яа-яЁё]){re.escape(source)}(?![A-Za-zА-Яа-яЁё])", re.IGNORECASE)
+    pattern = _gender_pair_pattern(source)
     count = 0
     def repl(match: re.Match) -> str:
         nonlocal count
