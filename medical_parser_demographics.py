@@ -80,7 +80,11 @@ class MedicalParserDemographicsMixin:
         """
         lines = [normalize_text(line) for line in (text or "").splitlines()]
         label_re = re.compile(
-            r"^(?:ф\.\s*и\.\s*о\.?|фио|фамилия\s+имя\s+отчество)\s*[:.\-]?\s*$",
+            r"^(?:"
+            r"ф\.\s*и\.\s*о\.?(?:\s+(?:пациента|больного))?|"
+            r"фио(?:\s+(?:пациента|больного))?|"
+            r"фамилия\s*,?\s*имя\s*,?\s*отчество"
+            r")\s*[:.\-]?\s*$",
             flags=re.IGNORECASE,
         )
         name_part = r"[А-ЯЁ][А-ЯЁа-яё]+(?:-[А-ЯЁ][А-ЯЁа-яё]+)?"

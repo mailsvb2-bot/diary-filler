@@ -1,8 +1,11 @@
 {
   "schema_version": 1,
-  "base_sha": "8fc1972cf0d78ccbed904a9056d51096af066f9f",
-  "reason": "Release-only version synchronization for v1.4.12. app_config.py changes only APP_VERSION so the packaged EXE and installer are distinguishable from v1.4.11. No parser, renderer, template, diary generation, document wording, formatting, or golden DOCX mechanics are changed.",
+  "base_sha": "9d43fede732fc807ef411aae669b1d6d6f971743",
+  "reason": "Explicit screenshot-reproduced parser/UI repair. Accept additional exact FIO labels used by primary DOCX forms, cut a clinical narrative tail that Word can concatenate directly to the diagnosis, and deduplicate repeated diagnosis-text folder scans during one UI interaction. Do not infer FIO from the filename and do not change renderers, templates, clinical wording, diary cadence, formatting, or golden DOCX mechanics.",
   "approved_blobs": {
-    "app_config.py": "50bd943a08ac92b61dd4a2e4245c6576e98f78ed"
+    "diary_text_selection.py": "7a1f36b8d18822367db61c2a57c5a54b2e0ccc13",
+    "medical_parser.py": "4eb17b47fcfbc3b438072d5e06dc95ff3b98456d",
+    "medical_parser_demographics.py": "049e87f5230b4b2a00bab8a7463826cc20204680",
+    "medical_parser_sanitize.py": "feade7b3f5ac42a4352837a9b28710b1e55420cb"
   }
 }
