@@ -11,6 +11,7 @@ PARTS = (
     "smoke_combined_part04_medical_generation.py",
     "smoke_combined_part05_diary_basic_templates.py",
     "smoke_combined_part06_diary_columns_settings.py",
+    "smoke_combined_part07_docx_cache_regression.py",
 )
 
 

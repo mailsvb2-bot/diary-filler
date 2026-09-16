@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import re
+import threading
 import zipfile
 import xml.etree.ElementTree as ET
 from datetime import datetime
@@ -19,6 +20,71 @@ from docx.text.paragraph import Paragraph
 
 from medical_constants import DATE_FMT
 from medical_text_utils import normalize_match, normalize_text
+
+
+_DOCX_TEXT_CACHE_MAX_ENTRIES = 8
+_DOCX_TEXT_CACHE_LOCK = threading.Lock()
+_DOCX_TEXT_CACHE: dict[str, tuple[int, int, str]] = {}
+
+
+def _docx_text_cache_key(path: Path) -> str:
+    try:
+        return str(path.resolve())
+    except (OSError, RuntimeError):
+        return str(path.absolute())
+
+
+def _docx_text_signature(path: Path) -> tuple[int, int]:
+    stat = path.stat()
+    return stat.st_size, stat.st_mtime_ns
+
+
+def _docx_text_cache_lookup(path: Path) -> tuple[str | None, tuple[int, int] | None]:
+    """Return cached text only while path, size and nanosecond mtime stay exact."""
+    try:
+        before = _docx_text_signature(path)
+    except OSError:
+        return None, None
+
+    key = _docx_text_cache_key(path)
+    with _DOCX_TEXT_CACHE_LOCK:
+        entry = _DOCX_TEXT_CACHE.get(key)
+        if entry is None:
+            return None, before
+        if entry[:2] != before:
+            _DOCX_TEXT_CACHE.pop(key, None)
+            return None, before
+        cached_text = entry[2]
+
+    # Re-check after the lookup so a file that changes while we inspect the
+    # cache can never be returned from the old entry.
+    try:
+        after = _docx_text_signature(path)
+    except OSError:
+        return None, None
+    if after != before:
+        with _DOCX_TEXT_CACHE_LOCK:
+            _DOCX_TEXT_CACHE.pop(key, None)
+        return None, after
+    return cached_text, before
+
+
+def _docx_text_cache_store(path: Path, signature: tuple[int, int], text: str) -> None:
+    key = _docx_text_cache_key(path)
+    with _DOCX_TEXT_CACHE_LOCK:
+        # Refresh insertion order for the bounded process-local cache.
+        _DOCX_TEXT_CACHE.pop(key, None)
+        _DOCX_TEXT_CACHE[key] = (signature[0], signature[1], text)
+        while len(_DOCX_TEXT_CACHE) > _DOCX_TEXT_CACHE_MAX_ENTRIES:
+            oldest_key = next(iter(_DOCX_TEXT_CACHE))
+            _DOCX_TEXT_CACHE.pop(oldest_key, None)
+
+
+def _docx_text_cache_invalidate(path: Path) -> None:
+    key = _docx_text_cache_key(path)
+    with _DOCX_TEXT_CACHE_LOCK:
+        _DOCX_TEXT_CACHE.pop(key, None)
+
 
 def iter_block_items(parent) -> Iterable[Paragraph | Table]:
     if isinstance(parent, DocxDocument):
@@ -36,7 +102,12 @@ def iter_block_items(parent) -> Iterable[Paragraph | Table]:
 
 
 def extract_docx_text(path: str | Path) -> str:
-    doc = Document(str(path))
+    candidate = Path(path).expanduser()
+    cached_text, before_signature = _docx_text_cache_lookup(candidate)
+    if cached_text is not None:
+        return cached_text
+
+    doc = Document(str(candidate))
     lines: List[str] = []
 
     def walk(parent):
@@ -56,4 +127,18 @@ def extract_docx_text(path: str | Path) -> str:
                         walk(cell)
 
     walk(doc)
-    return normalize_text("\n".join(lines))
+    text = normalize_text("\n".join(lines))
+
+    # Cache only a stable read. If Word/Explorer modified or replaced the file
+    # while python-docx was opening it, the next caller must perform a real read.
+    if before_signature is not None:
+        try:
+            after_signature = _docx_text_signature(candidate)
+        except OSError:
+            after_signature = None
+        if after_signature == before_signature:
+            _docx_text_cache_store(candidate, before_signature, text)
+        else:
+            _docx_text_cache_invalidate(candidate)
+
+    return text
