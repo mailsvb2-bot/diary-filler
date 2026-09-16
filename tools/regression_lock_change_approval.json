@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "1e4fd05d34df6fc073349e9049328cfd78b7d53d",
-  "reason": "Bounded DOCX text-cache performance candidate. It reuses only the normalized text of the same unchanged Word file and fail-closes on path/size/mtime_ns drift, including mutation during a read. No parser field semantics, title-date authority, rendering, templates, diary generation, clinical text, formatting, installer behavior, or user workflow is changed.",
+  "reason": "Bounded DOCX text-cache performance candidate. It reuses only the normalized text of the same unchanged Word file and fail-closes on path/size/mtime_ns drift, including mutation during a read. Focused proof stays inside the existing smoke runner so the production runtime-file budget does not increase. No parser field semantics, title-date authority, rendering, templates, diary generation, clinical text, formatting, installer behavior, or user workflow is changed.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -16,8 +16,7 @@
   ],
   "approved_blobs": {
     "medical_docx_blocks.py": "cc558deacc461f92f175e9dbc3a256153fdaae7a",
-    "smoke_combined_part07_docx_cache_regression.py": "f0c07e181ac9514c2b3d7986057f79086a624519",
-    "smoke_combined_runner.py": "531e6288551eb9d6c4575d89fcb70b5051dd6e65",
+    "smoke_combined_runner.py": "73e7283a48abcb03b5af283d75ee997d7c992e92",
     "tools/document_mechanics_change_approval.json": "9f01d0875e08c1a9096971011f0cd4e307b4124f"
   }
 }
