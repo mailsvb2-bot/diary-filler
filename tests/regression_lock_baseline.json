@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "1e4fd05d34df6fc073349e9049328cfd78b7d53d",
-  "baseline_note": "PR #73 merged as 1e4fd05d34df6fc073349e9049328cfd78b7d53d and post-merge Windows CI run 35096570883 passed the complete 34-step contour: regression/CI locks, document mechanics guard, production safety/privacy and audit, release gate, 8 canonical golden DOCX/full patient replay, staff and gender regressions, diagnosis and diary-source regressions, generation/finalization profiling, desktop intake and lifecycle regressions, real Tk GUI wiring, EXE build/startup with TkDND, packaged desktop intake auto-launch E2E, installer build, install/uninstall smoke, clean source archive, and release artifacts. This metadata-only advance promotes the exact tested parser-performance merge commit to the known-good regression baseline.",
+  "baseline_ref": "8d85689bd1aaece0438d4d59011c6c78fa69e222",
+  "baseline_note": "DOCX text-cache candidate 8d85689bd1aaece0438d4d59011c6c78fa69e222 passed Windows CI run 35105454605 with the complete 34-step contour: regression/CI locks, document mechanics guard, production safety/privacy and audit, release gate, canonical golden DOCX/full patient replay, staff/gender/diagnosis/diary regressions, generation and renderer profiling, desktop intake/lifecycle, real Tk GUI wiring, EXE build/startup with TkDND, packaged desktop intake auto-launch E2E, installer build, install/uninstall smoke, clean source archive, and release artifacts. This metadata-only advance promotes the exact tested DOCX-cache candidate to the known-good regression baseline before the clean final-head run.",
   "required_approval_evidence": [
     "ci_gate_lock"
   ],
