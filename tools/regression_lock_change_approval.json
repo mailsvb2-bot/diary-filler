@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "2a287ea58668bcf1774eb86000258189bdcfe2e4",
+  "reason": "Explicit primary parser performance candidate: normalize each inline line once and reuse it as a safe alias prefilter while retaining the existing regex match as authority. Full required regression evidence must pass before baseline promotion.",
+  "required_evidence": [
+    "document_mechanics_guard",
+    "full_patient_replay",
+    "golden_docx",
+    "staff_profile_regression",
+    "gender_generation_matrix",
+    "desktop_intake_contract",
+    "intake_lifecycle_regression",
+    "packaged_desktop_intake_e2e",
+    "installer_uninstall_smoke",
+    "ci_gate_lock"
+  ],
+  "approved_blobs": {
+    "medical_parser_core.py": "5da726b7d2b05a1efe4fc6bef19e0db9f45d0132",
+    "medical_parser_inline.py": "5eff3db0dee9ef6cec874b94c6fa0bf7af2d8f3d",
+    "tools/document_mechanics_change_approval.json": "9d3687af088a71866860c9f2e2319d76583c5f46"
+  }
+}

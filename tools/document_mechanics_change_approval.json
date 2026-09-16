@@ -1,8 +1,9 @@
 {
   "schema_version": 1,
-  "base_sha": "c08b9f43c2fc08ae63766ca907a770bc32578ad5",
-  "reason": "Release-only version synchronization for v1.4.13-fio-diagnosis-speed. app_config.py changes only APP_VERSION; parser, renderer, template, diary generation, clinical wording, formatting and golden DOCX mechanics are unchanged.",
+  "base_sha": "a8b0aa47c8e96e5b30d2b70f2bb8afbfd38fb6ca",
+  "reason": "Parser performance task: normalize inline lines once per parse and use the normalized text only as a safe prefilter before the existing regex authority. Field aliases, parser semantics, renderers, templates, diary cadence, clinical wording, and output formatting are unchanged. Full golden DOCX and patient replay remain mandatory.",
   "approved_blobs": {
-    "app_config.py": "ad46882c7cdecb6b62f2a5087a5461e42ca239e1"
+    "medical_parser_core.py": "5da726b7d2b05a1efe4fc6bef19e0db9f45d0132",
+    "medical_parser_inline.py": "5eff3db0dee9ef6cec874b94c6fa0bf7af2d8f3d"
   }
 }

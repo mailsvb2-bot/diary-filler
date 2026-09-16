@@ -44,12 +44,40 @@ class MedicalParserInlineMixin:
             return False
         return looks_like_label(cleaned)
 
-    def _extract_inline(self, text: str, aliases: Sequence[str]) -> str:
-        lines = text.splitlines()
+    @staticmethod
+    def _prepare_inline_lines(text: str) -> list[tuple[str, str]]:
+        """Normalize each input line once for the whole parse pass.
+
+        The previous implementation normalized every line again for every alias of
+        every field. Large primary DOCX files therefore spent most UI time in the
+        same whitespace/regex cleanup thousands of times. The second tuple item is
+        only a cheap semantic prefilter; the original regex remains the authority.
+        """
+        prepared: list[tuple[str, str]] = []
+        for line in text.splitlines():
+            line_norm = normalize_text(line)
+            if not line_norm:
+                continue
+            prepared.append((line_norm, normalize_match(line_norm)))
+        return prepared
+
+    def _extract_inline(
+        self,
+        text: str,
+        aliases: Sequence[str],
+        *,
+        prepared_lines: Sequence[tuple[str, str]] | None = None,
+    ) -> str:
+        lines = prepared_lines if prepared_lines is not None else self._prepare_inline_lines(text)
         for alias in aliases:
             alias_re = self._inline_value_pattern(alias)
-            for line in lines:
-                line_norm = normalize_text(line)
+            alias_norm = normalize_match(alias)
+            for line_norm, line_match in lines:
+                # Safe fast rejection: normalize_match collapses the same whitespace
+                # that _inline_value_pattern accepts via \s+, so a missing literal
+                # normalized alias cannot become a regex match later.
+                if alias_norm not in line_match:
+                    continue
                 m = re.search(alias_re, line_norm, flags=re.IGNORECASE)
                 if not m or self._ignore_inline_alias_match(line_norm, alias, m.start(), m.end()):
                     continue
