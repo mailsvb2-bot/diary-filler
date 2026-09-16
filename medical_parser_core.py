@@ -71,8 +71,9 @@ class MedicalParserCoreMixin:
         # document is selected in block 03.
         data.has_treatment_section = has_treatment_section_marker(text)
 
+        inline_lines = self._prepare_inline_lines(text)
         for field_name, aliases in self.FIELD_ALIASES.items():
-            value = self._extract_inline(text, aliases)
+            value = self._extract_inline(text, aliases, prepared_lines=inline_lines)
             if value:
                 # "Проживает - в семье" в анамнезе жизни не является адресом регистрации.
                 # Адрес берём только из явных адресных строк или компактной строки пациента.
