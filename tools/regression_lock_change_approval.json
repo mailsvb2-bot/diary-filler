@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "36e95c09a4fc181523ede745bd41380c2b8715c3",
+  "reason": "Release-only synchronization to v1.4.12 after the diary-output persistence and split-cell FIO fixes were already independently merged and fully tested. This candidate changes version, installer, CI path, release notes, audit target, and exact approval metadata only. It does not change parsers, renderers, templates, diary generation, document wording, formatting, or golden DOCX mechanics.",
+  "required_evidence": [
+    "ci_gate_lock",
+    "document_mechanics_guard",
+    "full_patient_replay",
+    "golden_docx",
+    "staff_profile_regression",
+    "gender_generation_matrix",
+    "desktop_intake_contract",
+    "intake_lifecycle_regression",
+    "packaged_desktop_intake_e2e",
+    "installer_uninstall_smoke"
+  ],
+  "approved_blobs": {
+    ".github/workflows/windows-build.yml": "46d3c98231f617959410c04023117bf402bcbd67",
+    "BUILD_WINDOWS_INSTALLER.bat": "49a66d01e15b9ed6f86b8be86c7d9a2a8b1ce618",
+    "app_config.py": "50bd943a08ac92b61dd4a2e4245c6576e98f78ed",
+    "installer/MedicalDiaryAutofill.iss": "b0db5583fd75852cd784d9ab5de6197eb29a522d",
+    "prod_audit.py": "4a11ef76a7bdd3b9eb5f5c1408fb9c0ff6cebb09",
+    "pyproject.toml": "0de21cc54b631fe1e12767ab8280832edd4b8c89",
+    "tools/ci_gate_lock.py": "6e1b191e8ec8c336f6d26a2ec232bde9d811dfa4",
+    "tools/document_mechanics_change_approval.json": "fa4caae649c9d79192625886ad4a565d78cbacfc",
+    "version_info.txt": "6253fc792d9c7a51c386b1d33f06c3b2c6a35348"
+  }
+}

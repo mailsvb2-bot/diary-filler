@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "base_sha": "1709f5986512cde6788c2561e85090e8595fa187",
-  "reason": "Explicit user-reported FIO parsing repair: a real DOCX table may store the exact FIO label in one cell and the patient name in the adjacent cell, which extract_docx_text preserves as consecutive lines. Recover only that narrowly defined structure when same-line FIO parsing left the field empty, accepting a standalone two/three-part Cyrillic name or surname plus initials. Never infer identity from a filename, never scan past the first non-empty value after the label, and leave all existing inline/compact parsing, renderers, templates, diary mechanics, formatting, and golden DOCX contracts unchanged.",
+  "base_sha": "8fc1972cf0d78ccbed904a9056d51096af066f9f",
+  "reason": "Release-only version synchronization for v1.4.12. app_config.py changes only APP_VERSION so the packaged EXE and installer are distinguishable from v1.4.11. No parser, renderer, template, diary generation, document wording, formatting, or golden DOCX mechanics are changed.",
   "approved_blobs": {
-    "medical_parser_demographics.py": "1b0ae3dcce16e6c6a6009bfdec655149947fab4b"
+    "app_config.py": "50bd943a08ac92b61dd4a2e4245c6576e98f78ed"
   }
 }

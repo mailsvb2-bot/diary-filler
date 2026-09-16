@@ -15,8 +15,8 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
-TARGET_VERSION = "1.4.11"
-TARGET_VERSION_LABEL = "v1.4.11-diagnosis-diary-authority"
+TARGET_VERSION = "1.4.12"
+TARGET_VERSION_LABEL = "v1.4.12-fio-diary-persistence"
 MAX_PYTHON_FILES = 125
 MAX_TINY_PYTHON_FILES = 25
 # Release/CI probes are executable quality gates, not runtime architecture.
@@ -1254,4 +1254,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
