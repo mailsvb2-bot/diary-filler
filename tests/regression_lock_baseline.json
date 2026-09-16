@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "a23c47b76b50eb487407166b9528fa6120862a1d",
-  "baseline_note": "PR #70 merged as a23c47b76b50eb487407166b9528fa6120862a1d and post-merge Windows CI run 35074629377 passed the complete 34-step contour: regression/CI locks, document mechanics guard, production safety/privacy and audit, release gate, 8 canonical golden DOCX/full patient replay, staff and gender regressions, diagnosis and diary-source regressions, generation/finalization profiling, desktop intake and lifecycle regressions, real Tk GUI wiring, EXE build/startup with TkDND, packaged desktop intake auto-launch E2E, installer build, install/uninstall smoke, clean source archive, and release artifacts. This metadata-only advance promotes the exact tested primary-title-cache merge commit to the known-good regression baseline.",
+  "baseline_ref": "b89933a2d4f365cee64d6643d6cbdd21ba3b9d6b",
+  "baseline_note": "PR #71 exact release candidate b89933a2d4f365cee64d6643d6cbdd21ba3b9d6b passed Windows CI run 35085976993 with the complete 34-step contour: regression/CI locks, document mechanics guard, production safety/privacy and audit, release gate, 8 canonical golden DOCX/full patient replay, staff and gender regressions, diagnosis and diary-source regressions, generation/finalization profiling, desktop intake and lifecycle regressions, real Tk GUI wiring, EXE build/startup with TkDND, packaged desktop intake auto-launch E2E, installer build, install/uninstall smoke, clean source archive, and release artifacts. This metadata-only advance promotes the exact tested v1.4.13-fio-diagnosis-speed candidate to the known-good regression baseline before the clean no-approval run.",
   "required_approval_evidence": [
     "ci_gate_lock"
   ],
