@@ -43,6 +43,32 @@ split_fio_data = service.parse_primary_document(split_fio_doc)
 assert split_fio_data.fio == "Тестов М.А.", split_fio_data.fio
 assert "Ф.И.О." not in split_fio_data.fio, split_fio_data.fio
 
+# Repeated UI requests for the same admission-title date must not reopen the
+# unchanged Word file. Editing/replacing the file must invalidate that cache.
+import os as _title_cache_os
+import medical_docx_title_finder as _title_finder
+_title_finder._TITLE_DATE_CACHE.clear()
+assert _title_finder.extract_admission_date_from_title_docx(split_fio_doc) == "28.05.2026"
+_original_title_reader = _title_finder._extract_admission_date_from_title_docx_uncached
+_title_reader_calls = [0]
+def _counting_title_reader(path):
+    _title_reader_calls[0] += 1
+    return _original_title_reader(path)
+_title_finder._extract_admission_date_from_title_docx_uncached = _counting_title_reader
+try:
+    assert _title_finder.extract_admission_date_from_title_docx(split_fio_doc) == "28.05.2026"
+    assert _title_reader_calls == [0], _title_reader_calls
+    _title_stat = split_fio_doc.stat()
+    _title_cache_os.utime(
+        split_fio_doc,
+        ns=(_title_stat.st_atime_ns, _title_stat.st_mtime_ns + 1_000_000_000),
+    )
+    assert _title_finder.extract_admission_date_from_title_docx(split_fio_doc) == "28.05.2026"
+    assert _title_reader_calls == [1], _title_reader_calls
+finally:
+    _title_finder._extract_admission_date_from_title_docx_uncached = _original_title_reader
+    _title_finder._TITLE_DATE_CACHE.clear()
+
 # Real-world label variants from primary DOCX forms must remain explicit;
 # never infer FIO from the filename.
 for fio_label in ("Ф.И.О. пациента", "ФИО пациента", "Ф.И.О. больного", "Фамилия, имя, отчество"):
