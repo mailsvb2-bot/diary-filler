@@ -1,9 +1,8 @@
 {
   "schema_version": 1,
-  "base_sha": "a8b0aa47c8e96e5b30d2b70f2bb8afbfd38fb6ca",
-  "reason": "Parser performance task: normalize inline lines once per parse and use the normalized text only as a safe prefilter before the existing regex authority. Field aliases, parser semantics, renderers, templates, diary cadence, clinical wording, and output formatting are unchanged. Full golden DOCX and patient replay remain mandatory.",
+  "base_sha": "62e4ba4d5793c807a6416d4fee97958119bdae24",
+  "reason": "DOCX read-performance task: cache only the already-normalized extract_docx_text result for an exact resolved path + file size + nanosecond mtime. Cache hits and completed reads are re-stat-checked; any signature change invalidates the entry. Parser field logic, title-date authority, renderers, templates, diary cadence, clinical wording, formatting, and generated document mechanics are unchanged. Full golden DOCX, patient replay, desktop intake, packaged EXE/TkDND, and installer/uninstall evidence remain mandatory.",
   "approved_blobs": {
-    "medical_parser_core.py": "5da726b7d2b05a1efe4fc6bef19e0db9f45d0132",
-    "medical_parser_inline.py": "5eff3db0dee9ef6cec874b94c6fa0bf7af2d8f3d"
+    "medical_docx_blocks.py": "cc558deacc461f92f175e9dbc3a256153fdaae7a"
   }
 }
