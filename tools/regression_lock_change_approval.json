@@ -3,6 +3,7 @@
   "baseline_ref": "d31ac390bda277878973de2afb863516e68dfcfe",
   "reason": "Measured gender-adaptation hot-path optimization: cache only compiled regex objects keyed by immutable gender-pair source strings. Patient text, transformed text, replacement counts, pair ordering, casing, word-boundary semantics, document rendering, templates, diaries, and user workflow remain unchanged. Local exhaustive equivalence covered 18,256 old/new conversions across all 190 gender pairs, both directions, casing and boundary cases; full combined smoke passed. Full Windows golden/gender/packaging evidence remains mandatory.",
   "required_evidence": [
+    "document_mechanics_guard",
     "full_patient_replay",
     "golden_docx",
     "staff_profile_regression",
