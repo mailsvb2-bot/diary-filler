@@ -18,6 +18,7 @@
   ],
   "approved_blobs": {
     "medical_text_utils.py": "6a78facfcb77c9931329a277b8ac35133e213c46",
-    "smoke_combined_runner.py": "60ac3fc7435343cbfdddf8652f01b3f0827d05ca"
+    "smoke_combined_runner.py": "60ac3fc7435343cbfdddf8652f01b3f0827d05ca",
+    "tools/document_mechanics_change_approval.json": "74de83408afc677032bcc48cb341e6ea22ad15b7"
   }
 }
