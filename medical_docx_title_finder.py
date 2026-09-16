@@ -78,7 +78,7 @@ def _admission_date_from_filename(path: str | Path) -> str:
                     return normalized
     return ""
 
-def extract_admission_date_from_title_docx(path: str | Path) -> str:
+def _extract_admission_date_from_title_docx_uncached(path: str | Path) -> str:
     """Return admission date only from the document title/header area.
 
     Контракт: дата поступления — это дата рядом с названием документа
@@ -218,3 +218,39 @@ def extract_admission_date_from_title_docx(path: str | Path) -> str:
                 return value
 
     return ""
+
+# Re-reading the same DOCX title is relatively expensive: python-docx walks tables
+# and may fall back to raw XML. One UI action can request the admission date several
+# times (preview, diary-template selection, frozen generation snapshot). Cache only
+# the latest few exact file signatures so repeated reads of an unchanged primary
+# document are instant, while an edited/replaced file is reparsed immediately.
+_TITLE_DATE_CACHE_MAX = 8
+_TITLE_DATE_CACHE: dict[str, tuple[int, int, str]] = {}
+
+
+def extract_admission_date_from_title_docx(path: str | Path) -> str:
+    """Cached public wrapper around the strict title-date parser.
+
+    The cache key is the resolved path and the value is guarded by both nanosecond
+    mtime and byte size. Failures to stat/resolve simply use the original parser
+    without caching, preserving its fail-closed behavior.
+    """
+    try:
+        candidate = Path(path).expanduser()
+        key = str(candidate.resolve())
+        stat = candidate.stat()
+        signature = (int(stat.st_mtime_ns), int(stat.st_size))
+    except Exception:
+        return _extract_admission_date_from_title_docx_uncached(path)
+
+    cached = _TITLE_DATE_CACHE.get(key)
+    if cached is not None and cached[:2] == signature:
+        return cached[2]
+
+    value = _extract_admission_date_from_title_docx_uncached(candidate)
+    _TITLE_DATE_CACHE[key] = (signature[0], signature[1], value)
+    if len(_TITLE_DATE_CACHE) > _TITLE_DATE_CACHE_MAX:
+        oldest = next(iter(_TITLE_DATE_CACHE))
+        if oldest != key:
+            _TITLE_DATE_CACHE.pop(oldest, None)
+    return value

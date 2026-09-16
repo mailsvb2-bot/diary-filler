@@ -1,11 +1,8 @@
 {
   "schema_version": 1,
-  "base_sha": "9d43fede732fc807ef411aae669b1d6d6f971743",
-  "reason": "Explicit screenshot-reproduced parser/UI repair. Accept additional exact FIO labels used by primary DOCX forms, cut a clinical narrative tail that Word can concatenate directly to the diagnosis, and deduplicate repeated diagnosis-text folder scans during one UI interaction. Do not infer FIO from the filename and do not change renderers, templates, clinical wording, diary cadence, formatting, or golden DOCX mechanics.",
+  "base_sha": "4093ee7ad01ffe4f198c94b7ffdf21f11e9fa75a",
+  "reason": "Performance-only primary-title read optimization for the user-reported UI lag. Cache the strict admission-title result by resolved path, nanosecond mtime, and file size so repeated reads of one unchanged DOCX do not reopen Word/XML; any file change invalidates immediately. No parser semantics, renderer, template, diary cadence, clinical wording, formatting, or golden DOCX mechanics are changed.",
   "approved_blobs": {
-    "diary_text_selection.py": "7a1f36b8d18822367db61c2a57c5a54b2e0ccc13",
-    "medical_parser.py": "4eb17b47fcfbc3b438072d5e06dc95ff3b98456d",
-    "medical_parser_demographics.py": "049e87f5230b4b2a00bab8a7463826cc20204680",
-    "medical_parser_sanitize.py": "feade7b3f5ac42a4352837a9b28710b1e55420cb"
+    "medical_docx_title_finder.py": "04ec40f180683788d60ce2ab18acccfd0f3c8d21"
   }
 }
