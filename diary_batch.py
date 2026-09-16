@@ -36,6 +36,96 @@ from diary_table_numbers import cell_int, hospitalization_day_int
 from diary_text_parser import clean_status_text, extract_statuses_from_docx, is_signature_paragraph_text, remove_examinee_words
 
 
+FIXED_HOLIDAY_RANGES: tuple[tuple[int, int, int], ...] = ((1, 1, 9), (5, 1, 9))
+
+
+@dataclass(frozen=True)
+class DynamicEpicrisisInput:
+    patient_name: str = ""
+    birth_date: str = ""
+    sick_leave_from: str = ""
+    complaints: str = ""
+    treatment: str = ""
+    profile_status: str = ""
+    treatment_correction: str = ""
+
+
+def _is_fixed_holiday(day: date) -> bool:
+    return any(month == day.month and start <= day.day <= end for month, start, end in FIXED_HOLIDAY_RANGES)
+
+
+def _is_non_working_day(day: date) -> bool:
+    return day.weekday() >= 5 or _is_fixed_holiday(day)
+
+
+def _next_working_day(day: date, *, used: tuple[date, ...] = ()) -> date:
+    used_set = set(used)
+    current = day
+    for _ in range(370):
+        if not _is_non_working_day(current) and current not in used_set:
+            return current
+        current += timedelta(days=1)
+    raise RuntimeError("Не удалось найти рабочий день в пределах одного года.")
+
+
+def _optional_full_date(value: str) -> date | None:
+    text = str(value or "").strip()
+    if not text:
+        return None
+    try:
+        return parse_full_date(text)
+    except ValueError:
+        return None
+
+
+def dynamic_epicrisis_base_date(admission_date_value: date, sick_leave_from: str) -> date:
+    """Count sick-leave epicrises from the later of admission/start-of-leave."""
+    sick_leave_date = _optional_full_date(sick_leave_from)
+    return max(admission_date_value, sick_leave_date) if sick_leave_date is not None else admission_date_value
+
+
+def dynamic_epicrisis_dates(
+    base_date: date,
+    *,
+    discharge_date: date | None = None,
+    limit: int = 12,
+) -> tuple[date, ...]:
+    """Return the proven Dokkomplekt ten-day sick-leave epicrisis cadence.
+
+    Each nominal +10-day point moves forward to the next working day.  A moved
+    point that reaches the discharge date is not emitted: discharge owns its
+    separate final diary entry.
+    """
+    result: list[date] = []
+    current = base_date + timedelta(days=10)
+    while len(result) < max(0, int(limit)):
+        if discharge_date is not None and current >= discharge_date:
+            break
+        adjusted = _next_working_day(current, used=tuple(result))
+        if discharge_date is not None and adjusted >= discharge_date:
+            break
+        result.append(adjusted)
+        current += timedelta(days=10)
+    return tuple(result)
+
+
+def build_dynamic_epicrisis_text(data: DynamicEpicrisisInput) -> str:
+    correction = str(data.treatment_correction or "").strip() or "Лекарства принимает согласно назначениям."
+    return "\n".join(
+        [
+            "Динамический эпикриз.",
+            f"ФИО: {data.patient_name or 'не указано'}.",
+            f"Дата рождения: {data.birth_date or 'не указана'}.",
+            f"Лечится с: {data.sick_leave_from or 'не указано'}.",
+            f"Жалобы: {data.complaints or 'без существенной динамики'}.",
+            f"Принимает: {data.treatment or 'согласно листу назначений'}.",
+            f"Профильный статус: {data.profile_status or 'без существенной динамики'}.",
+            correction,
+            "Продолжение лечения по листу нетрудоспособности.",
+        ]
+    )
+
+
 @dataclass(frozen=True)
 class TextDiaryEntry:
     """One clinical observation with semantic flags independent of DOCX layout.
@@ -365,6 +455,81 @@ def _write_text_diary_docx(
     apply_compact_diary_layout(doc)
     doc.save(str(path))
 
+
+def _write_text_diary_docx_with_dynamic_epicrises(
+    path: Path,
+    entries: Sequence[TextDiaryEntry],
+    epicrisis_entries: Sequence[tuple[date, str]],
+    *,
+    doctor_name: str = "",
+    department_head_name: str = "",
+) -> None:
+    """Render regular diaries unchanged and add sick-leave epicrises by date.
+
+    This path is called only when the doctor selected sick leave.  Regular
+    entries keep their precomputed sequence/joint-exam flags; an epicrisis on
+    the same date is inserted afterwards and never changes the every-third
+    joint examination cadence.
+    """
+    doc = Document()
+    doctor_short = format_staff_short_name(doctor_name)
+    head_short = format_staff_short_name(department_head_name)
+    doctor_signature = (
+        f"Лечащий врач {doctor_short if doctor_short.endswith('.') else doctor_short + '.'}"
+        if doctor_short else DIARY_TREATING_DOCTOR_SIGNATURE
+    )
+    head_signature = f"Зав.отделением {head_short}" if head_short else DIARY_DEPARTMENT_HEAD_SIGNATURE
+
+    blocks: list[tuple[date, int, TextDiaryEntry | str]] = [
+        (entry.date, 0, entry) for entry in entries
+    ]
+    blocks.extend((item_date, 1, text) for item_date, text in epicrisis_entries)
+
+    for item_date, block_kind, payload in sorted(blocks, key=lambda block: (block[0], block[1])):
+        if doc.paragraphs:
+            doc.add_paragraph("")
+
+        if block_kind == 0:
+            entry = payload
+            assert isinstance(entry, TextDiaryEntry)
+            if entry.is_joint_head_exam:
+                heading = doc.add_paragraph(f"{entry.date:%d.%m.%y} {DIARY_JOINT_HEAD_EXAM_TITLE}")
+                heading.paragraph_format.keep_together = True
+                heading.paragraph_format.keep_with_next = True
+                clinical = doc.add_paragraph(entry.text)
+                clinical.paragraph_format.keep_together = True
+                clinical.paragraph_format.keep_with_next = True
+            else:
+                clinical = doc.add_paragraph(f"{entry.date:%d.%m.%y} {entry.text}".rstrip())
+                clinical.paragraph_format.keep_together = True
+                clinical.paragraph_format.keep_with_next = True
+
+            doctor_paragraph = doc.add_paragraph(doctor_signature)
+            doctor_paragraph.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+            if entry.is_joint_head_exam:
+                doctor_paragraph.paragraph_format.keep_with_next = True
+                head_paragraph = doc.add_paragraph(head_signature)
+                head_paragraph.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+            continue
+
+        lines = str(payload or "").splitlines()
+        if lines:
+            first = doc.add_paragraph(f"{item_date:%d.%m.%y} {lines[0]}".rstrip())
+            first.paragraph_format.keep_together = True
+            first.paragraph_format.keep_with_next = len(lines) > 1
+            for index, line in enumerate(lines[1:], start=1):
+                paragraph = doc.add_paragraph(line)
+                paragraph.paragraph_format.keep_together = True
+                paragraph.paragraph_format.keep_with_next = index < len(lines) - 1
+        doctor_paragraph = doc.add_paragraph(doctor_signature)
+        doctor_paragraph.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+        doctor_paragraph.paragraph_format.keep_with_next = True
+        head_paragraph = doc.add_paragraph(head_signature)
+        head_paragraph.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+
+    apply_compact_diary_layout(doc)
+    doc.save(str(path))
+
 def _fill_text_diary_batch(
     *,
     diary_file_paths: Sequence[Path],
@@ -381,6 +546,14 @@ def _fill_text_diary_batch(
     discharge_value: str,
     doctor_name: str = "",
     department_head_name: str = "",
+    sick_leave_dynamic_epicrisis: bool = False,
+    sick_leave_from: str = "",
+    clinical_patient_name: str = "",
+    birth_date: str = "",
+    complaints: str = "",
+    treatment: str = "",
+    profile_status: str = "",
+    treatment_correction: str = "",
 ) -> DiaryBatchResult:
     if admission_date_value is None:
         raise ValueError("Для текстовых дневников нужна полная дата поступления.")
@@ -410,6 +583,27 @@ def _fill_text_diary_batch(
     if not entries:
         raise ValueError("Не удалось сформировать ни одной записи дневника по выбранным датам и текстам.")
 
+    epicrisis_entries: list[tuple[date, str]] = []
+    if sick_leave_dynamic_epicrisis:
+        epicrisis_base_date = dynamic_epicrisis_base_date(admission_date_value, sick_leave_from)
+        epicrisis_data = DynamicEpicrisisInput(
+            patient_name=clinical_patient_name or patient_filename,
+            birth_date=birth_date,
+            sick_leave_from=f"{epicrisis_base_date:%d.%m.%Y}",
+            complaints=complaints,
+            treatment=treatment,
+            profile_status=profile_status,
+            treatment_correction=treatment_correction,
+        )
+        epicrisis_entries = [
+            (item_date, build_dynamic_epicrisis_text(epicrisis_data))
+            for item_date in dynamic_epicrisis_dates(
+                epicrisis_base_date,
+                discharge_date=discharge_date_value,
+                limit=12,
+            )
+        ]
+
     created_files: list[Path] = []
     report_path: Path | None = None
     out_name = make_diary_output_name(patient_filename, file_index=1, total_files=1)
@@ -417,24 +611,37 @@ def _fill_text_diary_batch(
     with TemporaryDirectory(prefix=".diary-autofill-", dir=str(result_dir)) as tmp_dir:
         tmp_root = Path(tmp_dir)
         staged_doc = tmp_root / "diary.docx"
-        _write_text_diary_docx(staged_doc, entries, doctor_name=doctor_name, department_head_name=department_head_name)
+        if epicrisis_entries:
+            _write_text_diary_docx_with_dynamic_epicrises(
+                staged_doc,
+                entries,
+                epicrisis_entries,
+                doctor_name=doctor_name,
+                department_head_name=department_head_name,
+            )
+        else:
+            # Keep the proven no-sick-leave path byte-for-byte on the original renderer.
+            _write_text_diary_docx(
+                staged_doc,
+                entries,
+                doctor_name=doctor_name,
+                department_head_name=department_head_name,
+            )
         staged_report: Path | None = None
         if write_report:
             staged_report = tmp_root / report_name
-            staged_report.write_text(
-                "\n".join(
-                    [
-                        "ОТЧЁТ: текстовые дневники",
-                        f"Дата запуска: {datetime.now():%d.%m.%Y %H:%M:%S}",
-                        f"Поступление: {admission_value}",
-                        f"Выписка: {discharge_value or 'не указана'}",
-                        f"Дат из источника «Даты»: {len(dates)}",
-                        f"Создано записей: {len(entries)}",
-                        f"Финальных записей: {final_rows}",
-                    ]
-                ),
-                encoding="utf-8",
-            )
+            report_lines = [
+                "ОТЧЁТ: текстовые дневники",
+                f"Дата запуска: {datetime.now():%d.%m.%Y %H:%M:%S}",
+                f"Поступление: {admission_value}",
+                f"Выписка: {discharge_value or 'не указана'}",
+                f"Дат из источника «Даты»: {len(dates)}",
+                f"Создано записей: {len(entries)}",
+                f"Финальных записей: {final_rows}",
+            ]
+            if sick_leave_dynamic_epicrisis:
+                report_lines.append(f"Динамических эпикризов: {len(epicrisis_entries)}")
+            staged_report.write_text("\n".join(report_lines), encoding="utf-8")
         try:
             final_path = available_path(result_dir / out_name)
             os.replace(staged_doc, final_path)
@@ -483,6 +690,14 @@ def create_text_diaries(
     write_report: bool = False,
     doctor_name: str = "",
     department_head_name: str = "",
+    sick_leave_dynamic_epicrisis: bool = False,
+    sick_leave_from: str = "",
+    clinical_patient_name: str = "",
+    birth_date: str = "",
+    complaints: str = "",
+    treatment: str = "",
+    profile_status: str = "",
+    treatment_correction: str = "",
 ) -> DiaryBatchResult:
     """Production text-diary entry point.
 
@@ -532,6 +747,14 @@ def create_text_diaries(
         discharge_value=discharge_value,
         doctor_name=doctor_name,
         department_head_name=department_head_name,
+        sick_leave_dynamic_epicrisis=sick_leave_dynamic_epicrisis,
+        sick_leave_from=sick_leave_from,
+        clinical_patient_name=clinical_patient_name or str(gender_source_name or patient_name).strip(),
+        birth_date=birth_date,
+        complaints=complaints,
+        treatment=treatment,
+        profile_status=profile_status,
+        treatment_correction=treatment_correction,
     )
 
 
@@ -555,6 +778,14 @@ def fill_diary_batch(
     text_output: bool = False,
     doctor_name: str = "",
     department_head_name: str = "",
+    sick_leave_dynamic_epicrisis: bool = False,
+    sick_leave_from: str = "",
+    clinical_patient_name: str = "",
+    birth_date: str = "",
+    complaints: str = "",
+    treatment: str = "",
+    profile_status: str = "",
+    treatment_correction: str = "",
 ) -> DiaryBatchResult:
     if text_output:
         return create_text_diaries(
@@ -570,6 +801,14 @@ def fill_diary_batch(
             write_report=write_report,
             doctor_name=doctor_name,
             department_head_name=department_head_name,
+            sick_leave_dynamic_epicrisis=sick_leave_dynamic_epicrisis,
+            sick_leave_from=sick_leave_from,
+            clinical_patient_name=clinical_patient_name,
+            birth_date=birth_date,
+            complaints=complaints,
+            treatment=treatment,
+            profile_status=profile_status,
+            treatment_correction=treatment_correction,
         )
 
     if not diary_files:

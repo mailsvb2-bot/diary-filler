@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "3a82348828518850baeec89c09d3db7bc9f436ae",
+  "reason": "Restore the missing sick-leave dynamic-epicrisis behavior from Dokkomplekt without increasing the production runtime-module budget. No-sick-leave generation still calls the original renderer; comparison against exact old main found zero differing ZIP members in the generated DOCX. Sick-leave epicrises follow max(admission, leave start), +10-day cadence, working-day shift, no impact on every-third joint-exam numbering, and stop before discharge. Full Windows 34-step evidence is mandatory.",
+  "required_evidence": [
+    "document_mechanics_guard",
+    "full_patient_replay",
+    "golden_docx",
+    "staff_profile_regression",
+    "gender_generation_matrix",
+    "diagnosis_diary_regression",
+    "words_only_diary_regression",
+    "desktop_intake_contract",
+    "intake_lifecycle_regression",
+    "packaged_desktop_intake_e2e",
+    "installer_uninstall_smoke",
+    "ci_gate_lock"
+  ],
+  "approved_blobs": {
+    "actions_diary_flow.py": "a2b178fa81f523ec8f301eb3872c506ab8170f13",
+    "diary_batch.py": "9074c31b87fd53b5382a775619c65fafc23d2ec8",
+    "diary_service.py": "3cb890b960732a87424a5df605751f4332d76ae5",
+    "tests/verbal_diary_source_regression.py": "241729e39651656d4424cec8687d3ca1a6806c8b",
+    "tools/document_mechanics_change_approval.json": "f7d0e71f5fcdd6032228e5d559428b452244d7ca"
+  }
+}

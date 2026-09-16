@@ -75,6 +75,13 @@ class DiaryService:
         write_report: bool = False,
         doctor_name: str = "",
         department_head_name: str = "",
+        sick_leave_dynamic_epicrisis: bool = False,
+        sick_leave_from: str = "",
+        birth_date: str = "",
+        complaints: str = "",
+        treatment: str = "",
+        profile_status: str = "",
+        treatment_correction: str = "",
     ) -> DiaryBatchResult:
         if diary_files:
             return create_text_diaries(
@@ -90,6 +97,13 @@ class DiaryService:
                 write_report=write_report,
                 doctor_name=doctor_name,
                 department_head_name=department_head_name,
+                sick_leave_dynamic_epicrisis=sick_leave_dynamic_epicrisis,
+                sick_leave_from=sick_leave_from,
+                birth_date=birth_date,
+                complaints=complaints,
+                treatment=treatment,
+                profile_status=profile_status,
+                treatment_correction=treatment_correction,
             )
 
         # No numbered date template: the explicitly selected text file remains
@@ -116,4 +130,11 @@ class DiaryService:
                 write_report=write_report,
                 doctor_name=doctor_name,
                 department_head_name=department_head_name,
+                sick_leave_dynamic_epicrisis=sick_leave_dynamic_epicrisis,
+                sick_leave_from=sick_leave_from,
+                birth_date=birth_date,
+                complaints=complaints,
+                treatment=treatment,
+                profile_status=profile_status,
+                treatment_correction=treatment_correction,
             )

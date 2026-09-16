@@ -4,7 +4,7 @@ from pathlib import Path
 
 from app_config import *
 from medical_constants import DOCUMENT_ORDER
-from medical_models import PatientData
+from medical_models import PatientData, normalize_yes_no, parse_sick_leave_value
 
 
 class ActionsDiaryFlowMixin:
@@ -97,6 +97,40 @@ class ActionsDiaryFlowMixin:
             )
         out_dir = str(output_dir_override if output_dir_override is not None else self._result_output_dir())
         staff_profile = self._effective_staff_profile()
+        if patient_data_snapshot is not None:
+            sick_leave_needed = normalize_yes_no(patient_data_snapshot.expert_sick_leave_needed)
+            sick_leave_from = patient_data_snapshot.expert_sick_leave_from.strip()
+            if not sick_leave_needed and patient_data_snapshot.sick_leave:
+                legacy_needed, legacy_from = parse_sick_leave_value(patient_data_snapshot.sick_leave)
+                sick_leave_needed = legacy_needed
+                sick_leave_from = sick_leave_from or legacy_from
+            diary_birth = patient_data_snapshot.birth.strip()
+            diary_complaints = patient_data_snapshot.complaints.strip()
+            diary_treatment = patient_data_snapshot.treatment_plan.strip()
+            diary_profile_status = patient_data_snapshot.mental_status.strip()
+        else:
+            sick_leave_needed = normalize_yes_no(
+                self.expert_sick_leave_needed_var.get()
+                if getattr(self, "expert_sick_leave_needed_var", None) is not None
+                else ""
+            )
+            sick_leave_from = (
+                self.expert_sick_leave_from_var.get().strip()
+                if getattr(self, "expert_sick_leave_from_var", None) is not None
+                else ""
+            )
+            live_data = getattr(self, "data", PatientData())
+            diary_birth = str(getattr(parsed_for_name, "birth", "") or live_data.birth or "").strip()
+            diary_complaints = str(getattr(parsed_for_name, "complaints", "") or live_data.complaints or "").strip()
+            diary_treatment = str(
+                (self.assigned_treatment_var.get().strip() if getattr(self, "assigned_treatment_var", None) is not None else "")
+                or getattr(parsed_for_name, "treatment_plan", "")
+                or live_data.treatment_plan
+                or ""
+            ).strip()
+            diary_profile_status = str(
+                getattr(parsed_for_name, "mental_status", "") or live_data.mental_status or ""
+            ).strip()
         from diary_service import DiaryService
         result = DiaryService().create_text_diaries(
             status_files=self.status_files,
@@ -117,6 +151,12 @@ class ActionsDiaryFlowMixin:
             write_report=self._diagnostic_reports_enabled(),
             doctor_name=(patient_data_snapshot.doctor if patient_data_snapshot is not None else staff_profile["doctor"]),
             department_head_name=(patient_data_snapshot.head if patient_data_snapshot is not None else staff_profile["department_head"]),
+            sick_leave_dynamic_epicrisis=(sick_leave_needed == "да"),
+            sick_leave_from=sick_leave_from,
+            birth_date=diary_birth,
+            complaints=diary_complaints,
+            treatment=diary_treatment,
+            profile_status=diary_profile_status,
         )
         if log_created:
             self._log("\n✅ Дневники заполнены:\n")

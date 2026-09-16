@@ -1,8 +1,10 @@
 {
   "schema_version": 1,
-  "base_sha": "638f8c8c84224756c8c1b9d5f1b646d074cf5ba7",
-  "reason": "Explicit measured document-mechanics performance task: streamline normalize_match only, preserving established comparison semantics. Local old/new equivalence covered 92,887 randomized and systematic Unicode whitespace, dash, case, and yo/e cases; combined smoke, 8 golden DOCX, full patient replay, and gender matrix passed before CI. The approval is bound to the exact medical_text_utils.py blob and does not authorize any other protected path.",
+  "base_sha": "9bd3278a2b51694d7eae5ecc98f4011b342d0859",
+  "reason": "Explicit document-mechanics restoration requested by the user: restore the proven Dokkomplekt sick-leave dynamic epicrisis inside the existing diary module without adding runtime modules. The regular renderer remains the direct path whenever no epicrisis is due. Focused proof matched the legacy +10-day/working-day schedule; comparison against exact old main found zero differing ZIP members in the no-sick-leave DOCX. Full Windows evidence remains mandatory.",
   "approved_blobs": {
-    "medical_text_utils.py": "6a78facfcb77c9931329a277b8ac35133e213c46"
+    "actions_diary_flow.py": "a2b178fa81f523ec8f301eb3872c506ab8170f13",
+    "diary_batch.py": "9074c31b87fd53b5382a775619c65fafc23d2ec8",
+    "diary_service.py": "3cb890b960732a87424a5df605751f4332d76ae5"
   }
 }
