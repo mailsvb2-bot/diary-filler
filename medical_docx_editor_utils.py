@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from functools import lru_cache
 import re
 from typing import Callable, Iterable, Sequence
 
@@ -13,8 +14,14 @@ from docx.shared import Pt, RGBColor
 from medical_text_utils import normalize_match
 
 
+@lru_cache(maxsize=256)
+def _normalized_marker(marker: str) -> str:
+    """Normalize repeated marker literals once without caching patient text."""
+    return normalize_match(marker)
+
+
 def paragraph_matches_marker(normalized_paragraph_text: str, marker: str) -> bool:
-    marker = normalize_match(marker)
+    marker = _normalized_marker(marker)
     if not marker or not normalized_paragraph_text:
         return False
     text = normalized_paragraph_text.lstrip()

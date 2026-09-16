@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "base_sha": "62e4ba4d5793c807a6416d4fee97958119bdae24",
-  "reason": "DOCX read-performance task: cache only the already-normalized extract_docx_text result for an exact resolved path + file size + nanosecond mtime. Cache hits and completed reads are re-stat-checked; any signature change invalidates the entry. Parser field logic, title-date authority, renderers, templates, diary cadence, clinical wording, formatting, and generated document mechanics are unchanged. Full golden DOCX, patient replay, desktop intake, packaged EXE/TkDND, and installer/uninstall evidence remain mandatory.",
+  "base_sha": "d58e21aa387eab0ce12945a19dcc960e14668dd8",
+  "reason": "Renderer marker-search performance task: cache only normalization of repeated marker strings used by paragraph_matches_marker. Patient/document paragraph text is never cached, marker matching rules are unchanged, and the same normalize_match function remains the normalization authority on cache misses. Full golden DOCX, patient replay, staff/gender/diagnosis/diary regressions, performance profiling, desktop intake, packaged EXE/TkDND, and installer/uninstall evidence remain mandatory.",
   "approved_blobs": {
-    "medical_docx_blocks.py": "cc558deacc461f92f175e9dbc3a256153fdaae7a"
+    "medical_docx_editor_utils.py": "02352a49ee1b704d03d9d53aac326b229d7e8a38"
   }
 }
