@@ -2,10 +2,8 @@ name: Release 1.4.13 metadata prep
 
 on:
   push:
-    branches:
-      - release/1.4.13-primary-title-cache
-    paths:
-      - .github/workflows/release-prep-selfapply.yml
+    branches: [release/1.4.13-primary-title-cache]
+    paths: [.github/workflows/release-prep-selfapply.yml]
 
 permissions:
   contents: write
@@ -21,116 +19,69 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Verify expected ancestry
+      - name: Apply exact release metadata
         shell: bash
         run: |
           set -euo pipefail
-          expected_parent='2d74bab04fa062eed6fc55874743be080a87f860'
-          test "$(git rev-parse HEAD^)" = "$expected_parent"
+          test "$(git rev-parse HEAD^)" = '37bd053d26948cd211bfeba050adfaf27bec8234'
           git fetch origin main
           test "$(git merge-base HEAD origin/main)" = 'c08b9f43c2fc08ae63766ca907a770bc32578ad5'
-
-      - name: Apply exact 1.4.13 metadata synchronization
-        shell: bash
-        run: |
-          set -euo pipefail
           python - <<'PY'
           from pathlib import Path
-          import json
-          import subprocess
+          import json, subprocess
 
-          NEW_VERSION = '1.4.13'
-          NEW_LABEL = 'v1.4.13-fio-diagnosis-speed'
-          BASE_SHA = 'c08b9f43c2fc08ae63766ca907a770bc32578ad5'
+          LABEL = 'v1.4.13-fio-diagnosis-speed'
+          BASE = 'c08b9f43c2fc08ae63766ca907a770bc32578ad5'
           BASELINE = 'a23c47b76b50eb487407166b9528fa6120862a1d'
 
-          def text(path: str) -> str:
-              return Path(path).read_text(encoding='utf-8')
+          def read(p): return Path(p).read_text(encoding='utf-8')
+          def write(p, s): Path(p).write_text(s, encoding='utf-8')
+          def repl(p, old, new, count=1):
+              s = read(p)
+              if s.count(old) != count:
+                  raise SystemExit(f'{p}: expected {count} x {old!r}, got {s.count(old)}')
+              write(p, s.replace(old, new))
+          def blob_worktree(p):
+              return subprocess.check_output(['git', 'hash-object', p], text=True).strip()
+          def blob_index(p):
+              return subprocess.check_output(['git', 'rev-parse', f':{p}'], text=True).strip()
 
-          def write(path: str, value: str) -> None:
-              Path(path).write_text(value, encoding='utf-8')
+          repl('app_config.py', 'APP_VERSION = "v1.4.13-primary-title-cache"', f'APP_VERSION = "{LABEL}"')
+          repl('version_info.txt', 'filevers=(1, 4, 12, 0)', 'filevers=(1, 4, 13, 0)')
+          repl('version_info.txt', 'prodvers=(1, 4, 12, 0)', 'prodvers=(1, 4, 13, 0)')
+          repl('version_info.txt', 'v1.4.12-fio-diary-persistence', LABEL, 2)
+          repl('installer/MedicalDiaryAutofill.iss', '#define MyAppVersion "1.4.12"', '#define MyAppVersion "1.4.13"')
+          repl('.github/workflows/windows-build.yml', 'MedicalDiaryAutofill-Setup-1.4.12.exe', 'MedicalDiaryAutofill-Setup-1.4.13.exe', 2)
+          desired_windows_blob = blob_worktree('.github/workflows/windows-build.yml')
+          repl('tools/ci_gate_lock.py', 'MedicalDiaryAutofill-Setup-1.4.12.exe', 'MedicalDiaryAutofill-Setup-1.4.13.exe')
+          repl('prod_audit.py', 'TARGET_VERSION = "1.4.12"', 'TARGET_VERSION = "1.4.13"')
+          repl('prod_audit.py', 'TARGET_VERSION_LABEL = "v1.4.12-fio-diary-persistence"', f'TARGET_VERSION_LABEL = "{LABEL}"')
+          repl('README.md', '**Версия:** `v1.4.12-fio-diary-persistence`', f'**Версия:** `{LABEL}`')
 
-          def replace_exact(path: str, old: str, new: str, count: int = 1) -> None:
-              source = text(path)
-              actual = source.count(old)
-              if actual != count:
-                  raise SystemExit(f'{path}: expected {count} occurrence(s) of {old!r}, got {actual}')
-              write(path, source.replace(old, new))
-
-          replace_exact('app_config.py', 'APP_VERSION = "v1.4.13-primary-title-cache"', f'APP_VERSION = "{NEW_LABEL}"')
-          replace_exact('version_info.txt', 'filevers=(1, 4, 12, 0)', 'filevers=(1, 4, 13, 0)')
-          replace_exact('version_info.txt', 'prodvers=(1, 4, 12, 0)', 'prodvers=(1, 4, 13, 0)')
-          replace_exact('version_info.txt', 'v1.4.12-fio-diary-persistence', NEW_LABEL, count=2)
-          replace_exact('installer/MedicalDiaryAutofill.iss', '#define MyAppVersion "1.4.12"', '#define MyAppVersion "1.4.13"')
-          replace_exact('.github/workflows/windows-build.yml', 'MedicalDiaryAutofill-Setup-1.4.12.exe', 'MedicalDiaryAutofill-Setup-1.4.13.exe', count=2)
-          replace_exact('tools/ci_gate_lock.py', 'MedicalDiaryAutofill-Setup-1.4.12.exe', 'MedicalDiaryAutofill-Setup-1.4.13.exe')
-          replace_exact('prod_audit.py', 'TARGET_VERSION = "1.4.12"', 'TARGET_VERSION = "1.4.13"')
-          replace_exact('prod_audit.py', 'TARGET_VERSION_LABEL = "v1.4.12-fio-diary-persistence"', f'TARGET_VERSION_LABEL = "{NEW_LABEL}"')
-          replace_exact('README.md', '**Версия:** `v1.4.12-fio-diary-persistence`', f'**Версия:** `{NEW_LABEL}`')
-
-          notes = text('RELEASE_NOTES.md')
+          notes = read('RELEASE_NOTES.md')
           if not notes.startswith('# Release notes — v1.4.12-fio-diary-persistence'):
-              raise SystemExit('RELEASE_NOTES.md: unexpected current top release')
-          block = f'''# Release notes — {NEW_LABEL}\n\n## {NEW_LABEL}\n\n- Исправлено распознавание Ф.И.О. в реальных первичных DOCX с подписями `Ф.И.О. пациента`, `ФИО пациента`, `Ф.И.О. больного`, `ФИО больного` и `Фамилия, имя, отчество`; имя по-прежнему не угадывается из названия файла.\n- Исправлено загрязнение диагноза склеенным Word-текстом: фразы вроде `Находится на лечении...`, `Госпитализируется...`, `Целесообразна госпитализация...` и `Направляется на лечение/госпитализацию...` больше не попадают в поле диагноза.\n- Ускорен подбор текстов дневников при больших папках: одинаковый повторный поиск по сотням Word-файлов в рамках одного UI-действия использует короткий cache, привязанный к папке и диагнозу; проверка наличия файлов больше не строит и не сортирует весь список.\n- Ускорено повторное чтение даты поступления из заголовка неизменённого первичного DOCX: строгий title parser кэшируется по пути, размеру и nanosecond mtime; изменение файла немедленно инвалидирует кэш.\n- Исправления из PR #69 и оптимизация чтения заголовка из PR #70 прошли exact candidate, clean no-approval, post-merge и baseline-main Windows CI по полному 34-шаговому контуру, включая 8 canonical golden DOCX, реальный Tk, packaged EXE, installer и install/uninstall smoke.\n- Версия программы, package metadata, Windows EXE и installer синхронизирована как `1.4.13` / `{NEW_LABEL}`; installer имеет имя `MedicalDiaryAutofill-Setup-1.4.13.exe`.\n- Медицинские renderer/template, клиническая формулировка, календарь и формат дневников, а также canonical golden DOCX не меняются.\n\n'''
+              raise SystemExit('unexpected current release-notes head')
+          block = f'''# Release notes — {LABEL}\n\n## {LABEL}\n\n- Исправлено распознавание Ф.И.О. в реальных первичных DOCX с явными вариантами подписей; имя по-прежнему не угадывается из названия файла.\n- Исправлено загрязнение диагноза склеенным Word-текстом после строки диагноза.\n- Ускорен повторный подбор текстов дневников в больших папках без изменения words-only семантики.\n- Ускорено повторное чтение даты поступления из заголовка неизменённого первичного DOCX; изменение файла немедленно инвалидирует кэш.\n- Исправления PR #69 и PR #70 уже прошли exact, clean, post-merge и baseline-main Windows CI по полному 34-шаговому контуру, включая 8 canonical golden DOCX.\n- Версия EXE/package/installer синхронизирована как `1.4.13` / `{LABEL}`; installer: `MedicalDiaryAutofill-Setup-1.4.13.exe`.\n- Renderer/template, клинические формулировки, календарь/каденс и формат дневников не меняются.\n\n'''
           write('RELEASE_NOTES.md', block + notes)
 
-          staged_first = [
-              '.github/workflows/windows-build.yml',
-              'BUILD_WINDOWS_INSTALLER.bat',
-              'README.md',
-              'RELEASE_NOTES.md',
-              'app_config.py',
-              'installer/MedicalDiaryAutofill.iss',
-              'prod_audit.py',
-              'pyproject.toml',
-              'tools/ci_gate_lock.py',
-              'version_info.txt',
-          ]
-          subprocess.run(['git', 'add', '--', *staged_first], check=True)
+          stage = ['BUILD_WINDOWS_INSTALLER.bat','README.md','RELEASE_NOTES.md','app_config.py','installer/MedicalDiaryAutofill.iss','prod_audit.py','pyproject.toml','tools/ci_gate_lock.py','version_info.txt']
+          subprocess.run(['git','add','--',*stage], check=True)
 
-          def index_blob(path: str) -> str:
-              return subprocess.check_output(['git', 'rev-parse', f':{path}'], text=True).strip()
+          doc = {'schema_version':1,'base_sha':BASE,'reason':'Release-only version synchronization for v1.4.13-fio-diagnosis-speed. app_config.py changes only APP_VERSION; parser, renderer, template, diary generation, clinical wording, formatting and golden DOCX mechanics are unchanged.','approved_blobs':{'app_config.py':blob_index('app_config.py')}}
+          write('tools/document_mechanics_change_approval.json', json.dumps(doc,ensure_ascii=False,indent=2)+'\n')
+          subprocess.run(['git','add','--','tools/document_mechanics_change_approval.json'], check=True)
 
-          doc_approval = {
-              'schema_version': 1,
-              'base_sha': BASE_SHA,
-              'reason': 'Release-only version synchronization for v1.4.13-fio-diagnosis-speed. app_config.py changes only APP_VERSION so the fixed packaged EXE and installer are distinguishable from v1.4.12 while preserving all parser, renderer, template, diary generation, clinical wording, formatting, and golden DOCX mechanics.',
-              'approved_blobs': {'app_config.py': index_blob('app_config.py')},
-          }
-          write('tools/document_mechanics_change_approval.json', json.dumps(doc_approval, ensure_ascii=False, indent=2) + '\n')
-          subprocess.run(['git', 'add', '--', 'tools/document_mechanics_change_approval.json'], check=True)
-
-          critical = [
-              '.github/workflows/windows-build.yml',
-              'BUILD_WINDOWS_INSTALLER.bat',
-              'app_config.py',
-              'installer/MedicalDiaryAutofill.iss',
-              'prod_audit.py',
-              'pyproject.toml',
-              'tools/ci_gate_lock.py',
-              'tools/document_mechanics_change_approval.json',
-              'version_info.txt',
-          ]
-          reg_approval = {
-              'schema_version': 1,
-              'baseline_ref': BASELINE,
-              'reason': 'Release-only synchronization for v1.4.13-fio-diagnosis-speed after the FIO/diagnosis fixes and primary-title cache passed the full Windows regression contour. Candidate changes version metadata, installer paths, release documentation, and the exact release-only mechanics approval; parser, renderer, template, diary cadence, clinical wording, formatting, and golden DOCX mechanics remain unchanged.',
-              'required_evidence': [
-                  'ci_gate_lock', 'document_mechanics_guard', 'full_patient_replay', 'golden_docx',
-                  'staff_profile_regression', 'gender_generation_matrix', 'desktop_intake_contract',
-                  'intake_lifecycle_regression', 'packaged_desktop_intake_e2e', 'installer_uninstall_smoke',
-              ],
-              'approved_blobs': {path: index_blob(path) for path in critical},
-          }
-          write('tools/regression_lock_change_approval.json', json.dumps(reg_approval, ensure_ascii=False, indent=2) + '\n')
-          subprocess.run(['git', 'add', '--', 'tools/regression_lock_change_approval.json'], check=True)
-
-          baseline = json.loads(text('tests/regression_lock_baseline.json'))
-          if baseline.get('baseline_ref') != BASELINE:
-              raise SystemExit(f'unexpected regression baseline: {baseline.get("baseline_ref")}')
-          subprocess.run(['git', 'diff', '--cached', '--check'], check=True)
+          critical = ['BUILD_WINDOWS_INSTALLER.bat','app_config.py','installer/MedicalDiaryAutofill.iss','prod_audit.py','pyproject.toml','tools/ci_gate_lock.py','tools/document_mechanics_change_approval.json','version_info.txt']
+          approved = {p:blob_index(p) for p in critical}
+          approved['.github/workflows/windows-build.yml'] = desired_windows_blob
+          reg = {'schema_version':1,'baseline_ref':BASELINE,'reason':'Release-only synchronization for v1.4.13-fio-diagnosis-speed after PR #69 and PR #70 passed the full Windows contour; runtime document mechanics remain unchanged.','required_evidence':['ci_gate_lock','document_mechanics_guard','full_patient_replay','golden_docx','staff_profile_regression','gender_generation_matrix','desktop_intake_contract','intake_lifecycle_regression','packaged_desktop_intake_e2e','installer_uninstall_smoke'],'approved_blobs':approved}
+          write('tools/regression_lock_change_approval.json', json.dumps(reg,ensure_ascii=False,indent=2)+'\n')
+          subprocess.run(['git','add','--','tools/regression_lock_change_approval.json'], check=True)
+          if json.loads(read('tests/regression_lock_baseline.json')).get('baseline_ref') != BASELINE:
+              raise SystemExit('unexpected regression baseline')
+          subprocess.run(['git','diff','--cached','--check'], check=True)
+          print('DESIRED_WINDOWS_BLOB=' + desired_windows_blob)
           PY
-
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git commit -m 'Release 1.4.13 FIO diagnosis and speed fixes'
