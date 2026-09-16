@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "2a6899edd79a6ca0e564527fc982ad428c3940f9",
+  "reason": "Measured match-only normalization optimization: normalize_match now performs only the transformations that can affect its final canonical comparison output, avoiding redundant normalize_text regex cleanup while preserving dash folding, Unicode whitespace collapse, lowercase semantics, ё/е equivalence, trimming, document rendering, templates, diaries, and user workflow. Local old/new equivalence covered 50,141 randomized/Unicode cases plus 42,746 systematic whitespace/dash/case combinations with exact output equality; full combined smoke, 8 golden DOCX, full patient replay, and gender matrix passed locally. Full Windows golden/gender/packaging evidence remains mandatory.",
+  "required_evidence": [
+    "document_mechanics_guard",
+    "full_patient_replay",
+    "golden_docx",
+    "staff_profile_regression",
+    "gender_generation_matrix",
+    "diagnosis_diary_regression",
+    "words_only_diary_regression",
+    "desktop_intake_contract",
+    "intake_lifecycle_regression",
+    "packaged_desktop_intake_e2e",
+    "installer_uninstall_smoke",
+    "ci_gate_lock"
+  ],
+  "approved_blobs": {
+    "medical_text_utils.py": "6a78facfcb77c9931329a277b8ac35133e213c46",
+    "smoke_combined_runner.py": "60ac3fc7435343cbfdddf8652f01b3f0827d05ca"
+  }
+}
