@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "36e95c09a4fc181523ede745bd41380c2b8715c3",
-  "baseline_note": "PR #65 merged as 36e95c09a4fc181523ede745bd41380c2b8715c3 and post-merge Windows CI run 35014063735 passed the complete 34-step contour: regression/CI locks, document mechanics guard, production safety/privacy, release gate, 8 canonical golden DOCX/full patient replay, staff and gender regressions, diagnosis and diary-source regressions, the real DOCX adjacent-cell FIO regression, generation/finalization profiling, desktop intake and lifecycle regressions, real Tk GUI wiring, EXE build/startup with TkDND, packaged desktop intake auto-launch E2E, installer build, install/uninstall smoke, and release artifacts. This metadata-only advance promotes that exact tested main commit to the known-good regression baseline.",
+  "baseline_ref": "91aba01a657e69ea5f2cce2f167130d918390d54",
+  "baseline_note": "PR #67 exact release candidate 91aba01a657e69ea5f2cce2f167130d918390d54 passed Windows CI run 35054981369 through the complete 34-step contour: regression/CI locks, document mechanics guard, production safety/privacy and audit, release gate, 8 canonical golden DOCX/full patient replay, staff and gender regressions, diagnosis and diary-source regressions, generation/finalization profiling, desktop intake and lifecycle regressions, real Tk GUI wiring, EXE build/startup with TkDND, packaged desktop intake auto-launch E2E, installer 1.4.12 build, install/uninstall smoke, and release artifacts. This metadata-only advance promotes that exact tested release candidate to the known-good regression baseline before the required clean rerun without the temporary regression approval.",
   "required_approval_evidence": [
     "ci_gate_lock"
   ],
