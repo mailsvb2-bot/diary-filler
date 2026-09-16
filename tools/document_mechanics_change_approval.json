@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "base_sha": "02372de89b0f233cddd01d7a9c48220c998d040e",
-  "reason": "Renderer finalization performance task: skip regex replacement work only when a paragraph cannot possibly match any established facility-reference pattern, and precompile the same historical regexes once. Matching paragraphs still use the exact existing run-preserving replacement path; patient text is not cached; facility wording, templates, renderer sequencing, diary mechanics, and document formatting are unchanged. Full golden DOCX, patient replay, focused facility regression, performance profiling, desktop intake, packaged EXE/TkDND, and installer/uninstall evidence remain mandatory.",
+  "base_sha": "638f8c8c84224756c8c1b9d5f1b646d074cf5ba7",
+  "reason": "Explicit measured document-mechanics performance task: streamline normalize_match only, preserving established comparison semantics. Local old/new equivalence covered 92,887 randomized and systematic Unicode whitespace, dash, case, and yo/e cases; combined smoke, 8 golden DOCX, full patient replay, and gender matrix passed before CI. The approval is bound to the exact medical_text_utils.py blob and does not authorize any other protected path.",
   "approved_blobs": {
-    "medical_gender.py": "5655fd426e29646e87477bba8057a0df5d507617"
+    "medical_text_utils.py": "6a78facfcb77c9931329a277b8ac35133e213c46"
   }
 }

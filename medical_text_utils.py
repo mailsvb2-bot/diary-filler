@@ -30,10 +30,18 @@ def normalize_text(text: str) -> str:
     return text.strip()
 
 
+_MATCH_WHITESPACE_RE = re.compile(r"\s+")
+
+
 def normalize_match(text: str) -> str:
-    text = normalize_text(text).lower().replace("ё", "е")
-    text = re.sub(r"\s+", " ", text)
-    return text.strip()
+    if not text:
+        return ""
+    # Match-mode output always collapses every whitespace run to one ASCII
+    # space, so normalize_text's earlier space/newline cleanup is redundant.
+    for src, dst in DASHES.items():
+        text = text.replace(src, dst)
+    text = text.lower().replace("ё", "е")
+    return _MATCH_WHITESPACE_RE.sub(" ", text).strip()
 
 
 def clean_value(text: str) -> str:
