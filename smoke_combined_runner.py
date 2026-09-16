@@ -163,6 +163,25 @@ def _run_gender_regex_cache_regression() -> None:
     assert second_info.hits > first_info.hits
     assert second_info.maxsize == 512
 
+
+def _run_normalize_match_fast_path_regression() -> None:
+    """Prove match-only normalization keeps established Unicode semantics."""
+    from medical_text_utils import normalize_match
+
+    sources_and_expected = (
+        ("", ""),
+        ("  Анамнез\tжизни  ", "анамнез жизни"),
+        ("Ёжик — тест", "ежик - тест"),
+        ("ГБУЗ\xa0НО\vПБ №2", "гбуз но пб №2"),
+        ("A\n\n\nB", "a b"),
+        ("X\u2003Y\u202fZ", "x y z"),
+        ("слово‑слово – слово − слово", "слово-слово - слово - слово"),
+    )
+    for source, expected in sources_and_expected:
+        actual = normalize_match(source)
+        assert actual == expected, f"normalize_match mismatch: {source!r} -> {actual!r}"
+
+
 def run() -> None:
     root = Path(__file__).resolve().parent
     namespace = {"__name__": "__smoke_combined__", "__file__": str(root / "smoke_test_combined.py")}
@@ -173,3 +192,4 @@ def run() -> None:
     _run_docx_cache_regression()
     _run_facility_reference_regression()
     _run_gender_regex_cache_regression()
+    _run_normalize_match_fast_path_regression()
