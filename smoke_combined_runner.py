@@ -141,6 +141,28 @@ def _run_facility_reference_regression() -> None:
     assert actual == expected, f"facility reference regression mismatch: {actual!r}"
 
 
+
+def _run_gender_regex_cache_regression() -> None:
+    """Prove regex caching preserves gender conversion while reusing patterns."""
+    import shared_gender
+
+    pattern_cache = shared_gender._gender_pair_pattern
+    pattern_cache.cache_clear()
+
+    source = "Находился спокоен, ориентирован и был выписан."
+    first = shared_gender.adapt_text_to_patient_gender(source, "female")
+    first_info = pattern_cache.cache_info()
+    second = shared_gender.adapt_text_to_patient_gender(source, "female")
+    second_info = pattern_cache.cache_info()
+
+    assert first == second
+    assert first[0] == "Находилась спокойна, ориентирована и была выписана."
+    assert first[1] == 5
+    assert first_info.misses > 0
+    assert second_info.misses == first_info.misses
+    assert second_info.hits > first_info.hits
+    assert second_info.maxsize == 512
+
 def run() -> None:
     root = Path(__file__).resolve().parent
     namespace = {"__name__": "__smoke_combined__", "__file__": str(root / "smoke_test_combined.py")}
@@ -150,3 +172,4 @@ def run() -> None:
         exec(code, namespace, namespace)
     _run_docx_cache_regression()
     _run_facility_reference_regression()
+    _run_gender_regex_cache_regression()
