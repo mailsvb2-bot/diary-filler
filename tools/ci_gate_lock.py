@@ -36,6 +36,9 @@ WINDOWS_REQUIRED_IN_ORDER = (
 )
 
 RELEASE_REQUIRED_IN_ORDER = (
+    "Require signing credentials",
+    "Checkout exact release tag",
+    "Resolve and guard release tag",
     "python tools/regression_lock_check.py",
     "python tools/ci_gate_lock.py",
     "python tests/regression_surface_inventory.py",
@@ -108,10 +111,28 @@ def main() -> None:
     if windows.count("if-no-files-found: error") < 5:
         raise SystemExit("CI GATE LOCK FAILED: Windows workflow artifacts are no longer fail-closed")
 
-    for required in ("workflow_dispatch:", "Checkout exact release tag", "fetch-depth: 0", "MEDICAL_AUTOFILL_REQUIRE_SIGNED_EXE"):
+    for required in (
+        "workflow_dispatch:",
+        "push:",
+        "branches: [production-v1.4.13]",
+        "Checkout exact release tag",
+        "Resolve and guard release tag",
+        "refs/heads/production-v1.4.13",
+        "git/ref/heads/main",
+        "Tag $tag already exists; refusing to move or overwrite it.",
+        'ref="refs/tags/$tag"',
+        '"RELEASE_TAG=$tag"',
+        "fetch-depth: 0",
+        "MEDICAL_AUTOFILL_REQUIRE_SIGNED_EXE",
+    ):
         if required not in release:
             raise SystemExit(f"CI GATE LOCK FAILED: release workflow lost release-safety contract: {required}")
     _require_order(release, RELEASE_REQUIRED_IN_ORDER, "release workflow")
+
+    require_signing = release.index("Require signing credentials")
+    resolve_tag = release.index("Resolve and guard release tag")
+    if require_signing >= resolve_tag:
+        raise SystemExit("CI GATE LOCK FAILED: signing credentials must be required before one-shot tag creation")
 
     release_create = release[release.index("gh release create") :]
     for asset in (
@@ -121,6 +142,9 @@ def main() -> None:
     ):
         if asset not in release_create:
             raise SystemExit(f"CI GATE LOCK FAILED: official release asset missing: {asset}")
+
+    if '$env:RELEASE_TAG' not in release_create:
+        raise SystemExit("CI GATE LOCK FAILED: official release is not bound to the guarded release tag")
 
     print("CI GATE LOCK OK: mandatory PR/main/release regression topology is intact")
 
