@@ -1,0 +1,64 @@
+name: Release bump helper
+
+on:
+  push:
+    branches: [release/v1.4.14-intake-autolaunch]
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    if: ${{ !contains(github.event.head_commit.message, '[release-bump-done]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          ref: release/v1.4.14-intake-autolaunch
+          fetch-depth: 0
+      - name: Synchronize release metadata
+        shell: python
+        run: |
+          from pathlib import Path
+
+          def replace(path, old, new):
+              p = Path(path)
+              text = p.read_text(encoding="utf-8")
+              if old not in text:
+                  raise SystemExit(f"missing expected marker in {path}: {old}")
+              p.write_text(text.replace(old, new), encoding="utf-8")
+
+          replace("prod_audit.py", 'TARGET_VERSION = "1.4.13"', 'TARGET_VERSION = "1.4.14"')
+          replace("prod_audit.py", 'TARGET_VERSION_LABEL = "v1.4.13-fio-diagnosis-speed"', 'TARGET_VERSION_LABEL = "v1.4.14-intake-autolaunch"')
+          replace("release_check.py", "MedicalDiaryAutofill-Setup-1.4.13.exe", "MedicalDiaryAutofill-Setup-1.4.14.exe")
+          replace("README.md", '**Версия:** `v1.4.13-fio-diagnosis-speed`', '**Версия:** `v1.4.14-intake-autolaunch`')
+          replace(
+              "README.md",
+              "Официальный GitHub Release вынесен в отдельный fail-closed workflow: он требует Authenticode-сертификат и не публикует неподписанный EXE.",
+              "Официальный GitHub Release вынесен в отдельный fail-closed workflow и публикует проверенный unsigned EXE/installer; Windows может показывать предупреждение Unknown Publisher/SmartScreen до добавления code-signing сертификата.",
+          )
+
+          notes = Path("RELEASE_NOTES.md")
+          current = notes.read_text(encoding="utf-8")
+          header = "# Release notes — v1.4.14-intake-autolaunch\n\n"
+          if not current.startswith(header):
+              block = (
+                  header
+                  + "## v1.4.14-intake-autolaunch\n\n"
+                  + "- Исправлен установленный сценарий `Выписанные пациенты → DOC/DOCX → автоматический запуск интерфейса`: installer создаёт и сохраняет папку, сразу регистрирует и запускает hidden watcher, в том числе после silent/update install.\n"
+                  + "- При обновлении очищается только устаревшее техническое watcher-состояние; пользовательские документы и папка не удаляются.\n"
+                  + "- Installer smoke теперь доказывает живой watcher heartbeat ещё до первого ручного запуска GUI, а packaged E2E отдельно доказывает появление видимого окна после помещения первичного документа.\n"
+                  + "- Release recovery разрешён только для уже созданного тега, который указывает ровно на тот же candidate SHA и ещё не имеет GitHub Release; тег никогда не перемещается.\n"
+                  + "- Медицинские parser/renderer/template и генерация документов не изменялись; canonical golden DOCX остаются обязательным gate.\n"
+                  + "- Версия программы, package metadata, Windows EXE и installer синхронизирована как `1.4.14` / `v1.4.14-intake-autolaunch`; installer: `MedicalDiaryAutofill-Setup-1.4.14.exe`.\n\n"
+              )
+              notes.write_text(block + current, encoding="utf-8")
+      - name: Commit synchronized metadata
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add prod_audit.py release_check.py README.md RELEASE_NOTES.md
+          git diff --cached --check
+          git commit -m "release: synchronize v1.4.14 metadata [release-bump-done]"
+          git push origin HEAD:release/v1.4.14-intake-autolaunch
