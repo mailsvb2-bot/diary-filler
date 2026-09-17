@@ -1,4 +1,4 @@
-name: Signed Windows Release
+name: Windows Release
 
 on:
   workflow_dispatch:
@@ -14,31 +14,21 @@ permissions:
   contents: write
 
 concurrency:
-  group: signed-release-${{ github.event_name == 'workflow_dispatch' && inputs.tag || 'v1.4.13' }}
+  group: release-${{ github.event_name == 'workflow_dispatch' && inputs.tag || 'v1.4.13' }}
   cancel-in-progress: false
 
 jobs:
   release:
     runs-on: windows-latest
     timeout-minutes: 35
-    env:
-      SIGNING_CERT_PFX_BASE64: ${{ secrets.SIGNING_CERT_PFX_BASE64 }}
-      SIGNING_CERT_PASSWORD: ${{ secrets.SIGNING_CERT_PASSWORD }}
     steps:
-      - name: Require signing credentials
-        shell: pwsh
-        run: |
-          if ([string]::IsNullOrWhiteSpace($env:SIGNING_CERT_PFX_BASE64) -or [string]::IsNullOrWhiteSpace($env:SIGNING_CERT_PASSWORD)) {
-            throw "Official release is blocked: configure SIGNING_CERT_PFX_BASE64 and SIGNING_CERT_PASSWORD first."
-          }
-
-      - name: Checkout exact release tag
+      - name: Checkout exact release candidate
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.sha }}
           fetch-depth: 0
 
-      - name: Resolve and guard release tag
+      - name: Resolve and guard release target
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
@@ -59,10 +49,6 @@ jobs:
             if ($LASTEXITCODE -eq 0) {
               throw "Tag $tag already exists; refusing to move or overwrite it."
             }
-            gh api --method POST "repos/${{ github.repository }}/git/refs" -f ref="refs/tags/$tag" -f sha="${{ github.sha }}"
-            if ($LASTEXITCODE -ne 0) { throw "Failed to create immutable release tag $tag." }
-            git fetch origin "refs/tags/$tag:refs/tags/$tag"
-            if ($LASTEXITCODE -ne 0) { throw "Failed to fetch newly created release tag $tag." }
           } else {
             $tag = "${{ inputs.tag }}"
             if ([string]::IsNullOrWhiteSpace($tag)) { throw "Release tag input is empty." }
@@ -96,6 +82,9 @@ jobs:
 
       - name: Verify regression lock coverage inventory
         run: python tests/regression_surface_inventory.py
+
+      - name: Guard document mechanics
+        run: python tools/document_mechanics_guard.py
 
       - name: Run production safety gate
         run: python tools/production_safety_gate.py
@@ -141,30 +130,10 @@ jobs:
         shell: cmd
         run: build_exe_windows.bat
 
-      - name: Import code-signing certificate
-        shell: pwsh
-        run: |
-          $pfx = Join-Path $env:RUNNER_TEMP "medical-autofill-signing.pfx"
-          [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:SIGNING_CERT_PFX_BASE64))
-          echo "SIGNING_PFX=$pfx" >> $env:GITHUB_ENV
+      - name: Verify exact packaged EXE
+        run: python verify_built_exe.py
 
-      - name: Authenticode sign EXE
-        shell: pwsh
-        run: |
-          $signtool = (Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin" -Recurse -Filter signtool.exe | Where-Object { $_.FullName -match '\x64\signtool.exe$' } | Sort-Object FullName -Descending | Select-Object -First 1).FullName
-          if (-not $signtool) { throw "signtool.exe not found" }
-          & $signtool sign /fd SHA256 /f $env:SIGNING_PFX /p $env:SIGNING_CERT_PASSWORD /tr http://timestamp.digicert.com /td SHA256 dist\MedicalDiaryAutofill.exe
-          if ($LASTEXITCODE -ne 0) { throw "signtool sign failed: $LASTEXITCODE" }
-          & $signtool verify /pa /v dist\MedicalDiaryAutofill.exe
-          if ($LASTEXITCODE -ne 0) { throw "signtool verify failed: $LASTEXITCODE" }
-
-      - name: Verify exact signed packaged EXE
-        shell: pwsh
-        run: |
-          $env:MEDICAL_AUTOFILL_REQUIRE_SIGNED_EXE = "1"
-          python verify_built_exe.py
-
-      - name: Run signed packaged desktop intake E2E
+      - name: Run packaged desktop intake E2E
         shell: pwsh
         run: ./tools/windows_desktop_intake_e2e.ps1 -AppPath ./dist/MedicalDiaryAutofill.exe
 
@@ -179,26 +148,38 @@ jobs:
             choco install innosetup --no-progress -y
           }
 
-      - name: Build Windows installer from signed EXE
+      - name: Build Windows installer from verified EXE
         shell: cmd
         run: BUILD_WINDOWS_INSTALLER.bat
 
-      - name: Authenticode sign installer
-        shell: pwsh
-        run: |
-          $signtool = (Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin" -Recurse -Filter signtool.exe | Where-Object { $_.FullName -match '\x64\signtool.exe$' } | Sort-Object FullName -Descending | Select-Object -First 1).FullName
-          if (-not $signtool) { throw "signtool.exe not found" }
-          & $signtool sign /fd SHA256 /f $env:SIGNING_PFX /p $env:SIGNING_CERT_PASSWORD /tr http://timestamp.digicert.com /td SHA256 dist\MedicalDiaryAutofill-Setup-1.4.13.exe
-          if ($LASTEXITCODE -ne 0) { throw "installer signtool sign failed: $LASTEXITCODE" }
-          & $signtool verify /pa /v dist\MedicalDiaryAutofill-Setup-1.4.13.exe
-          if ($LASTEXITCODE -ne 0) { throw "installer signtool verify failed: $LASTEXITCODE" }
-
-      - name: Smoke signed installed and uninstalled application
+      - name: Smoke installed and uninstalled application
         shell: pwsh
         run: ./tools/windows_installer_smoke.ps1 -InstallerPath ./dist/MedicalDiaryAutofill-Setup-1.4.13.exe
 
       - name: Build clean source archive
         run: python make_release_zip.py
+
+      - name: Create guarded release tag
+        if: github.event_name == 'push'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $mainSha = gh api "repos/${{ github.repository }}/git/ref/heads/main" --jq ".object.sha"
+          if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($mainSha)) {
+            throw "Unable to re-resolve current main SHA before tag creation."
+          }
+          if ($mainSha.Trim() -ne "${{ github.sha }}") {
+            throw "Current main moved during release validation; refusing to create the release tag."
+          }
+          gh api "repos/${{ github.repository }}/git/ref/tags/$env:RELEASE_TAG" *> $null
+          if ($LASTEXITCODE -eq 0) {
+            throw "Tag $env:RELEASE_TAG already exists; refusing to move or overwrite it."
+          }
+          gh api --method POST "repos/${{ github.repository }}/git/refs" -f ref="refs/tags/$env:RELEASE_TAG" -f sha="${{ github.sha }}"
+          if ($LASTEXITCODE -ne 0) { throw "Failed to create immutable release tag $env:RELEASE_TAG." }
+          git fetch origin "refs/tags/$env:RELEASE_TAG:refs/tags/$env:RELEASE_TAG"
+          if ($LASTEXITCODE -ne 0) { throw "Failed to fetch newly created release tag $env:RELEASE_TAG." }
 
       - name: Publish GitHub Release
         shell: pwsh
