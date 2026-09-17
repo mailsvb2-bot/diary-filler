@@ -1,0 +1,74 @@
+name: Temporary v1.4.14 metadata sync
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout release branch
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          ref: release/v1.4.14-intake-autolaunch
+          fetch-depth: 0
+      - name: Apply exact metadata replacements
+        shell: python
+        run: |
+          from pathlib import Path
+
+          def replace_exact(path: str, old: str, new: str, minimum: int = 1) -> None:
+              p = Path(path)
+              text = p.read_text(encoding="utf-8")
+              count = text.count(old)
+              if count < minimum:
+                  raise SystemExit(f"Expected at least {minimum} occurrence(s) in {path}: {old!r}; got {count}")
+              p.write_text(text.replace(old, new), encoding="utf-8")
+
+          replace_exact("prod_audit.py", 'TARGET_VERSION = "1.4.13"', 'TARGET_VERSION = "1.4.14"')
+          replace_exact("prod_audit.py", 'TARGET_VERSION_LABEL = "v1.4.13-fio-diagnosis-speed"', 'TARGET_VERSION_LABEL = "v1.4.14-intake-autolaunch"')
+          replace_exact("prod_audit.py", "MedicalDiaryAutofill-Setup-1.4.13.exe", "MedicalDiaryAutofill-Setup-1.4.14.exe")
+          replace_exact("release_check.py", "MedicalDiaryAutofill-Setup-1.4.13.exe", "MedicalDiaryAutofill-Setup-1.4.14.exe")
+          replace_exact("README.md", '**Версия:** `v1.4.13-fio-diagnosis-speed`', '**Версия:** `v1.4.14-intake-autolaunch`')
+          replace_exact(
+              "README.md",
+              "Официальный GitHub Release вынесен в отдельный fail-closed workflow: он требует Authenticode-сертификат и не публикует неподписанный EXE.",
+              "Официальный GitHub Release вынесен в отдельный fail-closed workflow и публикует проверенный unsigned EXE/installer; Windows может показывать предупреждение Unknown Publisher/SmartScreen до добавления code-signing сертификата.",
+          )
+
+          notes = Path("RELEASE_NOTES.md")
+          current = notes.read_text(encoding="utf-8")
+          header = "# Release notes — v1.4.14-intake-autolaunch\n\n"
+          if not current.startswith(header):
+              block = (
+                  header
+                  + "## v1.4.14-intake-autolaunch\n\n"
+                  + "- Исправлен установленный сценарий `Выписанные пациенты → DOC/DOCX → автоматический запуск интерфейса`: installer создаёт и сохраняет папку, сразу регистрирует и запускает hidden watcher, в том числе после silent/update install.\n"
+                  + "- При обновлении очищается только устаревшее техническое watcher-состояние; пользовательские документы и папка не удаляются.\n"
+                  + "- Installer smoke теперь доказывает живой watcher heartbeat ещё до первого ручного запуска GUI, а packaged E2E отдельно доказывает появление видимого окна после помещения первичного документа.\n"
+                  + "- Release recovery разрешён только для уже созданного тега, который указывает ровно на тот же candidate SHA и ещё не имеет GitHub Release; тег никогда не перемещается.\n"
+                  + "- Медицинские parser/renderer/template и генерация документов не изменялись; canonical golden DOCX остаются обязательным gate.\n"
+                  + "- Версия программы, package metadata, Windows EXE и installer синхронизирована как `1.4.14` / `v1.4.14-intake-autolaunch`; installer: `MedicalDiaryAutofill-Setup-1.4.14.exe`.\n\n"
+              )
+              notes.write_text(block + current, encoding="utf-8")
+
+          helper = Path(".github/workflows/release-bump-helper.yml")
+          if helper.exists():
+              helper.unlink()
+      - name: Commit target branch
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          if git diff --cached --quiet; then
+            echo "No target changes needed"
+            exit 0
+          fi
+          git commit -m "release: synchronize v1.4.14 gates and notes"
+          git push origin HEAD:release/v1.4.14-intake-autolaunch
