@@ -1,0 +1,40 @@
+name: Patch unsigned release gate contract
+
+on:
+  push:
+    branches: [release/unsigned-v1.4.13]
+    paths: [.github/workflows/patch-release-check.yml]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          ref: release/unsigned-v1.4.13
+          fetch-depth: 0
+      - name: Update release gate contract
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('release_check.py')
+          text = path.read_text(encoding='utf-8')
+          old = '''    for snippet in [\n        "Signed Windows Release",\n        "SIGNING_CERT_PFX_BASE64",\n        "SIGNING_CERT_PASSWORD",\n        "signtool verify",\n        "MEDICAL_AUTOFILL_REQUIRE_SIGNED_EXE",\n        "python verify_built_exe.py",\n        "gh release create",\n        "--verify-tag",\n    ]:\n        if snippet not in release_workflow:\n            raise SystemExit(f"Signed release workflow misses fail-closed snippet: {snippet}")'''
+          new = '''    for snippet in [\n        "Windows Release",\n        "Resolve and guard release target",\n        "python tools/document_mechanics_guard.py",\n        "python verify_built_exe.py",\n        "./tools/windows_desktop_intake_e2e.ps1 -AppPath ./dist/MedicalDiaryAutofill.exe",\n        "./tools/windows_installer_smoke.ps1 -InstallerPath ./dist/MedicalDiaryAutofill-Setup-1.4.13.exe",\n        "Create guarded release tag",\n        "gh release create",\n        "--verify-tag",\n    ]:\n        if snippet not in release_workflow:\n            raise SystemExit(f"Unsigned release workflow misses fail-closed snippet: {snippet}")'''
+          if text.count(old) != 1:
+              raise SystemExit('expected signed release gate block exactly once')
+          path.write_text(text.replace(old, new), encoding='utf-8')
+          PY
+      - name: Commit exact release gate update
+        shell: bash
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add release_check.py
+          git diff --cached --check
+          git commit -m "release: validate verified unsigned publication contract"
+          git push origin HEAD:release/unsigned-v1.4.13
