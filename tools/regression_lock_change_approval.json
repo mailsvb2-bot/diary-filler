@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "e14c28819d3accb34aaa34969b73cb07fdb6c3f7",
+  "reason": "Replace the certificate-dependent signed release path with an explicitly verified unsigned v1.4.13 publication path while preserving all document, packaged EXE, desktop intake, installer, and uninstall regressions; create the immutable tag only after successful validation.",
+  "required_evidence": [
+    "document_mechanics_guard",
+    "full_patient_replay",
+    "golden_docx",
+    "staff_profile_regression",
+    "gender_generation_matrix",
+    "desktop_intake_contract",
+    "intake_lifecycle_regression",
+    "packaged_desktop_intake_e2e",
+    "installer_uninstall_smoke",
+    "ci_gate_lock"
+  ],
+  "approved_blobs": {
+    ".github/workflows/release.yml": "c458209ad33fd49df93080f156562075f0f7408b",
+    "tools/ci_gate_lock.py": "3665d776d92a292c851de595256447288e39d240"
+  }
+}
