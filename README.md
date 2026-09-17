@@ -16,7 +16,7 @@
 
 Локальная Windows-программа для заполнения медицинских документов и дневников наблюдения в Word `.docx`.
 
-Главный production-контракт: обычному пользователю отдаётся готовый Windows installer либо standalone `MedicalDiaryAutofill.exe`. Python, pip и зависимости нужны только разработчику или сборочному GitHub Actions runner.
+Главный production-контракт: обычному пользователю отдаётся готовый Windows installer либо готовый `MedicalDiaryAutofill.exe`. Python, pip и зависимости нужны только разработчику или сборочному GitHub Actions runner.
 
 ## Возможности
 
