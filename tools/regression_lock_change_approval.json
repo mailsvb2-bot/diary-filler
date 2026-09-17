@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "3a82348828518850baeec89c09d3db7bc9f436ae",
+  "reason": "Restore the proven Dokkomplekt sick-leave dynamic epicrisis layer without modifying the established diary_batch generator; require the complete regression and packaging evidence before merge.",
+  "required_evidence": [
+    "ci_gate_lock",
+    "document_mechanics_guard",
+    "full_patient_replay",
+    "golden_docx",
+    "staff_profile_regression",
+    "gender_generation_matrix",
+    "desktop_intake_contract",
+    "intake_lifecycle_regression",
+    "packaged_desktop_intake_e2e",
+    "installer_uninstall_smoke"
+  ],
+  "approved_blobs": {
+    "actions_diary_flow.py": "07ad1e81fb9d747c8751a44e2c19dfbd2f08a88b",
+    "diary_dynamic_epicrisis.py": "574e1e91e4b52c275afda41048d80dd8e3c0eb20",
+    "diary_service.py": "cd85ef8fdf901a4ab49fac4da1d894a24d24a8c5",
+    "tests/verbal_diary_source_regression.py": "3a72b2fe8ae72dabf041de344e6cfebd215cc7c3"
+  }
+}
