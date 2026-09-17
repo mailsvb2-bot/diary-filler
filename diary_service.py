@@ -60,6 +60,49 @@ class DiaryService:
                 return Path(raw_path).expanduser().parent
         return Path.cwd()
 
+    @staticmethod
+    def _add_dynamic_epicrises_if_needed(
+        result: DiaryBatchResult,
+        *,
+        sick_leave_dynamic_epicrisis: bool,
+        admission_value: str,
+        discharge_value: str,
+        sick_leave_from: str,
+        patient_name: str,
+        birth_date: str,
+        complaints: str,
+        treatment: str,
+        profile_status: str,
+        treatment_correction: str,
+        doctor_name: str,
+        department_head_name: str,
+    ) -> DiaryBatchResult:
+        # The established diary generator is intentionally untouched when sick
+        # leave is off.  Dynamic epicrises are an additive historical layer.
+        if not sick_leave_dynamic_epicrisis:
+            return result
+        from diary_dynamic_epicrisis import apply_sick_leave_dynamic_epicrises
+
+        total = 0
+        for created in result.created_files:
+            total += apply_sick_leave_dynamic_epicrises(
+                created,
+                admission_value=admission_value,
+                discharge_value=discharge_value,
+                sick_leave_from=sick_leave_from,
+                patient_name=patient_name,
+                birth_date=birth_date,
+                complaints=complaints,
+                treatment=treatment,
+                profile_status=profile_status,
+                treatment_correction=treatment_correction,
+                treating_physician=doctor_name,
+                department_head=department_head_name,
+            )
+        # Kept outside the dataclass for compatibility with existing consumers.
+        result.dynamic_epicrisis_count = total
+        return result
+
     def create_text_diaries(
         self,
         *,
@@ -75,21 +118,47 @@ class DiaryService:
         write_report: bool = False,
         doctor_name: str = "",
         department_head_name: str = "",
+        sick_leave_dynamic_epicrisis: bool = False,
+        sick_leave_from: str = "",
+        birth_date: str = "",
+        complaints: str = "",
+        treatment: str = "",
+        profile_status: str = "",
+        treatment_correction: str = "",
     ) -> DiaryBatchResult:
-        if diary_files:
-            return create_text_diaries(
-                status_files=status_files,
-                diary_files=diary_files,
-                output_dir=output_dir,
-                patient_name=patient_name,
+        def finalize(result: DiaryBatchResult) -> DiaryBatchResult:
+            return self._add_dynamic_epicrises_if_needed(
+                result,
+                sick_leave_dynamic_epicrisis=sick_leave_dynamic_epicrisis,
                 admission_value=admission_value,
-                gender_source_name=gender_source_name,
                 discharge_value=discharge_value,
-                repeat_statuses=repeat_statuses,
-                force_final_diary=force_final_diary,
-                write_report=write_report,
+                sick_leave_from=sick_leave_from,
+                patient_name=patient_name,
+                birth_date=birth_date,
+                complaints=complaints,
+                treatment=treatment,
+                profile_status=profile_status,
+                treatment_correction=treatment_correction,
                 doctor_name=doctor_name,
                 department_head_name=department_head_name,
+            )
+
+        if diary_files:
+            return finalize(
+                create_text_diaries(
+                    status_files=status_files,
+                    diary_files=diary_files,
+                    output_dir=output_dir,
+                    patient_name=patient_name,
+                    admission_value=admission_value,
+                    gender_source_name=gender_source_name,
+                    discharge_value=discharge_value,
+                    repeat_statuses=repeat_statuses,
+                    force_final_diary=force_final_diary,
+                    write_report=write_report,
+                    doctor_name=doctor_name,
+                    department_head_name=department_head_name,
+                )
             )
 
         # No numbered date template: the explicitly selected text file remains
@@ -103,17 +172,19 @@ class DiaryService:
                 admission_value=admission_value,
                 discharge_value=discharge_value,
             )
-            return create_text_diaries(
-                status_files=status_files,
-                diary_files=[fallback],
-                output_dir=persistent_output_dir,
-                patient_name=patient_name,
-                admission_value=admission_value,
-                gender_source_name=gender_source_name,
-                discharge_value=discharge_value,
-                repeat_statuses=repeat_statuses,
-                force_final_diary=force_final_diary,
-                write_report=write_report,
-                doctor_name=doctor_name,
-                department_head_name=department_head_name,
+            return finalize(
+                create_text_diaries(
+                    status_files=status_files,
+                    diary_files=[fallback],
+                    output_dir=persistent_output_dir,
+                    patient_name=patient_name,
+                    admission_value=admission_value,
+                    gender_source_name=gender_source_name,
+                    discharge_value=discharge_value,
+                    repeat_statuses=repeat_statuses,
+                    force_final_diary=force_final_diary,
+                    write_report=write_report,
+                    doctor_name=doctor_name,
+                    department_head_name=department_head_name,
+                )
             )
