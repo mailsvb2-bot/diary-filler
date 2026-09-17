@@ -139,8 +139,11 @@ assert "Ничего не запоминаем между разными popup-�
 assert "self._last_committee_date,\n            self.vk_date_var.get().strip()" not in main_source
 assert "self.vk_date_var.get().strip(),\n            self.sick_leave_vk_commission_date_var.get().strip()" not in main_source
 assert 'single_line=self._compact_ui' in main_source
-assert 'suffix not in {".docx", ".docm"}' in main_source
+assert 'suffix not in {".doc", ".docx", ".docm"}' in main_source
 assert 'txt_low.strip().startswith("эпи")' in main_source
+build_script_source = (ROOT / "build_exe_windows.bat").read_text(encoding="utf-8")
+for hidden_import in ("pythoncom", "win32com", "win32com.client"):
+    assert f"--hidden-import {hidden_import}" in build_script_source, hidden_import
 
 release_zip_source = (ROOT / "make_release_zip.py").read_text(encoding="utf-8")
 for snippet in ['".spec"', '".DS_Store"', '"Thumbs.db"', '".vscode"', '".idea"']:

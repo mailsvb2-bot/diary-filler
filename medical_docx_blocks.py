@@ -5,12 +5,15 @@
 
 from __future__ import annotations
 
+import os
 import re
 import threading
 import zipfile
+from contextlib import contextmanager
 import xml.etree.ElementTree as ET
 from datetime import datetime
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import Iterable, List, Optional
 
 from docx import Document
@@ -25,6 +28,76 @@ from medical_text_utils import normalize_match, normalize_text
 _DOCX_TEXT_CACHE_MAX_ENTRIES = 8
 _DOCX_TEXT_CACHE_LOCK = threading.Lock()
 _DOCX_TEXT_CACHE: dict[str, tuple[int, int, str]] = {}
+
+
+_SUPPORTED_WORD_SUFFIXES = {".doc", ".docx", ".docm"}
+
+
+def convert_legacy_doc_to_docx(source: Path, target: Path) -> None:
+    """Convert old binary Word .doc into a temporary DOCX without touching source."""
+    if os.name != "nt":
+        raise ValueError(
+            "Старый формат .doc поддерживается в установленной Windows-программе через Microsoft Word. "
+            "На этой системе сохраните файл как .docx."
+        )
+    try:
+        import pythoncom
+        import win32com.client
+    except Exception as exc:
+        raise ValueError(
+            "Не удалось подключить поддержку .doc через Microsoft Word. "
+            "Сохраните файл как .docx или переустановите программу."
+        ) from exc
+
+    word = None
+    opened = None
+    pythoncom.CoInitialize()
+    try:
+        word = win32com.client.DispatchEx("Word.Application")
+        word.Visible = False
+        word.DisplayAlerts = 0
+        opened = word.Documents.Open(
+            str(source.resolve()),
+            ReadOnly=True,
+            AddToRecentFiles=False,
+            ConfirmConversions=False,
+        )
+        # wdFormatXMLDocument == 12. The original .doc remains unchanged.
+        opened.SaveAs2(str(target.resolve()), FileFormat=12, AddToRecentFiles=False)
+    except Exception as exc:
+        raise ValueError(
+            f"Не удалось прочитать старый Word-файл .doc: {source.name}. "
+            "Для .doc требуется установленный Microsoft Word; можно также сохранить файл как .docx."
+        ) from exc
+    finally:
+        if opened is not None:
+            try:
+                opened.Close(False)
+            except Exception:
+                pass
+        if word is not None:
+            try:
+                word.Quit()
+            except Exception:
+                pass
+        pythoncom.CoUninitialize()
+
+
+@contextmanager
+def materialize_word_source_as_docx(path: str | Path):
+    """Yield a python-docx-readable path for .docx/.docm/.doc inputs."""
+    source = Path(path).expanduser()
+    suffix = source.suffix.lower()
+    if suffix not in _SUPPORTED_WORD_SUFFIXES:
+        allowed = ", ".join(sorted(_SUPPORTED_WORD_SUFFIXES))
+        raise ValueError(f"Неверный формат Word-файла: {suffix or 'без расширения'}. Разрешено: {allowed}.")
+    if suffix != ".doc":
+        yield source
+        return
+    with TemporaryDirectory(prefix="medical-autofill-legacy-doc-") as tmp_dir:
+        converted = Path(tmp_dir) / (source.stem + ".docx")
+        convert_legacy_doc_to_docx(source, converted)
+        yield converted
 
 
 def _docx_text_cache_key(path: Path) -> str:
@@ -107,7 +180,6 @@ def extract_docx_text(path: str | Path) -> str:
     if cached_text is not None:
         return cached_text
 
-    doc = Document(str(candidate))
     lines: List[str] = []
 
     def walk(parent):
@@ -126,7 +198,9 @@ def extract_docx_text(path: str | Path) -> str:
                         seen_cells.add(tc_id)
                         walk(cell)
 
-    walk(doc)
+    with materialize_word_source_as_docx(candidate) as readable_path:
+        doc = Document(str(readable_path))
+        walk(doc)
     text = normalize_text("\n".join(lines))
 
     # Cache only a stable read. If Word/Explorer modified or replaced the file

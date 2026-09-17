@@ -87,6 +87,9 @@ python -m PyInstaller ^
   --collect-all tkinterdnd2 ^
   --hidden-import win32api ^
   --hidden-import win32print ^
+  --hidden-import pythoncom ^
+  --hidden-import win32com ^
+  --hidden-import win32com.client ^
   main.py
 
 if exist dist\MedicalDiaryAutofill.exe (

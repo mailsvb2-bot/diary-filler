@@ -9,7 +9,7 @@ from docx.text.paragraph import Paragraph
 
 from medical_constants import DATE_FMT
 from medical_text_utils import normalize_match, normalize_text
-from medical_docx_blocks import iter_block_items
+from medical_docx_blocks import iter_block_items, materialize_word_source_as_docx
 from medical_docx_date_patterns import _TITLE_DATE_RE, _first_valid_full_date, _normalize_full_date_match
 from medical_docx_title_context import (
     _date_match_has_birth_context,
@@ -91,6 +91,14 @@ def _extract_admission_date_from_title_docx_uncached(path: str | Path) -> str:
     filename_date = _admission_date_from_filename(path)
     if filename_date:
         return filename_date
+
+    try:
+        source = Path(path).expanduser()
+        if source.suffix.lower() == ".doc":
+            with materialize_word_source_as_docx(source) as converted:
+                return _extract_admission_date_from_title_docx_uncached(converted)
+    except Exception:
+        return ""
 
     structured_entries: list[str] = []
     row_entries: list[list[str]] = []

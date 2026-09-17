@@ -5,12 +5,13 @@
 
 from __future__ import annotations
 
-import os
 import re
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from docx import Document
+
+from medical_docx_blocks import convert_legacy_doc_to_docx
 
 from diary_constants import (DATE_PREFIX_RE, EXAMINEE_ANY_RE, EXAMINEE_STANDARD_STATE_RE, EXAMINEE_START_RE, MIN_STATUS_LEN, SIGNATURE_MARKERS, STATUS_DATE_PREFIX_RE, STATUS_LABEL_PREFIX_RE, STATUS_NUMBER_BEFORE_DATE_RE, STATUS_NUMBER_PREFIX_RE, STATUS_STANDALONE_DAY_PREFIX_RE, STRUCTURAL_DIARY_PREFIXES, WHITESPACE_RE)
 
@@ -88,59 +89,8 @@ def looks_like_status(text: str) -> bool:
 
 
 def _convert_legacy_doc_to_docx(source: Path, target: Path) -> None:
-    """Convert a legacy binary .doc using Microsoft Word on Windows.
-
-    python-docx cannot read the old OLE .doc format. The desktop application
-    already depends on pywin32 on Windows, so we convert into a temporary DOCX
-    and then run the exact same tested parser used for native DOCX files.
-    """
-    if os.name != "nt":
-        raise ValueError(
-            "Старый формат .doc поддерживается в установленной Windows-программе через Microsoft Word. "
-            "На этой системе сохраните файл как .docx."
-        )
-    try:
-        import pythoncom
-        import win32com.client
-    except Exception as exc:
-        raise ValueError(
-            "Не удалось подключить поддержку .doc через Microsoft Word. "
-            "Сохраните файл как .docx или переустановите программу."
-        ) from exc
-
-    word = None
-    opened = None
-    pythoncom.CoInitialize()
-    try:
-        word = win32com.client.DispatchEx("Word.Application")
-        word.Visible = False
-        word.DisplayAlerts = 0
-        opened = word.Documents.Open(
-            str(source.resolve()),
-            ReadOnly=True,
-            AddToRecentFiles=False,
-            ConfirmConversions=False,
-        )
-        # wdFormatXMLDocument == 12. SaveAs2 preserves the document while making
-        # it readable by python-docx; the user's original .doc is never modified.
-        opened.SaveAs2(str(target.resolve()), FileFormat=12, AddToRecentFiles=False)
-    except Exception as exc:
-        raise ValueError(
-            f"Не удалось прочитать старый Word-файл .doc: {source.name}. "
-            "Для .doc требуется установленный Microsoft Word; можно также сохранить файл как .docx."
-        ) from exc
-    finally:
-        if opened is not None:
-            try:
-                opened.Close(False)
-            except Exception:
-                pass
-        if word is not None:
-            try:
-                word.Quit()
-            except Exception:
-                pass
-        pythoncom.CoUninitialize()
+    """Compatibility wrapper around the shared Word input converter."""
+    convert_legacy_doc_to_docx(source, target)
 
 
 def _open_status_document(path: Path):

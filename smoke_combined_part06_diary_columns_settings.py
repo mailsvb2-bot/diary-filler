@@ -362,9 +362,9 @@ non_docx_primary = OUT / "primary_wrong_type.txt"
 non_docx_primary.write_text("Первичный осмотр", encoding="utf-8")
 try:
     service.parse_primary_document(non_docx_primary)
-    raise AssertionError("primary parser must reject non-DOCX files before python-docx")
+    raise AssertionError("primary parser must reject non-Word files before parsing")
 except ValueError as exc:
-    assert "первичный документ" in str(exc) and ".docx" in str(exc), str(exc)
+    assert "первичный документ" in str(exc) and ".doc" in str(exc) and ".docx" in str(exc), str(exc)
 
 bad_epi = OUT / "epi_wrong_type.rtf"
 bad_epi.write_text("ЭПИ: текст", encoding="utf-8")

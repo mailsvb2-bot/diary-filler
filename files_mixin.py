@@ -277,7 +277,7 @@ class FilesMixin:
         path = filedialog.askopenfilename(
             title="Выберите первичный документ",
             initialdir=self._dialog_initial_dir(DIR_PRIMARY_DOCUMENTS),
-            filetypes=[("Word DOCX", "*.docx")],
+            filetypes=[("Word документы (.doc/.docx/.docm)", ("*.doc", "*.docx", "*.docm"))],
         )
         if not path:
             return
@@ -287,7 +287,7 @@ class FilesMixin:
         path = filedialog.askopenfilename(
             title="Выберите файл ЭПИ",
             initialdir=self._dialog_initial_dir(DIR_EPI),
-            filetypes=[("Word DOCX/DOCM", "*.docx *.docm"), ("Text", "*.txt"), ("All files", "*.*")],
+            filetypes=[("Word документы (.doc/.docx/.docm)", ("*.doc", "*.docx", "*.docm")), ("Text", "*.txt"), ("All files", "*.*")],
         )
         if path:
             self.epi_path_var.set(path)

@@ -1,6 +1,7 @@
 """Headless contract checks for the optional desktop patient-folder workflow."""
 from __future__ import annotations
 
+import shutil
 import sys
 import tempfile
 import time
@@ -14,6 +15,8 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 import startup
+import medical_docx_blocks
+from medical_service import MedicalDocumentService
 
 
 def _assert_naming_contract() -> None:
@@ -59,6 +62,7 @@ def _assert_primary_detection_contract() -> None:
     assert startup.desktop_intake_primary_score(primary) >= 5
     assert startup.desktop_intake_primary_score(referral) >= 5
     assert startup.desktop_intake_primary_score(discharge) < 0
+    assert startup.desktop_intake_is_candidate_word_file("Первичный.doc")
     assert startup.desktop_intake_is_candidate_word_file("Первичный.docx")
     assert startup.desktop_intake_is_candidate_word_file("Первичный.docm")
     assert not startup.desktop_intake_is_candidate_word_file("~$Первичный.docx")
@@ -79,7 +83,35 @@ def _assert_canonical_primary_parser_contract() -> None:
         doc.add_paragraph("Психический статус: контактен")
         doc.add_paragraph("Диагноз: F20.0")
         doc.save(canonical)
+        canonical_data = MedicalDocumentService().parse_primary_document(canonical)
         assert startup.desktop_intake_is_primary_document(canonical), "canonical parser primary was rejected"
+
+        # DOCM uses the same OOXML reader path and must remain first-class input.
+        macro = root / "patient.docm"
+        shutil.copyfile(canonical, macro)
+        macro_data = MedicalDocumentService().parse_primary_document(macro)
+        assert macro_data.fio == "Иванов Иван Иванович", macro_data.fio
+        assert startup.desktop_intake_is_primary_document(macro), "DOCM primary was rejected"
+
+        # Real binary DOC conversion requires Microsoft Word and is therefore
+        # exercised on Windows through the same converter. Here we replace only
+        # the external COM conversion with a deterministic copy so the contract
+        # proves every caller routes .doc through the shared conversion boundary.
+        legacy = root / "patient.doc"
+        legacy.write_bytes(b"legacy-doc-placeholder")
+        original_converter = medical_docx_blocks.convert_legacy_doc_to_docx
+        try:
+            medical_docx_blocks.convert_legacy_doc_to_docx = (
+                lambda _source, target: shutil.copyfile(canonical, target)
+            )
+            legacy_data = MedicalDocumentService().parse_primary_document(legacy)
+            assert legacy_data.fio == canonical_data.fio == "Иванов Иван Иванович", legacy_data.fio
+            assert legacy_data.admission_date == canonical_data.admission_date
+            assert legacy_data.diagnosis == canonical_data.diagnosis
+            assert legacy_data.input_document_kind == canonical_data.input_document_kind
+            assert startup.desktop_intake_is_primary_document(legacy), "DOC primary was rejected"
+        finally:
+            medical_docx_blocks.convert_legacy_doc_to_docx = original_converter
 
         discharge = root / "discharge.docx"
         doc = Document()
