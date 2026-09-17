@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "base_sha": "9bd3278a2b51694d7eae5ecc98f4011b342d0859",
-  "reason": "Explicit document-mechanics task requested by the user: restore the proven Dokkomplekt sick-leave dynamic epicrisis layer while preserving the established regular diary generator. The change remains additive: sick leave off leaves existing diary generation untouched; sick leave on adds 10-day dynamic epicrises with non-working-day shift and a hard discharge boundary. To preserve the production runtime-file budget, the dynamic-epicrisis helpers are kept inside the existing diary_service.py rather than a new runtime module. Approval is bound to the exact blobs below and does not authorize any other protected path.",
+  "reason": "Explicit document-mechanics task requested by the user: restore the proven Dokkomplekt sick-leave dynamic epicrisis layer while preserving the established regular diary generator and the canonical staff-profile signature wiring required by production audit. The change remains additive: sick leave off leaves existing diary generation untouched; sick leave on adds 10-day dynamic epicrises with non-working-day shift and a hard discharge boundary. To preserve the production runtime-file budget, the dynamic-epicrisis helpers are kept inside the existing diary_service.py rather than a new runtime module. Approval is bound to the exact blobs below and does not authorize any other protected path.",
   "approved_blobs": {
-    "actions_diary_flow.py": "07ad1e81fb9d747c8751a44e2c19dfbd2f08a88b",
+    "actions_diary_flow.py": "bebc881c8fa6319aa0cb5797b7f546a1ed7a8bf5",
     "diary_service.py": "9a43e7dde10ceae6557ef3ef600e2af3b1accb29"
   }
 }
