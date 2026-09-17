@@ -6,6 +6,7 @@ on:
       - fix/word-primary-canonical-parser-followup
     paths:
       - tools/.pr93-fix.patch
+      - .github/workflows/apply-pr93-fix.yml
 
 permissions:
   contents: write
