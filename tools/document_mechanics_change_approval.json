@@ -1,8 +1,10 @@
 {
   "schema_version": 1,
-  "base_sha": "638f8c8c84224756c8c1b9d5f1b646d074cf5ba7",
-  "reason": "Explicit measured document-mechanics performance task: streamline normalize_match only, preserving established comparison semantics. Local old/new equivalence covered 92,887 randomized and systematic Unicode whitespace, dash, case, and yo/e cases; combined smoke, 8 golden DOCX, full patient replay, and gender matrix passed before CI. The approval is bound to the exact medical_text_utils.py blob and does not authorize any other protected path.",
+  "base_sha": "9bd3278a2b51694d7eae5ecc98f4011b342d0859",
+  "reason": "Explicit document-mechanics task requested by the user: restore the proven Dokkomplekt sick-leave dynamic epicrisis layer while preserving the established regular diary generator. The change is additive: sick leave off leaves existing diary generation untouched; sick leave on adds 10-day dynamic epicrises with non-working-day shift and a hard discharge boundary. Approval is bound to the exact blobs below and does not authorize any other protected path.",
   "approved_blobs": {
-    "medical_text_utils.py": "6a78facfcb77c9931329a277b8ac35133e213c46"
+    "actions_diary_flow.py": "07ad1e81fb9d747c8751a44e2c19dfbd2f08a88b",
+    "diary_dynamic_epicrisis.py": "574e1e91e4b52c275afda41048d80dd8e3c0eb20",
+    "diary_service.py": "cd85ef8fdf901a4ab49fac4da1d894a24d24a8c5"
   }
 }
