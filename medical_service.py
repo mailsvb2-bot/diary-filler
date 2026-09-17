@@ -37,9 +37,9 @@ from medical_renderer import MedicalDocumentRenderer
 
 
 _TEXT_ENCODINGS = ("utf-8-sig", "utf-8", "cp1251")
-_PRIMARY_SUFFIXES = {".docx", ".docm"}
+_PRIMARY_SUFFIXES = {".doc", ".docx", ".docm"}
 _EPI_TEXT_SUFFIXES = {".txt"}
-_EPI_DOCX_SUFFIXES = {".docx", ".docm"}
+_EPI_DOCX_SUFFIXES = {".doc", ".docx", ".docm"}
 
 
 class MedicalDocumentService:

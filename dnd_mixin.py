@@ -184,7 +184,7 @@ class DragDropMixin:
             if "эпи" in stem_low or txt_low.strip().startswith("эпи") or "эпи:" in txt_low or "эпидемиологическ" in txt_low:
                 return "epi"
             return "unknown"
-        if suffix not in {".docx", ".docm"}:
+        if suffix not in {".doc", ".docx", ".docm"}:
             return "unknown"
 
         text = ""

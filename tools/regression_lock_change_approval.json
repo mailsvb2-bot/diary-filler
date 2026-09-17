@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "66b053fe883487dea55376181803fa41c10dbe68",
+  "reason": "User-requested Word input compatibility fix: .doc, .docx and .docm are accepted consistently by primary document service, manual selection, drag-and-drop and desktop intake. Legacy .doc is read-only converted through the shared Word COM boundary into a temporary DOCX and then uses the established parser. No document renderer, diary schedule or generated document content is changed. Exact candidate drift is approved only for the blobs listed here and requires the complete repository evidence contour before baseline advancement.",
+  "required_evidence": [
+    "ci_gate_lock",
+    "desktop_intake_contract",
+    "document_mechanics_guard",
+    "full_patient_replay",
+    "gender_generation_matrix",
+    "golden_docx",
+    "installer_uninstall_smoke",
+    "intake_lifecycle_regression",
+    "packaged_desktop_intake_e2e",
+    "staff_profile_regression"
+  ],
+  "approved_blobs": {
+    "build_exe_windows.bat": "3a9d84349bc13e7babf486b7029b66a9a906efba",
+    "diary_text_parser.py": "e885c971954921147a14939f67fb25c4ada1d196",
+    "dnd_mixin.py": "13637a986f4c1cc0a7355bd327ac7c4099627021",
+    "files_mixin.py": "98bef25c802fe7fc248a5b6c6c8a9dacb001294e",
+    "medical_docx_blocks.py": "8d2c8676969675ba2a4715cfb3348ae6d37a8de2",
+    "medical_docx_title_finder.py": "92a0d2ee628d9c80cd4c5865deac2f0af0873ad5",
+    "medical_service.py": "34ae376c2cc7e16801ef08105a90137c9fb44057",
+    "smoke_combined_part01_setup_contracts.py": "2a33ff67709b06812e911db535ba3eda4e2ffcad",
+    "smoke_combined_part06_diary_columns_settings.py": "759bdc75723d1d90057065d4a5634c5f39d6d0d0",
+    "startup.py": "44a65992b66495a0dfb5dd414c8e1d2e57683b8b",
+    "tests/desktop_intake_contract_check.py": "cc2f429a6b1c8403d774e846b6feecf43b4f09df",
+    "tools/document_mechanics_change_approval.json": "6c074cbb68cc6ee46c2f78456c3a8159ca101daf"
+  }
+}
