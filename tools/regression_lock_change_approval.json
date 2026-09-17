@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "7d9f3092656d017b9bc482134d8eb49e3246b1d8",
-  "reason": "Restore the installed Windows intake lifecycle proven in earlier PRs without touching medical/document generation: create and preserve Desktop\\Выписанные пациенты at install time, persist the existing hidden --intake-agent through HKCU Run, start that watcher immediately even for silent/update installs, clear only stale technical watcher handoff/heartbeat files, and require an installer smoke proof that the watcher heartbeat is live before any normal GUI launch.",
+  "reason": "Restore the installed Windows intake lifecycle proven in earlier PRs without touching medical or document generation: create and preserve the Desktop intake folder at install time, persist the existing hidden --intake-agent through HKCU Run, start that watcher immediately even for silent or update installs, clear only stale technical watcher handoff and heartbeat files, and require an installer smoke proof that the watcher heartbeat is live before any normal GUI launch.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
