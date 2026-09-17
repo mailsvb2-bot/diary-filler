@@ -1,0 +1,148 @@
+diff --git a/medical_docx_reader.py b/medical_docx_reader.py
+index fb736c2..ca71e15 100644
+--- a/medical_docx_reader.py
++++ b/medical_docx_reader.py
+@@ -1,7 +1,7 @@
+ """Facade for DOCX reading helpers."""
+ from __future__ import annotations
+ 
+-from medical_docx_blocks import extract_docx_text, iter_block_items
++from medical_docx_blocks import extract_docx_text, iter_block_items, materialize_word_source_as_docx
+ from medical_docx_title_dates import (
+     _TITLE_DATE_RE,
+     _admission_date_from_filename,
+@@ -19,6 +19,7 @@ from medical_docx_title_dates import (
+ __all__ = [
+     "iter_block_items",
+     "extract_docx_text",
++    "materialize_word_source_as_docx",
+     "extract_admission_date_from_title_docx",
+     "_TITLE_DATE_RE",
+     "_normalize_full_date_match",
+diff --git a/medical_parser_core.py b/medical_parser_core.py
+index 5da726b..fa58cc6 100644
+--- a/medical_parser_core.py
++++ b/medical_parser_core.py
+@@ -8,6 +8,7 @@ from typing import Dict, Optional, Sequence, Tuple
+ from medical_docx_reader import (
+     extract_admission_date_from_title_docx,
+     extract_docx_text,
++    materialize_word_source_as_docx,
+     _first_valid_full_date,
+     _is_birth_or_demographic_context,
+     _is_primary_title_context,
+@@ -50,13 +51,17 @@ class MedicalParserCoreMixin:
+         return "первичный документ"
+ 
+     def parse_docx(self, path: str | Path) -> PatientData:
+-        text = extract_docx_text(path)
+-        data = self.parse_text(text)
+-        # Дата поступления в DOCX имеет один источник истины: заголовок
+-        # документа / имя файла рядом с названием. Если структурный DOCX-поиск
+-        # нашёл дату рядом с заголовком, он имеет приоритет. Если нет, сохраняем
+-        # строгий text-fallback из parse_text вместо обнуления уже найденной даты.
+-        title_date = extract_admission_date_from_title_docx(path)
++        # Native DOCX/DOCM are read directly. Legacy binary DOC is materialized
++        # once into a temporary DOCX, then *all* parser stages consume that same
++        # readable file. This keeps FIO/date/diagnosis/document-kind in one
++        # canonical path and avoids opening Microsoft Word twice for one input.
++        with materialize_word_source_as_docx(path) as readable_path:
++            text = extract_docx_text(readable_path)
++            data = self.parse_text(text)
++            # Дата поступления имеет один источник истины: заголовок документа /
++            # имя файла рядом с названием. The temporary DOCX keeps source.stem,
++            # so filename-based title dates remain available for legacy DOC too.
++            title_date = extract_admission_date_from_title_docx(readable_path)
+         if title_date:
+             data.admission_date = title_date
+         self._refresh_warnings(data)
+diff --git a/tests/desktop_intake_contract_check.py b/tests/desktop_intake_contract_check.py
+index 430d9bc..5a1c431 100644
+--- a/tests/desktop_intake_contract_check.py
++++ b/tests/desktop_intake_contract_check.py
+@@ -75,7 +75,7 @@ def _assert_canonical_primary_parser_contract() -> None:
+         root = Path(tmp)
+         canonical = root / "patient.docx"
+         doc = Document()
+-        doc.add_paragraph("12.05.2026")
++        doc.add_paragraph("12.05.2026 Первичный осмотр")
+         doc.add_paragraph("Ф.И.О.: Иванов Иван Иванович")
+         doc.add_paragraph("Дата рождения: 01.01.1980")
+         doc.add_paragraph("В 3 отделение КДП поступает первично")
+@@ -100,16 +100,23 @@ def _assert_canonical_primary_parser_contract() -> None:
+         legacy = root / "patient.doc"
+         legacy.write_bytes(b"legacy-doc-placeholder")
+         original_converter = medical_docx_blocks.convert_legacy_doc_to_docx
++        conversion_calls: list[tuple[Path, Path]] = []
+         try:
+-            medical_docx_blocks.convert_legacy_doc_to_docx = (
+-                lambda _source, target: shutil.copyfile(canonical, target)
+-            )
++            def fake_converter(source: Path, target: Path) -> None:
++                conversion_calls.append((Path(source), Path(target)))
++                shutil.copyfile(canonical, target)
++
++            medical_docx_blocks.convert_legacy_doc_to_docx = fake_converter
+             legacy_data = MedicalDocumentService().parse_primary_document(legacy)
+             assert legacy_data.fio == canonical_data.fio == "Иванов Иван Иванович", legacy_data.fio
+             assert legacy_data.admission_date == canonical_data.admission_date
+             assert legacy_data.diagnosis == canonical_data.diagnosis
+             assert legacy_data.input_document_kind == canonical_data.input_document_kind
++            assert conversion_calls == [(legacy, conversion_calls[0][1])], conversion_calls
++            assert conversion_calls[0][1].suffix.lower() == ".docx"
++            conversion_calls.clear()
+             assert startup.desktop_intake_is_primary_document(legacy), "DOC primary was rejected"
++            assert len(conversion_calls) == 1, conversion_calls
+         finally:
+             medical_docx_blocks.convert_legacy_doc_to_docx = original_converter
+ 
+diff --git a/tools/document_mechanics_change_approval.json b/tools/document_mechanics_change_approval.json
+index 6c074cb..d951a39 100644
+--- a/tools/document_mechanics_change_approval.json
++++ b/tools/document_mechanics_change_approval.json
+@@ -1,12 +1,9 @@
+ {
+   "schema_version": 1,
+-  "base_sha": "c8c9f2ec94fc92403b3a0e7aba125dc7b93aff36",
+-  "reason": "Explicit Word-input compatibility task requested by the user: make primary/input Word handling accept .doc, .docx and .docm consistently. Legacy binary .doc is converted read-only through Microsoft Word into a temporary DOCX and then passed through the same established parser as native OOXML. The original .doc is never modified. This change is limited to Word input/read boundaries, file selection and intake detection; document rendering, diary cadence, generated document text and diary_batch.py remain unchanged. Approval is bound to the exact protected blobs below.",
++  "base_sha": "770c5c01ebd14107781d6e3eb81d29ffdbfabf0c",
++  "reason": "Explicit follow-up to the user-requested Word input compatibility fix. Legacy .doc must be converted read-only exactly once and the same temporary DOCX must feed the complete canonical primary parser, preventing identity/date/diagnosis/document-kind divergence while leaving .docx/.docm behavior unchanged. This follow-up touches only the Word reader facade and parser entry boundary; renderers, diary generation, diary cadence and diary_batch.py are untouched. Approval is bound to the exact protected blobs below.",
+   "approved_blobs": {
+-    "diary_text_parser.py": "e885c971954921147a14939f67fb25c4ada1d196",
+-    "files_mixin.py": "98bef25c802fe7fc248a5b6c6c8a9dacb001294e",
+-    "medical_docx_blocks.py": "8d2c8676969675ba2a4715cfb3348ae6d37a8de2",
+-    "medical_docx_title_finder.py": "92a0d2ee628d9c80cd4c5865deac2f0af0873ad5",
+-    "medical_service.py": "34ae376c2cc7e16801ef08105a90137c9fb44057"
++    "medical_docx_reader.py": "ca71e157add6b88bdf81c029627af6242d4f94cd",
++    "medical_parser_core.py": "fa58cc6628fd79b3913138254c8fa5f0dd7f466a"
+   }
+ }
+diff --git a/tools/regression_lock_change_approval.json b/tools/regression_lock_change_approval.json
+new file mode 100644
+index 0000000..44ddac2
+--- /dev/null
++++ b/tools/regression_lock_change_approval.json
+@@ -0,0 +1,23 @@
++{
++  "schema_version": 1,
++  "baseline_ref": "cf5a2d2bf87a315598daae5ac6fe72ff624ee111",
++  "reason": "User-requested Word input compatibility follow-up: legacy .doc is materialized read-only exactly once, and one temporary DOCX now feeds the complete canonical primary parser. This prevents field divergence while preserving already-verified .docx/.docm behavior. No renderer, generated-document text, diary schedule or diary_batch.py behavior changes. Exact candidate drift is approved only for the listed blobs and requires the full Windows evidence contour.",
++  "required_evidence": [
++    "ci_gate_lock",
++    "desktop_intake_contract",
++    "document_mechanics_guard",
++    "full_patient_replay",
++    "gender_generation_matrix",
++    "golden_docx",
++    "installer_uninstall_smoke",
++    "intake_lifecycle_regression",
++    "packaged_desktop_intake_e2e",
++    "staff_profile_regression"
++  ],
++  "approved_blobs": {
++    "medical_docx_reader.py": "ca71e157add6b88bdf81c029627af6242d4f94cd",
++    "medical_parser_core.py": "fa58cc6628fd79b3913138254c8fa5f0dd7f466a",
++    "tests/desktop_intake_contract_check.py": "5a1c4312d25ef047efa6c17b6c3127e92b2f8ed4",
++    "tools/document_mechanics_change_approval.json": "d951a39051a5b1e716a7c14097edb271c67631e3"
++  }
++}
