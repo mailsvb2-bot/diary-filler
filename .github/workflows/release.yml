@@ -85,6 +85,11 @@ jobs:
           PYTHONPATH: .
         run: python tests/diagnosis_override_regression.py
 
+      - name: Run words-only diary source regression
+        env:
+          PYTHONPATH: .
+        run: python tests/verbal_diary_source_regression.py
+
       - name: Run desktop intake contract
         run: python tests/desktop_intake_contract_check.py
 
@@ -125,6 +130,35 @@ jobs:
         shell: pwsh
         run: ./tools/windows_desktop_intake_e2e.ps1 -AppPath ./dist/MedicalDiaryAutofill.exe
 
+      - name: Ensure Inno Setup 6
+        shell: pwsh
+        run: |
+          $paths = @(
+            "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe",
+            "$env:ProgramFiles\Inno Setup 6\ISCC.exe"
+          ) | Where-Object { $_ -and (Test-Path $_) }
+          if (-not $paths) {
+            choco install innosetup --no-progress -y
+          }
+
+      - name: Build Windows installer from signed EXE
+        shell: cmd
+        run: BUILD_WINDOWS_INSTALLER.bat
+
+      - name: Authenticode sign installer
+        shell: pwsh
+        run: |
+          $signtool = (Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin" -Recurse -Filter signtool.exe | Where-Object { $_.FullName -match '\x64\signtool.exe$' } | Sort-Object FullName -Descending | Select-Object -First 1).FullName
+          if (-not $signtool) { throw "signtool.exe not found" }
+          & $signtool sign /fd SHA256 /f $env:SIGNING_PFX /p $env:SIGNING_CERT_PASSWORD /tr http://timestamp.digicert.com /td SHA256 dist\MedicalDiaryAutofill-Setup-1.4.13.exe
+          if ($LASTEXITCODE -ne 0) { throw "installer signtool sign failed: $LASTEXITCODE" }
+          & $signtool verify /pa /v dist\MedicalDiaryAutofill-Setup-1.4.13.exe
+          if ($LASTEXITCODE -ne 0) { throw "installer signtool verify failed: $LASTEXITCODE" }
+
+      - name: Smoke signed installed and uninstalled application
+        shell: pwsh
+        run: ./tools/windows_installer_smoke.ps1 -InstallerPath ./dist/MedicalDiaryAutofill-Setup-1.4.13.exe
+
       - name: Build clean source archive
         run: python make_release_zip.py
 
@@ -135,4 +169,4 @@ jobs:
         run: |
           gh release view "${{ inputs.tag }}" *> $null
           if ($LASTEXITCODE -eq 0) { throw "Release ${{ inputs.tag }} already exists; refusing to overwrite it." }
-          gh release create "${{ inputs.tag }}" dist\MedicalDiaryAutofill.exe release\MedicalDiaryAutofill_PRODUCTION_SOURCE.zip --verify-tag --title "MedicalDiaryAutofill ${{ inputs.tag }}" --generate-notes
+          gh release create "${{ inputs.tag }}" dist\MedicalDiaryAutofill.exe dist\MedicalDiaryAutofill-Setup-1.4.13.exe release\MedicalDiaryAutofill_PRODUCTION_SOURCE.zip --verify-tag --title "MedicalDiaryAutofill ${{ inputs.tag }}" --generate-notes
