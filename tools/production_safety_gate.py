@@ -89,6 +89,13 @@ def assert_installer_contract() -> None:
         "onboarding-required.flag",
         "CurStepChanged",
         "SaveStringToFile",
+        "[Dirs]",
+        'Name: "{userdesktop}\\Выписанные пациенты"; Flags: uninsneveruninstall',
+        "[Registry]",
+        'ValueName: "MedicalDiaryAutofill Intake"',
+        'Parameters: "--intake-agent"; Flags: runhidden nowait',
+        "[InstallDelete]",
+        "desktop-intake-agent-handoff.json",
         "[UninstallDelete]",
         "InitializeUninstall",
         "RegDeleteValue(",
@@ -100,22 +107,23 @@ def assert_installer_contract() -> None:
         fail("installer contract is incomplete: " + ", ".join(missing))
     if "--uninstall-intake-agent" in installer:
         fail("installer uninstall regressed to a helper command that can block removal")
-    if 'Name: "{userdesktop}\\Выписанные пациенты"' in installer:
-        fail("installer must not create Выписанные пациенты before the doctor's onboarding choice")
     if "desktop-intake-agent.heartbeat" not in installer:
-        fail("installer no longer cleans the watcher heartbeat")
+        fail("installer no longer manages the watcher heartbeat")
     if "MedicalDiaryAutofill Intake.vbs" not in installer:
         fail("installer no longer removes watcher Startup persistence")
     if "MedicalDiaryAutofill Intake" not in installer:
-        fail("installer no longer removes watcher HKCU Run persistence")
+        fail("installer no longer owns watcher HKCU Run persistence")
     if "dist\\MedicalDiaryAutofill.exe" not in installer_build or "ISCC" not in installer_build:
         fail("installer build script is not bound to the packaged EXE")
     for marker in (
-        "WINDOWS INSTALLER ACTIVE-WATCHER UNINSTALL SMOKE OK",
+        "WINDOWS INSTALLER WATCHER BOOTSTRAP AND UNINSTALL SMOKE OK",
         "unins*.exe",
         "--intake-agent",
         "Installer did not create onboarding-required.flag",
-        "Installer unexpectedly created Desktop\\Выписанные пациенты before onboarding",
+        "Installer did not create Desktop\\Выписанные пациенты before first GUI launch",
+        "Installer HKCU Run watcher entry does not contain --intake-agent",
+        "Installer did not bootstrap a live intake-agent heartbeat",
+        "Installer-started intake-agent process is not running before uninstall",
         "Uninstaller removed Desktop\\Выписанные пациенты",
         "Uninstaller removed a user-owned file from Desktop\\Выписанные пациенты",
         "MedicalDiaryAutofill process survived uninstall",
