@@ -1,7 +1,7 @@
 """Facade for DOCX reading helpers."""
 from __future__ import annotations
 
-from medical_docx_blocks import extract_docx_text, iter_block_items
+from medical_docx_blocks import extract_docx_text, iter_block_items, materialize_word_source_as_docx
 from medical_docx_title_dates import (
     _TITLE_DATE_RE,
     _admission_date_from_filename,
@@ -19,6 +19,7 @@ from medical_docx_title_dates import (
 __all__ = [
     "iter_block_items",
     "extract_docx_text",
+    "materialize_word_source_as_docx",
     "extract_admission_date_from_title_docx",
     "_TITLE_DATE_RE",
     "_normalize_full_date_match",
