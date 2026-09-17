@@ -105,9 +105,13 @@ jobs:
         run: python tools/full_patient_replay_check.py
 
       - name: Run staff profile regression
+        env:
+          PYTHONPATH: .
         run: python tools/staff_profile_regression.py
 
       - name: Run gender generation regression matrix
+        env:
+          PYTHONPATH: .
         run: python tools/gender_generation_regression_matrix.py
 
       - name: Run diagnosis override and diary-text regression
