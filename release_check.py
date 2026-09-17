@@ -180,17 +180,18 @@ def _assert_build_contract() -> None:
         if snippet not in workflow:
             raise SystemExit(f"GitHub Actions workflow misses production snippet: {snippet}")
     for snippet in [
-        "Signed Windows Release",
-        "SIGNING_CERT_PFX_BASE64",
-        "SIGNING_CERT_PASSWORD",
-        "signtool verify",
-        "MEDICAL_AUTOFILL_REQUIRE_SIGNED_EXE",
+        "Windows Release",
+        "Resolve and guard release target",
+        "python tools/document_mechanics_guard.py",
         "python verify_built_exe.py",
+        "./tools/windows_desktop_intake_e2e.ps1 -AppPath ./dist/MedicalDiaryAutofill.exe",
+        "./tools/windows_installer_smoke.ps1 -InstallerPath ./dist/MedicalDiaryAutofill-Setup-1.4.13.exe",
+        "Create guarded release tag",
         "gh release create",
         "--verify-tag",
     ]:
         if snippet not in release_workflow:
-            raise SystemExit(f"Signed release workflow misses fail-closed snippet: {snippet}")
+            raise SystemExit(f"Unsigned release workflow misses fail-closed snippet: {snippet}")
     verify_exe = (ROOT / "verify_built_exe.py").read_text(encoding="utf-8", errors="replace")
     for snippet in [
         "MEDICAL_AUTOFILL_STARTUP_PROBE",
