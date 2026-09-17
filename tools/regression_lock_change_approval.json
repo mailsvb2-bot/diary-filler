@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "53ffa41b15a4426acfd6f7aa69fd78233b00c67d",
+  "reason": "Prepare v1.4.14 release metadata and fail-closed release wiring for the already-proven installed intake autolaunch fix. No medical parser, renderer, template, diary, or document-generation mechanics change.",
+  "required_evidence": [
+    "document_mechanics_guard",
+    "full_patient_replay",
+    "golden_docx",
+    "staff_profile_regression",
+    "gender_generation_matrix",
+    "desktop_intake_contract",
+    "intake_lifecycle_regression",
+    "packaged_desktop_intake_e2e",
+    "installer_uninstall_smoke",
+    "ci_gate_lock"
+  ],
+  "approved_blobs": {
+    ".github/workflows/release.yml": "e401a55741b27b1cb2661aa6df2a725cabc4e8fd",
+    ".github/workflows/windows-build.yml": "85af1aa3a56374f8d81a26199538b03a0d40be31",
+    "BUILD_WINDOWS_INSTALLER.bat": "5cfc03d0433ae08fb517299bfc83f484e59da372",
+    "app_config.py": "1133bbb1724fc4d4b9c8bd6d7355c4c5169174dc",
+    "installer/MedicalDiaryAutofill.iss": "f00fd1fe3ee1b746def3b56c58f068bd5c742521",
+    "prod_audit.py": "267bd8aa63e320f0e4d0b3b0b62b12f5ae66fb42",
+    "pyproject.toml": "d2701b0f24ed1e557fa6da63658a83b7e52b7074",
+    "release_check.py": "80506d2d5384f9f5f9a8466ec6c247fec123b45b",
+    "tools/ci_gate_lock.py": "4ae21aad64138e9374080220c334f87a77933487",
+    "version_info.txt": "d2ac93fd7d7a3d6244db16cce4a1272e144dd656"
+  }
+}
