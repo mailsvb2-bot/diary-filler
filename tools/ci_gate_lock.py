@@ -119,7 +119,7 @@ def main() -> None:
         "Resolve and guard release target",
         "refs/heads/production-v1.4.14",
         "git/ref/heads/main",
-        "Tag $tag already exists; refusing to move or overwrite it.",
+        "Tag $tag already exists at a different SHA; refusing to move or overwrite it.",
         '"RELEASE_TAG=$tag"',
         "fetch-depth: 0",
         "Create guarded release tag",
