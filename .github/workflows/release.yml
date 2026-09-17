@@ -7,12 +7,14 @@ on:
         description: Existing v1.4.0-style tag to publish
         required: true
         type: string
+  push:
+    branches: [production-v1.4.13]
 
 permissions:
   contents: write
 
 concurrency:
-  group: signed-release-${{ inputs.tag }}
+  group: signed-release-${{ github.event_name == 'workflow_dispatch' && inputs.tag || 'v1.4.13' }}
   cancel-in-progress: false
 
 jobs:
@@ -33,8 +35,44 @@ jobs:
       - name: Checkout exact release tag
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
-          ref: ${{ inputs.tag }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.sha }}
           fetch-depth: 0
+
+      - name: Resolve and guard release tag
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ("${{ github.event_name }}" -eq "push") {
+            if ("${{ github.ref }}" -ne "refs/heads/production-v1.4.13") {
+              throw "One-shot release may run only from refs/heads/production-v1.4.13."
+            }
+            $mainSha = gh api "repos/${{ github.repository }}/git/ref/heads/main" --jq ".object.sha"
+            if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($mainSha)) {
+              throw "Unable to resolve current main SHA."
+            }
+            if ($mainSha.Trim() -ne "${{ github.sha }}") {
+              throw "One-shot release branch is not the exact current main SHA; refusing to publish."
+            }
+            $tag = "v1.4.13"
+            gh api "repos/${{ github.repository }}/git/ref/tags/$tag" *> $null
+            if ($LASTEXITCODE -eq 0) {
+              throw "Tag $tag already exists; refusing to move or overwrite it."
+            }
+            gh api --method POST "repos/${{ github.repository }}/git/refs" -f ref="refs/tags/$tag" -f sha="${{ github.sha }}"
+            if ($LASTEXITCODE -ne 0) { throw "Failed to create immutable release tag $tag." }
+            git fetch origin "refs/tags/$tag:refs/tags/$tag"
+            if ($LASTEXITCODE -ne 0) { throw "Failed to fetch newly created release tag $tag." }
+          } else {
+            $tag = "${{ inputs.tag }}"
+            if ([string]::IsNullOrWhiteSpace($tag)) { throw "Release tag input is empty." }
+            $tagSha = git rev-list -n 1 $tag
+            $headSha = git rev-parse HEAD
+            if ($LASTEXITCODE -ne 0 -or $tagSha.Trim() -ne $headSha.Trim()) {
+              throw "Checked-out release tag does not resolve to HEAD."
+            }
+          }
+          "RELEASE_TAG=$tag" >> $env:GITHUB_ENV
 
       - name: Set up Python
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
@@ -167,6 +205,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release view "${{ inputs.tag }}" *> $null
-          if ($LASTEXITCODE -eq 0) { throw "Release ${{ inputs.tag }} already exists; refusing to overwrite it." }
-          gh release create "${{ inputs.tag }}" dist\MedicalDiaryAutofill.exe dist\MedicalDiaryAutofill-Setup-1.4.13.exe release\MedicalDiaryAutofill_PRODUCTION_SOURCE.zip --verify-tag --title "MedicalDiaryAutofill ${{ inputs.tag }}" --generate-notes
+          gh release view "$env:RELEASE_TAG" *> $null
+          if ($LASTEXITCODE -eq 0) { throw "Release $env:RELEASE_TAG already exists; refusing to overwrite it." }
+          gh release create "$env:RELEASE_TAG" dist\MedicalDiaryAutofill.exe dist\MedicalDiaryAutofill-Setup-1.4.13.exe release\MedicalDiaryAutofill_PRODUCTION_SOURCE.zip --verify-tag --title "MedicalDiaryAutofill $env:RELEASE_TAG" --generate-notes
