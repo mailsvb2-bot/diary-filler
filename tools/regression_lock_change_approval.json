@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "c50f48a79e2b08736e7b22f990cc15719c77820a",
+  "reason": "Recover the already-created immutable v1.4.13 tag after production run 35267769036 completed all product, EXE, packaged-intake, installer, uninstall and source validation but failed only on a malformed PowerShell git-fetch refspec after the tag had already been created. Recovery is allowed only when v1.4.13 resolves exactly to 724d752795dfcf9386af39710128b66633aad5c9 and no GitHub Release exists; the workspace is then reset to that exact tag before rebuilding and publication. The tag is never moved or recreated. Also fixes the future fetch refspec with ${env:RELEASE_TAG}. No medical/document generation, parser, diary, watcher, EXE runtime, installer mechanics or test logic changes.",
+  "required_evidence": [
+    "document_mechanics_guard",
+    "full_patient_replay",
+    "golden_docx",
+    "staff_profile_regression",
+    "gender_generation_matrix",
+    "desktop_intake_contract",
+    "intake_lifecycle_regression",
+    "packaged_desktop_intake_e2e",
+    "installer_uninstall_smoke",
+    "ci_gate_lock"
+  ],
+  "approved_blobs": {
+    ".github/workflows/release.yml": "5ab8393279b80544e42596ac5051e8bc181c40a0"
+  }
+}
