@@ -52,12 +52,16 @@ try {
         Remove-Item -LiteralPath $installDir -Recurse -Force
     }
 
+    # Do not use Start-Process -Wait here: on Windows it waits for the full
+    # descendant process tree, and a correct installation intentionally leaves
+    # the intake-agent child running. WaitForExit() waits only for Setup itself.
     $install = Start-Process -FilePath $installer -ArgumentList @(
         '/VERYSILENT',
         '/SUPPRESSMSGBOXES',
         '/NORESTART',
         "/DIR=$installDir"
-    ) -Wait -PassThru
+    ) -PassThru
+    $install.WaitForExit()
     if ($install.ExitCode -ne 0) {
         throw "Installer exited with code $($install.ExitCode)"
     }
@@ -105,7 +109,8 @@ try {
         '/VERYSILENT',
         '/SUPPRESSMSGBOXES',
         '/NORESTART'
-    ) -Wait -PassThru
+    ) -PassThru
+    $uninstall.WaitForExit()
     if ($uninstall.ExitCode -ne 0) {
         throw "Uninstaller exited with code $($uninstall.ExitCode)"
     }
