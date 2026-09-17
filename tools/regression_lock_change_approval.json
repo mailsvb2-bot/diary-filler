@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "66b053fe883487dea55376181803fa41c10dbe68",
-  "reason": "User-requested Word input compatibility fix: .doc, .docx and .docm are accepted consistently by primary document service, manual selection, drag-and-drop and desktop intake. Legacy .doc is read-only converted through the shared Word COM boundary into a temporary DOCX and then uses the established parser. No document renderer, diary schedule or generated document content is changed. Exact candidate drift is approved only for the blobs listed here and requires the complete repository evidence contour before baseline advancement.",
+  "reason": "User-requested Word input compatibility fix: .doc, .docx and .docm are accepted consistently by primary document service, manual selection, drag-and-drop and desktop intake. Legacy .doc is read-only converted exactly once through the shared Word COM boundary into a temporary DOCX, and the complete canonical parser consumes that same file. No document renderer, diary schedule or generated document content is changed. Exact candidate drift is approved only for the blobs listed here and requires the complete repository evidence contour before baseline advancement.",
   "required_evidence": [
     "ci_gate_lock",
     "desktop_intake_contract",
@@ -25,7 +25,9 @@
     "smoke_combined_part01_setup_contracts.py": "2a33ff67709b06812e911db535ba3eda4e2ffcad",
     "smoke_combined_part06_diary_columns_settings.py": "759bdc75723d1d90057065d4a5634c5f39d6d0d0",
     "startup.py": "44a65992b66495a0dfb5dd414c8e1d2e57683b8b",
-    "tests/desktop_intake_contract_check.py": "430d9bc5758b022c9b3e75db102fd870c2656471",
-    "tools/document_mechanics_change_approval.json": "6c074cbb68cc6ee46c2f78456c3a8159ca101daf"
+    "tests/desktop_intake_contract_check.py": "5a1c4312d25ef047efa6c17b6c3127e92b2f8ed4",
+    "tools/document_mechanics_change_approval.json": "f0a663b952a7d4f3e53717a724899320f90dc702",
+    "medical_docx_reader.py": "ca71e157add6b88bdf81c029627af6242d4f94cd",
+    "medical_parser_core.py": "fa58cc6628fd79b3913138254c8fa5f0dd7f466a"
   }
 }

@@ -1,12 +1,14 @@
 {
   "schema_version": 1,
   "base_sha": "c8c9f2ec94fc92403b3a0e7aba125dc7b93aff36",
-  "reason": "Explicit Word-input compatibility task requested by the user: make primary/input Word handling accept .doc, .docx and .docm consistently. Legacy binary .doc is converted read-only through Microsoft Word into a temporary DOCX and then passed through the same established parser as native OOXML. The original .doc is never modified. This change is limited to Word input/read boundaries, file selection and intake detection; document rendering, diary cadence, generated document text and diary_batch.py remain unchanged. Approval is bound to the exact protected blobs below.",
+  "reason": "Explicit Word-input compatibility task requested by the user: make primary/input Word handling accept .doc, .docx and .docm consistently. Legacy binary .doc is converted read-only through Microsoft Word exactly once into a temporary DOCX, and that same temporary file is consumed by the complete canonical primary parser so identity, admission date, diagnosis and document kind cannot diverge. The original .doc is never modified. This change is limited to Word input/read boundaries, file selection and intake detection; document rendering, diary cadence, generated document text and diary_batch.py remain unchanged. Approval is bound to the exact protected blobs below.",
   "approved_blobs": {
     "diary_text_parser.py": "e885c971954921147a14939f67fb25c4ada1d196",
     "files_mixin.py": "98bef25c802fe7fc248a5b6c6c8a9dacb001294e",
     "medical_docx_blocks.py": "8d2c8676969675ba2a4715cfb3348ae6d37a8de2",
     "medical_docx_title_finder.py": "92a0d2ee628d9c80cd4c5865deac2f0af0873ad5",
-    "medical_service.py": "34ae376c2cc7e16801ef08105a90137c9fb44057"
+    "medical_service.py": "34ae376c2cc7e16801ef08105a90137c9fb44057",
+    "medical_docx_reader.py": "ca71e157add6b88bdf81c029627af6242d4f94cd",
+    "medical_parser_core.py": "fa58cc6628fd79b3913138254c8fa5f0dd7f466a"
   }
 }

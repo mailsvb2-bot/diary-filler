@@ -75,7 +75,7 @@ def _assert_canonical_primary_parser_contract() -> None:
         root = Path(tmp)
         canonical = root / "patient.docx"
         doc = Document()
-        doc.add_paragraph("12.05.2026")
+        doc.add_paragraph("12.05.2026 Первичный осмотр")
         doc.add_paragraph("Ф.И.О.: Иванов Иван Иванович")
         doc.add_paragraph("Дата рождения: 01.01.1980")
         doc.add_paragraph("В 3 отделение КДП поступает первично")
@@ -100,16 +100,23 @@ def _assert_canonical_primary_parser_contract() -> None:
         legacy = root / "patient.doc"
         legacy.write_bytes(b"legacy-doc-placeholder")
         original_converter = medical_docx_blocks.convert_legacy_doc_to_docx
+        conversion_calls: list[tuple[Path, Path]] = []
         try:
-            medical_docx_blocks.convert_legacy_doc_to_docx = (
-                lambda _source, target: shutil.copyfile(canonical, target)
-            )
+            def fake_converter(source: Path, target: Path) -> None:
+                conversion_calls.append((Path(source), Path(target)))
+                shutil.copyfile(canonical, target)
+
+            medical_docx_blocks.convert_legacy_doc_to_docx = fake_converter
             legacy_data = MedicalDocumentService().parse_primary_document(legacy)
             assert legacy_data.fio == canonical_data.fio == "Иванов Иван Иванович", legacy_data.fio
             assert legacy_data.admission_date == canonical_data.admission_date
             assert legacy_data.diagnosis == canonical_data.diagnosis
             assert legacy_data.input_document_kind == canonical_data.input_document_kind
+            assert conversion_calls == [(legacy, conversion_calls[0][1])], conversion_calls
+            assert conversion_calls[0][1].suffix.lower() == ".docx"
+            conversion_calls.clear()
             assert startup.desktop_intake_is_primary_document(legacy), "DOC primary was rejected"
+            assert len(conversion_calls) == 1, conversion_calls
         finally:
             medical_docx_blocks.convert_legacy_doc_to_docx = original_converter
 

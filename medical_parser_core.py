@@ -8,6 +8,7 @@ from typing import Dict, Optional, Sequence, Tuple
 from medical_docx_reader import (
     extract_admission_date_from_title_docx,
     extract_docx_text,
+    materialize_word_source_as_docx,
     _first_valid_full_date,
     _is_birth_or_demographic_context,
     _is_primary_title_context,
@@ -50,13 +51,17 @@ class MedicalParserCoreMixin:
         return "первичный документ"
 
     def parse_docx(self, path: str | Path) -> PatientData:
-        text = extract_docx_text(path)
-        data = self.parse_text(text)
-        # Дата поступления в DOCX имеет один источник истины: заголовок
-        # документа / имя файла рядом с названием. Если структурный DOCX-поиск
-        # нашёл дату рядом с заголовком, он имеет приоритет. Если нет, сохраняем
-        # строгий text-fallback из parse_text вместо обнуления уже найденной даты.
-        title_date = extract_admission_date_from_title_docx(path)
+        # Native DOCX/DOCM are read directly. Legacy binary DOC is materialized
+        # once into a temporary DOCX, then *all* parser stages consume that same
+        # readable file. This keeps FIO/date/diagnosis/document-kind in one
+        # canonical path and avoids opening Microsoft Word twice for one input.
+        with materialize_word_source_as_docx(path) as readable_path:
+            text = extract_docx_text(readable_path)
+            data = self.parse_text(text)
+            # Дата поступления имеет один источник истины: заголовок документа /
+            # имя файла рядом с названием. The temporary DOCX keeps source.stem,
+            # so filename-based title dates remain available for legacy DOC too.
+            title_date = extract_admission_date_from_title_docx(readable_path)
         if title_date:
             data.admission_date = title_date
         self._refresh_warnings(data)
