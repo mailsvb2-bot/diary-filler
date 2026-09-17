@@ -25,8 +25,24 @@ ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 SetupLogging=yes
 
+[Dirs]
+; The intake folder is part of the installed workflow and belongs to the user.
+; It must exist before the first GUI launch and must survive uninstall.
+Name: "{userdesktop}\Выписанные пациенты"; Flags: uninsneveruninstall
+
 [Files]
 Source: "..\dist\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
+
+[Registry]
+; Bootstrap the hidden watcher at logon even if the GUI has never been opened.
+Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "MedicalDiaryAutofill Intake"; ValueData: """{app}\{#MyAppExeName}"" --intake-agent"; Flags: uninsdeletevalue
+
+[InstallDelete]
+; An in-place update must not leave a stale build-identity handoff that makes the
+; freshly installed watcher retire itself before it can observe the intake folder.
+Type: files; Name: "{localappdata}\MedicalDiaryAutofill\desktop-intake-agent-handoff.json"
+Type: files; Name: "{localappdata}\MedicalDiaryAutofill\desktop-intake-agent.heartbeat"
+Type: files; Name: "{localappdata}\MedicalDiaryAutofill\desktop-intake-gui.heartbeat"
 
 [Icons]
 Name: "{group}\MedicalDiaryAutofill"; Filename: "{app}\{#MyAppExeName}"
@@ -34,6 +50,9 @@ Name: "{autodesktop}\MedicalDiaryAutofill"; Filename: "{app}\{#MyAppExeName}"
 Name: "{group}\Проверить MedicalDiaryAutofill"; Filename: "{app}\{#MyAppExeName}"; Parameters: "--self-check"
 
 [Run]
+; Start the watcher independently of the optional visible post-install launch.
+; This is what makes dropping a DOC/DOCX work immediately after install/update.
+Filename: "{app}\{#MyAppExeName}"; Parameters: "--intake-agent"; Flags: runhidden nowait
 Filename: "{app}\{#MyAppExeName}"; Description: "Запустить MedicalDiaryAutofill"; Flags: nowait postinstall skipifsilent
 
 [UninstallDelete]
