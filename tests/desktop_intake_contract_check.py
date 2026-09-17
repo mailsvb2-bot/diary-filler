@@ -83,6 +83,7 @@ def _assert_canonical_primary_parser_contract() -> None:
         doc.add_paragraph("Психический статус: контактен")
         doc.add_paragraph("Диагноз: F20.0")
         doc.save(canonical)
+        canonical_data = MedicalDocumentService().parse_primary_document(canonical)
         assert startup.desktop_intake_is_primary_document(canonical), "canonical parser primary was rejected"
 
         # DOCM uses the same OOXML reader path and must remain first-class input.
@@ -104,8 +105,10 @@ def _assert_canonical_primary_parser_contract() -> None:
                 lambda _source, target: shutil.copyfile(canonical, target)
             )
             legacy_data = MedicalDocumentService().parse_primary_document(legacy)
-            assert legacy_data.fio == "Иванов Иван Иванович", legacy_data.fio
-            assert legacy_data.admission_date == "12.05.2026", legacy_data.admission_date
+            assert legacy_data.fio == canonical_data.fio == "Иванов Иван Иванович", legacy_data.fio
+            assert legacy_data.admission_date == canonical_data.admission_date
+            assert legacy_data.diagnosis == canonical_data.diagnosis
+            assert legacy_data.input_document_kind == canonical_data.input_document_kind
             assert startup.desktop_intake_is_primary_document(legacy), "DOC primary was rejected"
         finally:
             medical_docx_blocks.convert_legacy_doc_to_docx = original_converter
