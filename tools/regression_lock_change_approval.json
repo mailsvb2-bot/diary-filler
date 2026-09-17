@@ -18,6 +18,7 @@
     "medical_docx_reader.py": "ca71e157add6b88bdf81c029627af6242d4f94cd",
     "medical_parser_core.py": "fa58cc6628fd79b3913138254c8fa5f0dd7f466a",
     "tests/desktop_intake_contract_check.py": "5a1c4312d25ef047efa6c17b6c3127e92b2f8ed4",
-    "tools/document_mechanics_change_approval.json": "d951a39051a5b1e716a7c14097edb271c67631e3"
+    "tools/document_mechanics_change_approval.json": "d951a39051a5b1e716a7c14097edb271c67631e3",
+    "startup.py": "c3fe6bae1d295d5ffed07de318f94da34507d3ff"
   }
 }

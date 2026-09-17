@@ -215,14 +215,15 @@ def desktop_intake_is_primary_document(path: str | Path) -> bool:
     if not candidate.is_file() or not desktop_intake_is_candidate_word_file(candidate):
         return False
     try:
-        from medical_docx_reader import extract_docx_text
+        from medical_docx_reader import extract_docx_text, materialize_word_source_as_docx
         from medical_parser import MedicalTextParser
 
-        text = extract_docx_text(candidate)
-        normalized = _desktop_normalized_text(text)
-        if any(marker in normalized for marker in _DESKTOP_INTAKE_EXCLUDED_MARKERS):
-            return False
-        data = MedicalTextParser().parse_docx(candidate)
+        with materialize_word_source_as_docx(candidate) as readable_path:
+            text = extract_docx_text(readable_path)
+            normalized = _desktop_normalized_text(text)
+            if any(marker in normalized for marker in _DESKTOP_INTAKE_EXCLUDED_MARKERS):
+                return False
+            data = MedicalTextParser().parse_docx(readable_path)
         kind = _desktop_normalized_text(data.input_document_kind)
         if kind in {
             "первичный осмотр",
