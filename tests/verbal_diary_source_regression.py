@@ -6,7 +6,7 @@ source type from optional numeric «Даты» 01–31.
 """
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -14,6 +14,7 @@ from docx import Document
 
 import diary_service
 from actions_diary_flow import ActionsDiaryFlowMixin
+from diary_service import dynamic_epicrisis_base_date, dynamic_epicrisis_dates
 from diary_template_selection import DiaryTemplateSelectionMixin
 from diary_text_selection import (
     find_diary_text_file_for_diagnosis,
@@ -130,9 +131,15 @@ def _assert_selected_text_does_not_require_dates(root: Path) -> None:
     snapshot = PatientData(
         fio="Тестов Тест Тестович",
         output_fio="Тестов Тест Тестович",
+        birth="01.01.1980",
         admission_date="18.05.2026",
         discharge_date="25.05.2026",
         diagnosis="F06.8 Органическое расстройство личности",
+        complaints="Жалоб не предъявляет",
+        treatment_plan="Терапия по листу назначений",
+        mental_status="Состояние стабильное",
+        expert_sick_leave_needed="да",
+        expert_sick_leave_from="20.05.2026",
         doctor="Врач",
         head="Заведующий",
     )
@@ -153,6 +160,12 @@ def _assert_selected_text_does_not_require_dates(root: Path) -> None:
     assert app.numbered_lookup_calls == 0, app.numbered_lookup_calls
     assert captured.get("status_files") == [str(text_file)], captured
     assert captured.get("diary_files") == [], captured
+    assert captured.get("sick_leave_dynamic_epicrisis") is True, captured
+    assert captured.get("sick_leave_from") == "20.05.2026", captured
+    assert captured.get("birth_date") == "01.01.1980", captured
+    assert captured.get("complaints") == "Жалоб не предъявляет", captured
+    assert captured.get("treatment") == "Терапия по листу назначений", captured
+    assert captured.get("profile_status") == "Состояние стабильное", captured
 
 
 def _assert_fallback_output_survives_temporary_date_source(root: Path) -> None:
@@ -191,6 +204,86 @@ def _assert_text_folder_never_enters_numeric_scanner(root: Path) -> None:
     assert app.lookup_calls == 0, app.lookup_calls
 
 
+def _assert_dynamic_epicrisis_calendar_contract() -> None:
+    admission = date(2026, 9, 1)
+    assert dynamic_epicrisis_base_date(admission, "06.09.2026") == date(2026, 9, 6)
+    assert dynamic_epicrisis_base_date(admission, "") == admission
+
+    # 19.09.2026 is Saturday, therefore the first +10 day epicrisis moves to Monday.
+    assert dynamic_epicrisis_dates(
+        date(2026, 9, 9), discharge_date=date(2026, 10, 5)
+    )[:2] == (date(2026, 9, 21), date(2026, 9, 29))
+    # If the shifted working day reaches discharge, the entry is not created.
+    assert dynamic_epicrisis_dates(
+        date(2026, 9, 9), discharge_date=date(2026, 9, 21)
+    ) == ()
+    # Historical fixed holiday calendar: 01-09 January are non-working days.
+    assert dynamic_epicrisis_dates(
+        date(2026, 12, 22), discharge_date=date(2027, 1, 20)
+    )[0] == date(2027, 1, 11)
+
+
+def _assert_dynamic_epicrisis_is_additive(root: Path) -> None:
+    text_dir = root / "dynamic-epicrisis"
+    text_dir.mkdir()
+    text_file = text_dir / "status.docx"
+    doc = Document()
+    doc.add_paragraph("Состояние спокойное. Контакт продуктивный.")
+    doc.save(str(text_file))
+
+    without_dir = text_dir / "without"
+    with_dir = text_dir / "with"
+    without_dir.mkdir()
+    with_dir.mkdir()
+    service = diary_service.DiaryService()
+
+    without_result = service.create_text_diaries(
+        status_files=[text_file],
+        diary_files=[],
+        output_dir=without_dir,
+        patient_name="Тестов Тест Тестович",
+        admission_value="01.09.2026",
+        discharge_value="25.09.2026",
+        doctor_name="Врач В.В.",
+        department_head_name="Заведующий З.З.",
+        sick_leave_dynamic_epicrisis=False,
+    )
+    without_text = [p.text for p in Document(str(without_result.created_files[0])).paragraphs]
+    assert not any("Динамический эпикриз." in text for text in without_text), without_text
+    assert not hasattr(without_result, "dynamic_epicrisis_count")
+
+    with_result = service.create_text_diaries(
+        status_files=[text_file],
+        diary_files=[],
+        output_dir=with_dir,
+        patient_name="Тестов Тест Тестович",
+        admission_value="01.09.2026",
+        discharge_value="25.09.2026",
+        doctor_name="Врач В.В.",
+        department_head_name="Заведующий З.З.",
+        sick_leave_dynamic_epicrisis=True,
+        sick_leave_from="01.09.2026",
+        birth_date="01.01.1980",
+        complaints="Жалоб не предъявляет",
+        treatment="Терапия по листу назначений",
+        profile_status="Состояние стабильное",
+    )
+    paragraphs = [p.text for p in Document(str(with_result.created_files[0])).paragraphs]
+    epicrisis_heads = [text for text in paragraphs if "Динамический эпикриз." in text]
+    assert epicrisis_heads == [
+        "11.09.26 Динамический эпикриз.",
+        "21.09.26 Динамический эпикриз.",
+    ], epicrisis_heads
+    assert getattr(with_result, "dynamic_epicrisis_count", 0) == 2
+
+    # The ordinary clinical sequence remains present; an epicrisis on 11.09 is
+    # inserted after that date's ordinary diary, never replacing it.
+    ordinary_11 = [i for i, text in enumerate(paragraphs) if text.startswith("11.09.26 ") and "Динамический эпикриз." not in text]
+    dynamic_11 = [i for i, text in enumerate(paragraphs) if text == "11.09.26 Динамический эпикриз."]
+    assert ordinary_11 and dynamic_11 and ordinary_11[0] < dynamic_11[0], paragraphs
+    assert any(text.startswith("25.09.26 ") for text in paragraphs), "final discharge diary disappeared"
+
+
 def main() -> None:
     with TemporaryDirectory(prefix="verbal-diary-source-") as temp_dir:
         root = Path(temp_dir)
@@ -198,7 +291,12 @@ def main() -> None:
         _assert_selected_text_does_not_require_dates(root)
         _assert_fallback_output_survives_temporary_date_source(root)
         _assert_text_folder_never_enters_numeric_scanner(root)
-    print("VERBAL DIARY SOURCE REGRESSION OK: words-only matching; Texts never scanned as numeric Dates; fallback output persists")
+        _assert_dynamic_epicrisis_calendar_contract()
+        _assert_dynamic_epicrisis_is_additive(root)
+    print(
+        "VERBAL DIARY SOURCE REGRESSION OK: words-only matching; Texts never scanned as numeric Dates; "
+        "fallback output persists; sick-leave dynamic epicrises are additive and calendar-locked"
+    )
 
 
 if __name__ == "__main__":

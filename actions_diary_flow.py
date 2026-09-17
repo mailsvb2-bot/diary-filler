@@ -4,7 +4,7 @@ from pathlib import Path
 
 from app_config import *
 from medical_constants import DOCUMENT_ORDER
-from medical_models import PatientData
+from medical_models import PatientData, normalize_yes_no
 
 
 class ActionsDiaryFlowMixin:
@@ -97,6 +97,31 @@ class ActionsDiaryFlowMixin:
             )
         out_dir = str(output_dir_override if output_dir_override is not None else self._result_output_dir())
         staff_profile = self._effective_staff_profile()
+
+        if patient_data_snapshot is not None:
+            sick_leave_dynamic_epicrisis = normalize_yes_no(
+                patient_data_snapshot.expert_sick_leave_needed
+            ) == "да"
+            sick_leave_from = patient_data_snapshot.expert_sick_leave_from
+            birth_date = patient_data_snapshot.birth
+            complaints = patient_data_snapshot.complaints
+            treatment = patient_data_snapshot.treatment_plan
+            profile_status = patient_data_snapshot.mental_status
+        else:
+            live_data = getattr(self, "data", None)
+            sick_leave_needed_var = getattr(self, "expert_sick_leave_needed_var", None)
+            sick_leave_from_var = getattr(self, "expert_sick_leave_from_var", None)
+            sick_leave_dynamic_epicrisis = normalize_yes_no(
+                sick_leave_needed_var.get() if sick_leave_needed_var is not None else ""
+            ) == "да"
+            sick_leave_from = (
+                sick_leave_from_var.get().strip() if sick_leave_from_var is not None else ""
+            )
+            birth_date = str(getattr(live_data, "birth", "") or "")
+            complaints = str(getattr(live_data, "complaints", "") or "")
+            treatment = str(getattr(live_data, "treatment_plan", "") or "")
+            profile_status = str(getattr(live_data, "mental_status", "") or "")
+
         from diary_service import DiaryService
         result = DiaryService().create_text_diaries(
             status_files=self.status_files,
@@ -117,6 +142,12 @@ class ActionsDiaryFlowMixin:
             write_report=self._diagnostic_reports_enabled(),
             doctor_name=(patient_data_snapshot.doctor if patient_data_snapshot is not None else staff_profile["doctor"]),
             department_head_name=(patient_data_snapshot.head if patient_data_snapshot is not None else staff_profile["department_head"]),
+            sick_leave_dynamic_epicrisis=sick_leave_dynamic_epicrisis,
+            sick_leave_from=sick_leave_from,
+            birth_date=birth_date,
+            complaints=complaints,
+            treatment=treatment,
+            profile_status=profile_status,
         )
         if log_created:
             self._log("\n✅ Дневники заполнены:\n")
@@ -127,6 +158,7 @@ class ActionsDiaryFlowMixin:
             self._log(
                 f"Итого: файлов {result.processed_files}, дневников {result.filled_rows}, "
                 f"дат {result.month_cells_filled}, финальных записей {result.final_rows_filled}, "
+                f"динамических эпикризов {getattr(result, 'dynamic_epicrisis_count', 0)}, "
                 f"удалено после выписки {result.removed_after_discharge_rows}.\n"
             )
         return result
