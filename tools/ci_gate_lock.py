@@ -36,12 +36,12 @@ WINDOWS_REQUIRED_IN_ORDER = (
 )
 
 RELEASE_REQUIRED_IN_ORDER = (
-    "Require signing credentials",
-    "Checkout exact release tag",
-    "Resolve and guard release tag",
+    "Checkout exact release candidate",
+    "Resolve and guard release target",
     "python tools/regression_lock_check.py",
     "python tools/ci_gate_lock.py",
     "python tests/regression_surface_inventory.py",
+    "python tools/document_mechanics_guard.py",
     "python tools/production_safety_gate.py",
     "python tools/privacy_diagnostics_check.py",
     "python prod_audit.py",
@@ -55,13 +55,13 @@ RELEASE_REQUIRED_IN_ORDER = (
     "python tests/intake_lifecycle_regression.py",
     "python gui_runtime_check.py",
     "build_exe_windows.bat",
-    "signtool sign",
     "python verify_built_exe.py",
     "./tools/windows_desktop_intake_e2e.ps1 -AppPath ./dist/MedicalDiaryAutofill.exe",
     "BUILD_WINDOWS_INSTALLER.bat",
-    "Authenticode sign installer",
     "./tools/windows_installer_smoke.ps1 -InstallerPath ./dist/MedicalDiaryAutofill-Setup-1.4.13.exe",
     "python make_release_zip.py",
+    "Create guarded release tag",
+    "gh release create",
 )
 
 REQUIRED_REPOSITORY_FILES = (
@@ -115,26 +115,42 @@ def main() -> None:
         "workflow_dispatch:",
         "push:",
         "branches: [production-v1.4.13]",
-        "Checkout exact release tag",
-        "Resolve and guard release tag",
+        "Checkout exact release candidate",
+        "Resolve and guard release target",
         "refs/heads/production-v1.4.13",
         "git/ref/heads/main",
         "Tag $tag already exists; refusing to move or overwrite it.",
-        'ref="refs/tags/$tag"',
         '"RELEASE_TAG=$tag"',
         "fetch-depth: 0",
-        "MEDICAL_AUTOFILL_REQUIRE_SIGNED_EXE",
+        "Create guarded release tag",
+        'ref="refs/tags/$env:RELEASE_TAG"',
+        "Current main moved during release validation; refusing to create the release tag.",
     ):
         if required not in release:
             raise SystemExit(f"CI GATE LOCK FAILED: release workflow lost release-safety contract: {required}")
     _require_order(release, RELEASE_REQUIRED_IN_ORDER, "release workflow")
 
-    require_signing = release.index("Require signing credentials")
-    resolve_tag = release.index("Resolve and guard release tag")
-    if require_signing >= resolve_tag:
-        raise SystemExit("CI GATE LOCK FAILED: signing credentials must be required before one-shot tag creation")
+    for forbidden in (
+        "SIGNING_CERT_PFX_BASE64",
+        "SIGNING_CERT_PASSWORD",
+        "signtool",
+        "MEDICAL_AUTOFILL_REQUIRE_SIGNED_EXE",
+        "Authenticode sign",
+    ):
+        if forbidden in release:
+            raise SystemExit(f"CI GATE LOCK FAILED: unsigned release unexpectedly depends on signing material: {forbidden}")
 
-    release_create = release[release.index("gh release create") :]
+    resolve_target = release.index("Resolve and guard release target")
+    smoke_installer = release.index("./tools/windows_installer_smoke.ps1")
+    create_tag = release.index("Create guarded release tag")
+    publish_release = release.index("gh release create")
+    if not (resolve_target < smoke_installer < create_tag < publish_release):
+        raise SystemExit(
+            "CI GATE LOCK FAILED: release tag must be created only after candidate validation "
+            "and immediately before publication"
+        )
+
+    release_create = release[publish_release:]
     for asset in (
         r"dist\MedicalDiaryAutofill.exe",
         r"dist\MedicalDiaryAutofill-Setup-1.4.13.exe",
@@ -146,7 +162,7 @@ def main() -> None:
     if '$env:RELEASE_TAG' not in release_create:
         raise SystemExit("CI GATE LOCK FAILED: official release is not bound to the guarded release tag")
 
-    print("CI GATE LOCK OK: mandatory PR/main/release regression topology is intact")
+    print("CI GATE LOCK OK: mandatory PR/main/unsigned-release regression topology is intact")
 
 
 if __name__ == "__main__":

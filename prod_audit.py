@@ -344,8 +344,11 @@ def _assert_final_user_flow_gate_contract() -> None:
         (verify_exe, "_pe_has_authenticode_signature", "packaged EXE verifier must inspect Authenticode presence"),
         (verify_exe, "MEDICAL_AUTOFILL_REQUIRE_SIGNED_EXE", "official release verifier must fail closed when unsigned"),
         (gui_check, "event_generate", "GUI runtime check must exercise real widget events"),
-        (release_workflow, "SIGNING_CERT_PFX_BASE64", "official release must require a signing certificate"),
-        (release_workflow, "signtool verify", "official release must verify Authenticode"),
+        (release_workflow, "python tools/document_mechanics_guard.py", "official release must guard document mechanics"),
+        (release_workflow, "python verify_built_exe.py", "official release must verify the exact packaged EXE"),
+        (release_workflow, "./tools/windows_desktop_intake_e2e.ps1 -AppPath ./dist/MedicalDiaryAutofill.exe", "official release must exercise packaged desktop intake"),
+        (release_workflow, "./tools/windows_installer_smoke.ps1 -InstallerPath ./dist/MedicalDiaryAutofill-Setup-1.4.13.exe", "official release must smoke-test install/uninstall"),
+        (release_workflow, "Create guarded release tag", "official release must create its immutable tag only after validation"),
         (release_workflow, "gh release create", "official release needs a stable GitHub Release channel"),
     ]
     missing = [message for source, snippet, message in required_pairs if snippet not in source]
