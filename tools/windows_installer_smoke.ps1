@@ -9,6 +9,7 @@ $runKeyPath = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run'
 $runValueName = 'MedicalDiaryAutofill Intake'
 $startupScript = Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs\Startup\MedicalDiaryAutofill Intake.vbs'
 $runtimeDir = Join-Path $env:LOCALAPPDATA 'MedicalDiaryAutofill'
+$agentHeartbeat = Join-Path $runtimeDir 'desktop-intake-agent.heartbeat'
 $desktopDir = [Environment]::GetFolderPath('Desktop')
 if ([string]::IsNullOrWhiteSpace($desktopDir)) {
     throw 'Windows Desktop path is unavailable'
@@ -24,18 +25,43 @@ function Stop-AppProcesses {
     }
 }
 
+function Wait-ForAgentHeartbeat {
+    param([int]$TimeoutSeconds = 20)
+    $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
+    do {
+        if (Test-Path -LiteralPath $agentHeartbeat) {
+            try {
+                $payload = Get-Content -LiteralPath $agentHeartbeat -Raw | ConvertFrom-Json
+                $age = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds() / 1000.0 - [double]$payload.timestamp
+                if ($payload.schema -eq 1 -and $payload.identity -and $age -ge 0 -and $age -le 8) {
+                    return
+                }
+            } catch {}
+        }
+        Start-Sleep -Milliseconds 250
+    } while ([DateTime]::UtcNow -lt $deadline)
+    throw 'Installer did not bootstrap a live intake-agent heartbeat'
+}
+
 try {
     Stop-AppProcesses
+    Remove-ItemProperty -Path $runKeyPath -Name $runValueName -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath $startupScript -Force -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath $agentHeartbeat -Force -ErrorAction SilentlyContinue
     if (Test-Path $installDir) {
         Remove-Item -LiteralPath $installDir -Recurse -Force
     }
 
+    # Do not use Start-Process -Wait here: on Windows it waits for the full
+    # descendant process tree, and a correct installation intentionally leaves
+    # the intake-agent child running. WaitForExit() waits only for Setup itself.
     $install = Start-Process -FilePath $installer -ArgumentList @(
         '/VERYSILENT',
         '/SUPPRESSMSGBOXES',
         '/NORESTART',
         "/DIR=$installDir"
-    ) -Wait -PassThru
+    ) -PassThru
+    $install.WaitForExit()
     if ($install.ExitCode -ne 0) {
         throw "Installer exited with code $($install.ExitCode)"
     }
@@ -47,12 +73,22 @@ try {
     if (-not (Test-Path -LiteralPath $onboardingMarker -PathType Leaf)) {
         throw 'Installer did not create onboarding-required.flag'
     }
-    if (-not $intakeExistedBefore -and (Test-Path -LiteralPath $intakeDir -PathType Container)) {
-        throw 'Installer unexpectedly created Desktop\Выписанные пациенты before onboarding'
+    if (-not (Test-Path -LiteralPath $intakeDir -PathType Container)) {
+        throw 'Installer did not create Desktop\Выписанные пациенты before first GUI launch'
     }
 
-    # Simulate the user accepting first-run creation. A user-owned file must survive uninstall.
-    New-Item -ItemType Directory -Path $intakeDir -Force | Out-Null
+    $runValue = Get-ItemPropertyValue -Path $runKeyPath -Name $runValueName -ErrorAction Stop
+    if ([string]$runValue -notmatch '--intake-agent') {
+        throw 'Installer HKCU Run watcher entry does not contain --intake-agent'
+    }
+    if ([string]$runValue -notmatch [regex]::Escape($app)) {
+        throw 'Installer HKCU Run watcher entry does not target the installed EXE'
+    }
+
+    # Critical production proof: the hidden watcher must already be alive after a
+    # silent install, before any normal GUI launch has happened.
+    Wait-ForAgentHeartbeat
+
     Set-Content -LiteralPath $preserveProbe -Value 'preserve intake folder' -Encoding UTF8
 
     $uninstaller = Get-ChildItem -LiteralPath $installDir -Filter 'unins*.exe' -File | Select-Object -First 1
@@ -60,29 +96,21 @@ try {
         throw 'Inno Setup uninstaller is missing'
     }
 
-    # Reproduce the real problematic state: watcher is alive and both persistence
-    # routes exist when uninstall starts. Uninstall must still complete by itself.
-    New-Item -Path $runKeyPath -Force | Out-Null
-    New-ItemProperty -Path $runKeyPath -Name $runValueName -Value ('"' + $app + '" --intake-agent') -PropertyType String -Force | Out-Null
+    # Keep the Startup route present too so uninstall proves it cleans both
+    # persistence routes while the installer-started watcher is alive.
     New-Item -ItemType Directory -Path (Split-Path -Parent $startupScript) -Force | Out-Null
     Set-Content -LiteralPath $startupScript -Value 'stub' -Encoding Unicode
 
-    $watcher = Start-Process -FilePath $app -ArgumentList @('--intake-agent') -PassThru
-    $deadline = [DateTime]::UtcNow.AddSeconds(12)
-    do {
-        $running = @(Get-Process -Name 'MedicalDiaryAutofill' -ErrorAction SilentlyContinue)
-        if ($running.Count -gt 0) { break }
-        Start-Sleep -Milliseconds 250
-    } while ([DateTime]::UtcNow -lt $deadline)
     if (@(Get-Process -Name 'MedicalDiaryAutofill' -ErrorAction SilentlyContinue).Count -eq 0) {
-        throw 'Failed to start installed intake-agent before uninstall smoke'
+        throw 'Installer-started intake-agent process is not running before uninstall'
     }
 
     $uninstall = Start-Process -FilePath $uninstaller.FullName -ArgumentList @(
         '/VERYSILENT',
         '/SUPPRESSMSGBOXES',
         '/NORESTART'
-    ) -Wait -PassThru
+    ) -PassThru
+    $uninstall.WaitForExit()
     if ($uninstall.ExitCode -ne 0) {
         throw "Uninstaller exited with code $($uninstall.ExitCode)"
     }
@@ -118,7 +146,7 @@ try {
         throw 'Uninstaller removed a user-owned file from Desktop\Выписанные пациенты'
     }
 
-    Write-Host 'WINDOWS INSTALLER ACTIVE-WATCHER UNINSTALL SMOKE OK'
+    Write-Host 'WINDOWS INSTALLER WATCHER BOOTSTRAP AND UNINSTALL SMOKE OK'
 }
 finally {
     Stop-AppProcesses

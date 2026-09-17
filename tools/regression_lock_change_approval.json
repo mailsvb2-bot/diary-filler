@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "7d9f3092656d017b9bc482134d8eb49e3246b1d8",
+  "reason": "Restore the installed Windows intake lifecycle proven in earlier PRs without touching medical or document generation: create and preserve the Desktop intake folder at install time, persist the existing hidden --intake-agent through HKCU Run, start that watcher immediately even for silent or update installs, clear only stale technical watcher handoff and heartbeat files, and require an installer smoke proof that the watcher heartbeat is live before any normal GUI launch.",
+  "required_evidence": [
+    "document_mechanics_guard",
+    "full_patient_replay",
+    "golden_docx",
+    "staff_profile_regression",
+    "gender_generation_matrix",
+    "desktop_intake_contract",
+    "intake_lifecycle_regression",
+    "packaged_desktop_intake_e2e",
+    "installer_uninstall_smoke",
+    "ci_gate_lock"
+  ],
+  "approved_blobs": {
+    "installer/MedicalDiaryAutofill.iss": "b8e1bb72855c5c40f80c0663328747e2ccc0c176",
+    "tools/production_safety_gate.py": "f7e624d8208201c1f0c5cc64de6ba0098d160da5",
+    "tools/windows_installer_smoke.ps1": "773cc7a4a1a411a07073ad0c4ece508f88ac38a4"
+  }
+}
