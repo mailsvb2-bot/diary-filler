@@ -29,10 +29,12 @@ jobs:
           fetch-depth: 0
 
       - name: Resolve and guard release target
+        id: release_target
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          $recoverExistingTag = $false
           if ("${{ github.event_name }}" -eq "push") {
             if ("${{ github.ref }}" -ne "refs/heads/production-v1.4.13") {
               throw "One-shot release may run only from refs/heads/production-v1.4.13."
@@ -50,7 +52,21 @@ jobs:
               throw "Unable to inspect existing release tags."
             }
             if ($matchingTagRefs -contains "refs/tags/$tag") {
-              throw "Tag $tag already exists; refusing to move or overwrite it."
+              $tagSha = gh api "repos/${{ github.repository }}/git/ref/tags/$tag" --jq ".object.sha"
+              if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($tagSha)) {
+                throw "Unable to resolve existing release tag $tag."
+              }
+              $releaseTags = @(gh api --paginate "repos/${{ github.repository }}/releases" --jq ".[].tag_name")
+              if ($LASTEXITCODE -ne 0) {
+                throw "Unable to inspect existing GitHub Releases."
+              }
+              if ($releaseTags -contains $tag) {
+                throw "Release $tag already exists; refusing to overwrite it."
+              }
+              if ($tagSha.Trim() -ne "724d752795dfcf9386af39710128b66633aad5c9") {
+                throw "Tag $tag already exists; refusing to move or overwrite it."
+              }
+              $recoverExistingTag = $true
             }
           } else {
             $tag = "${{ inputs.tag }}"
@@ -62,6 +78,20 @@ jobs:
             }
           }
           "RELEASE_TAG=$tag" >> $env:GITHUB_ENV
+          "recover_existing_tag=$($recoverExistingTag.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
+
+      - name: Materialize guarded existing tag for recovery
+        if: steps.release_target.outputs.recover_existing_tag == 'true'
+        shell: pwsh
+        run: |
+          git fetch origin "refs/tags/${env:RELEASE_TAG}:refs/tags/${env:RELEASE_TAG}"
+          if ($LASTEXITCODE -ne 0) { throw "Failed to fetch guarded recovery tag $env:RELEASE_TAG." }
+          git checkout --detach "refs/tags/${env:RELEASE_TAG}"
+          if ($LASTEXITCODE -ne 0) { throw "Failed to checkout guarded recovery tag $env:RELEASE_TAG." }
+          $headSha = git rev-parse HEAD
+          if ($LASTEXITCODE -ne 0 -or $headSha.Trim() -ne "724d752795dfcf9386af39710128b66633aad5c9") {
+            throw "Guarded recovery checkout does not match the immutable v1.4.13 tag SHA."
+          }
 
       - name: Set up Python
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
@@ -167,7 +197,7 @@ jobs:
         run: python make_release_zip.py
 
       - name: Create guarded release tag
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' && steps.release_target.outputs.recover_existing_tag != 'true'
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
@@ -188,7 +218,7 @@ jobs:
           }
           gh api --method POST "repos/${{ github.repository }}/git/refs" -f ref="refs/tags/$env:RELEASE_TAG" -f sha="${{ github.sha }}"
           if ($LASTEXITCODE -ne 0) { throw "Failed to create immutable release tag $env:RELEASE_TAG." }
-          git fetch origin "refs/tags/$env:RELEASE_TAG:refs/tags/$env:RELEASE_TAG"
+          git fetch origin "refs/tags/${env:RELEASE_TAG}:refs/tags/${env:RELEASE_TAG}"
           if ($LASTEXITCODE -ne 0) { throw "Failed to fetch newly created release tag $env:RELEASE_TAG." }
 
       - name: Publish GitHub Release
@@ -196,6 +226,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          $tagSha = gh api "repos/${{ github.repository }}/git/ref/tags/$env:RELEASE_TAG" --jq ".object.sha"
+          $headSha = git rev-parse HEAD
+          if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($tagSha) -or $tagSha.Trim() -ne $headSha.Trim()) {
+            throw "Release assets are not built from the exact guarded release tag."
+          }
           $releaseTags = @(gh api --paginate "repos/${{ github.repository }}/releases" --jq ".[].tag_name")
           if ($LASTEXITCODE -ne 0) { throw "Unable to inspect existing GitHub Releases." }
           if ($releaseTags -contains $env:RELEASE_TAG) { throw "Release $env:RELEASE_TAG already exists; refusing to overwrite it." }
