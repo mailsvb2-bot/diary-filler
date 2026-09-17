@@ -47,6 +47,7 @@ RELEASE_REQUIRED_IN_ORDER = (
     "python tools/staff_profile_regression.py",
     "python tools/gender_generation_regression_matrix.py",
     "python tests/diagnosis_override_regression.py",
+    "python tests/verbal_diary_source_regression.py",
     "python tests/desktop_intake_contract_check.py",
     "python tests/intake_lifecycle_regression.py",
     "python gui_runtime_check.py",
@@ -54,6 +55,9 @@ RELEASE_REQUIRED_IN_ORDER = (
     "signtool sign",
     "python verify_built_exe.py",
     "./tools/windows_desktop_intake_e2e.ps1 -AppPath ./dist/MedicalDiaryAutofill.exe",
+    "BUILD_WINDOWS_INSTALLER.bat",
+    "Authenticode sign installer",
+    "./tools/windows_installer_smoke.ps1 -InstallerPath ./dist/MedicalDiaryAutofill-Setup-1.4.13.exe",
     "python make_release_zip.py",
 )
 
@@ -108,6 +112,15 @@ def main() -> None:
         if required not in release:
             raise SystemExit(f"CI GATE LOCK FAILED: release workflow lost release-safety contract: {required}")
     _require_order(release, RELEASE_REQUIRED_IN_ORDER, "release workflow")
+
+    release_create = release[release.index("gh release create") :]
+    for asset in (
+        r"dist\MedicalDiaryAutofill.exe",
+        r"dist\MedicalDiaryAutofill-Setup-1.4.13.exe",
+        r"release\MedicalDiaryAutofill_PRODUCTION_SOURCE.zip",
+    ):
+        if asset not in release_create:
+            raise SystemExit(f"CI GATE LOCK FAILED: official release asset missing: {asset}")
 
     print("CI GATE LOCK OK: mandatory PR/main/release regression topology is intact")
 
