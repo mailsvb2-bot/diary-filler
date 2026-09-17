@@ -17,6 +17,6 @@
   "approved_blobs": {
     "installer/MedicalDiaryAutofill.iss": "b8e1bb72855c5c40f80c0663328747e2ccc0c176",
     "tools/production_safety_gate.py": "f7e624d8208201c1f0c5cc64de6ba0098d160da5",
-    "tools/windows_installer_smoke.ps1": "23dfeb2e1260fa40ef7778fe5f86e7f23efe8a81"
+    "tools/windows_installer_smoke.ps1": "773cc7a4a1a411a07073ad0c4ece508f88ac38a4"
   }
 }
