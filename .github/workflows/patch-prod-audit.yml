@@ -4,12 +4,16 @@ on:
   push:
     branches: [release/unsigned-v1.4.13]
     paths: [.github/workflows/patch-prod-audit.yml]
+  pull_request:
+    branches: [main]
+    types: [reopened]
 
 permissions:
   contents: write
 
 jobs:
   patch:
+    if: github.head_ref == 'release/unsigned-v1.4.13' || github.ref == 'refs/heads/release/unsigned-v1.4.13'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
