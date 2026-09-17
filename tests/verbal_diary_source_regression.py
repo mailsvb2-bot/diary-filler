@@ -14,10 +14,7 @@ from docx import Document
 
 import diary_service
 from actions_diary_flow import ActionsDiaryFlowMixin
-from diary_dynamic_epicrisis import (
-    dynamic_epicrisis_base_date,
-    dynamic_epicrisis_dates,
-)
+from diary_service import dynamic_epicrisis_base_date, dynamic_epicrisis_dates
 from diary_template_selection import DiaryTemplateSelectionMixin
 from diary_text_selection import (
     find_diary_text_file_for_diagnosis,
