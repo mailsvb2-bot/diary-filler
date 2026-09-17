@@ -1,0 +1,128 @@
+name: Publish v1.4.13 once
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/production-publish-v1.4.13.yml'
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: production-publish-v1.4.13
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      TAG: v1.4.13
+      TARGET_SHA: 5947ed56251a100c20297ba1f89788246dafdd4e
+      SIGNING_CERT_PFX_BASE64: ${{ secrets.SIGNING_CERT_PFX_BASE64 }}
+      SIGNING_CERT_PASSWORD: ${{ secrets.SIGNING_CERT_PASSWORD }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Require valid signing material before mutating release refs
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "${SIGNING_CERT_PFX_BASE64:-}" || -z "${SIGNING_CERT_PASSWORD:-}" ]]; then
+            echo "::error::Official release is blocked: configure SIGNING_CERT_PFX_BASE64 and SIGNING_CERT_PASSWORD first."
+            exit 1
+          fi
+
+          pfx="$RUNNER_TEMP/medical-autofill-release-signing.pfx"
+          trap 'rm -f "$pfx"' EXIT
+          if ! printf '%s' "$SIGNING_CERT_PFX_BASE64" | base64 --decode > "$pfx"; then
+            echo "::error::SIGNING_CERT_PFX_BASE64 is not valid base64."
+            exit 1
+          fi
+          if ! openssl pkcs12 -in "$pfx" -passin env:SIGNING_CERT_PASSWORD -noout >/dev/null 2>&1; then
+            echo "::error::Signing PFX cannot be opened with SIGNING_CERT_PASSWORD."
+            exit 1
+          fi
+
+      - name: Checkout release controller
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          fetch-depth: 0
+
+      - name: Verify exact proven production target
+        shell: bash
+        run: |
+          set -euo pipefail
+          git cat-file -e "${TARGET_SHA}^{commit}"
+          if ! git merge-base --is-ancestor "$TARGET_SHA" HEAD; then
+            echo "::error::TARGET_SHA is not an ancestor of current main."
+            exit 1
+          fi
+          if [[ "$(git rev-parse "$TARGET_SHA:.github/workflows/release.yml")" != "$(git rev-parse 'HEAD:.github/workflows/release.yml')" ]]; then
+            echo "::error::Signed release workflow drifted after the proven production target."
+            exit 1
+          fi
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "::error::GitHub Release $TAG already exists; refusing duplicate publication."
+            exit 1
+          fi
+
+      - name: Create exact release tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          existing="$(git ls-remote --tags origin "refs/tags/$TAG" | awk '{print $1}')"
+          if [[ -n "$existing" ]]; then
+            if [[ "$existing" != "$TARGET_SHA" ]]; then
+              echo "::error::Existing tag $TAG points to $existing instead of $TARGET_SHA."
+              exit 1
+            fi
+            echo "Tag $TAG already points to the exact proven target; reusing it."
+          else
+            git tag "$TAG" "$TARGET_SHA"
+            git push origin "refs/tags/$TAG"
+          fi
+
+      - name: Dispatch and monitor signed release
+        shell: bash
+        run: |
+          set -euo pipefail
+          previous="$(gh run list --workflow release.yml --event workflow_dispatch --limit 1 --json databaseId --jq '.[0].databaseId' 2>/dev/null || true)"
+          gh workflow run release.yml --ref main -f tag="$TAG"
+
+          run_id=""
+          for _ in $(seq 1 60); do
+            current="$(gh run list --workflow release.yml --event workflow_dispatch --limit 1 --json databaseId --jq '.[0].databaseId' 2>/dev/null || true)"
+            if [[ -n "$current" && "$current" != "$previous" ]]; then
+              run_id="$current"
+              break
+            fi
+            sleep 2
+          done
+
+          if [[ -z "$run_id" ]]; then
+            echo "::error::Signed release workflow did not materialize after dispatch."
+            if ! gh release view "$TAG" >/dev/null 2>&1; then
+              git push origin ":refs/tags/$TAG" || true
+            fi
+            exit 1
+          fi
+
+          echo "Monitoring Signed Windows Release run $run_id"
+          set +e
+          gh run watch "$run_id" --exit-status
+          rc=$?
+          set -e
+
+          if [[ $rc -ne 0 ]]; then
+            if gh release view "$TAG" >/dev/null 2>&1; then
+              echo "::error::Signed release run failed after a release object appeared; preserving tag for investigation."
+            else
+              echo "Signed release failed before publication; removing the one-shot tag."
+              git push origin ":refs/tags/$TAG" || true
+            fi
+            exit "$rc"
+          fi
+
+          gh release view "$TAG" --json tagName,name,isDraft,isPrerelease,assets --jq '{tag: .tagName, name: .name, draft: .isDraft, prerelease: .isPrerelease, assets: [.assets[].name]}'
