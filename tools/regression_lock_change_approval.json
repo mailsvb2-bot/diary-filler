@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "3a82348828518850baeec89c09d3db7bc9f436ae",
-  "reason": "Restore the proven Dokkomplekt sick-leave dynamic epicrisis layer without modifying the established diary_batch generator; require the complete regression and packaging evidence before merge. The exact regression approval also binds the document-mechanics approval metadata because that protected approval file changed as part of this candidate.",
+  "reason": "Restore the proven Dokkomplekt sick-leave dynamic epicrisis layer without modifying the established diary_batch generator; preserve the production runtime-file budget by keeping the additive dynamic-epicrisis helpers inside diary_service.py; require the complete regression and packaging evidence before merge. The exact regression approval also binds the current document-mechanics approval metadata.",
   "required_evidence": [
     "ci_gate_lock",
     "document_mechanics_guard",
@@ -16,9 +16,8 @@
   ],
   "approved_blobs": {
     "actions_diary_flow.py": "07ad1e81fb9d747c8751a44e2c19dfbd2f08a88b",
-    "diary_dynamic_epicrisis.py": "574e1e91e4b52c275afda41048d80dd8e3c0eb20",
-    "diary_service.py": "cd85ef8fdf901a4ab49fac4da1d894a24d24a8c5",
-    "tests/verbal_diary_source_regression.py": "3a72b2fe8ae72dabf041de344e6cfebd215cc7c3",
-    "tools/document_mechanics_change_approval.json": "b1aee358abffa0bdab404332e7d1ad61686832be"
+    "diary_service.py": "9a43e7dde10ceae6557ef3ef600e2af3b1accb29",
+    "tests/verbal_diary_source_regression.py": "2dc4716753a2a35a5c1334c69433f4f7a02ceaae",
+    "tools/document_mechanics_change_approval.json": "2f568d1c27a7a86d0af47c14ecf3af991abfc14f"
   }
 }
