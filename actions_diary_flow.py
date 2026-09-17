@@ -107,8 +107,6 @@ class ActionsDiaryFlowMixin:
             complaints = patient_data_snapshot.complaints
             treatment = patient_data_snapshot.treatment_plan
             profile_status = patient_data_snapshot.mental_status
-            doctor_name = patient_data_snapshot.doctor
-            department_head_name = patient_data_snapshot.head
         else:
             live_data = getattr(self, "data", None)
             sick_leave_needed_var = getattr(self, "expert_sick_leave_needed_var", None)
@@ -123,8 +121,6 @@ class ActionsDiaryFlowMixin:
             complaints = str(getattr(live_data, "complaints", "") or "")
             treatment = str(getattr(live_data, "treatment_plan", "") or "")
             profile_status = str(getattr(live_data, "mental_status", "") or "")
-            doctor_name = staff_profile["doctor"]
-            department_head_name = staff_profile["department_head"]
 
         from diary_service import DiaryService
         result = DiaryService().create_text_diaries(
@@ -144,8 +140,8 @@ class ActionsDiaryFlowMixin:
             repeat_statuses=self.repeat_statuses_var.get(),
             force_final_diary=self.force_final_diary_var.get(),
             write_report=self._diagnostic_reports_enabled(),
-            doctor_name=doctor_name,
-            department_head_name=department_head_name,
+            doctor_name=(patient_data_snapshot.doctor if patient_data_snapshot is not None else staff_profile["doctor"]),
+            department_head_name=(patient_data_snapshot.head if patient_data_snapshot is not None else staff_profile["department_head"]),
             sick_leave_dynamic_epicrisis=sick_leave_dynamic_epicrisis,
             sick_leave_from=sick_leave_from,
             birth_date=birth_date,
