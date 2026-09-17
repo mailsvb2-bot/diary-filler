@@ -45,8 +45,11 @@ jobs:
               throw "One-shot release branch is not the exact current main SHA; refusing to publish."
             }
             $tag = "v1.4.13"
-            gh api "repos/${{ github.repository }}/git/ref/tags/$tag" *> $null
-            if ($LASTEXITCODE -eq 0) {
+            $matchingTagRefs = @(gh api "repos/${{ github.repository }}/git/matching-refs/tags/$tag" --jq ".[].ref")
+            if ($LASTEXITCODE -ne 0) {
+              throw "Unable to inspect existing release tags."
+            }
+            if ($matchingTagRefs -contains "refs/tags/$tag") {
               throw "Tag $tag already exists; refusing to move or overwrite it."
             }
           } else {
@@ -172,8 +175,11 @@ jobs:
           if ($mainSha.Trim() -ne "${{ github.sha }}") {
             throw "Current main moved during release validation; refusing to create the release tag."
           }
-          gh api "repos/${{ github.repository }}/git/ref/tags/$env:RELEASE_TAG" *> $null
-          if ($LASTEXITCODE -eq 0) {
+          $matchingTagRefs = @(gh api "repos/${{ github.repository }}/git/matching-refs/tags/$env:RELEASE_TAG" --jq ".[].ref")
+          if ($LASTEXITCODE -ne 0) {
+            throw "Unable to re-inspect existing release tags."
+          }
+          if ($matchingTagRefs -contains "refs/tags/$env:RELEASE_TAG") {
             throw "Tag $env:RELEASE_TAG already exists; refusing to move or overwrite it."
           }
           gh api --method POST "repos/${{ github.repository }}/git/refs" -f ref="refs/tags/$env:RELEASE_TAG" -f sha="${{ github.sha }}"
@@ -186,6 +192,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release view "$env:RELEASE_TAG" *> $null
-          if ($LASTEXITCODE -eq 0) { throw "Release $env:RELEASE_TAG already exists; refusing to overwrite it." }
+          $releaseTags = @(gh api --paginate "repos/${{ github.repository }}/releases" --jq ".[].tag_name")
+          if ($LASTEXITCODE -ne 0) { throw "Unable to inspect existing GitHub Releases." }
+          if ($releaseTags -contains $env:RELEASE_TAG) { throw "Release $env:RELEASE_TAG already exists; refusing to overwrite it." }
           gh release create "$env:RELEASE_TAG" dist\MedicalDiaryAutofill.exe dist\MedicalDiaryAutofill-Setup-1.4.13.exe release\MedicalDiaryAutofill_PRODUCTION_SOURCE.zip --verify-tag --title "MedicalDiaryAutofill $env:RELEASE_TAG" --generate-notes

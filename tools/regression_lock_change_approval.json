@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "1ad0c2aad9365ed83611a3f553f9b97087f0d419",
+  "reason": "Make the unsigned v1.4.13 release absence checks PowerShell-safe after production run 35263021852 proved that expected 404 responses terminate GitHub CLI steps before absence can be interpreted. Preserve all overwrite guards and all document, packaged EXE, desktop-intake, installer, and uninstall regressions.",
+  "required_evidence": [
+    "document_mechanics_guard",
+    "full_patient_replay",
+    "golden_docx",
+    "staff_profile_regression",
+    "gender_generation_matrix",
+    "desktop_intake_contract",
+    "intake_lifecycle_regression",
+    "packaged_desktop_intake_e2e",
+    "installer_uninstall_smoke",
+    "ci_gate_lock"
+  ],
+  "approved_blobs": {
+    ".github/workflows/release.yml": "699ee84fb727cecc3ff0779084ef933bdfb6fc3c"
+  }
+}
