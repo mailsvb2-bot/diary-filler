@@ -1,3 +1,14 @@
+# Release notes — v1.4.14-intake-autolaunch
+
+## v1.4.14-intake-autolaunch
+
+- Исправлен установленный сценарий `Выписанные пациенты → DOC/DOCX → автоматический запуск интерфейса`: installer создаёт и сохраняет папку, сразу регистрирует и запускает hidden watcher, в том числе после silent/update install.
+- При обновлении очищается только устаревшее техническое watcher-состояние; пользовательские документы и папка не удаляются.
+- Installer smoke теперь доказывает живой watcher heartbeat ещё до первого ручного запуска GUI, а packaged E2E отдельно доказывает появление видимого окна после помещения первичного документа.
+- Release recovery разрешён только для уже созданного тега, который указывает ровно на тот же candidate SHA и ещё не имеет GitHub Release; тег никогда не перемещается.
+- Медицинские parser/renderer/template и генерация документов не изменялись; canonical golden DOCX остаются обязательным gate.
+- Версия программы, package metadata, Windows EXE и installer синхронизирована как `1.4.14` / `v1.4.14-intake-autolaunch`; installer: `MedicalDiaryAutofill-Setup-1.4.14.exe`.
+
 # Release notes — v1.4.13-fio-diagnosis-speed
 
 ## v1.4.13-fio-diagnosis-speed
