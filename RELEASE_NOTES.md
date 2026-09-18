@@ -1,3 +1,15 @@
+# Release notes — v1.4.17-intake-wake-fix
+
+## v1.4.17-intake-wake-fix
+
+- Исправлен реальный сценарий автозапуска: если GUI закрыт, любой полностью скопированный Word-файл `.doc/.docx/.docm` в корне `Desktop\\Выписанные пациенты` теперь сначала будит приложение, а медицинская классификация выполняется уже штатным видимым GUI/parser-путём.
+- Скрытый watcher больше не может молча заблокировать запуск из-за false-negative или исключения предварительного медицинского parser-а.
+- При уже открытом GUI прежняя медицинская фильтрация сохранена, поэтому обработка входных документов остаётся контролируемой.
+- Добавлен regression, который намеренно ломает медицинский classifier и доказывает, что closed-GUI wake всё равно срабатывает.
+- Production safety gate запрещает возврат скрытого watcher-а к медицинской pre-classification.
+- PR #127 exact-head `b494747009ba35b6afed509d5a7d7463abf36b44` прошёл Windows run `35388989332` полностью, включая packaged desktop-intake auto-launch E2E и installed/uninstalled smoke; merge `5425be6187b61706359947b75ba35eeee767fbab` также прошёл post-merge Windows CI `35389351382`.
+- Версия программы и installer: `1.4.17` / `v1.4.17-intake-wake-fix`; installer: `MedicalDiaryAutofill-Setup-1.4.17.exe`.
+
 # Release notes — v1.4.16-docx-boundary-integrity
 
 ## v1.4.16-docx-boundary-integrity
