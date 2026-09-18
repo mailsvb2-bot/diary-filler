@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "1f4c83b13a2dd6260097b805df4aea7f8d42f3a3",
-  "baseline_note": "PR #116 prepared v1.4.15 release/version metadata for the always-on/self-healing intake watcher fix and passed Windows run 35339090310 with all 34 product-path steps successful. PR #117 then removed the temporary document-mechanics approval and passed Windows run 35339574191, again 34/34. PR #117 merged as 1f4c83b13a2dd6260097b805df4aea7f8d42f3a3. This baseline is the clean release tree: no temporary document-mechanics approval remains, and medical parsing, rendering, templates, diary generation and generated-document mechanics are unchanged.",
+  "baseline_ref": "56b53fd45ec7d140efb2d253f348f572636250fb",
+  "baseline_note": "PR #119 fixed destructive DOCX section replacement. Exact candidate 7d2ccd0132cf5f26f5e1ad985a70b3264b5ebf18 passed Windows run 35343158910 with all 34 product-path steps successful, including the new DOCX block-boundary regression, full patient replay, canonical golden DOCX, round-trip treatment preservation, EXE, packaged intake E2E, installer and installed/uninstall smoke. PR #119 merged as 56b53fd45ec7d140efb2d253f348f572636250fb.",
   "required_approval_evidence": [
     "ci_gate_lock"
   ],
