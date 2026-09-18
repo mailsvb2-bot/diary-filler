@@ -132,6 +132,36 @@ def _assert_canonical_primary_parser_contract() -> None:
         assert not startup.desktop_intake_is_primary_document(discharge), "discharge must stay excluded"
 
 
+def _assert_closed_gui_wake_is_classification_free() -> None:
+    """A closed GUI must wake for supported Word input before medical parsing."""
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        candidate = root / "real-world-primary.docx"
+        candidate.write_bytes(b"not-parsed-by-hidden-watcher")
+
+        original_quiet = startup.desktop_intake_file_is_quiet
+        original_classifier = startup.desktop_intake_is_primary_document
+        try:
+            startup.desktop_intake_file_is_quiet = lambda _path: True  # type: ignore[assignment]
+
+            def forbidden_classifier(_path):
+                raise AssertionError("hidden watcher must not medically classify before GUI launch")
+
+            startup.desktop_intake_is_primary_document = forbidden_classifier  # type: ignore[assignment]
+            wake = startup.desktop_intake_scan_wake_candidates(root)
+            assert wake == [candidate], wake
+        finally:
+            startup.desktop_intake_is_primary_document = original_classifier  # type: ignore[assignment]
+            startup.desktop_intake_file_is_quiet = original_quiet  # type: ignore[assignment]
+
+    agent_source = Path(startup.__file__).read_text(encoding="utf-8")
+    start = agent_source.index("def run_desktop_intake_agent")
+    end = agent_source.index("# Existing-GUI handoff", start)
+    agent_body = agent_source[start:end]
+    assert "desktop_intake_scan_wake_candidates(root)" in agent_body
+    assert "desktop_intake_scan_primary_candidates(root)" not in agent_body
+
+
 def _assert_agent_heartbeat_contract() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         runtime = Path(tmp)
@@ -338,6 +368,7 @@ def main() -> None:
     _assert_canonical_primary_parser_contract()
     _assert_top_level_only_and_safe_move()
     _assert_agent_update_and_encoding_contract()
+    _assert_closed_gui_wake_is_classification_free()
     _assert_agent_heartbeat_contract()
     _assert_stale_disabled_intake_self_heals()
     print("desktop intake contract: PASS")

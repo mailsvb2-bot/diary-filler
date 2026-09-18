@@ -298,7 +298,24 @@ def desktop_intake_iter_candidates(intake_root: str | Path) -> tuple[Path, ...]:
     return tuple(item[2] for item in result)
 
 
+def desktop_intake_scan_wake_candidates(intake_root: str | Path) -> list[Path]:
+    """Return quiet Word files that must wake a closed GUI.
+
+    The hidden watcher is an outer lifecycle component, not a medical parser.
+    It must never decide whether a supported Word document is clinically a
+    primary document before the application is visible.  Any .doc/.docx/.docm
+    placed in the intake root wakes the GUI; the canonical GUI/parser path then
+    validates and processes the document.
+    """
+    return [
+        path
+        for path in desktop_intake_iter_candidates(intake_root)
+        if desktop_intake_file_is_quiet(path)
+    ]
+
+
 def desktop_intake_scan_primary_candidates(intake_root: str | Path) -> list[Path]:
+    """Filter supported Word files only after the GUI is already running."""
     result: list[Path] = []
     for path in desktop_intake_iter_candidates(intake_root):
         if not desktop_intake_file_is_quiet(path):
@@ -1120,7 +1137,7 @@ def run_desktop_intake_agent() -> int:
                 if now - launched_at < _DESKTOP_INTAKE_AGENT_RELAUNCH_COOLDOWN_SECONDS
             }
             if not _desktop_gui_is_active():
-                for path in desktop_intake_scan_primary_candidates(root):
+                for path in desktop_intake_scan_wake_candidates(root):
                     signature = _desktop_source_signature(path)
                     if signature in recently_launched:
                         continue
