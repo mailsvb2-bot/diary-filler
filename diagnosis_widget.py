@@ -105,16 +105,39 @@ class DiagnosisWidgetMixin:
                 self._focus_diagnosis_popup(event)
                 return
 
-        self._commit_visible_diagnosis_change()
+        pending = getattr(self, "_diagnosis_search_after_id", None)
+        if pending is not None:
+            try:
+                self.root.after_cancel(pending)
+            except Exception:
+                pass
+            self._diagnosis_search_after_id = None
+
         query = self.diagnosis_var.get().strip()
         if not query:
+            self._commit_visible_diagnosis_change()
             self._hide_diagnosis_popup()
             return
-        display_values = [_format_diagnosis(item) for item in _search_icd10_f(query, limit=24)]
-        if display_values:
-            self._show_diagnosis_popup(display_values[:12], keep_entry_focus=True)
-        else:
-            self._hide_diagnosis_popup()
+
+        def refresh_after_typing() -> None:
+            self._diagnosis_search_after_id = None
+            self._commit_visible_diagnosis_change()
+            current = self.diagnosis_var.get().strip()
+            if not current:
+                self._hide_diagnosis_popup()
+                return
+            display_values = [
+                _format_diagnosis(item) for item in _search_icd10_f(current, limit=24)
+            ]
+            if display_values:
+                self._show_diagnosis_popup(display_values[:12], keep_entry_focus=True)
+            else:
+                self._hide_diagnosis_popup()
+
+        try:
+            self._diagnosis_search_after_id = self.root.after(120, refresh_after_typing)
+        except Exception:
+            refresh_after_typing()
 
     def _select_first_diagnosis_match(self, _event=None) -> str:
         query = self.diagnosis_var.get().strip()
