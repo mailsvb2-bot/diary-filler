@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "e7b3bebfb717a01d774a0b6f34260f8ceb66a7ef",
-  "reason": "Fix the real installed Windows intake failure without changing medical/document generation: make Desktop/Выписанные пациенты mandatory, heal legacy desktop_intake_enabled=false on every GUI start, and prevent stale preference state from suppressing watcher persistence/runtime.",
+  "reason": "Fix the real installed Windows intake failure without changing medical/document generation: make the Desktop intake folder mandatory, heal legacy desktop_intake_enabled=false on every GUI start, and prevent stale preference state from suppressing watcher persistence/runtime.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
