@@ -19,18 +19,18 @@
     "actions_ui_state.py": "034a1a356efd28d2eb829c35b11c8981e4b4b64d",
     "build_exe_windows.bat": "df4894ffb18fc331abfaa9564c6cd02025917b35",
     "diagnosis_widget.py": "3d3dda5dfd1674fa268f66934f9d1daff9eb103c",
-    "dialog_dates.py": "d5c4c91889006f6e956d56e884770e4999d790a6",
+    "dialog_dates.py": "0e24aa276128c1a00847748c07319bddb9bac8df",
     "dialog_fields_popup.py": "3eacc0dcd07ca5612f775a8ed090cd37c5ead218",
     "installer/MedicalDiaryAutofill.iss": "6db683d10a149dca46352dac83d62a389c7a0bc0",
     "main.py": "661bf5b9f4c31bd515e000dc4a7b53c6f8f5a4e8",
     "medical_docx_blocks.py": "6fe7b72fd3e50f6105d14ddb2c785825eabdfb9e",
     "release_check.py": "21e8f54ce4fad64fc119ca9e67f46d7b7fc67ecd",
-    "smoke_combined_part02_ui_parser_regressions.py": "1e42353a4f0c872a90c8f7042bb37b81b6c45a83",
+    "smoke_combined_part02_ui_parser_regressions.py": "4830a78fdf899c1bfcbf3e6d0111bd95a967b2f1",
     "startup.py": "dfc8c48fbea42c0f8a9591e3c8b7ae58f8e9f580",
     "tests/desktop_intake_contract_check.py": "ccb338672adb4512a5b2ccdab0b87b2f213258df",
     "tests/intake_lifecycle_regression.py": "d191e6de2c965399047745cd15f42904983daae0",
-    "tools/document_mechanics_change_approval.json": "684ccdffe64e4fded0ab5699910a5a40622b2128",
-    "tools/production_safety_gate.py": "d6b954dbaf73b5dabdf3e2baf27e6c960e017762",
+    "tools/document_mechanics_change_approval.json": "ea43d6b08537a8e55b32bbabd1169f15d1c17fa4",
+    "tools/production_safety_gate.py": "6dc013c012ac4b9690d678145200468bc8197b53",
     "tools/windows_installer_smoke.ps1": "24dc703e3b22b1335a16f48222fbc1b37023dcf6"
   }
 }
