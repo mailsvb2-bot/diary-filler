@@ -21,12 +21,12 @@
     "files_mixin.py": "98bef25c802fe7fc248a5b6c6c8a9dacb001294e",
     "medical_docx_blocks.py": "8d2c8676969675ba2a4715cfb3348ae6d37a8de2",
     "medical_docx_title_finder.py": "92a0d2ee628d9c80cd4c5865deac2f0af0873ad5",
-    "medical_service.py": "34ae376c2cc7e16801ef08105a90137c9fb44057",
+    "medical_service.py": "494176c87a547c870622cc6f5713e7e064ce3071",
     "smoke_combined_part01_setup_contracts.py": "2a33ff67709b06812e911db535ba3eda4e2ffcad",
     "smoke_combined_part06_diary_columns_settings.py": "759bdc75723d1d90057065d4a5634c5f39d6d0d0",
     "startup.py": "44a65992b66495a0dfb5dd414c8e1d2e57683b8b",
     "tests/desktop_intake_contract_check.py": "5a1c4312d25ef047efa6c17b6c3127e92b2f8ed4",
-    "tools/document_mechanics_change_approval.json": "f0a663b952a7d4f3e53717a724899320f90dc702",
+    "tools/document_mechanics_change_approval.json": "ba7e1e1b6d18f2f842c97e3f94cf74d1db079c2f",
     "medical_docx_reader.py": "ca71e157add6b88bdf81c029627af6242d4f94cd",
     "medical_parser_core.py": "fa58cc6628fd79b3913138254c8fa5f0dd7f466a"
   }
