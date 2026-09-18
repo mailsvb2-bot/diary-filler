@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "c227a8a6ffbaa9356051c11c75f564c464806f1e",
-  "baseline_note": "PR #125 added fail-closed merged-PR provenance verification for pushes to main/master without changing document-generation mechanics. Its candidate run 35354211683 passed the full Windows product path, and the post-merge main run 35354734956 also completed successfully with the provenance guard, full patient replay/golden DOCX, packaged intake, installer build, and installed/uninstalled smoke all green. PR #125 merged as c227a8a6ffbaa9356051c11c75f564c464806f1e; this is the clean hardened production/test baseline.",
+  "baseline_ref": "5425be6187b61706359947b75ba35eeee767fbab",
+  "baseline_note": "PR #127 removed medical pre-classification from the closed-GUI Desktop watcher: any quiet supported Word file in Desktop\\\\Выписанные пациенты now wakes the visible application, while canonical medical validation stays in the GUI/parser path. Exact candidate b494747009ba35b6afed509d5a7d7463abf36b44 passed Windows run 35388989332 end-to-end, including regression locks, golden DOCX/full patient replay, desktop intake contract, intake lifecycle, real Tk, packaged EXE auto-launch E2E, installer build, and installed/uninstalled smoke. PR #127 merged as 5425be6187b61706359947b75ba35eeee767fbab; this is the tested production/test baseline.",
   "required_approval_evidence": [
     "ci_gate_lock"
   ],
