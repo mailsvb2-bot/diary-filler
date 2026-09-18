@@ -44,10 +44,22 @@ def assert_intake_boundary() -> None:
         "nothing below generates or edits medical documents",
         "app._apply_primary_document_path(str(moved_primary), prompt_for_referral=True)",
         "The medical/diary generation engine stays",
+        "def desktop_intake_scan_wake_candidates",
+        "hidden watcher is an outer lifecycle component, not a medical parser",
     )
     missing = [marker for marker in required if marker not in startup]
     if missing:
         fail("desktop intake boundary drifted: " + ", ".join(missing))
+
+    agent_start = startup.find("def run_desktop_intake_agent")
+    agent_end = startup.find("# Existing-GUI handoff", agent_start)
+    if agent_start < 0 or agent_end < 0:
+        fail("desktop intake agent boundary cannot be located")
+    agent_body = startup[agent_start:agent_end]
+    if "desktop_intake_scan_wake_candidates(root)" not in agent_body:
+        fail("closed-GUI watcher no longer wakes before medical classification")
+    if "desktop_intake_scan_primary_candidates(root)" in agent_body:
+        fail("closed-GUI watcher regressed to medical pre-classification")
 
 
 def assert_self_check_is_outer_only() -> None:
