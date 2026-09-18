@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import os
 import re
 import threading
@@ -32,6 +33,55 @@ _DOCX_TEXT_CACHE: dict[str, tuple[int, int, str]] = {}
 
 _SUPPORTED_WORD_SUFFIXES = {".doc", ".docx", ".docm"}
 
+_LEGACY_DOC_CACHE_LOCK = threading.Lock()
+_LEGACY_DOC_CACHE_CONTEXT: TemporaryDirectory | None = None
+_LEGACY_DOC_CACHE: dict[tuple[str, int, int], Path] = {}
+_LEGACY_DOC_CACHE_MAX_ENTRIES = 4
+
+
+def _active_word_hwnd(win32com_client) -> int | None:
+    """Return the existing user's Word window handle when COM exposes it."""
+    try:
+        active = win32com_client.GetActiveObject("Word.Application")
+        hwnd = int(getattr(active, "Hwnd", 0) or 0)
+        return hwnd or None
+    except Exception:
+        return None
+
+
+def _legacy_doc_cache_path(source: Path) -> Path:
+    """Convert one exact .doc filesystem revision at most once per process."""
+    global _LEGACY_DOC_CACHE_CONTEXT
+
+    resolved = source.resolve()
+    stat = resolved.stat()
+    key = (str(resolved), int(stat.st_size), int(stat.st_mtime_ns))
+    with _LEGACY_DOC_CACHE_LOCK:
+        cached = _LEGACY_DOC_CACHE.get(key)
+        if cached is not None and cached.is_file():
+            return cached
+
+        if _LEGACY_DOC_CACHE_CONTEXT is None:
+            _LEGACY_DOC_CACHE_CONTEXT = TemporaryDirectory(
+                prefix="medical-autofill-legacy-doc-cache-"
+            )
+        digest = hashlib.sha256(
+            f"{key[0]}|{key[1]}|{key[2]}".encode("utf-8", errors="surrogatepass")
+        ).hexdigest()[:24]
+        target = Path(_LEGACY_DOC_CACHE_CONTEXT.name) / f"{digest}.docx"
+        convert_legacy_doc_to_docx(resolved, target)
+        _LEGACY_DOC_CACHE[key] = target
+
+        while len(_LEGACY_DOC_CACHE) > _LEGACY_DOC_CACHE_MAX_ENTRIES:
+            oldest_key = next(iter(_LEGACY_DOC_CACHE))
+            old_path = _LEGACY_DOC_CACHE.pop(oldest_key)
+            if old_path != target:
+                try:
+                    old_path.unlink(missing_ok=True)
+                except OSError:
+                    pass
+        return target
+
 
 def convert_legacy_doc_to_docx(source: Path, target: Path) -> None:
     """Convert old binary Word .doc into a temporary DOCX without touching source."""
@@ -51,9 +101,19 @@ def convert_legacy_doc_to_docx(source: Path, target: Path) -> None:
 
     word = None
     opened = None
+    user_word_hwnd = None
+    automation_word_hwnd = None
     pythoncom.CoInitialize()
     try:
+        # Word is a user application. Never assume that a COM object belongs to
+        # us merely because we requested DispatchEx: record the already-active
+        # user instance and refuse to Quit it if COM returns that same window.
+        user_word_hwnd = _active_word_hwnd(win32com.client)
         word = win32com.client.DispatchEx("Word.Application")
+        try:
+            automation_word_hwnd = int(getattr(word, "Hwnd", 0) or 0) or None
+        except Exception:
+            automation_word_hwnd = None
         word.Visible = False
         word.DisplayAlerts = 0
         opened = word.Documents.Open(
@@ -76,10 +136,21 @@ def convert_legacy_doc_to_docx(source: Path, target: Path) -> None:
             except Exception:
                 pass
         if word is not None:
-            try:
-                word.Quit()
-            except Exception:
-                pass
+            # Quit only a distinct automation instance. If Word handed COM the
+            # same top-level instance that the doctor already had open, closing
+            # the document is enough; the user's Word application must survive.
+            safe_to_quit = (
+                user_word_hwnd is None
+                or (
+                    automation_word_hwnd is not None
+                    and automation_word_hwnd != user_word_hwnd
+                )
+            )
+            if safe_to_quit:
+                try:
+                    word.Quit()
+                except Exception:
+                    pass
         pythoncom.CoUninitialize()
 
 
@@ -94,10 +165,10 @@ def materialize_word_source_as_docx(path: str | Path):
     if suffix != ".doc":
         yield source
         return
-    with TemporaryDirectory(prefix="medical-autofill-legacy-doc-") as tmp_dir:
-        converted = Path(tmp_dir) / (source.stem + ".docx")
-        convert_legacy_doc_to_docx(source, converted)
-        yield converted
+    # One primary .doc is consulted by several canonical readers (classification,
+    # parser, title-date lookup). Reuse one exact conversion instead of repeatedly
+    # starting and stopping Microsoft Word during the same GUI session.
+    yield _legacy_doc_cache_path(source)
 
 
 def _docx_text_cache_key(path: Path) -> str:
