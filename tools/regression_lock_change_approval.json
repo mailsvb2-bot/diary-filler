@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "754471423e47a26094e9a11eeaee56de86746787",
-  "reason": "Prepare v1.4.15 release metadata and fail-closed release wiring for the already-proven always-on intake watcher fix. No medical parser, renderer, template, diary, or document-generation mechanics change.",
+  "baseline_ref": "153113d8615e618432f6ff63672b7dc38b4e8e2c",
+  "reason": "Remove the temporary v1.4.15 document-mechanics approval after the exact release candidate passed the full Windows regression contour. No product or document-generation code changes.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -15,16 +15,6 @@
     "ci_gate_lock"
   ],
   "approved_blobs": {
-    ".github/workflows/release.yml": "5b328c59f20c412f0815fa7ee088a0bdc2a8ed9d",
-    ".github/workflows/windows-build.yml": "77cf4c74605ab97af35e38d511ac1009014e91bb",
-    "BUILD_WINDOWS_INSTALLER.bat": "a59881193723709d200f30588b284d5a722b9ae0",
-    "app_config.py": "0909a2b0542d0ecc61abb18b57c52ac86a5c21df",
-    "installer/MedicalDiaryAutofill.iss": "d2303f81b8772ff6f59458fd21db80b627d3063b",
-    "prod_audit.py": "02c561db119d6454538abc494ea2cb6d75db6a6a",
-    "pyproject.toml": "95abc153ca115c1bcb92b09f57dd6055e3092753",
-    "release_check.py": "5d733f92104d4c38e69cb63de00dadb5b8e7621d",
-    "tools/ci_gate_lock.py": "46077b58ec15531af9e73eb764a59a693d81488d",
-    "tools/document_mechanics_change_approval.json": "242dada1e4d8c3418c0ba431a2fe1f2b5ee42dc3",
-    "version_info.txt": "1f5b05cf52e70bea1ab104e47a150dc752379c8f"
+    "tools/document_mechanics_change_approval.json": "<deleted>"
   }
 }
