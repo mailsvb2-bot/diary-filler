@@ -13,6 +13,7 @@ WINDOWS_WORKFLOW = ROOT / ".github" / "workflows" / "windows-build.yml"
 RELEASE_WORKFLOW = ROOT / ".github" / "workflows" / "release.yml"
 
 WINDOWS_REQUIRED_IN_ORDER = (
+    "python tools/main_branch_policy.py",
     "python tools/regression_lock_check.py",
     "python tools/ci_gate_lock.py",
     "python tests/regression_surface_inventory.py",
@@ -72,6 +73,7 @@ REQUIRED_REPOSITORY_FILES = (
     "tests/intake_lifecycle_regression.py",
     "tests/diagnosis_override_regression.py",
     "tools/document_mechanics_guard.py",
+    "tools/main_branch_policy.py",
     "tools/full_patient_replay_check.py",
     "tools/golden_docx_regression.py",
     "tools/staff_profile_regression.py",
@@ -103,7 +105,7 @@ def main() -> None:
     windows = WINDOWS_WORKFLOW.read_text(encoding="utf-8")
     release = RELEASE_WORKFLOW.read_text(encoding="utf-8")
 
-    for required in ("pull_request:", "workflow_dispatch:", "branches: [main, master]", "fetch-depth: 0"):
+    for required in ("pull_request:", "workflow_dispatch:", "branches: [main, master]", "fetch-depth: 0", "pull-requests: read"):
         if required not in windows:
             raise SystemExit(f"CI GATE LOCK FAILED: Windows workflow lost trigger/history contract: {required}")
     _require_order(windows, WINDOWS_REQUIRED_IN_ORDER, "Windows workflow")
