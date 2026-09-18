@@ -220,7 +220,7 @@ def assert_staff_profile_contract() -> None:
         (settings, "def _set_staff_profile"),
         (settings, '"deputy_chief"'),
         (main_source, "def _first_launch_onboarding"),
-        (main_source, "Создать на рабочем столе папку «Выписанные пациенты»?"),
+        (main_source, "app._set_desktop_intake_preference(True)"),
         (main_source, "_prompt_staff_profile(first_run=True)"),
         (window, 'text="Сотрудники"'),
         (medical_flow, "_apply_staff_profile_to_patient_data(data)"),
