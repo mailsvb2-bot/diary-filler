@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "ceb9269a5779827950102eba1c3ab68b78ba373e",
-  "reason": "Prepare v1.4.16 release metadata and fail-closed release wiring for the already-proven DOCX block-boundary integrity fix. No medical parser, renderer, template, diary, watcher, or document-generation mechanics change in this release slice.",
+  "baseline_ref": "6f9d7d3d9de04bfbcd3e92317bb97d242eb04cd1",
+  "reason": "Remove the temporary v1.4.16 document-mechanics approval after the exact release candidate passed the complete Windows regression contour. No product or document-generation behavior changes in this cleanup.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -15,16 +15,6 @@
     "ci_gate_lock"
   ],
   "approved_blobs": {
-    ".github/workflows/release.yml": "507d724b040e9f8879623746d70b512ea058e156",
-    ".github/workflows/windows-build.yml": "4b6108472b527c6374e43637bc473dd3f09a69a2",
-    "BUILD_WINDOWS_INSTALLER.bat": "ea278cac019ced6a3f5369d5f2d188ea5f45cab0",
-    "app_config.py": "81f0ed17c9a9ffe16f3cb74bc0957e827b83d972",
-    "installer/MedicalDiaryAutofill.iss": "e88791a9464648128d58846281392407e23ec51d",
-    "prod_audit.py": "e0b257605460a3b481646f855eeed2285d5b6a5f",
-    "pyproject.toml": "8446d64584941dad28f356bf50cd101711bd1d01",
-    "release_check.py": "d215a209a4ada357d9feccce6e09d17f804a3b69",
-    "tools/ci_gate_lock.py": "c94d0666c451b21e2068662728372946bdcbc9bc",
-    "tools/document_mechanics_change_approval.json": "385fdc9d5e899b59d55987a19b25c0111372fb0f",
-    "version_info.txt": "e70cb87bc9cce049cff1f8d667db26e136ceb9bc"
+    "tools/document_mechanics_change_approval.json": "<deleted>"
   }
 }
