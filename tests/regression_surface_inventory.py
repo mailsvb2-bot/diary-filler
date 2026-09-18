@@ -48,6 +48,7 @@ MUST_BE_LOCKED = (
     "tests/desktop_intake_contract_check.py",
     "tests/intake_lifecycle_regression.py",
     "tools/document_mechanics_guard.py",
+    "tools/main_branch_policy.py",
     "tools/full_patient_replay_check.py",
     "tools/golden_docx_regression.py",
     "tools/windows_desktop_intake_e2e.ps1",
