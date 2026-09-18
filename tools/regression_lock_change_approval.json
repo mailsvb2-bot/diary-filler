@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "1f4c83b13a2dd6260097b805df4aea7f8d42f3a3",
+  "reason": "Fix DOCX generation corruption by preserving original template section identity, preventing inserted patient text from becoming structural markers, and completing renderer boundary aliases. Intake/watcher behavior is unchanged.",
+  "required_evidence": [
+    "document_mechanics_guard",
+    "full_patient_replay",
+    "golden_docx",
+    "staff_profile_regression",
+    "gender_generation_matrix",
+    "desktop_intake_contract",
+    "intake_lifecycle_regression",
+    "packaged_desktop_intake_e2e",
+    "installer_uninstall_smoke",
+    "ci_gate_lock"
+  ],
+  "approved_blobs": {
+    "medical_docx_editor_core.py": "576b90f9d689f2f858f710dc02f8525510cf05b2",
+    "medical_docx_editor_markers.py": "0f9efd01a2bb369f6e16e25568eac86b0d34c97e",
+    "medical_markers.py": "82e40a2bb77760b94502c643eac058a24d1b0458",
+    "tools/docx_block_boundary_regression.py": "24f96a46731b756c08a4581ee8f5a4020a820ea1",
+    "tools/full_patient_replay_check.py": "ff3ad21c27ecbff82fe24a59fcce80da8871d2bb"
+  }
+}
