@@ -136,14 +136,21 @@ def convert_legacy_doc_to_docx(source: Path, target: Path) -> None:
             except Exception:
                 pass
         if word is not None:
-            # Quit only a distinct automation instance. If Word handed COM the
-            # same top-level instance that the doctor already had open, closing
-            # the document is enough; the user's Word application must survive.
-            safe_to_quit = (
-                user_word_hwnd is None
-                or (
-                    automation_word_hwnd is not None
-                    and automation_word_hwnd != user_word_hwnd
+            # Quit only an automation-owned, distinct instance.  UserControl is
+            # Word's own ownership signal; default to True on any ambiguity so
+            # an existing interactive Word process is never terminated.
+            try:
+                automation_owned = not bool(getattr(word, "UserControl", True))
+            except Exception:
+                automation_owned = False
+            safe_to_quit = bool(
+                automation_owned
+                and (
+                    user_word_hwnd is None
+                    or (
+                        automation_word_hwnd is not None
+                        and automation_word_hwnd != user_word_hwnd
+                    )
                 )
             )
             if safe_to_quit:
