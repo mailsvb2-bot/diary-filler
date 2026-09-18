@@ -32,7 +32,7 @@ def assert_agent_recreates_deleted_intake_root() -> None:
         original_touch = startup._desktop_touch_agent_heartbeat
         original_retired = startup._desktop_agent_is_retired
         original_gui_active = startup._desktop_gui_is_active
-        original_scan = startup.desktop_intake_scan_primary_candidates
+        original_scan = startup.desktop_intake_scan_wake_candidates
         original_sleep = startup.time.sleep
         original_log = startup._desktop_agent_log
         scans: list[bool] = []
@@ -58,7 +58,7 @@ def assert_agent_recreates_deleted_intake_root() -> None:
             startup._desktop_touch_agent_heartbeat = lambda: None  # type: ignore[assignment]
             startup._desktop_agent_is_retired = lambda: False  # type: ignore[assignment]
             startup._desktop_gui_is_active = lambda: False  # type: ignore[assignment]
-            startup.desktop_intake_scan_primary_candidates = scan  # type: ignore[assignment]
+            startup.desktop_intake_scan_wake_candidates = scan  # type: ignore[assignment]
             startup.time.sleep = lambda _seconds: None  # type: ignore[assignment]
             startup._desktop_agent_log = lambda _message: None  # type: ignore[assignment]
 
@@ -69,7 +69,7 @@ def assert_agent_recreates_deleted_intake_root() -> None:
         finally:
             startup._desktop_agent_log = original_log  # type: ignore[assignment]
             startup.time.sleep = original_sleep  # type: ignore[assignment]
-            startup.desktop_intake_scan_primary_candidates = original_scan  # type: ignore[assignment]
+            startup.desktop_intake_scan_wake_candidates = original_scan  # type: ignore[assignment]
             startup._desktop_gui_is_active = original_gui_active  # type: ignore[assignment]
             startup._desktop_agent_is_retired = original_retired  # type: ignore[assignment]
             startup._desktop_touch_agent_heartbeat = original_touch  # type: ignore[assignment]
@@ -97,7 +97,7 @@ def assert_agent_rebinds_when_desktop_moves() -> None:
         original_touch = startup._desktop_touch_agent_heartbeat
         original_retired = startup._desktop_agent_is_retired
         original_gui_active = startup._desktop_gui_is_active
-        original_scan = startup.desktop_intake_scan_primary_candidates
+        original_scan = startup.desktop_intake_scan_wake_candidates
         original_sleep = startup.time.sleep
         original_log = startup._desktop_agent_log
 
@@ -116,7 +116,7 @@ def assert_agent_rebinds_when_desktop_moves() -> None:
             startup._desktop_touch_agent_heartbeat = lambda: None  # type: ignore[assignment]
             startup._desktop_agent_is_retired = lambda: False  # type: ignore[assignment]
             startup._desktop_gui_is_active = lambda: False  # type: ignore[assignment]
-            startup.desktop_intake_scan_primary_candidates = scan  # type: ignore[assignment]
+            startup.desktop_intake_scan_wake_candidates = scan  # type: ignore[assignment]
             startup.time.sleep = lambda _seconds: None  # type: ignore[assignment]
             startup._desktop_agent_log = lambda _message: None  # type: ignore[assignment]
 
@@ -126,7 +126,7 @@ def assert_agent_rebinds_when_desktop_moves() -> None:
         finally:
             startup._desktop_agent_log = original_log  # type: ignore[assignment]
             startup.time.sleep = original_sleep  # type: ignore[assignment]
-            startup.desktop_intake_scan_primary_candidates = original_scan  # type: ignore[assignment]
+            startup.desktop_intake_scan_wake_candidates = original_scan  # type: ignore[assignment]
             startup._desktop_gui_is_active = original_gui_active  # type: ignore[assignment]
             startup._desktop_agent_is_retired = original_retired  # type: ignore[assignment]
             startup._desktop_touch_agent_heartbeat = original_touch  # type: ignore[assignment]
