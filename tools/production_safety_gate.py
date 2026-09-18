@@ -45,6 +45,7 @@ def assert_intake_boundary() -> None:
         "app._apply_primary_document_path(str(moved_primary), prompt_for_referral=True)",
         "The medical/diary generation engine stays",
         "def desktop_intake_scan_wake_candidates",
+        "def _desktop_candidate_snapshot",
         "hidden watcher is an outer lifecycle component, not a medical parser",
     )
     missing = [marker for marker in required if marker not in startup]
@@ -56,10 +57,22 @@ def assert_intake_boundary() -> None:
     if agent_start < 0 or agent_end < 0:
         fail("desktop intake agent boundary cannot be located")
     agent_body = startup[agent_start:agent_end]
-    if "desktop_intake_scan_wake_candidates(root)" not in agent_body:
-        fail("closed-GUI watcher no longer wakes before medical classification")
+    if "_desktop_candidate_snapshot(root)" not in agent_body:
+        fail("closed-GUI watcher no longer uses filesystem-event snapshots")
     if "desktop_intake_scan_primary_candidates(root)" in agent_body:
         fail("closed-GUI watcher regressed to medical pre-classification")
+    if "recently_launched" in agent_body:
+        fail("closed-GUI watcher regressed to time-based relaunch of unchanged files")
+
+    poll_start = startup.find("def _desktop_poll_intake")
+    poll_end = startup.find("def start_desktop_intake_runtime", poll_start)
+    if poll_start < 0 or poll_end < 0:
+        fail("desktop intake GUI polling boundary cannot be located")
+    poll_body = startup[poll_start:poll_end]
+    if "_desktop_candidate_snapshot(intake_root)" not in poll_body:
+        fail("open GUI no longer uses cheap intake snapshots")
+    if "desktop_intake_scan_primary_candidates" in poll_body:
+        fail("open GUI regressed to repeated medical parsing on every polling tick")
 
 
 def assert_self_check_is_outer_only() -> None:
@@ -125,10 +138,15 @@ def assert_installer_contract() -> None:
         fail("installer no longer removes watcher Startup persistence")
     if "MedicalDiaryAutofill Intake" not in installer:
         fail("installer no longer owns watcher HKCU Run persistence")
-    if "dist\\MedicalDiaryAutofill.exe" not in installer_build or "ISCC" not in installer_build:
-        fail("installer build script is not bound to the packaged EXE")
+    fast_runtime = "dist\\installed\\MedicalDiaryAutofill\\MedicalDiaryAutofill.exe"
+    if fast_runtime not in installer_build or "ISCC" not in installer_build:
+        fail("installer build script is not bound to the fast onedir runtime")
+    if '..\\dist\\installed\\MedicalDiaryAutofill\\*' not in installer:
+        fail("installer no longer packages the fast onedir runtime")
+    if 'Description: "Запустить MedicalDiaryAutofill"' in installer:
+        fail("installer regressed to unsolicited visible post-install launch")
     for marker in (
-        "WINDOWS INSTALLER WATCHER BOOTSTRAP AND UNINSTALL SMOKE OK",
+        "WINDOWS INSTALLER FAST ONEDIR WATCHER BOOTSTRAP AND UNINSTALL SMOKE OK",
         "unins*.exe",
         "--intake-agent",
         "Installer did not create onboarding-required.flag",
@@ -178,6 +196,51 @@ def assert_installer_contract() -> None:
         fail("desktop intake must activate the GUI before intake runtime schedules primary parsing/popups")
     if "filesandordirs" in installer.casefold():
         fail("installer uses broad recursive uninstall deletion")
+
+
+def assert_runtime_responsiveness_contract() -> None:
+    startup_source = read("startup.py")
+    dates = read("dialog_dates.py")
+    diagnosis = read("diagnosis_widget.py")
+    ui_state = read("actions_ui_state.py")
+    blocks = read("medical_docx_blocks.py")
+    build = read("build_exe_windows.bat")
+    installer = read("installer/MedicalDiaryAutofill.iss")
+    main_source = read("main.py")
+
+    if "for suffix in range(10 ** extra_len)" in dates:
+        fail("date KeyRelease path regressed to brute-force parser probing")
+    for marker in ('if len(raw) != 8:', 'self.root.after(120, refresh_after_typing)'):
+        source = dates if "len(raw)" in marker else diagnosis
+        if marker not in source:
+            fail(f"responsive UI contract missing marker: {marker}")
+    mark_start = ui_state.find("def _mark_manual_field")
+    mark_end = ui_state.find("def _set_ui_var", mark_start)
+    if mark_start < 0 or mark_end < 0:
+        fail("manual-field tracking boundary cannot be located")
+    if "_commit_visible_diagnosis_change" in ui_state[mark_start:mark_end]:
+        fail("diagnosis StringVar trace performs heavy synchronous work again")
+
+    for marker in (
+        "def _active_word_hwnd",
+        "def _legacy_doc_cache_path",
+        "safe_to_quit =",
+        "automation_word_hwnd != user_word_hwnd",
+    ):
+        if marker not in blocks:
+            fail(f"Word ownership/cache contract missing marker: {marker}")
+
+    if "--onedir" not in build or "--distpath dist\\installed" not in build:
+        fail("installed Windows runtime is no longer built as fast PyInstaller onedir")
+    if '..\\dist\\installed\\MedicalDiaryAutofill\\*' not in installer:
+        fail("installer lost fast onedir payload")
+    if 'Description: "Запустить MedicalDiaryAutofill"' in installer:
+        fail("installer may visibly auto-launch without an explicit user action")
+
+    tree = ast.parse(main_source, filename="main.py")
+    for node in tree.body:
+        if isinstance(node, ast.ImportFrom) and node.module == "app":
+            fail("main.py eagerly imports the full GUI/document graph before watcher dispatch")
 
 
 def assert_privacy_and_replay_contract() -> None:
@@ -285,6 +348,7 @@ def main() -> None:
     assert_intake_boundary()
     assert_self_check_is_outer_only()
     assert_installer_contract()
+    assert_runtime_responsiveness_contract()
     assert_privacy_and_replay_contract()
     assert_staff_profile_contract()
     assert_ci_wiring()
