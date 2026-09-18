@@ -15,6 +15,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 import startup
+import main as app_main
 import medical_docx_blocks
 from medical_service import MedicalDocumentService
 
@@ -241,6 +242,91 @@ def _assert_agent_update_and_encoding_contract() -> None:
             startup._desktop_native_gui_command = original_native_command  # type: ignore[assignment]
 
 
+
+def _assert_stale_disabled_intake_self_heals() -> None:
+    class FakeApp:
+        def __init__(self) -> None:
+            self.root = object()
+            self._desktop_intake_enabled_for_session = False
+            self.preference = False
+
+        def _desktop_intake_preference(self):
+            return self.preference
+
+        def _set_desktop_intake_preference(self, enabled: bool) -> None:
+            self.preference = bool(enabled)
+
+        def _staff_profile_is_configured(self) -> bool:
+            return True
+
+        def _prompt_staff_profile(self, *, first_run: bool = False) -> bool:
+            raise AssertionError("staff prompt must not run in this contract probe")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        intake_root = Path(tmp) / "Desktop" / "Выписанные пациенты"
+        marker_path = Path(tmp) / "no-onboarding-marker.flag"
+        original_root = app_main.desktop_intake_root_path
+        original_marker = app_main._installation_onboarding_marker_path
+        try:
+            app_main.desktop_intake_root_path = lambda: intake_root  # type: ignore[assignment]
+            app_main._installation_onboarding_marker_path = lambda: marker_path  # type: ignore[assignment]
+            app = FakeApp()
+            app_main._first_launch_onboarding(app)
+            assert intake_root.is_dir(), "mandatory intake root was not recreated"
+            assert app._desktop_intake_enabled_for_session is True
+            assert app.preference is True, "legacy desktop_intake_enabled=false was not healed"
+        finally:
+            app_main.desktop_intake_root_path = original_root  # type: ignore[assignment]
+            app_main._installation_onboarding_marker_path = original_marker  # type: ignore[assignment]
+
+    if startup.os.name != "nt":
+        return
+
+    class FakeRoot:
+        def __init__(self) -> None:
+            self.scheduled: list[int] = []
+
+        def winfo_exists(self) -> bool:
+            return True
+
+        def after(self, delay: int, callback) -> None:
+            self.scheduled.append(delay)
+
+    class RuntimeApp:
+        def __init__(self) -> None:
+            self.root = FakeRoot()
+            self._desktop_intake_enabled_for_session = False
+
+    calls: list[str] = []
+    originals = {
+        "touch": startup._desktop_touch_gui_heartbeat,
+        "ensure": startup.desktop_intake_ensure_root,
+        "startup": startup._desktop_install_agent_autostart,
+        "run_key": startup._desktop_install_agent_run_key,
+        "start": startup._desktop_start_agent_process,
+        "heartbeat": startup._desktop_schedule_heartbeat,
+    }
+    with tempfile.TemporaryDirectory() as tmp:
+        try:
+            startup._desktop_touch_gui_heartbeat = lambda: calls.append("touch")  # type: ignore[assignment]
+            startup.desktop_intake_ensure_root = lambda: Path(tmp)  # type: ignore[assignment]
+            startup._desktop_install_agent_autostart = lambda: calls.append("startup") or True  # type: ignore[assignment]
+            startup._desktop_install_agent_run_key = lambda: calls.append("run_key") or True  # type: ignore[assignment]
+            startup._desktop_start_agent_process = lambda: calls.append("start") or True  # type: ignore[assignment]
+            startup._desktop_schedule_heartbeat = lambda app: calls.append("heartbeat")  # type: ignore[assignment]
+            app = RuntimeApp()
+            startup.start_desktop_intake_runtime(app)
+            assert {"touch", "startup", "run_key", "start", "heartbeat"} <= set(calls), calls
+            assert app.root.scheduled, "runtime health/poll callbacks were not scheduled"
+        finally:
+            startup._desktop_touch_gui_heartbeat = originals["touch"]  # type: ignore[assignment]
+            startup.desktop_intake_ensure_root = originals["ensure"]  # type: ignore[assignment]
+            startup._desktop_install_agent_autostart = originals["startup"]  # type: ignore[assignment]
+            startup._desktop_install_agent_run_key = originals["run_key"]  # type: ignore[assignment]
+            startup._desktop_start_agent_process = originals["start"]  # type: ignore[assignment]
+            startup._desktop_schedule_heartbeat = originals["heartbeat"]  # type: ignore[assignment]
+
+
 def main() -> None:
     _assert_naming_contract()
     _assert_primary_detection_contract()
@@ -248,6 +334,7 @@ def main() -> None:
     _assert_top_level_only_and_safe_move()
     _assert_agent_update_and_encoding_contract()
     _assert_agent_heartbeat_contract()
+    _assert_stale_disabled_intake_self_heals()
     print("desktop intake contract: PASS")
 
 
