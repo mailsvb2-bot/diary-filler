@@ -28,6 +28,7 @@ class DialogDiagnosisPopup:
         self.listbox: tk.Listbox | None = None
         self.entry: tk.Entry | None = None
         self.var: tk.StringVar | None = None
+        self._refresh_after_id = None
 
     @staticmethod
     def is_diagnosis_label(label: str) -> bool:
@@ -36,7 +37,7 @@ class DialogDiagnosisPopup:
     def attach(self, entry: tk.Entry, var: tk.StringVar) -> None:
         self.entry = entry
         self.var = var
-        entry.bind("<KeyRelease>", self.refresh)
+        entry.bind("<KeyRelease>", self.schedule_refresh)
         entry.bind("<Down>", self.focus_popup)
         entry.bind("<Return>", self.return_if_visible)
         entry.bind("<Escape>", lambda _event: self.hide())
@@ -90,7 +91,22 @@ class DialogDiagnosisPopup:
         if keep_entry_focus:
             self.owner.after_idle(lambda: self.entry.focus_set() if self.entry is not None else None)
 
+    def schedule_refresh(self, event=None) -> None:
+        if event is not None and getattr(event, "keysym", "") in _NAVIGATION_KEYS:
+            return
+        if self._refresh_after_id is not None:
+            try:
+                self.owner.after_cancel(self._refresh_after_id)
+            except Exception:
+                pass
+            self._refresh_after_id = None
+        try:
+            self._refresh_after_id = self.owner.after(120, self.refresh)
+        except Exception:
+            self.refresh()
+
     def refresh(self, event=None) -> None:
+        self._refresh_after_id = None
         if event is not None and getattr(event, "keysym", "") in _NAVIGATION_KEYS:
             return
         query = self.var.get().strip() if self.var is not None else ""
