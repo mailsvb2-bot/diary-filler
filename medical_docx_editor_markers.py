@@ -13,7 +13,12 @@ class DocxEditorMarkersMixin:
             if template_text is None:
                 # Paragraphs created from patient data are content, never template structure.
                 continue
-            if any(paragraph_matches_marker(template_text, marker) for marker in markers):
+            current_text = normalize_match(paragraph.text)
+            if any(
+                paragraph_matches_marker(template_text, marker)
+                or paragraph_matches_marker(current_text, marker)
+                for marker in markers
+            ):
                 return i
         return None
 
