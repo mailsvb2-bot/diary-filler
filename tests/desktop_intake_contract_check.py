@@ -114,7 +114,8 @@ def _assert_canonical_primary_parser_contract() -> None:
             assert legacy_data.admission_date == canonical_data.admission_date
             assert legacy_data.diagnosis == canonical_data.diagnosis
             assert legacy_data.input_document_kind == canonical_data.input_document_kind
-            assert conversion_calls == [(legacy, conversion_calls[0][1])], conversion_calls
+            assert len(conversion_calls) == 1, conversion_calls
+            assert conversion_calls[0][0].samefile(legacy), conversion_calls
             assert conversion_calls[0][1].suffix.lower() == ".docx"
             conversion_calls.clear()
             assert startup.desktop_intake_is_primary_document(legacy), "DOC primary was rejected"
