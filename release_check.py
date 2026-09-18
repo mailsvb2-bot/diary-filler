@@ -185,7 +185,7 @@ def _assert_build_contract() -> None:
         "python tools/document_mechanics_guard.py",
         "python verify_built_exe.py",
         "./tools/windows_desktop_intake_e2e.ps1 -AppPath ./dist/MedicalDiaryAutofill.exe",
-        "./tools/windows_installer_smoke.ps1 -InstallerPath ./dist/MedicalDiaryAutofill-Setup-1.4.16.exe",
+        "./tools/windows_installer_smoke.ps1 -InstallerPath ./dist/MedicalDiaryAutofill-Setup-1.4.17.exe",
         "Create guarded release tag",
         "gh release create",
         "--verify-tag",
