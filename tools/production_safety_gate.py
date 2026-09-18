@@ -149,6 +149,12 @@ def assert_installer_contract() -> None:
     for marker in ("PYINSTALLER_RESET_ENVIRONMENT", "def _desktop_visible_popen", "_desktop_visible_popen("):
         if marker not in startup_source:
             fail(f"desktop intake lost independent visible child-process marker: {marker}")
+    if "_disable_desktop_intake_persistence" in main_source:
+        fail("first-run onboarding can still disable installed intake persistence")
+    if 'getattr(app, "_desktop_intake_enabled_for_session", True) is False' in startup_source:
+        fail("stale desktop intake preference can still suppress watcher self-heal")
+    if "legacy desktop_intake_enabled=false" not in main_source:
+        fail("first-run onboarding no longer documents stale disabled-state healing")
     intake_arg_pos = main_source.find("intake_primary = _intake_primary_argument")
     activation_pos = main_source.find("_activate_root_for_intake(root)", intake_arg_pos)
     runtime_pos = main_source.find("start_desktop_intake_runtime(", intake_arg_pos)
