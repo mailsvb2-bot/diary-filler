@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "5425be6187b61706359947b75ba35eeee767fbab",
-  "reason": "Prepare v1.4.17 release metadata and fail-closed release wiring for the already-proven closed-GUI Desktop intake wake fix. No medical parser, renderer, diary, template, watcher runtime logic, or document-generation mechanics change in this release slice.",
+  "baseline_ref": "81d48c3c09fe7b26c4caf0d5d9c2c922d73454f8",
+  "reason": "Remove the temporary v1.4.17 document-mechanics approval after the exact release candidate and post-merge main both passed the complete Windows regression contour. No product or document-generation behavior changes in this cleanup.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -15,16 +15,6 @@
     "ci_gate_lock"
   ],
   "approved_blobs": {
-    ".github/workflows/release.yml": "a705fe7e25b6296b765a185f86d0c78aa2cb4d29",
-    ".github/workflows/windows-build.yml": "9618cb1249cd74b7b912ff268f9d0a1ab31a4b78",
-    "BUILD_WINDOWS_INSTALLER.bat": "56c3032de8478befb3ec47117438090b64d7d8d4",
-    "app_config.py": "a19147f9cac2ae8b62b9c62e6203db3ca5a57d33",
-    "installer/MedicalDiaryAutofill.iss": "e7dcca642731c75a6110aa694d251a878935e4a1",
-    "prod_audit.py": "f16d3600eb862ef8d1c0de4b4d36339736bc2158",
-    "pyproject.toml": "695bd2da70a7f5f622943ebeb09dcef767780e79",
-    "release_check.py": "ff096be7d25a2697c5b3965e46ec4debb36205b2",
-    "tools/ci_gate_lock.py": "382089333b44432dd1ac15d26c1679683b4f7f0c",
-    "tools/document_mechanics_change_approval.json": "2eb28f873c5b33294ba4e5affa656751716e6182",
-    "version_info.txt": "efadc69ac80cc4bb21590a2177f68e70c36eaac8"
+    "tools/document_mechanics_change_approval.json": "<deleted>"
   }
 }
