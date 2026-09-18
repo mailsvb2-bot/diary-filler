@@ -18,15 +18,9 @@ class ActionsUiStateMixin:
         elif field == "discharge_date":
             self._manual_discharge_date = True
         elif field == "diagnosis":
+            # The write trace must stay O(1). Heavy diagnosis synchronization,
+            # diary-text matching and ICD search are debounced from KeyRelease.
             self._manual_diagnosis = True
-            # StringVar writes are the earliest reliable signal that the doctor
-            # changed the visible Diagnosis field. Promote that value immediately
-            # instead of waiting for a platform-dependent <KeyRelease> event.
-            # Programmatic parser/UI fills use _set_ui_var(), which suspends this
-            # trace, so only an actual user-visible edit enters this path.
-            commit_visible = getattr(self, "_commit_visible_diagnosis_change", None)
-            if callable(commit_visible):
-                commit_visible()
 
     def _set_ui_var(self, variable: tk.StringVar, value: str) -> None:
         self._suspend_user_edit_tracking = True
