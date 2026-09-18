@@ -149,6 +149,16 @@ def assert_installer_contract() -> None:
     for marker in ("PYINSTALLER_RESET_ENVIRONMENT", "def _desktop_visible_popen", "_desktop_visible_popen("):
         if marker not in startup_source:
             fail(f"desktop intake lost independent visible child-process marker: {marker}")
+    if "_disable_desktop_intake_persistence" in main_source:
+        fail("first-run onboarding can still disable installed intake persistence")
+    if 'getattr(app, "_desktop_intake_enabled_for_session", True) is False' in startup_source:
+        fail("stale desktop intake preference can still suppress watcher self-heal")
+    for marker in (
+        "app._desktop_intake_enabled_for_session = True",
+        "app._set_desktop_intake_preference(True)",
+    ):
+        if marker not in main_source:
+            fail(f"first-run onboarding lost mandatory intake self-heal marker: {marker}")
     intake_arg_pos = main_source.find("intake_primary = _intake_primary_argument")
     activation_pos = main_source.find("_activate_root_for_intake(root)", intake_arg_pos)
     runtime_pos = main_source.find("start_desktop_intake_runtime(", intake_arg_pos)
@@ -210,7 +220,7 @@ def assert_staff_profile_contract() -> None:
         (settings, "def _set_staff_profile"),
         (settings, '"deputy_chief"'),
         (main_source, "def _first_launch_onboarding"),
-        (main_source, "Создать на рабочем столе папку «Выписанные пациенты»?"),
+        (main_source, "app._set_desktop_intake_preference(True)"),
         (main_source, "_prompt_staff_profile(first_run=True)"),
         (window, 'text="Сотрудники"'),
         (medical_flow, "_apply_staff_profile_to_patient_data(data)"),

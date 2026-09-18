@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "e7b3bebfb717a01d774a0b6f34260f8ceb66a7ef",
-  "reason": "Remove the now-obsolete temporary document-mechanics approval after PR #111 while keeping the regression lock fail-closed. No product, medical, diary, parser, renderer, template, installer, or workflow file changes.",
+  "reason": "Fix the real installed Windows intake failure without changing medical/document generation: make the Desktop intake folder mandatory, heal legacy desktop_intake_enabled=false on every GUI start, and prevent stale preference state from suppressing watcher persistence/runtime.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -15,6 +15,11 @@
     "ci_gate_lock"
   ],
   "approved_blobs": {
-    "tools/document_mechanics_change_approval.json": "<deleted>"
+    "main.py": "c9947bb240605b2920328c9f18032c5817704c95",
+    "startup.py": "428df6412a30694646d3b6c39a9b307291e28001",
+    "tools/document_mechanics_change_approval.json": "<deleted>",
+    "tests/desktop_intake_contract_check.py": "19e5c300ffaa58ce93d117a07ca49481f3349aa6",
+    "tests/intake_lifecycle_regression.py": "d0fae099e53daf6fc6a93a9ed748c3a7ac385bc5",
+    "tools/production_safety_gate.py": "4a80f2ff021fc10fb5c778c0720fa466b899c9e1"
   }
 }

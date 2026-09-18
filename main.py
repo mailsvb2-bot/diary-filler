@@ -34,8 +34,6 @@ from startup import (
     DESKTOP_INTAKE_PRIMARY_ARGUMENT,
     _create_root,
     _desktop_agent_is_active,
-    _desktop_remove_agent_run_key,
-    _desktop_startup_script_path,
     _startup_log_path,
     _write_startup_error,
     desktop_intake_root_path,
@@ -51,19 +49,8 @@ def _installation_onboarding_marker_path() -> Path:
     return Path(sys.executable).resolve().parent / "onboarding-required.flag"
 
 
-def _disable_desktop_intake_persistence() -> None:
-    """Disable future watcher starts when the doctor declines the intake folder."""
-    try:
-        path = _desktop_startup_script_path()
-        if path is not None:
-            path.unlink(missing_ok=True)
-    except OSError:
-        pass
-    _desktop_remove_agent_run_key()
-
-
 def _first_launch_onboarding(app) -> None:
-    """Ask after each installation about intake and reusable staff names."""
+    """Heal the mandatory intake workflow and ask only for staff data."""
     if os.name != "nt" or os.environ.get("CI", "").strip():
         return
 
@@ -71,40 +58,35 @@ def _first_launch_onboarding(app) -> None:
     force_after_install = marker.is_file()
     onboarding_complete = True
 
+    # The installed workflow is not optional: the installer creates
+    # «Выписанные пациенты», and moving DOC/DOCX there must always wake the app.
+    # Older builds could persist desktop_intake_enabled=false and even remove
+    # watcher autostart during first-run onboarding.  Heal that stale state on
+    # every normal GUI start instead of asking whether the folder should exist.
     try:
         intake_root = desktop_intake_root_path()
-        preference = app._desktop_intake_preference()
-        should_ask = force_after_install or preference is None
-        if should_ask:
-            create_folder = messagebox.askyesno(
-                "Первый запуск",
-                "Создать на рабочем столе папку «Выписанные пациенты»?\n\n"
-                "Если выбрать «Нет», программа всё равно будет работать вручную.",
+        intake_root.mkdir(parents=True, exist_ok=True)
+        app._desktop_intake_enabled_for_session = True
+        if app._desktop_intake_preference() is not True:
+            app._set_desktop_intake_preference(True)
+    except OSError as exc:
+        app._desktop_intake_enabled_for_session = True
+        onboarding_complete = False
+        code, _safe_details = _support_write_startup_failure(exc, stage="intake")
+        try:
+            messagebox.showwarning(
+                "Выписанные пациенты",
+                "Не удалось подготовить папку «Выписанные пациенты». "
+                "Фоновое наблюдение будет восстановлено автоматически при следующем запуске.\n\n"
+                f"Код ошибки: {code}",
                 parent=app.root,
             )
-            app._desktop_intake_enabled_for_session = bool(create_folder)
-            app._set_desktop_intake_preference(bool(create_folder))
-            if create_folder:
-                try:
-                    intake_root.mkdir(parents=True, exist_ok=True)
-                except OSError as exc:
-                    app._desktop_intake_enabled_for_session = False
-                    app._set_desktop_intake_preference(False)
-                    onboarding_complete = False
-                    code, _safe_details = _support_write_startup_failure(exc, stage="intake")
-                    messagebox.showwarning(
-                        "Выписанные пациенты",
-                        "Не удалось создать папку «Выписанные пациенты». Ручной режим остаётся доступен.\n\n"
-                        f"Код ошибки: {code}",
-                        parent=app.root,
-                    )
-            else:
-                # Never delete an existing user-owned folder; only disable watcher persistence.
-                _disable_desktop_intake_persistence()
-        else:
-            app._desktop_intake_enabled_for_session = bool(preference)
+        except Exception:
+            pass
     except Exception:
-        app._desktop_intake_enabled_for_session = False
+        # A damaged legacy preference must never disable the watcher for this
+        # session. Runtime startup below will still recreate persistence routes.
+        app._desktop_intake_enabled_for_session = True
         onboarding_complete = False
 
     if force_after_install or not app._staff_profile_is_configured():
@@ -119,7 +101,6 @@ def _first_launch_onboarding(app) -> None:
             marker.unlink(missing_ok=True)
         except OSError:
             pass
-
 
 def _startup_probe_result_path() -> Path | None:
     value = os.environ.get("MEDICAL_AUTOFILL_STARTUP_PROBE_RESULT", "").strip()

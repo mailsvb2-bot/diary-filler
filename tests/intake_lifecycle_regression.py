@@ -307,57 +307,57 @@ def assert_install_marker_forces_folder_and_staff_onboarding() -> None:
             app_main._installation_onboarding_marker_path = original_marker  # type: ignore[assignment]
             app_main.os = original_os  # type: ignore[assignment]
 
-        assert len(asked) == 1 and "Выписанные пациенты" in asked[0], asked
+        assert asked == [], "mandatory intake must not ask an opt-out question"
         assert app.staff_prompts == 1, app.staff_prompts
         assert app.preference is True and app._desktop_intake_enabled_for_session is True
         assert not marker.exists(), "completed onboarding marker was not consumed"
 
 
-def assert_declining_folder_never_deletes_existing_user_folder() -> None:
+def assert_legacy_disabled_preference_heals_and_preserves_user_folder() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         intake = root / startup.DESKTOP_INTAKE_FOLDER_NAME
         intake.mkdir()
         sentinel = intake / "user-file.txt"
         sentinel.write_text("keep", encoding="utf-8")
-        marker = root / "onboarding-required.flag"
-        marker.write_text("1", encoding="ascii")
-        disabled = []
+        marker = root / "no-onboarding-marker.flag"
 
         class AppStub:
             root = None
-            _desktop_intake_enabled_for_session = True
-            def _desktop_intake_preference(self): return True
-            def _set_desktop_intake_preference(self, enabled): self.preference = bool(enabled)
-            def _staff_profile_is_configured(self): return True
-            def _prompt_staff_profile(self, *, first_run=False): return True
+            _desktop_intake_enabled_for_session = False
+
+            def __init__(self) -> None:
+                self.preference = False
+
+            def _desktop_intake_preference(self):
+                return self.preference
+
+            def _set_desktop_intake_preference(self, enabled):
+                self.preference = bool(enabled)
+
+            def _staff_profile_is_configured(self):
+                return True
+
+            def _prompt_staff_profile(self, *, first_run=False):
+                raise AssertionError("staff prompt must not run without install marker")
 
         app = AppStub()
         original_os = app_main.os
         original_marker = app_main._installation_onboarding_marker_path
         original_root = app_main.desktop_intake_root_path
-        original_yesno = app_main.messagebox.askyesno
-        original_disable = app_main._disable_desktop_intake_persistence
         try:
             app_main.os = SimpleNamespace(name="nt", environ={})  # type: ignore[assignment]
             app_main._installation_onboarding_marker_path = lambda: marker  # type: ignore[assignment]
             app_main.desktop_intake_root_path = lambda: intake  # type: ignore[assignment]
-            app_main.messagebox.askyesno = lambda *_args, **_kwargs: False
-            app_main._disable_desktop_intake_persistence = lambda: disabled.append(True)  # type: ignore[assignment]
             app_main._first_launch_onboarding(app)
         finally:
-            app_main._disable_desktop_intake_persistence = original_disable  # type: ignore[assignment]
-            app_main.messagebox.askyesno = original_yesno
             app_main.desktop_intake_root_path = original_root  # type: ignore[assignment]
             app_main._installation_onboarding_marker_path = original_marker  # type: ignore[assignment]
             app_main.os = original_os  # type: ignore[assignment]
 
-        assert getattr(app, "preference", None) is False
-        assert app._desktop_intake_enabled_for_session is False
-        assert disabled == [True], disabled
+        assert app.preference is True
+        assert app._desktop_intake_enabled_for_session is True
         assert sentinel.read_text(encoding="utf-8") == "keep"
-        assert not marker.exists(), "completed decline onboarding marker was not consumed"
-
 
 def main() -> None:
     assert_agent_recreates_deleted_intake_root()
@@ -366,9 +366,9 @@ def main() -> None:
     assert_old_watcher_retires_after_in_place_update()
     assert_pyinstaller_children_are_independent_and_gui_is_visible()
     assert_install_marker_forces_folder_and_staff_onboarding()
-    assert_declining_folder_never_deletes_existing_user_folder()
+    assert_legacy_disabled_preference_heals_and_preserves_user_folder()
     print(
-        "INTAKE LIFECYCLE REGRESSION OK: self-heal + Desktop rebind + in-place watcher replacement + independent PyInstaller child runtime + install onboarding"
+        "INTAKE LIFECYCLE REGRESSION OK: self-heal + Desktop rebind + in-place watcher replacement + independent PyInstaller child runtime + mandatory install intake"
     )
 
 
