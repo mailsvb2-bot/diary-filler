@@ -12,6 +12,7 @@ import sys
 
 from docx import Document
 
+from docx_block_boundary_regression import verify as verify_docx_block_boundaries
 from golden_docx_regression import verify as verify_golden
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -93,6 +94,7 @@ def verify_user_flow() -> None:
 
 
 def main() -> None:
+    verify_docx_block_boundaries()
     if OUT.exists():
         shutil.rmtree(OUT, ignore_errors=True)
     try:
