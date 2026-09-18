@@ -24,12 +24,48 @@ class DialogDatesMixin:
 
     @staticmethod
     def _compact_date_can_continue(digits: str) -> bool:
-        """Cheap UI predicate: six/seven compact digits may still be extended.
+        """Return whether one more typed digit can still change interpretation.
 
-        Do not brute-force parser candidates in the Tk KeyRelease handler. Full
-        normalization remains canonical on Enter/FocusOut/creation validation.
+        Preserve the established live-mask UX without the old 110-candidate
+        brute force. Seven-digit possibilities require at most ten probes. For
+        an eight-digit completion from six digits, DDMM + the two-digit century
+        prefix is checked directly against the supported clinical-year range.
         """
-        return bool(digits and digits.isdigit() and len(digits) in {6, 7})
+        if not digits.isdigit() or len(digits) not in {6, 7}:
+            return False
+
+        # A one-digit extension is cheap and also covers legacy seven-digit
+        # forms such as 1012026.
+        if any(parse_date(digits + str(suffix)) for suffix in range(10)):
+            return True
+        if len(digits) == 7:
+            return False
+
+        # Eight compact digits are canonical DDMMYYYY.  The six-digit prefix
+        # fixes DDMM and the first two year digits, so no 00..99 probing is
+        # necessary.
+        try:
+            day = int(digits[:2])
+            month = int(digits[2:4])
+            century_prefix = int(digits[4:6])
+        except ValueError:
+            return False
+        first_year = max(1900, century_prefix * 100)
+        last_year = min(2200, century_prefix * 100 + 99)
+        if first_year > last_year:
+            return False
+
+        candidate_year = first_year
+        if day == 29 and month == 2:
+            while candidate_year <= last_year:
+                if candidate_year % 4 == 0 and (
+                    candidate_year % 100 != 0 or candidate_year % 400 == 0
+                ):
+                    break
+                candidate_year += 1
+            if candidate_year > last_year:
+                return False
+        return parse_date(digits[:4] + f"{candidate_year:04d}") is not None
 
     @staticmethod
     def _format_date_input_live(value: str) -> str:
@@ -43,14 +79,16 @@ class DialogDatesMixin:
         raw = (value or "").strip()
         if not raw or not raw.isdigit():
             return raw
-        # Six/seven digits are deliberately left untouched while typing:
-        # they can be valid short dates or prefixes of an eight-digit date.
-        # This keeps the keystroke path O(1); Enter/FocusOut performs the full
-        # canonical parse and normalization.
-        if len(raw) != 8:
+        if len(raw) not in {6, 7, 8}:
             return raw
         parsed = parse_date(raw)
-        return parsed.strftime(DATE_FMT) if parsed else raw
+        if not parsed:
+            return raw
+        if len(raw) < 8 and DialogDatesMixin._compact_date_can_continue(raw):
+            return raw
+        if len(raw) == 6:
+            return parsed.strftime("%d.%m.%y")
+        return parsed.strftime(DATE_FMT)
 
     def _normalize_date_entry_var(self, variable) -> str:
         """Normalize a date entry after typing without forcing separators.
