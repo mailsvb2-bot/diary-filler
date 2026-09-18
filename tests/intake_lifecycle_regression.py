@@ -153,22 +153,77 @@ def assert_gui_poll_rebinds_when_desktop_moves() -> None:
             def after(self, _delay: int, _callback) -> None:
                 return None
 
-        app = SimpleNamespace(root=RootStub(), _desktop_intake_processing=False)
+        app = SimpleNamespace(
+            root=RootStub(),
+            _desktop_intake_processing=False,
+            _desktop_intake_observed={},
+        )
         original_root_path = startup.desktop_intake_root_path
-        original_scan = startup.desktop_intake_scan_primary_candidates
+        original_snapshot = startup._desktop_candidate_snapshot
         original_log = startup._desktop_agent_log
         try:
             startup.desktop_intake_root_path = lambda: new_root  # type: ignore[assignment]
-            startup.desktop_intake_scan_primary_candidates = (
-                lambda root: scanned.append(Path(root)) or []
+            startup._desktop_candidate_snapshot = (
+                lambda root: scanned.append(Path(root)) or {}
             )  # type: ignore[assignment]
             startup._desktop_agent_log = lambda _message: None  # type: ignore[assignment]
             startup._desktop_poll_intake(app, old_root)
             assert scanned == [new_root], scanned
+            assert app._desktop_intake_observed == {}
         finally:
             startup._desktop_agent_log = original_log  # type: ignore[assignment]
-            startup.desktop_intake_scan_primary_candidates = original_scan  # type: ignore[assignment]
+            startup._desktop_candidate_snapshot = original_snapshot  # type: ignore[assignment]
             startup.desktop_intake_root_path = original_root_path  # type: ignore[assignment]
+
+
+def assert_gui_poll_processes_only_new_or_changed_arrivals() -> None:
+    """Unchanged intake files must never be re-parsed on every Tk polling tick."""
+    candidate = Path("C:/intake/primary.docx")
+    snapshots = [
+        {"k": (candidate, "sig-1")},
+        {"k": (candidate, "sig-1")},
+        {"k": (candidate, "sig-2")},
+        {},
+        {"k": (candidate, "sig-2")},
+    ]
+    processed: list[Path] = []
+
+    class RootStub:
+        def winfo_exists(self) -> bool:
+            return True
+
+        def after(self, _delay: int, _callback) -> None:
+            return None
+
+    app = SimpleNamespace(
+        root=RootStub(),
+        _desktop_intake_processing=False,
+        _desktop_intake_observed={},
+    )
+    original_rebind = startup._desktop_rebind_intake_root
+    original_snapshot = startup._desktop_candidate_snapshot
+    original_process = startup._desktop_process_primary
+    original_log = startup._desktop_agent_log
+    try:
+        startup._desktop_rebind_intake_root = lambda root: (Path(root), False)  # type: ignore[assignment]
+        startup._desktop_candidate_snapshot = lambda _root: snapshots.pop(0)  # type: ignore[assignment]
+        startup._desktop_process_primary = lambda _app, path: processed.append(Path(path)) or False  # type: ignore[assignment]
+        startup._desktop_agent_log = lambda _message: None  # type: ignore[assignment]
+
+        root = Path("C:/intake")
+        startup._desktop_poll_intake(app, root)
+        startup._desktop_poll_intake(app, root)
+        startup._desktop_poll_intake(app, root)
+        startup._desktop_poll_intake(app, root)
+        startup._desktop_poll_intake(app, root)
+
+        assert processed == [candidate, candidate, candidate], processed
+        # first arrival, changed revision, then same revision after path removal/re-copy
+    finally:
+        startup._desktop_agent_log = original_log  # type: ignore[assignment]
+        startup._desktop_process_primary = original_process  # type: ignore[assignment]
+        startup._desktop_candidate_snapshot = original_snapshot  # type: ignore[assignment]
+        startup._desktop_rebind_intake_root = original_rebind  # type: ignore[assignment]
 
 
 def assert_old_watcher_retires_after_in_place_update() -> None:
@@ -363,12 +418,13 @@ def main() -> None:
     assert_agent_recreates_deleted_intake_root()
     assert_agent_rebinds_when_desktop_moves()
     assert_gui_poll_rebinds_when_desktop_moves()
+    assert_gui_poll_processes_only_new_or_changed_arrivals()
     assert_old_watcher_retires_after_in_place_update()
     assert_pyinstaller_children_are_independent_and_gui_is_visible()
     assert_install_marker_forces_folder_and_staff_onboarding()
     assert_legacy_disabled_preference_heals_and_preserves_user_folder()
     print(
-        "INTAKE LIFECYCLE REGRESSION OK: self-heal + Desktop rebind + in-place watcher replacement + independent PyInstaller child runtime + mandatory install intake"
+        "INTAKE LIFECYCLE REGRESSION OK: self-heal + Desktop rebind + event-driven intake + in-place watcher replacement + independent PyInstaller child runtime + mandatory install intake"
     )
 
 
