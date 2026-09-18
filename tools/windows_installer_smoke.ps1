@@ -70,6 +70,10 @@ try {
     if (-not (Test-Path $app)) {
         throw 'Installed MedicalDiaryAutofill.exe is missing'
     }
+    $internalDir = Join-Path $installDir '_internal'
+    if (-not (Test-Path -LiteralPath $internalDir -PathType Container)) {
+        throw 'Installer did not deploy the fast PyInstaller onedir runtime'
+    }
     if (-not (Test-Path -LiteralPath $onboardingMarker -PathType Leaf)) {
         throw 'Installer did not create onboarding-required.flag'
     }
@@ -146,7 +150,7 @@ try {
         throw 'Uninstaller removed a user-owned file from Desktop\Выписанные пациенты'
     }
 
-    Write-Host 'WINDOWS INSTALLER WATCHER BOOTSTRAP AND UNINSTALL SMOKE OK'
+    Write-Host 'WINDOWS INSTALLER FAST ONEDIR WATCHER BOOTSTRAP AND UNINSTALL SMOKE OK'
 }
 finally {
     Stop-AppProcesses
