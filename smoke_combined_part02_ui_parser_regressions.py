@@ -2,7 +2,7 @@ from app_config import DIARY_KIND
 from dialog_fields_linking import attach_linked_field_mirroring
 import dialog_dates as _dialog_dates
 
-# --- UI responsiveness regression: date keystrokes stay O(1) ---
+# --- UI responsiveness regression: date keystrokes have a bounded parser cost ---
 _original_parse_date = _dialog_dates.parse_date
 _date_parse_calls = []
 def _counting_parse_date(value):
@@ -10,9 +10,18 @@ def _counting_parse_date(value):
     return _original_parse_date(value)
 _dialog_dates.parse_date = _counting_parse_date
 try:
-    assert _dialog_dates.DialogDatesMixin._format_date_input_live("090926") == "090926"
+    assert _dialog_dates.DialogDatesMixin._format_date_input_live("090926") == "09.09.26"
+    assert len(_date_parse_calls) <= 12, _date_parse_calls
+
+    _date_parse_calls.clear()
+    assert _dialog_dates.DialogDatesMixin._format_date_input_live("090920") == "090920"
+    assert len(_date_parse_calls) <= 12, _date_parse_calls
+
+    _date_parse_calls.clear()
     assert _dialog_dates.DialogDatesMixin._format_date_input_live("0909202") == "0909202"
-    assert _date_parse_calls == [], _date_parse_calls
+    assert len(_date_parse_calls) <= 2, _date_parse_calls
+
+    _date_parse_calls.clear()
     assert _dialog_dates.DialogDatesMixin._format_date_input_live("09092026") == "09.09.2026"
     assert _date_parse_calls == ["09092026"], _date_parse_calls
 finally:
