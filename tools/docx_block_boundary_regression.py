@@ -5,6 +5,13 @@ alias used to locate a block must also be a valid boundary marker.
 """
 from __future__ import annotations
 
+from pathlib import Path
+import sys
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
 from docx import Document
 
 from medical_docx_editor import DocxBlockEditor
