@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "664b7763b5f8f509a488bdd0de603a81a5c9fda7",
+  "reason": "Harden main/master provenance so direct pushes fail CI unless the exact HEAD is uniquely attributable to a merged pull request targeting the protected branch. No medical parser, renderer, template, diary, watcher, or document-generation mechanics change.",
+  "required_evidence": [
+    "document_mechanics_guard",
+    "full_patient_replay",
+    "golden_docx",
+    "staff_profile_regression",
+    "gender_generation_matrix",
+    "desktop_intake_contract",
+    "intake_lifecycle_regression",
+    "packaged_desktop_intake_e2e",
+    "installer_uninstall_smoke",
+    "ci_gate_lock"
+  ],
+  "approved_blobs": {
+    ".github/workflows/windows-build.yml": "40a60eb719d8b8aa82a2e486c989c887540fac20",
+    "tests/regression_surface_inventory.py": "e1c3ee27d1f6ac65fff3500203ea522c6b3366cd",
+    "tools/ci_gate_lock.py": "7d14c9cf297e093ed00bad761030023516184368",
+    "tools/main_branch_policy.py": "602214b3401a1ad40185ed2ecffc0d9253358165"
+  }
+}
