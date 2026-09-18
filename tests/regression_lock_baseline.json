@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "153113d8615e618432f6ff63672b7dc38b4e8e2c",
-  "baseline_note": "PR #116 prepared v1.4.15 release/version metadata with a distinct installer filename for the already-proven always-on/self-healing intake watcher fix. Exact candidate 1f1e47cb059024e18536699b58448f89be451bbf passed Windows run 35339090310 with all 34 product-path steps successful, including canonical golden DOCX/full patient replay, desktop intake/lifecycle, real Tk GUI, packaged EXE auto-launch, installer build and installed/uninstall smoke. PR #116 merged as 153113d8615e618432f6ff63672b7dc38b4e8e2c. Medical parsing, rendering, templates, diary generation and document mechanics were unchanged.",
+  "baseline_ref": "1f4c83b13a2dd6260097b805df4aea7f8d42f3a3",
+  "baseline_note": "PR #116 prepared v1.4.15 release/version metadata for the always-on/self-healing intake watcher fix and passed Windows run 35339090310 with all 34 product-path steps successful. PR #117 then removed the temporary document-mechanics approval and passed Windows run 35339574191, again 34/34. PR #117 merged as 1f4c83b13a2dd6260097b805df4aea7f8d42f3a3. This baseline is the clean release tree: no temporary document-mechanics approval remains, and medical parsing, rendering, templates, diary generation and generated-document mechanics are unchanged.",
   "required_approval_evidence": [
     "ci_gate_lock"
   ],
