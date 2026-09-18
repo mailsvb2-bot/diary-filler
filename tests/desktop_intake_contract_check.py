@@ -267,6 +267,7 @@ def _assert_stale_disabled_intake_self_heals() -> None:
         marker_path = Path(tmp) / "no-onboarding-marker.flag"
         original_root = app_main.desktop_intake_root_path
         original_marker = app_main._installation_onboarding_marker_path
+        original_ci = app_main.os.environ.pop("CI", None)
         try:
             app_main.desktop_intake_root_path = lambda: intake_root  # type: ignore[assignment]
             app_main._installation_onboarding_marker_path = lambda: marker_path  # type: ignore[assignment]
@@ -276,6 +277,10 @@ def _assert_stale_disabled_intake_self_heals() -> None:
             assert app._desktop_intake_enabled_for_session is True
             assert app.preference is True, "legacy desktop_intake_enabled=false was not healed"
         finally:
+            if original_ci is not None:
+                app_main.os.environ["CI"] = original_ci
+            else:
+                app_main.os.environ.pop("CI", None)
             app_main.desktop_intake_root_path = original_root  # type: ignore[assignment]
             app_main._installation_onboarding_marker_path = original_marker  # type: ignore[assignment]
 
