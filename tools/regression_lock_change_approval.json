@@ -17,6 +17,7 @@
   "approved_blobs": {
     "startup.py": "20e36588093c1cb28651cee2e8326b5f365e8ad0",
     "tests/desktop_intake_contract_check.py": "48ee818fc80064fc2c316c6f88d82a68b27522a7",
-    "tools/production_safety_gate.py": "5b2d8b08061f2c053de849cc0d20ff1089d59f1a"
+    "tools/production_safety_gate.py": "5b2d8b08061f2c053de849cc0d20ff1089d59f1a",
+    "tests/intake_lifecycle_regression.py": "82139aaa418606896bc0987accd31b6322830a91"
   }
 }
