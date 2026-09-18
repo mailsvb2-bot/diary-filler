@@ -19,6 +19,7 @@
     "startup.py": "428df6412a30694646d3b6c39a9b307291e28001",
     "tools/document_mechanics_change_approval.json": "<deleted>",
     "tests/desktop_intake_contract_check.py": "19e5c300ffaa58ce93d117a07ca49481f3349aa6",
+    "tests/intake_lifecycle_regression.py": "d0fae099e53daf6fc6a93a9ed748c3a7ac385bc5",
     "tools/production_safety_gate.py": "4a80f2ff021fc10fb5c778c0720fa466b899c9e1"
   }
 }
