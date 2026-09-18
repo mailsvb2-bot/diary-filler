@@ -1,8 +1,0 @@
-{
-  "schema_version": 1,
-  "base_sha": "58179772baa45722a14ef725899d77cc7ccc4fb5",
-  "reason": "Version-label-only release update in app_config.py for v1.4.14; no document mechanics change.",
-  "approved_blobs": {
-    "app_config.py": "1133bbb1724fc4d4b9c8bd6d7355c4c5169174dc"
-  }
-}
