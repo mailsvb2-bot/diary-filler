@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "ceb9269a5779827950102eba1c3ab68b78ba373e",
-  "baseline_note": "PR #119 fixed destructive DOCX section replacement. Exact candidate 7d2ccd0132cf5f26f5e1ad985a70b3264b5ebf18 passed Windows run 35343158910 with all 34 product-path steps successful. PR #120 then removed the temporary document-mechanics approval; exact candidate 81dca0761be8ce9287272d0eea43315189456a87 passed Windows run 35343658038 with all 34 steps successful and merged as ceb9269a5779827950102eba1c3ab68b78ba373e. This baseline is the clean post-fix tree: DOCX block-boundary regression, full patient replay, canonical golden DOCX, round-trip treatment preservation, EXE, packaged intake E2E, installer and installed/uninstall smoke are all proven, with no temporary document-mechanics approval remaining.",
+  "baseline_ref": "6f9d7d3d9de04bfbcd3e92317bb97d242eb04cd1",
+  "baseline_note": "PR #122 prepared v1.4.16 release metadata for the already-proven DOCX block-boundary integrity fix. Exact candidate 90510627057685cd7bcc1a9267efc6fbe34af310 passed Windows run 35346560302 with all 34 product-path steps successful, including DOCX boundary regression/full patient replay, canonical golden DOCX, release gate, EXE, packaged intake E2E, installer and installed/uninstall smoke. PR #122 merged as 6f9d7d3d9de04bfbcd3e92317bb97d242eb04cd1. The underlying document-generation mechanics are exactly the already-proven PR #119 fix.",
   "required_approval_evidence": [
     "ci_gate_lock"
   ],
