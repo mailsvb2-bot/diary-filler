@@ -209,9 +209,9 @@ def assert_runtime_responsiveness_contract() -> None:
     main_source = read("main.py")
 
     if "for suffix in range(10 ** extra_len)" in dates:
-        fail("date KeyRelease path regressed to brute-force parser probing")
-    for marker in ('if len(raw) != 8:', 'self.root.after(120, refresh_after_typing)'):
-        source = dates if "len(raw)" in marker else diagnosis
+        fail("date KeyRelease path regressed to 110-candidate brute-force parser probing")
+    for marker in ('for suffix in range(10)', 'self.root.after(120, refresh_after_typing)'):
+        source = dates if "range(10)" in marker else diagnosis
         if marker not in source:
             fail(f"responsive UI contract missing marker: {marker}")
     mark_start = ui_state.find("def _mark_manual_field")
