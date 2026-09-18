@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "664b7763b5f8f509a488bdd0de603a81a5c9fda7",
-  "baseline_note": "PR #122 prepared v1.4.16 release metadata for the already-proven DOCX block-boundary integrity fix and passed Windows run 35346560302 with all 34 product-path steps successful. PR #123 then removed the temporary document-mechanics approval and passed Windows run 35347001753, again 34/34. PR #123 merged as 664b7763b5f8f509a488bdd0de603a81a5c9fda7. This baseline is the clean v1.4.16 release tree: the PR #119 document-boundary fix is retained, all temporary mechanics approvals are gone, and full replay/golden DOCX, EXE, packaged intake and installer smoke are proven.",
+  "baseline_ref": "c227a8a6ffbaa9356051c11c75f564c464806f1e",
+  "baseline_note": "PR #125 added fail-closed merged-PR provenance verification for pushes to main/master without changing document-generation mechanics. Its candidate run 35354211683 passed the full Windows product path, and the post-merge main run 35354734956 also completed successfully with the provenance guard, full patient replay/golden DOCX, packaged intake, installer build, and installed/uninstalled smoke all green. PR #125 merged as c227a8a6ffbaa9356051c11c75f564c464806f1e; this is the clean hardened production/test baseline.",
   "required_approval_evidence": [
     "ci_gate_lock"
   ],
