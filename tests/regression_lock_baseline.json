@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "e7b3bebfb717a01d774a0b6f34260f8ceb66a7ef",
-  "baseline_note": "PR #111 prepared v1.4.14 release/version metadata and fail-closed release wiring for the already-proven installed DOC/DOCX intake autolaunch fix. Exact candidate 3a08464231b20c04c922f564b2f4a571318f6f5b passed Windows run 35306399514 with the full 34-step product path successful: regression/CI locks, document-mechanics guard, safety/privacy, production audit/release gate, full patient replay and canonical golden DOCX, staff/gender/diagnosis/words-only diary regressions, performance profiles, desktop intake/lifecycle, real Tk, EXE build and startup/TkDND verification, packaged desktop intake auto-launch E2E, installer build, installed watcher/uninstall smoke, source archive and artifact uploads. PR #111 merged as e7b3bebfb717a01d774a0b6f34260f8ceb66a7ef. The release work changes version/release/installer metadata only; medical parsers, renderers, templates, diary generation and document-generation mechanics remain unchanged.",
+  "baseline_ref": "70a8170b9b95a81d99f9cccf493ac4a887889b18",
+  "baseline_note": "PR #112 completed the guarded cleanup after v1.4.14 preparation: it removed the temporary document-mechanics approval under an exact deletion-only regression approval. Exact candidate d3774805311d88db54d99ee50c32d86ef4476330 passed Windows run 35306970178 with the full 34-step product path successful, including regression/CI locks, document-mechanics guard, full patient replay and canonical golden DOCX, packaged desktop intake auto-launch E2E, installer build, installed watcher/uninstall smoke, source archive and artifacts. PR #112 merged as 70a8170b9b95a81d99f9cccf493ac4a887889b18. No product, medical, diary, parser, renderer, template, installer, or workflow behavior changed in the cleanup.",
   "required_approval_evidence": [
     "ci_gate_lock"
   ],
