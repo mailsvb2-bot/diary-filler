@@ -194,8 +194,9 @@ def _assert_legacy_word_conversion_never_quits_user_word() -> None:
             return self.opened
 
     class FakeWord:
-        def __init__(self, hwnd: int) -> None:
+        def __init__(self, hwnd: int, *, user_control: bool) -> None:
             self.Hwnd = hwnd
+            self.UserControl = user_control
             self.Visible = True
             self.DisplayAlerts = 1
             self.opened = FakeOpened()
@@ -217,7 +218,7 @@ def _assert_legacy_word_conversion_never_quits_user_word() -> None:
         source = Path(tmp) / "source.doc"
         source.write_bytes(b"legacy")
 
-        user_word = FakeWord(101)
+        user_word = FakeWord(101, user_control=True)
         client.GetActiveObject = lambda _name: user_word  # type: ignore[attr-defined]
         client.DispatchEx = lambda _name: user_word  # type: ignore[attr-defined]
 
@@ -231,7 +232,7 @@ def _assert_legacy_word_conversion_never_quits_user_word() -> None:
             assert user_word.opened.closed == 1
             assert user_word.quit_calls == 0, "existing user Word was terminated"
 
-            automation_word = FakeWord(202)
+            automation_word = FakeWord(202, user_control=False)
 
             def no_active_word(_name):
                 raise RuntimeError("no active Word")
