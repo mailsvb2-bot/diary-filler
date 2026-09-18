@@ -1,3 +1,15 @@
+# Release notes — v1.4.15-intake-always-on
+
+## v1.4.15-intake-always-on
+
+- Исправлен реальный установленный сценарий, при котором старое сохранённое `desktop_intake_enabled=false` могло отключить watcher после установки/обновления.
+- Папка «Выписанные пациенты» теперь является обязательным installed workflow: первый запуск больше не предлагает отключить наблюдение, а устаревшее состояние `false` автоматически лечится в `true`.
+- При обычном запуске восстанавливаются intake-папка и watcher persistence; пользовательские файлы в папке не удаляются.
+- Регрессии обновлены так, чтобы запрещать возврат старого opt-out поведения и доказывать self-heal старого состояния.
+- Exact candidate PR #114 прошёл полный Windows-контур 34/34, включая golden DOCX, intake lifecycle, packaged EXE auto-launch, installer build и install/uninstall smoke.
+- Медицинская генерация, parser/renderer/templates и canonical golden DOCX не изменялись.
+- Версия программы и installer синхронизированы как `1.4.15` / `v1.4.15-intake-always-on`; installer: `MedicalDiaryAutofill-Setup-1.4.15.exe`.
+
 # Release notes — v1.4.14-intake-autolaunch
 
 ## v1.4.14-intake-autolaunch
