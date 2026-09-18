@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "c227a8a6ffbaa9356051c11c75f564c464806f1e",
+  "reason": "Fix the real closed-GUI Desktop intake failure without touching document generation: wake the application for any quiet supported Word file before medical classification, then leave validation and processing to the canonical visible GUI/parser path.",
+  "required_evidence": [
+    "document_mechanics_guard",
+    "full_patient_replay",
+    "golden_docx",
+    "staff_profile_regression",
+    "gender_generation_matrix",
+    "desktop_intake_contract",
+    "intake_lifecycle_regression",
+    "packaged_desktop_intake_e2e",
+    "installer_uninstall_smoke",
+    "ci_gate_lock"
+  ],
+  "approved_blobs": {
+    "startup.py": "20e36588093c1cb28651cee2e8326b5f365e8ad0",
+    "tests/desktop_intake_contract_check.py": "48ee818fc80064fc2c316c6f88d82a68b27522a7",
+    "tools/production_safety_gate.py": "5b2d8b08061f2c053de849cc0d20ff1089d59f1a"
+  }
+}
