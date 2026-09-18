@@ -44,6 +44,16 @@ SELF_CHECK_ARGUMENT = "--self-check"
 UNINSTALL_INTAKE_ARGUMENT = "--uninstall-intake-agent"
 
 
+def __getattr__(name: str):
+    """Preserve legacy module access without loading the GUI in watcher mode."""
+    if name == "CombinedMedicalDiaryApp":
+        from app import CombinedMedicalDiaryApp as app_class
+
+        globals()[name] = app_class
+        return app_class
+    raise AttributeError(name)
+
+
 def _installation_onboarding_marker_path() -> Path:
     return Path(sys.executable).resolve().parent / "onboarding-required.flag"
 
