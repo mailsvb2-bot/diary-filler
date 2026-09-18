@@ -24,20 +24,12 @@ class DialogDatesMixin:
 
     @staticmethod
     def _compact_date_can_continue(digits: str) -> bool:
-        """Return True when more digits can still form a supported compact date."""
-        if not digits.isdigit() or len(digits) >= 8:
-            return False
-        remaining = 8 - len(digits)
-        # We only call this for six/seven digit input, so at most 110 cheap
-        # parser probes are needed. This preserves legacy 7-digit forms such as
-        # 1012026 instead of prematurely turning their six-digit prefix into
-        # an unrelated DD.MM.YY value.
-        for extra_len in range(1, remaining + 1):
-            for suffix in range(10 ** extra_len):
-                candidate = digits + f"{suffix:0{extra_len}d}"
-                if parse_date(candidate):
-                    return True
-        return False
+        """Cheap UI predicate: six/seven compact digits may still be extended.
+
+        Do not brute-force parser candidates in the Tk KeyRelease handler. Full
+        normalization remains canonical on Enter/FocusOut/creation validation.
+        """
+        return bool(digits and digits.isdigit() and len(digits) in {6, 7})
 
     @staticmethod
     def _format_date_input_live(value: str) -> str:
@@ -51,16 +43,14 @@ class DialogDatesMixin:
         raw = (value or "").strip()
         if not raw or not raw.isdigit():
             return raw
-        if len(raw) not in {6, 7, 8}:
+        # Six/seven digits are deliberately left untouched while typing:
+        # they can be valid short dates or prefixes of an eight-digit date.
+        # This keeps the keystroke path O(1); Enter/FocusOut performs the full
+        # canonical parse and normalization.
+        if len(raw) != 8:
             return raw
         parsed = parse_date(raw)
-        if not parsed:
-            return raw
-        if len(raw) < 8 and DialogDatesMixin._compact_date_can_continue(raw):
-            return raw
-        if len(raw) == 6:
-            return parsed.strftime("%d.%m.%y")
-        return parsed.strftime(DATE_FMT)
+        return parsed.strftime(DATE_FMT) if parsed else raw
 
     def _normalize_date_entry_var(self, variable) -> str:
         """Normalize a date entry after typing without forcing separators.
