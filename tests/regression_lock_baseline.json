@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "e7b3bebfb717a01d774a0b6f34260f8ceb66a7ef",
-  "baseline_note": "PR #111 prepared v1.4.14 release/version metadata and fail-closed release wiring for the already-proven installed DOC/DOCX intake autolaunch fix. Exact candidate 3a08464231b20c04c922f564b2f4a571318f6f5b passed Windows run 35306399514 with the full 34-step product path successful: regression/CI locks, document-mechanics guard, safety/privacy, production audit/release gate, full patient replay and canonical golden DOCX, staff/gender/diagnosis/words-only diary regressions, performance profiles, desktop intake/lifecycle, real Tk, EXE build and startup/TkDND verification, packaged desktop intake auto-launch E2E, installer build, installed watcher/uninstall smoke, source archive and artifact uploads. PR #111 merged as e7b3bebfb717a01d774a0b6f34260f8ceb66a7ef. The release work changes version/release/installer metadata only; medical parsers, renderers, templates, diary generation and document-generation mechanics remain unchanged.",
+  "baseline_ref": "754471423e47a26094e9a11eeaee56de86746787",
+  "baseline_note": "PR #114 fixed the real installed Windows intake failure by making the Desktop intake watcher always-on/self-healing without changing medical parsing, document rendering, templates, diary generation, or generated document mechanics. Exact candidate c70d5b76ae91c96203b136e2cf8be5352d8e3a76 passed Windows run 35310030772 with all 34 product-path steps successful. PR #114 merged as 754471423e47a26094e9a11eeaee56de86746787, and post-merge main run 35323089431 again passed all 34 steps, including desktop intake contract/lifecycle, real Tk GUI, EXE startup/TkDND, packaged desktop intake auto-launch E2E, installer build, installed application/uninstall smoke, golden DOCX/full patient replay, staff/gender/diagnosis/diary regressions, safety/privacy, production audit and release gate.",
   "required_approval_evidence": [
     "ci_gate_lock"
   ],
