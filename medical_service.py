@@ -14,6 +14,7 @@ from tempfile import TemporaryDirectory
 from typing import Dict, List, Optional, Sequence, Tuple
 
 from medical_constants import DOCUMENT_LABELS, DOCUMENT_ORDER, OUTPUT_SUFFIXES
+from medical_docx_blocks import materialize_word_source_as_docx
 from medical_docx_reader import extract_docx_text
 from medical_formatting import (
     available_path,
@@ -58,7 +59,8 @@ class MedicalDocumentService:
 все отмеченные в UI документы.
         """
         primary_path = self._existing_file(path, "первичный документ", allowed_suffixes=_PRIMARY_SUFFIXES)
-        return self.parser.parse_docx(primary_path)
+        with materialize_word_source_as_docx(primary_path) as readable_path:
+            return self.parser.parse_docx(readable_path)
 
     def parse_navigation(self, path: str | Path) -> PatientData:
         # Совместимость со старыми вызовами: раньше входной документ назывался
