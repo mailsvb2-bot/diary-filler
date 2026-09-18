@@ -65,7 +65,7 @@ if errorlevel 1 (
   exit /b 1
 )
 
-echo [6/6] Собираю один EXE через PyInstaller...
+echo [6/6] Собираю portable EXE и быстрый installed runtime через PyInstaller...
 set ADD_TEMPLATES=
 if exist templates (
   set ADD_TEMPLATES=--add-data "templates;templates"
@@ -92,15 +92,48 @@ python -m PyInstaller ^
   --hidden-import win32com.client ^
   main.py
 
-if exist dist\MedicalDiaryAutofill.exe (
+if not exist dist\MedicalDiaryAutofill.exe (
   echo.
-  echo ГОТОВО: dist\MedicalDiaryAutofill.exe
-  echo Этот файл можно отдавать пользователям. Он запускается без Python/pip.
-  if "%CI%"=="" pause
-  exit /b 0
-) else (
-  echo.
-  echo [ОШИБКА] EXE не найден. Смотри вывод выше.
+  echo [ОШИБКА] Portable EXE не найден. Смотри вывод выше.
   if "%CI%"=="" pause
   exit /b 1
 )
+
+echo.
+echo [6/6] Собираю быстрый runtime для установленной версии...
+python -m PyInstaller ^
+  --noconfirm ^
+  --clean ^
+  --onedir ^
+  --windowed ^
+  --name MedicalDiaryAutofill ^
+  --distpath dist\installed ^
+  --workpath build\installed ^
+  --specpath build\installed-spec ^
+  --version-file version_info.txt ^
+  --noupx ^
+  %ADD_TEMPLATES% ^
+  --collect-all docx ^
+  --collect-all lxml ^
+  --collect-all tkinterdnd2 ^
+  --hidden-import win32api ^
+  --hidden-import win32print ^
+  --hidden-import pythoncom ^
+  --hidden-import win32com ^
+  --hidden-import win32com.client ^
+  main.py
+if errorlevel 1 exit /b 1
+
+if not exist dist\installed\MedicalDiaryAutofill\MedicalDiaryAutofill.exe (
+  echo [ОШИБКА] Быстрый installed runtime не создан.
+  if "%CI%"=="" pause
+  exit /b 1
+)
+
+echo.
+echo ГОТОВО:
+echo   portable: dist\MedicalDiaryAutofill.exe
+echo   installed runtime: dist\installed\MedicalDiaryAutofill\MedicalDiaryAutofill.exe
+echo Пользователю Python и зависимости не нужны.
+if "%CI%"=="" pause
+exit /b 0
