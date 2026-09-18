@@ -23,13 +23,13 @@
     "dialog_fields_popup.py": "3eacc0dcd07ca5612f775a8ed090cd37c5ead218",
     "installer/MedicalDiaryAutofill.iss": "6db683d10a149dca46352dac83d62a389c7a0bc0",
     "main.py": "661bf5b9f4c31bd515e000dc4a7b53c6f8f5a4e8",
-    "medical_docx_blocks.py": "0f9ee6699f9ccfc4ad5d730b61867f5d1b0d7762",
+    "medical_docx_blocks.py": "6fe7b72fd3e50f6105d14ddb2c785825eabdfb9e",
     "release_check.py": "21e8f54ce4fad64fc119ca9e67f46d7b7fc67ecd",
     "smoke_combined_part02_ui_parser_regressions.py": "1e42353a4f0c872a90c8f7042bb37b81b6c45a83",
     "startup.py": "dfc8c48fbea42c0f8a9591e3c8b7ae58f8e9f580",
-    "tests/desktop_intake_contract_check.py": "9806f03a2b5e4de18118ee2a982113a11655544d",
+    "tests/desktop_intake_contract_check.py": "ccb338672adb4512a5b2ccdab0b87b2f213258df",
     "tests/intake_lifecycle_regression.py": "d191e6de2c965399047745cd15f42904983daae0",
-    "tools/document_mechanics_change_approval.json": "37a50c3d5d0a7a552becab2f5de7167768fadac2",
+    "tools/document_mechanics_change_approval.json": "684ccdffe64e4fded0ab5699910a5a40622b2128",
     "tools/production_safety_gate.py": "d6b954dbaf73b5dabdf3e2baf27e6c960e017762",
     "tools/windows_installer_smoke.ps1": "24dc703e3b22b1335a16f48222fbc1b37023dcf6"
   }
