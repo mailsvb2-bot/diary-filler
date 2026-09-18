@@ -18,7 +18,7 @@
     "medical_docx_editor_core.py": "5611aa8bdfb40b9fdbe05668f6e93e33e90c003a",
     "medical_docx_editor_markers.py": "0f9efd01a2bb369f6e16e25568eac86b0d34c97e",
     "medical_markers.py": "82e40a2bb77760b94502c643eac058a24d1b0458",
-    "tools/docx_block_boundary_regression.py": "24f96a46731b756c08a4581ee8f5a4020a820ea1",
+    "tools/docx_block_boundary_regression.py": "2cd7e3b44a41f6aa2a1eb2ba0434a3b4fb5880ef",
     "tools/full_patient_replay_check.py": "ff3ad21c27ecbff82fe24a59fcce80da8871d2bb",
     "tools/document_mechanics_change_approval.json": "59a04dae5b8e810367eb29d9277775c8627fe219"
   }
