@@ -13,8 +13,8 @@ class DocxEditorCoreMixin:
         self.doc = doc
         # Keep the structural identity of paragraphs that came from the template.
         # Patient text inserted later must never become a new section marker.
-        self._template_paragraph_text_by_id = {
-            id(paragraph._p): normalize_match(paragraph.text)
+        self._template_paragraph_text_by_element = {
+            paragraph._p: normalize_match(paragraph.text)
             for paragraph in doc.paragraphs
         }
 
@@ -23,4 +23,4 @@ class DocxEditorCoreMixin:
         return list(self.doc.paragraphs)
 
     def template_paragraph_text(self, paragraph: Paragraph) -> str | None:
-        return self._template_paragraph_text_by_id.get(id(paragraph._p))
+        return self._template_paragraph_text_by_element.get(paragraph._p)
