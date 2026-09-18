@@ -1,8 +1,8 @@
 # Медицинский автозаполнитель
 
-**Версия:** `v1.4.13-fio-diagnosis-speed`
+**Версия:** `v1.4.14-intake-autolaunch`
 
-**Final user-flow gate:** Windows CI теперь проверяет не только Python-код и сборку, но и реальный Tk UI, TkDND, запуск уже собранного EXE, packaged desktop-intake auto-launch и install/uninstall сценарий Windows installer. Официальный GitHub Release вынесен в отдельный fail-closed workflow: он требует Authenticode-сертификат и не публикует неподписанный EXE.
+**Final user-flow gate:** Windows CI теперь проверяет не только Python-код и сборку, но и реальный Tk UI, TkDND, запуск уже собранного EXE, packaged desktop-intake auto-launch и install/uninstall сценарий Windows installer. Официальный GitHub Release вынесен в отдельный fail-closed workflow и публикует проверенный unsigned EXE/installer; Windows может показывать предупреждение Unknown Publisher/SmartScreen до добавления code-signing сертификата.
 
 **UI hotfix:** блок 01 стабилизирован: после выбора первичного документа drop-зона не меняет внешнюю высоту, поэтому кнопки «Нет/Да» больше не должны прыгать.
 

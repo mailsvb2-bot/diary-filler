@@ -1,9 +1,8 @@
 {
   "schema_version": 1,
-  "base_sha": "770c5c01ebd14107781d6e3eb81d29ffdbfabf0c",
-  "reason": "Explicit follow-up to the user-requested Word input compatibility fix. Legacy .doc must be converted read-only exactly once and the same temporary DOCX must feed the complete canonical primary parser, preventing identity/date/diagnosis/document-kind divergence while leaving .docx/.docm behavior unchanged. This follow-up touches only the Word reader facade and parser entry boundary; renderers, diary generation, diary cadence and diary_batch.py are untouched. Approval is bound to the exact protected blobs below.",
+  "base_sha": "58179772baa45722a14ef725899d77cc7ccc4fb5",
+  "reason": "Version-label-only release update in app_config.py for v1.4.14; no document mechanics change.",
   "approved_blobs": {
-    "medical_docx_reader.py": "ca71e157add6b88bdf81c029627af6242d4f94cd",
-    "medical_parser_core.py": "fa58cc6628fd79b3913138254c8fa5f0dd7f466a"
+    "app_config.py": "1133bbb1724fc4d4b9c8bd6d7355c4c5169174dc"
   }
 }
