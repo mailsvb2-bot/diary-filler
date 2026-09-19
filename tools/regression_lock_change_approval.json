@@ -17,6 +17,6 @@
   "approved_blobs": {
     "diary_service.py": "3c506885fdaa831699e9251ef7c23bb28ce2f6c0",
     "tests/verbal_diary_source_regression.py": "6a16eb6cd37aa24f10563ce07427a7dc0da67e59",
-    "tools/document_mechanics_change_approval.json": "175aa19069323b9389c5e2ccf8b2851a0371ed6b"
+    "tools/document_mechanics_change_approval.json": "356a0c466991380f16fb28182ab4d9c7633eac11"
   }
 }
