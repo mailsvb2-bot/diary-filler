@@ -9,6 +9,7 @@ import hashlib
 import os
 import re
 import threading
+import time
 import zipfile
 from contextlib import contextmanager
 import xml.etree.ElementTree as ET
@@ -47,6 +48,36 @@ def _active_word_hwnd(win32com_client) -> int | None:
         return hwnd or None
     except Exception:
         return None
+
+
+def _word_automation_safe_to_quit(
+    *,
+    preexisting_user_hwnd: int | None,
+    automation_hwnd: int | None,
+    user_control: bool,
+    visible: bool,
+    document_count: int,
+) -> bool:
+    """Return True only when the Word instance is still provably automation-only."""
+    if automation_hwnd is None:
+        return False
+    if preexisting_user_hwnd is not None and automation_hwnd == preexisting_user_hwnd:
+        return False
+    if user_control or visible or document_count != 0:
+        return False
+    return True
+
+
+def _word_automation_snapshot(word) -> tuple[int | None, bool, bool, int] | None:
+    """Read ownership-sensitive Word state conservatively; ambiguity means no Quit."""
+    try:
+        hwnd = int(getattr(word, "Hwnd", 0) or 0) or None
+        user_control = bool(getattr(word, "UserControl", True))
+        visible = bool(getattr(word, "Visible", True))
+        document_count = int(getattr(word.Documents, "Count", 0) or 0)
+    except Exception:
+        return None
+    return hwnd, user_control, visible, document_count
 
 
 def _legacy_doc_cache_path(source: Path) -> Path:
@@ -135,29 +166,50 @@ def convert_legacy_doc_to_docx(source: Path, target: Path) -> None:
                 opened.Close(False)
             except Exception:
                 pass
+            opened = None
         if word is not None:
-            # Quit only an automation-owned, distinct instance.  UserControl is
-            # Word's own ownership signal; default to True on any ambiguity so
-            # an existing interactive Word process is never terminated.
-            try:
-                automation_owned = not bool(getattr(word, "UserControl", True))
-            except Exception:
-                automation_owned = False
+            # A user can launch Word while our hidden conversion instance still
+            # exists. Word may then expose that same COM instance interactively.
+            # Re-check ownership after closing our document and again after a
+            # short grace period. If Word became visible/user-controlled or has
+            # any document, release our COM reference without calling Quit().
+            snapshot = _word_automation_snapshot(word)
             safe_to_quit = bool(
-                automation_owned
-                and (
-                    user_word_hwnd is None
-                    or (
-                        automation_word_hwnd is not None
-                        and automation_word_hwnd != user_word_hwnd
-                    )
+                snapshot is not None
+                and _word_automation_safe_to_quit(
+                    preexisting_user_hwnd=user_word_hwnd,
+                    automation_hwnd=snapshot[0] or automation_word_hwnd,
+                    user_control=snapshot[1],
+                    visible=snapshot[2],
+                    document_count=snapshot[3],
                 )
             )
+            if safe_to_quit:
+                try:
+                    pythoncom.PumpWaitingMessages()
+                except Exception:
+                    pass
+                time.sleep(0.15)
+                snapshot = _word_automation_snapshot(word)
+                safe_to_quit = bool(
+                    snapshot is not None
+                    and _word_automation_safe_to_quit(
+                        preexisting_user_hwnd=user_word_hwnd,
+                        automation_hwnd=snapshot[0] or automation_word_hwnd,
+                        user_control=snapshot[1],
+                        visible=snapshot[2],
+                        document_count=snapshot[3],
+                    )
+                )
             if safe_to_quit:
                 try:
                     word.Quit()
                 except Exception:
                     pass
+            # Release the COM proxy while COM is still initialized.  In the
+            # user-took-ownership path this is what prevents our process from
+            # keeping Word alive or making the next launch sluggish.
+            word = None
         pythoncom.CoUninitialize()
 
 
