@@ -1,3 +1,17 @@
+# Release notes — v1.4.19-super-production
+
+## v1.4.19-super-production
+
+- Динамический эпикриз дневников использует формулировку «Психический статус».
+- Ускорен watcher папки `Desktop\Выписанные пациенты`: короче quiet/poll интервалы без медицинской классификации в скрытом агенте.
+- Windows E2E теперь измеряет путь `новый первичный DOCX → видимое окно`; установленная onedir-сборка имеет жёсткий production-budget.
+- Startup установленной onedir-сборки имеет отдельный fail-closed budget.
+- Генерация полного комплекта медицинских документов имеет fail-closed performance budget.
+- Полный generation smoke доказывает, что исходные первичный DOCX и ЭПИ остаются байт-в-байт неизменными.
+- Production-дневники дополнительно зафиксированы как текстовые абзацы, без возврата к таблице; проверены границы от D0+1 до даты выписки.
+- Golden DOCX/full patient replay, staff/gender/diagnosis regressions, Tk/TkDND, packaged intake, installer install/uninstall остаются обязательными.
+- Версия программы и installer: `1.4.19` / `v1.4.19-super-production`; installer: `MedicalDiaryAutofill-Setup-1.4.19.exe`.
+
 # Release notes — v1.4.18-runtime-responsiveness
 
 ## v1.4.18-runtime-responsiveness
