@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "c5d13d79131695b1f388da62b67da2bbce3e1256",
-  "baseline_note": "PR #147 prepared v1.4.19-super-production, exact-head a9f95d3494253a105fd5428e1093e1cc933112b7 passed Windows run 35466485952 completely, merged as c5d13d79131695b1f388da62b67da2bbce3e1256, and post-merge main run 35466687169 also completed SUCCESS. This cleanup removes the temporary document-mechanics approval while retaining only a narrowed regression approval for that deletion.",
+  "baseline_ref": "6bb931e3c63b0b4f5af3f4c7b8f24960c126279b",
+  "baseline_note": "PR #147 prepared v1.4.19-super-production and was fully validated before/after merge. PR #149 then removed the temporary document-mechanics approval under a narrowed regression approval; exact cleanup 9718ad8e6e7f7019583afa4932d3652cc873e890 passed Windows run 35467473748, merged as 6bb931e3c63b0b4f5af3f4c7b8f24960c126279b, and post-merge main run 35467703973 completed SUCCESS. This is the clean tested tree before removing the final temporary regression approval.",
   "required_approval_evidence": [
     "ci_gate_lock"
   ],
