@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "base_sha": "b0077f68311fcc8bb9c7db4be0ae04a41332a922",
+  "reason": "Explicit v1.4.18 release metadata update after the fully verified runtime-responsiveness repair. The only protected document-mechanics file changed is app_config.py, and that change is version-label metadata only; document parsing, rendering, templates, and generation behavior are unchanged.",
+  "approved_blobs": {
+    "app_config.py": "30075036aa8a4b4b750cd3cf4a30d57cf52221d8"
+  }
+}
