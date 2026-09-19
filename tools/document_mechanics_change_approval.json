@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "base_sha": "a6b9f3c118aedab800da8cdab42933e622b5ad05",
+  "reason": "Rename the user-visible dynamic epicrisis label from Профильный статус to Психический статус without changing diary generation mechanics.",
+  "approved_blobs": {
+    "diary_service.py": "3c506885fdaa831699e9251ef7c23bb28ce2f6c0"
+  }
+}
