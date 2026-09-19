@@ -35,6 +35,47 @@ class DiagnosisWidgetMixin:
             self.status_files = []
         return normalized
 
+    def _schedule_diagnosis_auto_text_refresh(self, normalized: str) -> None:
+        """Debounce automatic diary-text matching; never run it in the write trace."""
+        pending = getattr(self, "_diagnosis_refresh_after_id", None)
+        if pending is not None:
+            try:
+                self.root.after_cancel(pending)
+            except Exception:
+                pass
+            self._diagnosis_refresh_after_id = None
+
+        if not normalized:
+            return
+        if (
+            getattr(self, "status_files", None)
+            and not getattr(self, "_diary_text_files_auto_selected", False)
+        ):
+            return
+
+        def refresh_auto_text() -> None:
+            self._diagnosis_refresh_after_id = None
+            current = self.diagnosis_var.get().strip()
+            current = sanitize_diagnosis(current) if current else ""
+            if not current:
+                return
+            if self.status_files and not getattr(
+                self, "_diary_text_files_auto_selected", False
+            ):
+                return
+            try:
+                self._auto_select_diary_text_by_diagnosis(
+                    ask_folder=False,
+                    diagnosis_override=current,
+                )
+            except Exception:
+                return
+
+        try:
+            self._diagnosis_refresh_after_id = self.root.after(180, refresh_auto_text)
+        except Exception:
+            refresh_auto_text()
+
     def _commit_visible_diagnosis_change(self) -> None:
         """Promote a doctor-edited visible diagnosis to the current patient state.
 
@@ -63,46 +104,7 @@ class DiagnosisWidgetMixin:
             if hasattr(self, "_redraw_selection_controls"):
                 self._redraw_selection_controls()
 
-        pending = getattr(self, "_diagnosis_refresh_after_id", None)
-        if pending is not None:
-            try:
-                self.root.after_cancel(pending)
-            except Exception:
-                pass
-            self._diagnosis_refresh_after_id = None
-
-        # Empty diagnosis means "no automatic text source".  A manual text file,
-        # if any, remains intentionally pinned for the current patient.
-        if not normalized:
-            return
-        if self.status_files and not auto_selected:
-            return
-
-        def refresh_auto_text() -> None:
-            self._diagnosis_refresh_after_id = None
-            current = self.diagnosis_var.get().strip()
-            current = sanitize_diagnosis(current) if current else ""
-            if not current:
-                return
-            # If the doctor manually pinned a Word file while the debounce was
-            # pending, that explicit choice wins and must not be replaced.
-            if self.status_files and not getattr(self, "_diary_text_files_auto_selected", False):
-                return
-            try:
-                self._auto_select_diary_text_by_diagnosis(
-                    ask_folder=False,
-                    diagnosis_override=current,
-                )
-            except Exception:
-                # Reactive matching is convenience only.  Generation still has
-                # its own hard validation/fallback and must never crash while the
-                # doctor is typing in the diagnosis field.
-                return
-
-        try:
-            self._diagnosis_refresh_after_id = self.root.after(180, refresh_auto_text)
-        except Exception:
-            refresh_auto_text()
+        self._schedule_diagnosis_auto_text_refresh(normalized)
 
     def _on_diagnosis_selected(self, _event=None) -> None:
         self.diagnosis_var.set(self.diagnosis_var.get().strip())
