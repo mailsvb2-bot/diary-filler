@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "16fb73157e596301f41eb7d79ee6c0ff6080b9da",
-  "reason": "Explicit v1.4.18 release metadata and release-workflow update for the already verified runtime-responsiveness repair. Runtime/document behavior is unchanged; this approval covers only version metadata, installer/release wiring, CI locks, and the exact app version-label change.",
+  "baseline_ref": "028aaaf47dbff7e377af83dd620790ceeedbd5d2",
+  "reason": "Remove the temporary document-mechanics approval after the exact v1.4.18 candidate and post-merge main both passed the complete Windows regression contour. No runtime, document-generation, installer, intake, Word, UI, or parsing behavior changes in this cleanup.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -15,16 +15,6 @@
     "ci_gate_lock"
   ],
   "approved_blobs": {
-    ".github/workflows/release.yml": "4d0b6730b6083f695e55d603c2e326ab2aad4521",
-    ".github/workflows/windows-build.yml": "323807d71d2164032beb5d695de7a90888469b24",
-    "BUILD_WINDOWS_INSTALLER.bat": "af75b529ceadaefae70724189b99816d34aab55f",
-    "app_config.py": "30075036aa8a4b4b750cd3cf4a30d57cf52221d8",
-    "installer/MedicalDiaryAutofill.iss": "2694e988811befcdf94b90b655f45e112c5df35e",
-    "prod_audit.py": "4d7918b4b780d8cbbbfe4bf85c161b2b4c61d716",
-    "pyproject.toml": "16b890d3d9c75644cff8d4703d381cd7a4b5a2ef",
-    "release_check.py": "5c62cac8143a1e40df45ca4888afa050d102466b",
-    "tools/ci_gate_lock.py": "c68a45af33df985627608bcebda758b3967c60f4",
-    "tools/document_mechanics_change_approval.json": "e31bf4b0071119ef10db99b961f2b44fffa7d3b7",
-    "version_info.txt": "8ffad7e476ed1c6967f9d3a512ae0c1f5ee056a2"
+    "tools/document_mechanics_change_approval.json": "<deleted>"
   }
 }
