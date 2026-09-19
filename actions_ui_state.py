@@ -23,7 +23,12 @@ class ActionsUiStateMixin:
             self._manual_diagnosis = True
             sync_visible = getattr(self, "_sync_visible_diagnosis_state", None)
             if callable(sync_visible):
-                sync_visible()
+                normalized = sync_visible()
+                schedule_auto = getattr(
+                    self, "_schedule_diagnosis_auto_text_refresh", None
+                )
+                if callable(schedule_auto):
+                    schedule_auto(normalized)
 
     def _set_ui_var(self, variable: tk.StringVar, value: str) -> None:
         self._suspend_user_edit_tracking = True
