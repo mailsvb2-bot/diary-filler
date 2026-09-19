@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "16fb73157e596301f41eb7d79ee6c0ff6080b9da",
-  "baseline_note": "PR #132 fixed runtime responsiveness, Word isolation, event-driven intake, and fast installed onedir packaging. PR #133 then removed the temporary mechanics approval and merged as 16fb73157e596301f41eb7d79ee6c0ff6080b9da after exact-head Windows run 35426361927 SUCCESS. Post-merge main run 35426573815 also completed SUCCESS through packaged auto-launch E2E and installed/uninstalled smoke. This is the clean tested runtime-responsiveness tree before removing the final temporary regression approval.",
+  "baseline_ref": "028aaaf47dbff7e377af83dd620790ceeedbd5d2",
+  "baseline_note": "PR #135 prepared v1.4.18 runtime-responsiveness release metadata. Exact candidate b9aadba74fad4b8883ea5d15ced5b7870ca25f25 passed Windows run 35435590318 completely, including golden DOCX, real Tk, packaged auto-launch E2E, v1.4.18 installer build, and installed/uninstalled smoke. It merged as 028aaaf47dbff7e377af83dd620790ceeedbd5d2, and post-merge main run 35435751226 also completed SUCCESS. This is the tested v1.4.18 release tree before temporary approval cleanup.",
   "required_approval_evidence": [
     "ci_gate_lock"
   ],
