@@ -26,6 +26,7 @@ WINDOWS_REQUIRED_IN_ORDER = (
     "python tools/staff_profile_regression.py",
     "python tools/gender_generation_regression_matrix.py",
     "python tests/diagnosis_override_regression.py",
+    "python tools/generation_performance_profile.py --runs 3",
     "python tests/desktop_intake_contract_check.py",
     "python tests/intake_lifecycle_regression.py",
     "python gui_runtime_check.py",
@@ -33,7 +34,7 @@ WINDOWS_REQUIRED_IN_ORDER = (
     "python verify_built_exe.py",
     "./tools/windows_desktop_intake_e2e.ps1 -AppPath ./dist/MedicalDiaryAutofill.exe",
     "BUILD_WINDOWS_INSTALLER.bat",
-    "./tools/windows_installer_smoke.ps1 -InstallerPath ./dist/MedicalDiaryAutofill-Setup-1.4.18.exe",
+    "./tools/windows_installer_smoke.ps1 -InstallerPath ./dist/MedicalDiaryAutofill-Setup-1.4.19.exe",
 )
 
 RELEASE_REQUIRED_IN_ORDER = (
@@ -52,6 +53,7 @@ RELEASE_REQUIRED_IN_ORDER = (
     "python tools/gender_generation_regression_matrix.py",
     "python tests/diagnosis_override_regression.py",
     "python tests/verbal_diary_source_regression.py",
+    "python tools/generation_performance_profile.py --runs 3",
     "python tests/desktop_intake_contract_check.py",
     "python tests/intake_lifecycle_regression.py",
     "python gui_runtime_check.py",
@@ -59,7 +61,7 @@ RELEASE_REQUIRED_IN_ORDER = (
     "python verify_built_exe.py",
     "./tools/windows_desktop_intake_e2e.ps1 -AppPath ./dist/MedicalDiaryAutofill.exe",
     "BUILD_WINDOWS_INSTALLER.bat",
-    "./tools/windows_installer_smoke.ps1 -InstallerPath ./dist/MedicalDiaryAutofill-Setup-1.4.18.exe",
+    "./tools/windows_installer_smoke.ps1 -InstallerPath ./dist/MedicalDiaryAutofill-Setup-1.4.19.exe",
     "python make_release_zip.py",
     "Create guarded release tag",
     "gh release create",
@@ -78,6 +80,7 @@ REQUIRED_REPOSITORY_FILES = (
     "tools/golden_docx_regression.py",
     "tools/staff_profile_regression.py",
     "tools/gender_generation_regression_matrix.py",
+    "tools/generation_performance_profile.py",
     "tools/windows_desktop_intake_e2e.ps1",
     "tools/windows_installer_smoke.ps1",
     "tools/regression_lock_check.py",
@@ -116,10 +119,10 @@ def main() -> None:
     for required in (
         "workflow_dispatch:",
         "push:",
-        "branches: [production-v1.4.18]",
+        "branches: [production-v1.4.19]",
         "Checkout exact release candidate",
         "Resolve and guard release target",
-        "refs/heads/production-v1.4.18",
+        "refs/heads/production-v1.4.19",
         "git/ref/heads/main",
         "Tag $tag already exists at a different SHA; refusing to move or overwrite it.",
         '"RELEASE_TAG=$tag"',
@@ -155,7 +158,7 @@ def main() -> None:
     release_create = release[publish_release:]
     for asset in (
         r"dist\MedicalDiaryAutofill.exe",
-        r"dist\MedicalDiaryAutofill-Setup-1.4.18.exe",
+        r"dist\MedicalDiaryAutofill-Setup-1.4.19.exe",
         r"release\MedicalDiaryAutofill_PRODUCTION_SOURCE.zip",
     ):
         if asset not in release_create:
