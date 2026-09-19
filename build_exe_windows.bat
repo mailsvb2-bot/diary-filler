@@ -110,7 +110,7 @@ python -m PyInstaller ^
   --distpath dist\installed ^
   --workpath build\installed ^
   --specpath build\installed-spec ^
-  --version-file version_info.txt ^
+  --version-file "%CD%\version_info.txt" ^
   --noupx ^
   %ADD_TEMPLATES% ^
   --collect-all docx ^
