@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "2f43e18cec71846e907b17fcdfb1d8a47e45c42f",
-  "baseline_note": "PR #138 corrected the dynamic epicrisis label to «Психический статус», exact candidate e12bc85f671525376aea01d62696a21dd48d0b72 passed Windows run 35455443363 completely, and merged as 2f43e18cec71846e907b17fcdfb1d8a47e45c42f. This cleanup removes the temporary document-mechanics approval and retains only a narrowed regression approval for that deletion.",
+  "baseline_ref": "2f6f0f3141e8bf2583da17190af5ae0c2119d564",
+  "baseline_note": "PR #138 corrected the dynamic epicrisis label to «Психический статус»: exact candidate e12bc85f671525376aea01d62696a21dd48d0b72 passed run 35455443363, merged as 2f43e18cec71846e907b17fcdfb1d8a47e45c42f, and post-merge main run 35455695662 succeeded. PR #139 removed the temporary mechanics approval; exact cleanup ba99b126ae16d4638653a2e94152b4c700a1475f passed run 35455815884 and merged as 2f6f0f3141e8bf2583da17190af5ae0c2119d564. This is the clean tested tree before removing the final temporary regression approval.",
   "required_approval_evidence": [
     "ci_gate_lock"
   ],
