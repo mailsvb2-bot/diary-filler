@@ -16,6 +16,25 @@ def _format_diagnosis(item) -> str:
 
 
 class DiagnosisWidgetMixin:
+    def _sync_visible_diagnosis_state(self) -> str:
+        """Synchronize only cheap clinical state from the visible entry."""
+        if getattr(self, "_suspend_user_edit_tracking", False):
+            return ""
+
+        visible = self.diagnosis_var.get().strip()
+        normalized = sanitize_diagnosis(visible) if visible else ""
+        self._manual_diagnosis = True
+        self._popup_diagnosis_override = normalized
+        if hasattr(self, "data"):
+            self.data.diagnosis = normalized
+
+        if (
+            getattr(self, "_diary_text_files_auto_selected", False)
+            and getattr(self, "status_files", None)
+        ):
+            self.status_files = []
+        return normalized
+
     def _commit_visible_diagnosis_change(self) -> None:
         """Promote a doctor-edited visible diagnosis to the current patient state.
 
@@ -25,25 +44,18 @@ class DiagnosisWidgetMixin:
         Keep every downstream consumer aligned immediately, while preserving an
         explicit manually chosen diary-text Word file as a sticky doctor override.
         """
+        had_auto_selected_file = bool(
+            getattr(self, "_diary_text_files_auto_selected", False)
+            and getattr(self, "status_files", None)
+        )
+        normalized = self._sync_visible_diagnosis_state()
         if getattr(self, "_suspend_user_edit_tracking", False):
             return
 
-        visible = self.diagnosis_var.get().strip()
-        normalized = sanitize_diagnosis(visible) if visible else ""
-        self._manual_diagnosis = True
-        # Some compatibility paths still consult the popup override or self.data.
-        # Mirror the visible doctor choice there so no stale parsed diagnosis can
-        # reappear after reparse/popup/generation routing.
-        self._popup_diagnosis_override = normalized
-        if hasattr(self, "data"):
-            self.data.diagnosis = normalized
-
         auto_selected = bool(getattr(self, "_diary_text_files_auto_selected", False))
-        if auto_selected:
-            # The old automatic text belongs to the old diagnosis and must stop
-            # looking selected immediately.  A manually pinned Word file is never
-            # cleared here.
-            self.status_files = []
+        if had_auto_selected_file:
+            # Redraw only when there was actually an old automatic file to clear;
+            # later keystrokes remain cheap.
             if hasattr(self, "_update_diary_text_label"):
                 self._update_diary_text_label(
                     success=bool(getattr(self, "diary_texts_dir", ""))
