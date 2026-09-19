@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "3c1570d0aec9900dfdefa5860ef257c8065edcf3",
+  "reason": "Explicit user-requested wording correction in dynamic epicrisis with regression coverage and full Windows evidence required.",
+  "required_evidence": [
+    "document_mechanics_guard",
+    "full_patient_replay",
+    "golden_docx",
+    "staff_profile_regression",
+    "gender_generation_matrix",
+    "desktop_intake_contract",
+    "intake_lifecycle_regression",
+    "packaged_desktop_intake_e2e",
+    "installer_uninstall_smoke",
+    "ci_gate_lock"
+  ],
+  "approved_blobs": {
+    "diary_service.py": "3c506885fdaa831699e9251ef7c23bb28ce2f6c0",
+    "tests/verbal_diary_source_regression.py": "6a16eb6cd37aa24f10563ce07427a7dc0da67e59",
+    "tools/document_mechanics_change_approval.json": "175aa19069323b9389c5e2ccf8b2851a0371ed6b"
+  }
+}
