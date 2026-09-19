@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "5ac0dc07ff9286ff8d718c532d949e0b5c811cf7",
-  "baseline_note": "PR #141 super-production hardening passed exact-head Windows CI 35463521828 and post-merge main Windows CI 35463793995. It reduced Desktop intake wake latency, added installed and packaged drop-to-visible/startup budgets, enforced generation-performance budgets, proved source DOCX immutability, and strengthened text-diary date/paragraph contracts. This baseline points to the clean tested merge before removing the temporary exact approval.",
+  "baseline_ref": "1832f76a4ec1576af4644a84cd199682630ed92b",
+  "baseline_note": "PR #144 separated the portable PyInstaller one-file CI latency ceiling from the stricter installed onedir production budget. Exact-head run 35464991428 passed, merged as 1832f76a4ec1576af4644a84cd199682630ed92b, and post-merge main run 35465598794 passed the complete Windows production contour.",
   "required_approval_evidence": [
     "ci_gate_lock"
   ],
