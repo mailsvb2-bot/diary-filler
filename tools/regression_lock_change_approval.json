@@ -20,6 +20,6 @@
     "startup.py": "e4759250af8ed8a7b0524aaef25fa4245be7e72d",
     "tools/generation_performance_profile.py": "45a55b4a459dc9034da675cddb214146af8e135c",
     "tools/windows_desktop_intake_e2e.ps1": "5531f599db405f0dab0c76b8b3edbd3334be56dd",
-    "tools/windows_installer_smoke.ps1": "49df3a477db95f92ec820471e3396bad198bfb36"
+    "tools/windows_installer_smoke.ps1": "29cca67508bb60e68a9a2f73c2dcb54b78655f9b"
   }
 }
