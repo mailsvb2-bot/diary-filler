@@ -105,6 +105,11 @@ class DiagnosisWidgetMixin:
                 self._focus_diagnosis_popup(event)
                 return
 
+        # Commit the visible clinical value immediately. This is cheap state
+        # synchronization and preserves the established GUI contract; only the
+        # expensive ICD lookup remains debounced.
+        self._commit_visible_diagnosis_change()
+
         pending = getattr(self, "_diagnosis_search_after_id", None)
         if pending is not None:
             try:
@@ -115,13 +120,11 @@ class DiagnosisWidgetMixin:
 
         query = self.diagnosis_var.get().strip()
         if not query:
-            self._commit_visible_diagnosis_change()
             self._hide_diagnosis_popup()
             return
 
         def refresh_after_typing() -> None:
             self._diagnosis_search_after_id = None
-            self._commit_visible_diagnosis_change()
             current = self.diagnosis_var.get().strip()
             if not current:
                 self._hide_diagnosis_popup()
