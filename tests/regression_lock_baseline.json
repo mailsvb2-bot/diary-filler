@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "1832f76a4ec1576af4644a84cd199682630ed92b",
-  "baseline_note": "PR #144 separated the portable PyInstaller one-file CI latency ceiling from the stricter installed onedir production budget. Exact-head run 35464991428 passed, merged as 1832f76a4ec1576af4644a84cd199682630ed92b, and post-merge main run 35465598794 passed the complete Windows production contour.",
+  "baseline_ref": "c5d13d79131695b1f388da62b67da2bbce3e1256",
+  "baseline_note": "v1.4.19-super-production release metadata was validated on exact-head PR #147 run 35466485952, merged as c5d13d79131695b1f388da62b67da2bbce3e1256, and post-merge main run 35466687169 passed the complete Windows production contour including golden DOCX/full patient replay, diary regressions, generation performance budget, packaged intake E2E, installed onedir startup/intake and installer uninstall smoke.",
   "required_approval_evidence": [
     "ci_gate_lock"
   ],
