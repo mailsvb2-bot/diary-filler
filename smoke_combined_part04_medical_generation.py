@@ -1,6 +1,53 @@
 import copy
 from docx.shared import RGBColor
 
+from medical_docx_blocks import _word_automation_safe_to_quit
+
+# Word automation may call Quit() only while the instance is still provably
+# hidden and automation-only. Any sign of user ownership must fail closed.
+assert _word_automation_safe_to_quit(
+    preexisting_user_hwnd=None,
+    automation_hwnd=200,
+    user_control=False,
+    visible=False,
+    document_count=0,
+)
+assert not _word_automation_safe_to_quit(
+    preexisting_user_hwnd=200,
+    automation_hwnd=200,
+    user_control=False,
+    visible=False,
+    document_count=0,
+)
+assert not _word_automation_safe_to_quit(
+    preexisting_user_hwnd=None,
+    automation_hwnd=200,
+    user_control=True,
+    visible=False,
+    document_count=0,
+)
+assert not _word_automation_safe_to_quit(
+    preexisting_user_hwnd=None,
+    automation_hwnd=200,
+    user_control=False,
+    visible=True,
+    document_count=0,
+)
+assert not _word_automation_safe_to_quit(
+    preexisting_user_hwnd=None,
+    automation_hwnd=200,
+    user_control=False,
+    visible=False,
+    document_count=1,
+)
+assert not _word_automation_safe_to_quit(
+    preexisting_user_hwnd=None,
+    automation_hwnd=None,
+    user_control=False,
+    visible=False,
+    document_count=0,
+)
+
 # The primary document and EPI are user-owned source evidence. Generation may
 # read them but must never rewrite, normalize, resave or otherwise mutate them.
 nav_bytes_before_generation = nav.read_bytes()
