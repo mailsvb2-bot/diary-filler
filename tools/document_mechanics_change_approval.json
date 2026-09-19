@@ -4,7 +4,7 @@
   "reason": "Explicit responsiveness/Word-isolation repair requested by the user: make date and diagnosis typing non-blocking, cache legacy .doc conversion, and ensure Word automation never quits an existing user Word instance. No document generation/rendering/template output rules are changed.",
   "approved_blobs": {
     "actions_ui_state.py": "034a1a356efd28d2eb829c35b11c8981e4b4b64d",
-    "diagnosis_widget.py": "3d3dda5dfd1674fa268f66934f9d1daff9eb103c",
+    "diagnosis_widget.py": "2dedfd006a121d4e2bac40a97b0e6472de9fb429",
     "dialog_dates.py": "0e24aa276128c1a00847748c07319bddb9bac8df",
     "dialog_fields_popup.py": "3eacc0dcd07ca5612f775a8ed090cd37c5ead218",
     "medical_docx_blocks.py": "6fe7b72fd3e50f6105d14ddb2c785825eabdfb9e"
