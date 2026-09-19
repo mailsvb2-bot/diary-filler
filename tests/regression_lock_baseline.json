@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "028aaaf47dbff7e377af83dd620790ceeedbd5d2",
-  "baseline_note": "PR #135 prepared v1.4.18 runtime-responsiveness release metadata. Exact candidate b9aadba74fad4b8883ea5d15ced5b7870ca25f25 passed Windows run 35435590318 completely, including golden DOCX, real Tk, packaged auto-launch E2E, v1.4.18 installer build, and installed/uninstalled smoke. It merged as 028aaaf47dbff7e377af83dd620790ceeedbd5d2, and post-merge main run 35435751226 also completed SUCCESS. This is the tested v1.4.18 release tree before temporary approval cleanup.",
+  "baseline_ref": "3c1570d0aec9900dfdefa5860ef257c8065edcf3",
+  "baseline_note": "PR #135 prepared v1.4.18 and merged as 028aaaf47dbff7e377af83dd620790ceeedbd5d2 after exact-head run 35435590318 SUCCESS; post-merge main run 35435751226 also succeeded. PR #136 removed the temporary mechanics approval, exact candidate c78c878abf1613d454d2a5cfb8313bb2b3790429 passed run 35435978359 completely, and merged as 3c1570d0aec9900dfdefa5860ef257c8065edcf3. Post-merge main run 35436180559 then completed SUCCESS through packaged auto-launch E2E and installed/uninstalled smoke. This is the clean tested v1.4.18 tree before removing the final temporary regression approval.",
   "required_approval_evidence": [
     "ci_gate_lock"
   ],
