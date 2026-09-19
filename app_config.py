@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-APP_VERSION = "v1.4.18-runtime-responsiveness"
+APP_VERSION = "v1.4.19-super-production"
 APP_TITLE = f"Медицинский автозаполнитель — {APP_VERSION}"
 
 # Цветовая схема точно по референсу: глубокий navy-midnight, cyan-акцент, card-стиль блоков.
