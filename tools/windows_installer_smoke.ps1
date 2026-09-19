@@ -197,6 +197,11 @@ d.save(p)
     if (-not $installedCreatedPatientFolder) {
         throw 'Installed watcher GUI did not move the primary DOCX into a patient subfolder'
     }
+
+    # Restore a marker before uninstall so the original cleanup proof remains
+    # meaningful even though the installed-intake E2E consumed first-run state.
+    Set-Content -LiteralPath $onboardingMarker -Value 'installer-smoke-uninstall-proof' -Encoding ASCII
+
     if (-not (Test-Path -LiteralPath $intakeDir -PathType Container)) {
         throw 'Installer did not create Desktop\Выписанные пациенты before first GUI launch'
     }
@@ -286,6 +291,7 @@ finally {
     }
     Remove-Item -LiteralPath (Join-Path $env:RUNNER_TEMP 'MedicalDiaryAutofill-installed-startup-probe.txt') -Force -ErrorAction SilentlyContinue
     Remove-Item -LiteralPath (Join-Path $env:RUNNER_TEMP 'make_installed_intake_fixture.py') -Force -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath (Join-Path $env:APPDATA 'MedicalDiaryAutofill\settings.json') -Force -ErrorAction SilentlyContinue
     if (-not $intakeExistedBefore -and (Test-Path -LiteralPath $intakeDir -PathType Container)) {
         $remaining = @(Get-ChildItem -LiteralPath $intakeDir -Force -ErrorAction SilentlyContinue)
         if ($remaining.Count -eq 0) {
