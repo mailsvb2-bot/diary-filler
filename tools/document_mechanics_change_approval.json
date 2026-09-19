@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "base_sha": "61f55119e1fb5f6817a89ca8f4ebf2c15fdbfa17",
+  "reason": "Explicit version-label-only app_config update for v1.4.19 super-production release; document mechanics are unchanged.",
+  "approved_blobs": {
+    "app_config.py": "945267873fb6c933cb3645381e6f5b7a2e005381"
+  }
+}
