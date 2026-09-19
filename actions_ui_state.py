@@ -18,9 +18,12 @@ class ActionsUiStateMixin:
         elif field == "discharge_date":
             self._manual_discharge_date = True
         elif field == "diagnosis":
-            # The write trace must stay O(1). Heavy diagnosis synchronization,
-            # diary-text matching and ICD search are debounced from KeyRelease.
+            # Preserve immediate clinical state semantics, but keep StringVar
+            # writes O(1): no ICD search, folder scan or automatic text matching.
             self._manual_diagnosis = True
+            sync_visible = getattr(self, "_sync_visible_diagnosis_state", None)
+            if callable(sync_visible):
+                sync_visible()
 
     def _set_ui_var(self, variable: tk.StringVar, value: str) -> None:
         self._suspend_user_edit_tracking = True
