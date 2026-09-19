@@ -237,8 +237,12 @@ d.save(p)
     $dropToVisible.Stop()
     $dropToVisibleMs = [math]::Round($dropToVisible.Elapsed.TotalMilliseconds, 0)
     Write-Host "INTAKE E2E drop-to-visible latency: $dropToVisibleMs ms"
-    if ($dropToVisible.Elapsed.TotalSeconds -gt 8.0) {
-        throw "Watcher-triggered GUI exceeded production latency budget: $dropToVisibleMs ms > 8000 ms"
+    # This path intentionally exercises the portable PyInstaller one-file binary,
+    # which includes extraction overhead and is not the installed production
+    # runtime. Keep a generous regression ceiling here; the installed onedir
+    # path is separately gated at 5 seconds in windows_installer_smoke.ps1.
+    if ($dropToVisible.Elapsed.TotalSeconds -gt 12.0) {
+        throw "Portable one-file watcher-triggered GUI exceeded CI latency budget: $dropToVisibleMs ms > 12000 ms"
     }
 
     Wait-Until -Description 'primary DOCX moved into patient subfolder' -TimeoutSeconds 20 -Condition {
