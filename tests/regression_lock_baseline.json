@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "f84a0808630361c3594ec6f9486c28e38ff78886",
-  "baseline_note": "PR #132 fixed runtime responsiveness, Word ownership, event-driven intake, and fast installed onedir packaging. Exact candidate 0da4742163923a28f19c475ada405a17e33a6b20 passed Windows run 35425633677 completely. PR #132 merged as f84a0808630361c3594ec6f9486c28e38ff78886, and post-merge main run 35426167209 also completed SUCCESS through real Tk, packaged auto-launch E2E, installer build, and installed/uninstalled smoke. This is the tested runtime-responsiveness baseline before temporary approval cleanup.",
+  "baseline_ref": "16fb73157e596301f41eb7d79ee6c0ff6080b9da",
+  "baseline_note": "PR #132 fixed runtime responsiveness, Word isolation, event-driven intake, and fast installed onedir packaging. PR #133 then removed the temporary mechanics approval and merged as 16fb73157e596301f41eb7d79ee6c0ff6080b9da after exact-head Windows run 35426361927 SUCCESS. Post-merge main run 35426573815 also completed SUCCESS through packaged auto-launch E2E and installed/uninstalled smoke. This is the clean tested runtime-responsiveness tree before removing the final temporary regression approval.",
   "required_approval_evidence": [
     "ci_gate_lock"
   ],
