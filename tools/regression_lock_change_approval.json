@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "6bb931e3c63b0b4f5af3f4c7b8f24960c126279b",
-  "reason": "Fix the user-visible Word close/slow-reopen race after generation by making legacy .doc COM cleanup fail closed when Word becomes visible, user-controlled, or receives user documents.",
+  "baseline_ref": "1c5f5f8635c11e787b82dfbbb943aabab5efb7dc",
+  "reason": "Remove the temporary document mechanics approval after the fully verified Word COM ownership race fix.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -15,8 +15,6 @@
     "ci_gate_lock"
   ],
   "approved_blobs": {
-    "medical_docx_blocks.py": "5be926d5def9a1ce225cbaf601817aa5a7459739",
-    "smoke_combined_part04_medical_generation.py": "043db3b67e2774fa0f274616e3b13ac13e9e6e54",
-    "tools/document_mechanics_change_approval.json": "53427a2e2f5a6b26d9df3753a7d5e205497b4d74"
+    "tools/document_mechanics_change_approval.json": "<deleted>"
   }
 }
