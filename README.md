@@ -1,6 +1,8 @@
 # Медицинский автозаполнитель
 
-**Версия:** `v1.4.18-runtime-responsiveness`
+**Версия:** `v1.4.19-super-production`
+
+**Super-production:** установленный onedir-runtime теперь имеет fail-closed бюджеты запуска и автооткрытия из `Выписанные пациенты`; генерация документов имеет performance-gate; исходный первичный DOCX/ЭПИ проверяются на байт-в-байт неизменность; production-дневники зафиксированы как текстовый документ с границами дат госпитализации.
 
 **Final user-flow gate:** Windows CI теперь проверяет не только Python-код и сборку, но и реальный Tk UI, TkDND, запуск уже собранного EXE, packaged desktop-intake auto-launch и install/uninstall сценарий Windows installer. Официальный GitHub Release вынесен в отдельный fail-closed workflow и публикует проверенный unsigned EXE/installer; Windows может показывать предупреждение Unknown Publisher/SmartScreen до добавления code-signing сертификата.
 
