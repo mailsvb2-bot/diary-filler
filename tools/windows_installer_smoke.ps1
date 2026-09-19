@@ -18,6 +18,9 @@ $intakeDir = Join-Path $desktopDir 'Выписанные пациенты'
 $intakeExistedBefore = Test-Path -LiteralPath $intakeDir
 $preserveProbe = Join-Path $intakeDir '.installer-smoke-preserve.txt'
 $onboardingMarker = Join-Path $installDir 'onboarding-required.flag'
+$installedFixtureName = 'Первичный_installed_intake_E2E.docx'
+$installedFixture = Join-Path $intakeDir $installedFixtureName
+$installedCreatedPatientFolder = $null
 
 function Stop-AppProcesses {
     Get-Process -Name 'MedicalDiaryAutofill' -ErrorAction SilentlyContinue | ForEach-Object {
@@ -111,6 +114,89 @@ try {
     if (-not (Test-Path -LiteralPath $onboardingMarker -PathType Leaf)) {
         throw 'Installer did not create onboarding-required.flag'
     }
+
+    # The startup probe intentionally does not consume first-run onboarding.
+    # For the installed intake E2E, preconfigure staff and consume the marker so
+    # no modal dialog can hide the actual watcher -> visible-GUI latency.
+    $settingsDir = Join-Path $env:APPDATA 'MedicalDiaryAutofill'
+    New-Item -ItemType Directory -Path $settingsDir -Force | Out-Null
+    @{
+        desktop_intake_enabled = $true
+        staff_profile = @{
+            configured = $true
+            doctor = 'Автоврач А.А.'
+            department_head = 'Автозаведующая З.З.'
+            deputy_chief = 'Автозам Д.Д.'
+        }
+    } | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $settingsDir 'settings.json') -Encoding UTF8
+    Remove-Item -LiteralPath $onboardingMarker -Force
+
+    $fixtureBuilder = Join-Path $env:RUNNER_TEMP 'make_installed_intake_fixture.py'
+    @'
+import sys
+from docx import Document
+p = sys.argv[1]
+d = Document()
+d.add_paragraph("12.05.2026 Первичный осмотр")
+d.add_paragraph("История болезни № INSTALLED-E2E-001")
+d.add_paragraph("Ф.И.О.: Установкин Тест Тестович")
+d.add_paragraph("Дата рождения: 01.01.1980")
+d.add_paragraph("Жалобы при поступлении: тестовая запись")
+d.add_paragraph("Анамнез жизни: без особенностей")
+d.add_paragraph("Психический статус: контактен, ориентирован")
+d.add_paragraph("Диагноз: F20.0")
+d.add_paragraph("План лечения: тестовая терапия")
+d.save(p)
+'@ | Set-Content -LiteralPath $fixtureBuilder -Encoding UTF8
+
+    $dropWatch = [Diagnostics.Stopwatch]::StartNew()
+    & python $fixtureBuilder $installedFixture
+    if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $installedFixture)) {
+        throw 'Failed to create installed intake E2E primary DOCX'
+    }
+
+    $visibleDeadline = [DateTime]::UtcNow.AddSeconds(8)
+    $visibleFound = $false
+    do {
+        foreach ($process in @(Get-Process -Name 'MedicalDiaryAutofill' -ErrorAction SilentlyContinue)) {
+            try {
+                $process.Refresh()
+                if ($process.MainWindowHandle -ne 0) {
+                    $visibleFound = $true
+                    break
+                }
+            } catch {}
+        }
+        if ($visibleFound) { break }
+        Start-Sleep -Milliseconds 100
+    } while ([DateTime]::UtcNow -lt $visibleDeadline)
+    $dropWatch.Stop()
+    $installedDropMs = [math]::Round($dropWatch.Elapsed.TotalMilliseconds, 0)
+    Write-Host "INSTALLED INTAKE drop-to-visible latency: $installedDropMs ms"
+    if (-not $visibleFound) {
+        throw 'Installed watcher did not open a visible GUI for the dropped primary DOCX'
+    }
+    if ($dropWatch.Elapsed.TotalSeconds -gt 5.0) {
+        throw "Installed watcher exceeded production drop-to-visible budget: $installedDropMs ms > 5000 ms"
+    }
+
+    $moveDeadline = [DateTime]::UtcNow.AddSeconds(10)
+    do {
+        if (-not (Test-Path -LiteralPath $installedFixture)) {
+            $moved = Get-ChildItem -LiteralPath $intakeDir -Directory -ErrorAction SilentlyContinue | ForEach-Object {
+                $candidate = Join-Path $_.FullName $installedFixtureName
+                if (Test-Path -LiteralPath $candidate) { Get-Item -LiteralPath $candidate }
+            } | Select-Object -First 1
+            if ($null -ne $moved) {
+                $installedCreatedPatientFolder = $moved.Directory.FullName
+                break
+            }
+        }
+        Start-Sleep -Milliseconds 150
+    } while ([DateTime]::UtcNow -lt $moveDeadline)
+    if (-not $installedCreatedPatientFolder) {
+        throw 'Installed watcher GUI did not move the primary DOCX into a patient subfolder'
+    }
     if (-not (Test-Path -LiteralPath $intakeDir -PathType Container)) {
         throw 'Installer did not create Desktop\Выписанные пациенты before first GUI launch'
     }
@@ -194,7 +280,12 @@ finally {
         Remove-Item -LiteralPath $installDir -Recurse -Force -ErrorAction SilentlyContinue
     }
     Remove-Item -LiteralPath $preserveProbe -Force -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath $installedFixture -Force -ErrorAction SilentlyContinue
+    if ($installedCreatedPatientFolder) {
+        Remove-Item -LiteralPath $installedCreatedPatientFolder -Recurse -Force -ErrorAction SilentlyContinue
+    }
     Remove-Item -LiteralPath (Join-Path $env:RUNNER_TEMP 'MedicalDiaryAutofill-installed-startup-probe.txt') -Force -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath (Join-Path $env:RUNNER_TEMP 'make_installed_intake_fixture.py') -Force -ErrorAction SilentlyContinue
     if (-not $intakeExistedBefore -and (Test-Path -LiteralPath $intakeDir -PathType Container)) {
         $remaining = @(Get-ChildItem -LiteralPath $intakeDir -Force -ErrorAction SilentlyContinue)
         if ($remaining.Count -eq 0) {
