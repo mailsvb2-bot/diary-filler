@@ -18,7 +18,7 @@
     "BUILD_WINDOWS_INSTALLER.bat": "08de7f1796440f2b10e931a426758d45ecab4fae",
     "actions_ui_state.py": "034a1a356efd28d2eb829c35b11c8981e4b4b64d",
     "build_exe_windows.bat": "df4894ffb18fc331abfaa9564c6cd02025917b35",
-    "diagnosis_widget.py": "3d3dda5dfd1674fa268f66934f9d1daff9eb103c",
+    "diagnosis_widget.py": "2dedfd006a121d4e2bac40a97b0e6472de9fb429",
     "dialog_dates.py": "0e24aa276128c1a00847748c07319bddb9bac8df",
     "dialog_fields_popup.py": "3eacc0dcd07ca5612f775a8ed090cd37c5ead218",
     "installer/MedicalDiaryAutofill.iss": "6db683d10a149dca46352dac83d62a389c7a0bc0",
@@ -29,7 +29,7 @@
     "startup.py": "dfc8c48fbea42c0f8a9591e3c8b7ae58f8e9f580",
     "tests/desktop_intake_contract_check.py": "a722c582e064392701961971331de1b0c0f1892c",
     "tests/intake_lifecycle_regression.py": "d191e6de2c965399047745cd15f42904983daae0",
-    "tools/document_mechanics_change_approval.json": "ea43d6b08537a8e55b32bbabd1169f15d1c17fa4",
+    "tools/document_mechanics_change_approval.json": "cacdd751b12915a2554e8103e98d058e9134faba",
     "tools/production_safety_gate.py": "6dc013c012ac4b9690d678145200468bc8197b53",
     "tools/windows_installer_smoke.ps1": "24dc703e3b22b1335a16f48222fbc1b37023dcf6"
   }
