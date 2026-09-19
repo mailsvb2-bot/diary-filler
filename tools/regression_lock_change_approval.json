@@ -20,7 +20,7 @@
     "BUILD_WINDOWS_INSTALLER.bat": "af75b529ceadaefae70724189b99816d34aab55f",
     "app_config.py": "30075036aa8a4b4b750cd3cf4a30d57cf52221d8",
     "installer/MedicalDiaryAutofill.iss": "2694e988811befcdf94b90b655f45e112c5df35e",
-    "prod_audit.py": "56bff3fcc78b4648661c241b13127d15e5da0e8b",
+    "prod_audit.py": "4d7918b4b780d8cbbbfe4bf85c161b2b4c61d716",
     "pyproject.toml": "16b890d3d9c75644cff8d4703d381cd7a4b5a2ef",
     "release_check.py": "5c62cac8143a1e40df45ca4888afa050d102466b",
     "tools/ci_gate_lock.py": "c68a45af33df985627608bcebda758b3967c60f4",
