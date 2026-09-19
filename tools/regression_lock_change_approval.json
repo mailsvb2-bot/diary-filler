@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "2f6f0f3141e8bf2583da17190af5ae0c2119d564",
+  "reason": "Super-production audit: reduce desktop intake wake latency, add installed/startup and generation performance budgets, prove source DOCX immutability, and lock text-diary date/paragraph contract.",
+  "required_evidence": [
+    "document_mechanics_guard",
+    "full_patient_replay",
+    "golden_docx",
+    "staff_profile_regression",
+    "gender_generation_matrix",
+    "desktop_intake_contract",
+    "intake_lifecycle_regression",
+    "packaged_desktop_intake_e2e",
+    "installer_uninstall_smoke",
+    "ci_gate_lock"
+  ],
+  "approved_blobs": {
+    "smoke_combined_part04_medical_generation.py": "b094f4cfe6555ee8576565c9f7747ceb38596d46",
+    "smoke_combined_part05_diary_basic_templates.py": "baab739916373b0243cb61e132c857493718ec53",
+    "startup.py": "e4759250af8ed8a7b0524aaef25fa4245be7e72d",
+    "tools/generation_performance_profile.py": "45a55b4a459dc9034da675cddb214146af8e135c",
+    "tools/windows_desktop_intake_e2e.ps1": "5531f599db405f0dab0c76b8b3edbd3334be56dd",
+    "tools/windows_installer_smoke.ps1": "29cca67508bb60e68a9a2f73c2dcb54b78655f9b"
+  }
+}
