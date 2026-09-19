@@ -123,7 +123,7 @@ def build_dynamic_epicrisis_text(data: DynamicEpicrisisInput) -> str:
             f"Лечится с: {data.sick_leave_from or 'не указано'}.",
             f"Жалобы: {data.complaints or 'без существенной динамики'}.",
             f"Принимает: {data.treatment or 'согласно листу назначений'}.",
-            f"Профильный статус: {data.profile_status or 'без существенной динамики'}.",
+            f"Психический статус: {data.profile_status or 'без существенной динамики'}.",
             correction,
             "Продолжение лечения по листу нетрудоспособности.",
             *dynamic_epicrisis_signature_lines(data.treating_physician, data.department_head),
