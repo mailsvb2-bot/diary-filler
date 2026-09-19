@@ -275,6 +275,8 @@ def _assert_dynamic_epicrisis_is_additive(root: Path) -> None:
         "21.09.26 Динамический эпикриз.",
     ], epicrisis_heads
     assert getattr(with_result, "dynamic_epicrisis_count", 0) == 2
+    assert "Психический статус: Состояние стабильное." in paragraphs, paragraphs
+    assert not any("Профильный статус:" in text for text in paragraphs), paragraphs
 
     # The ordinary clinical sequence remains present; an epicrisis on 11.09 is
     # inserted after that date's ordinary diary, never replacing it.
