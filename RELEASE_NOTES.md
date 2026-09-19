@@ -1,3 +1,17 @@
+# Release notes — v1.4.18-runtime-responsiveness
+
+## v1.4.18-runtime-responsiveness
+
+- Ускорен установленный запуск: portable EXE остаётся PyInstaller onefile, а installer теперь разворачивает быстрый onedir-runtime, поэтому при обычном запуске не требуется заново распаковывать весь Python/lxml/Tk runtime.
+- Desktop intake переведён на событийную модель: неизменённые Word-файлы больше не проходят повторную медицинскую классификацию каждые polling-циклы и не могут сами по себе снова запускать GUI после закрытия программы.
+- Ввод дат оптимизирован: сохранена прежняя live-маска дат, но удалён старый перебор до ~110 parser-кандидатов на один KeyRelease.
+- Ввод диагноза разделён на мгновенную O(1)-синхронизацию клинического состояния и отложенные ICD/автоподбор операций, чтобы печать не блокировалась.
+- Legacy .doc конвертируется один раз на конкретную ревизию файла в пределах процесса; повторные parser/read-path больше не запускают Microsoft Word снова и снова.
+- Word automation защищён по владению: существующий пользовательский Word не получает Quit(); завершаться может только отдельный automation-инстанс, созданный программой.
+- Убрано видимое автоматическое открытие программы после установки; installer запускает только скрытый intake watcher.
+- PR #132 exact-head `0da4742163923a28f19c475ada405a17e33a6b20` прошёл Windows run `35425633677` полностью, включая real Tk, packaged auto-launch E2E и installed onedir smoke. Merge `f84a0808630361c3594ec6f9486c28e38ff78886` прошёл post-merge Windows run `35426167209`; последующая cleanup-цепочка также полностью зелёная.
+- Версия программы и installer: `1.4.18` / `v1.4.18-runtime-responsiveness`; installer: `MedicalDiaryAutofill-Setup-1.4.18.exe`.
+
 # Release notes — v1.4.17-intake-wake-fix
 
 ## v1.4.17-intake-wake-fix

@@ -1,6 +1,6 @@
 # Медицинский автозаполнитель
 
-**Версия:** `v1.4.17-intake-wake-fix`
+**Версия:** `v1.4.18-runtime-responsiveness`
 
 **Final user-flow gate:** Windows CI теперь проверяет не только Python-код и сборку, но и реальный Tk UI, TkDND, запуск уже собранного EXE, packaged desktop-intake auto-launch и install/uninstall сценарий Windows installer. Официальный GitHub Release вынесен в отдельный fail-closed workflow и публикует проверенный unsigned EXE/installer; Windows может показывать предупреждение Unknown Publisher/SmartScreen до добавления code-signing сертификата.
 
