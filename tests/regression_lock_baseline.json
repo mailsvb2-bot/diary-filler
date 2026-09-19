@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "fac106f76839df194461d2ec525d7ccb2c690a39",
-  "baseline_note": "PR #129 prepared v1.4.17 release metadata and passed exact-head Windows run 35390201320; merge 81d48c3c09fe7b26c4caf0d5d9c2c922d73454f8 passed post-merge run 35391969299. PR #130 then removed the temporary document-mechanics approval, exact candidate 618806bf4503ce69419d0d3fdc235865770bbbde passed Windows run 35392416622 completely, and merged as fac106f76839df194461d2ec525d7ccb2c690a39. This is the clean tested v1.4.17 release tree before removing the final temporary regression approval.",
+  "baseline_ref": "f84a0808630361c3594ec6f9486c28e38ff78886",
+  "baseline_note": "PR #132 fixed runtime responsiveness, Word ownership, event-driven intake, and fast installed onedir packaging. Exact candidate 0da4742163923a28f19c475ada405a17e33a6b20 passed Windows run 35425633677 completely. PR #132 merged as f84a0808630361c3594ec6f9486c28e38ff78886, and post-merge main run 35426167209 also completed SUCCESS through real Tk, packaged auto-launch E2E, installer build, and installed/uninstalled smoke. This is the tested runtime-responsiveness baseline before temporary approval cleanup.",
   "required_approval_evidence": [
     "ci_gate_lock"
   ],
