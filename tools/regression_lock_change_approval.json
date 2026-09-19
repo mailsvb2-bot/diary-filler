@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "6bb931e3c63b0b4f5af3f4c7b8f24960c126279b",
+  "reason": "Fix the user-visible Word close/slow-reopen race after generation by making legacy .doc COM cleanup fail closed when Word becomes visible, user-controlled, or receives user documents.",
+  "required_evidence": [
+    "document_mechanics_guard",
+    "full_patient_replay",
+    "golden_docx",
+    "staff_profile_regression",
+    "gender_generation_matrix",
+    "desktop_intake_contract",
+    "intake_lifecycle_regression",
+    "packaged_desktop_intake_e2e",
+    "installer_uninstall_smoke",
+    "ci_gate_lock"
+  ],
+  "approved_blobs": {
+    "medical_docx_blocks.py": "b387680f7231313685e46aa6b584a069ad217fd6",
+    "smoke_combined_part04_medical_generation.py": "043db3b67e2774fa0f274616e3b13ac13e9e6e54",
+    "tools/document_mechanics_change_approval.json": "069e73268abd37796bdc5d2f48057b7f7b661ece"
+  }
+}
