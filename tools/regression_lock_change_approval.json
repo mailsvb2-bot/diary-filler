@@ -17,7 +17,7 @@
   "approved_blobs": {
     "BUILD_WINDOWS_INSTALLER.bat": "08de7f1796440f2b10e931a426758d45ecab4fae",
     "actions_ui_state.py": "1901f794119ba15c1606189cd3e5861c1109d667",
-    "build_exe_windows.bat": "df4894ffb18fc331abfaa9564c6cd02025917b35",
+    "build_exe_windows.bat": "dc532670af7f2a6a97064d2b29792ef6b991105e",
     "diagnosis_widget.py": "2656597b28a268f0d6d8897d36531663529fd892",
     "dialog_dates.py": "0e24aa276128c1a00847748c07319bddb9bac8df",
     "dialog_fields_popup.py": "3eacc0dcd07ca5612f775a8ed090cd37c5ead218",
