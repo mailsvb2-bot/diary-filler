@@ -154,8 +154,16 @@ contract_result = DiaryService().create_text_diaries(
     discharge_value="13.06.2026",
 )
 contract_output = Document(contract_result.created_files[0])
+assert not contract_output.tables, "production diary regressed from text paragraphs back to a table"
 contract_lines = [p.text for p in contract_output.paragraphs if p.text.strip()]
 contract_joined = "\n".join(contract_lines)
+regular_or_joint_dates = [
+    line.split(" ", 1)[0]
+    for line in contract_lines
+    if line[:8].count(".") == 2 and line[:8].replace(".", "").isdigit()
+]
+assert regular_or_joint_dates == ["11.06.26", "12.06.26", "13.06.26"], regular_or_joint_dates
+assert all("10.06.26" not in line for line in contract_lines), contract_lines
 assert "TEMPLATE_STATUS_ONE пациентка пришла спокойно." in contract_joined, contract_joined
 assert "TEMPLATE_STATUS_TWO пациентка оставалась спокойна." in contract_joined, contract_joined
 # The discharge diary is the third generated observation here, so the universal
