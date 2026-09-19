@@ -27,7 +27,7 @@
     "release_check.py": "21e8f54ce4fad64fc119ca9e67f46d7b7fc67ecd",
     "smoke_combined_part02_ui_parser_regressions.py": "4830a78fdf899c1bfcbf3e6d0111bd95a967b2f1",
     "startup.py": "dfc8c48fbea42c0f8a9591e3c8b7ae58f8e9f580",
-    "tests/desktop_intake_contract_check.py": "ccb338672adb4512a5b2ccdab0b87b2f213258df",
+    "tests/desktop_intake_contract_check.py": "a722c582e064392701961971331de1b0c0f1892c",
     "tests/intake_lifecycle_regression.py": "d191e6de2c965399047745cd15f42904983daae0",
     "tools/document_mechanics_change_approval.json": "ea43d6b08537a8e55b32bbabd1169f15d1c17fa4",
     "tools/production_safety_gate.py": "6dc013c012ac4b9690d678145200468bc8197b53",
