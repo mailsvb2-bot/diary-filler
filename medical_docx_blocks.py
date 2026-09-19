@@ -173,9 +173,17 @@ def convert_legacy_doc_to_docx(source: Path, target: Path) -> None:
             # Re-check ownership after closing our document and again after a
             # short grace period. If Word became visible/user-controlled or has
             # any document, release our COM reference without calling Quit().
+            distinct_from_preexisting_user = bool(
+                user_word_hwnd is None
+                or (
+                    automation_word_hwnd is not None
+                    and automation_word_hwnd != user_word_hwnd
+                )
+            )
             snapshot = _word_automation_snapshot(word)
             safe_to_quit = bool(
-                snapshot is not None
+                distinct_from_preexisting_user
+                and snapshot is not None
                 and _word_automation_safe_to_quit(
                     preexisting_user_hwnd=user_word_hwnd,
                     automation_hwnd=snapshot[0] or automation_word_hwnd,
