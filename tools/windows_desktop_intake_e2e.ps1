@@ -224,6 +224,7 @@ d.save(p)
     if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $fixture)) {
         throw 'Failed to create primary DOCX fixture for watcher E2E'
     }
+    $dropToVisible = [Diagnostics.Stopwatch]::StartNew()
 
     Wait-Until -Description 'watcher-triggered launch request with a visible GUI window' -TimeoutSeconds 40 -Condition {
         $records = @(Get-AppProcessRecords)
@@ -233,6 +234,13 @@ d.save(p)
         if ($launchLogCount -le $launchLogCountBeforeDrop) { return $false }
         return (Test-AppHasVisibleWindow)
     }
+    $dropToVisible.Stop()
+    $dropToVisibleMs = [math]::Round($dropToVisible.Elapsed.TotalMilliseconds, 0)
+    Write-Host "INTAKE E2E drop-to-visible latency: $dropToVisibleMs ms"
+    if ($dropToVisible.Elapsed.TotalSeconds -gt 8.0) {
+        throw "Watcher-triggered GUI exceeded production latency budget: $dropToVisibleMs ms > 8000 ms"
+    }
+
     Wait-Until -Description 'primary DOCX moved into patient subfolder' -TimeoutSeconds 20 -Condition {
         if (Test-Path -LiteralPath $fixture) { return $false }
         $matches = @(Get-ChildItem -LiteralPath $intakeRoot -Directory -ErrorAction SilentlyContinue | Where-Object {
