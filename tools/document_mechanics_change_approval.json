@@ -3,6 +3,6 @@
   "base_sha": "208d3de565f897a06eeb4d6c47799c0eb406653a",
   "reason": "Fix Word COM ownership race so legacy .doc conversion never quits a Word instance after the user has opened or taken control of it; release COM proxies before CoUninitialize.",
   "approved_blobs": {
-    "medical_docx_blocks.py": "b387680f7231313685e46aa6b584a069ad217fd6"
+    "medical_docx_blocks.py": "5be926d5def9a1ce225cbaf601817aa5a7459739"
   }
 }
