@@ -74,6 +74,40 @@ try {
     if (-not (Test-Path -LiteralPath $internalDir -PathType Container)) {
         throw 'Installer did not deploy the fast PyInstaller onedir runtime'
     }
+
+    # Measure the actual installed onedir startup path, not the slower portable
+    # one-file launcher. The startup probe constructs the real GUI and TkDND
+    # wiring, writes evidence, then exits before mainloop.
+    $probeResult = Join-Path $env:RUNNER_TEMP 'MedicalDiaryAutofill-installed-startup-probe.txt'
+    Remove-Item -LiteralPath $probeResult -Force -ErrorAction SilentlyContinue
+    $psi = [Diagnostics.ProcessStartInfo]::new()
+    $psi.FileName = $app
+    $psi.WorkingDirectory = $installDir
+    $psi.UseShellExecute = $false
+    $psi.Environment['MEDICAL_AUTOFILL_STARTUP_PROBE'] = '1'
+    $psi.Environment['MEDICAL_AUTOFILL_STARTUP_PROBE_RESULT'] = $probeResult
+    $startupWatch = [Diagnostics.Stopwatch]::StartNew()
+    $startupProbe = [Diagnostics.Process]::Start($psi)
+    if (-not $startupProbe.WaitForExit(8000)) {
+        try { $startupProbe.Kill($true) } catch {}
+        throw 'Installed application startup probe exceeded hard 8 second timeout'
+    }
+    $startupWatch.Stop()
+    if ($startupProbe.ExitCode -ne 0) {
+        throw "Installed application startup probe exited with code $($startupProbe.ExitCode)"
+    }
+    if (-not (Test-Path -LiteralPath $probeResult)) {
+        throw 'Installed application startup probe did not write evidence'
+    }
+    $probeText = Get-Content -LiteralPath $probeResult -Raw
+    if ($probeText -notmatch 'OK' -or $probeText -notmatch 'dnd=1') {
+        throw "Installed application startup evidence is incomplete: $probeText"
+    }
+    $startupMs = [math]::Round($startupWatch.Elapsed.TotalMilliseconds, 0)
+    Write-Host "INSTALLED ONEDIR STARTUP PROBE: $startupMs ms"
+    if ($startupWatch.Elapsed.TotalSeconds -gt 5.0) {
+        throw "Installed application exceeded production startup budget: $startupMs ms > 5000 ms"
+    }
     if (-not (Test-Path -LiteralPath $onboardingMarker -PathType Leaf)) {
         throw 'Installer did not create onboarding-required.flag'
     }
@@ -160,6 +194,7 @@ finally {
         Remove-Item -LiteralPath $installDir -Recurse -Force -ErrorAction SilentlyContinue
     }
     Remove-Item -LiteralPath $preserveProbe -Force -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath (Join-Path $env:RUNNER_TEMP 'MedicalDiaryAutofill-installed-startup-probe.txt') -Force -ErrorAction SilentlyContinue
     if (-not $intakeExistedBefore -and (Test-Path -LiteralPath $intakeDir -PathType Container)) {
         $remaining = @(Get-ChildItem -LiteralPath $intakeDir -Force -ErrorAction SilentlyContinue)
         if ($remaining.Count -eq 0) {

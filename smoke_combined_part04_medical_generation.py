@@ -1,5 +1,11 @@
 import copy
 from docx.shared import RGBColor
+
+# The primary document and EPI are user-owned source evidence. Generation may
+# read them but must never rewrite, normalize, resave or otherwise mutate them.
+nav_bytes_before_generation = nav.read_bytes()
+epi_bytes_before_generation = epi.read_bytes()
+
 created, data = service.create_documents(
     navigation_path=nav,
     output_dir=OUT / "medical_with_epi",
@@ -10,6 +16,8 @@ created, data = service.create_documents(
 )
 assert len(created) == len(DOCUMENT_ORDER), created
 assert all(path.exists() for path in created)
+assert nav.read_bytes() == nav_bytes_before_generation, "primary source DOCX was modified during generation"
+assert epi.read_bytes() == epi_bytes_before_generation, "EPI source was modified during generation"
 for created_path in created:
     assert "_" not in created_path.name, created_path.name
 assert any(path.name == "Иванова Ирина Ивановна Выписной эпикриз.docx" for path in created), [p.name for p in created]

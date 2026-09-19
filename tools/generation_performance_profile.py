@@ -342,6 +342,26 @@ def run_profile(measured_runs: int) -> dict[str, Any]:
     }
 
 
+PRODUCTION_MAX_MEDIAN_TOTAL_MS = 1000.0
+PRODUCTION_MAX_MEDIAN_MARKER_SEARCH_MS = 350.0
+
+
+def _enforce_production_budget(report: dict[str, Any]) -> None:
+    median = report["median"]
+    total = float(median["median_total_ms"])
+    marker = float(median["median_marker_search_total_ms"])
+    if total > PRODUCTION_MAX_MEDIAN_TOTAL_MS:
+        raise SystemExit(
+            f"GENERATION PERFORMANCE REGRESSION: median total {total:.3f} ms exceeds "
+            f"{PRODUCTION_MAX_MEDIAN_TOTAL_MS:.0f} ms production budget"
+        )
+    if marker > PRODUCTION_MAX_MEDIAN_MARKER_SEARCH_MS:
+        raise SystemExit(
+            f"GENERATION PERFORMANCE REGRESSION: median marker search {marker:.3f} ms exceeds "
+            f"{PRODUCTION_MAX_MEDIAN_MARKER_SEARCH_MS:.0f} ms production budget"
+        )
+
+
 def _print_summary(report: dict[str, Any]) -> None:
     median = report["median"]
     print("GENERATION PERFORMANCE PROFILE")
@@ -380,6 +400,7 @@ def main() -> int:
         parser.error("--runs must be >= 1")
     report = run_profile(args.runs)
     _print_summary(report)
+    _enforce_production_budget(report)
     if args.json_out:
         args.json_out.write_text(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True), encoding="utf-8")
     return 0
