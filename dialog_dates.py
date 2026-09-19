@@ -24,20 +24,48 @@ class DialogDatesMixin:
 
     @staticmethod
     def _compact_date_can_continue(digits: str) -> bool:
-        """Return True when more digits can still form a supported compact date."""
-        if not digits.isdigit() or len(digits) >= 8:
+        """Return whether one more typed digit can still change interpretation.
+
+        Preserve the established live-mask UX without the old 110-candidate
+        brute force. Seven-digit possibilities require at most ten probes. For
+        an eight-digit completion from six digits, DDMM + the two-digit century
+        prefix is checked directly against the supported clinical-year range.
+        """
+        if not digits.isdigit() or len(digits) not in {6, 7}:
             return False
-        remaining = 8 - len(digits)
-        # We only call this for six/seven digit input, so at most 110 cheap
-        # parser probes are needed. This preserves legacy 7-digit forms such as
-        # 1012026 instead of prematurely turning their six-digit prefix into
-        # an unrelated DD.MM.YY value.
-        for extra_len in range(1, remaining + 1):
-            for suffix in range(10 ** extra_len):
-                candidate = digits + f"{suffix:0{extra_len}d}"
-                if parse_date(candidate):
-                    return True
-        return False
+
+        # A one-digit extension is cheap and also covers legacy seven-digit
+        # forms such as 1012026.
+        if any(parse_date(digits + str(suffix)) for suffix in range(10)):
+            return True
+        if len(digits) == 7:
+            return False
+
+        # Eight compact digits are canonical DDMMYYYY.  The six-digit prefix
+        # fixes DDMM and the first two year digits, so no 00..99 probing is
+        # necessary.
+        try:
+            day = int(digits[:2])
+            month = int(digits[2:4])
+            century_prefix = int(digits[4:6])
+        except ValueError:
+            return False
+        first_year = max(1900, century_prefix * 100)
+        last_year = min(2200, century_prefix * 100 + 99)
+        if first_year > last_year:
+            return False
+
+        candidate_year = first_year
+        if day == 29 and month == 2:
+            while candidate_year <= last_year:
+                if candidate_year % 4 == 0 and (
+                    candidate_year % 100 != 0 or candidate_year % 400 == 0
+                ):
+                    break
+                candidate_year += 1
+            if candidate_year > last_year:
+                return False
+        return parse_date(digits[:4] + f"{candidate_year:04d}") is not None
 
     @staticmethod
     def _format_date_input_live(value: str) -> str:

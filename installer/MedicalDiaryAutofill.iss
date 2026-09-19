@@ -31,7 +31,8 @@ SetupLogging=yes
 Name: "{userdesktop}\Выписанные пациенты"; Flags: uninsneveruninstall
 
 [Files]
-Source: "..\dist\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
+; Installed builds use PyInstaller onedir: no per-launch onefile extraction delay.
+Source: "..\dist\installed\MedicalDiaryAutofill\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Registry]
 ; Bootstrap the hidden watcher at logon even if the GUI has never been opened.
@@ -53,7 +54,6 @@ Name: "{group}\Проверить MedicalDiaryAutofill"; Filename: "{app}\{#MyAp
 ; Start the watcher independently of the optional visible post-install launch.
 ; This is what makes dropping a DOC/DOCX work immediately after install/update.
 Filename: "{app}\{#MyAppExeName}"; Parameters: "--intake-agent"; Flags: runhidden nowait
-Filename: "{app}\{#MyAppExeName}"; Description: "Запустить MedicalDiaryAutofill"; Flags: nowait postinstall skipifsilent
 
 [UninstallDelete]
 Type: files; Name: "{autostartup}\MedicalDiaryAutofill Intake.vbs"

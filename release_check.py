@@ -158,7 +158,15 @@ def _assert_build_contract() -> None:
     build = (ROOT / "build_exe_windows.bat").read_text(encoding="utf-8", errors="replace")
     workflow = (ROOT / ".github/workflows/windows-build.yml").read_text(encoding="utf-8")
     release_workflow = (ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
-    for snippet in ["release_check.py", "version_info.txt", "--noupx", "MedicalDiaryAutofill.exe"]:
+    for snippet in [
+        "release_check.py",
+        "version_info.txt",
+        "--noupx",
+        "--onefile",
+        "--onedir",
+        "dist\\installed\\MedicalDiaryAutofill",
+        "MedicalDiaryAutofill.exe",
+    ]:
         if snippet not in build:
             raise SystemExit(f"build_exe_windows.bat misses production snippet: {snippet}")
     release_zip = (ROOT / "make_release_zip.py").read_text(encoding="utf-8")

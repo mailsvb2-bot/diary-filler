@@ -3,8 +3,8 @@ chcp 65001 > nul
 setlocal EnableExtensions
 cd /d "%~dp0"
 
-if not exist "dist\MedicalDiaryAutofill.exe" (
-  echo [ОШИБКА] Сначала нужен dist\MedicalDiaryAutofill.exe
+if not exist "dist\installed\MedicalDiaryAutofill\MedicalDiaryAutofill.exe" (
+  echo [ОШИБКА] Сначала нужен быстрый installed runtime: dist\installed\MedicalDiaryAutofill\MedicalDiaryAutofill.exe
   exit /b 1
 )
 

@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "fac106f76839df194461d2ec525d7ccb2c690a39",
+  "reason": "User-requested runtime responsiveness and Word isolation repair: event-driven desktop intake prevents repeated parsing/relaunch of unchanged files; date and diagnosis typing stay non-blocking; legacy DOC conversion is cached and cannot quit an existing user Word instance; installer uses fast onedir runtime while preserving portable onefile asset. Document generation behavior is intentionally unchanged.",
+  "required_evidence": [
+    "document_mechanics_guard",
+    "full_patient_replay",
+    "golden_docx",
+    "staff_profile_regression",
+    "gender_generation_matrix",
+    "desktop_intake_contract",
+    "intake_lifecycle_regression",
+    "packaged_desktop_intake_e2e",
+    "installer_uninstall_smoke",
+    "ci_gate_lock"
+  ],
+  "approved_blobs": {
+    "BUILD_WINDOWS_INSTALLER.bat": "08de7f1796440f2b10e931a426758d45ecab4fae",
+    "actions_ui_state.py": "1901f794119ba15c1606189cd3e5861c1109d667",
+    "build_exe_windows.bat": "dc532670af7f2a6a97064d2b29792ef6b991105e",
+    "diagnosis_widget.py": "2656597b28a268f0d6d8897d36531663529fd892",
+    "dialog_dates.py": "0e24aa276128c1a00847748c07319bddb9bac8df",
+    "dialog_fields_popup.py": "3eacc0dcd07ca5612f775a8ed090cd37c5ead218",
+    "installer/MedicalDiaryAutofill.iss": "6db683d10a149dca46352dac83d62a389c7a0bc0",
+    "main.py": "661bf5b9f4c31bd515e000dc4a7b53c6f8f5a4e8",
+    "medical_docx_blocks.py": "6fe7b72fd3e50f6105d14ddb2c785825eabdfb9e",
+    "release_check.py": "21e8f54ce4fad64fc119ca9e67f46d7b7fc67ecd",
+    "smoke_combined_part02_ui_parser_regressions.py": "4830a78fdf899c1bfcbf3e6d0111bd95a967b2f1",
+    "startup.py": "dfc8c48fbea42c0f8a9591e3c8b7ae58f8e9f580",
+    "tests/desktop_intake_contract_check.py": "a722c582e064392701961971331de1b0c0f1892c",
+    "tests/intake_lifecycle_regression.py": "d191e6de2c965399047745cd15f42904983daae0",
+    "tools/document_mechanics_change_approval.json": "59d6e7e668bd755b1ae9c0ba964a0bb5cfdab741",
+    "tools/production_safety_gate.py": "6dc013c012ac4b9690d678145200468bc8197b53",
+    "tools/windows_installer_smoke.ps1": "24dc703e3b22b1335a16f48222fbc1b37023dcf6",
+    "tools/windows_desktop_intake_e2e.ps1": "1409d8cd0e63e752dd211b17292f0a3834ed4084"
+  }
+}

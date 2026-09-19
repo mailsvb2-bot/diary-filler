@@ -325,6 +325,41 @@ def desktop_intake_scan_primary_candidates(intake_root: str | Path) -> list[Path
     return result
 
 
+def _desktop_candidate_snapshot(intake_root: str | Path) -> dict[str, tuple[Path, str]]:
+    """Cheap snapshot of quiet top-level Word files without medical parsing.
+
+    The snapshot is the event boundary for both the hidden watcher and the open
+    GUI.  Medical classification is performed only once for a new/changed file,
+    never on every polling tick.
+    """
+    snapshot: dict[str, tuple[Path, str]] = {}
+    for path in desktop_intake_scan_wake_candidates(intake_root):
+        try:
+            key = os.path.normcase(str(path.resolve()))
+        except OSError:
+            key = os.path.normcase(str(path.absolute()))
+        snapshot[key] = (path, _desktop_source_signature(path))
+    return snapshot
+
+
+def _desktop_prune_observed_snapshot(
+    observed: dict[str, str],
+    current: dict[str, tuple[Path, str]],
+) -> dict[str, str]:
+    """Forget removed paths so a later re-copy is treated as a new arrival."""
+    return {key: observed[key] for key in current if key in observed}
+
+
+def _desktop_first_new_or_changed_candidate(
+    observed: dict[str, str],
+    current: dict[str, tuple[Path, str]],
+) -> tuple[str, Path, str] | None:
+    for key, (path, signature) in current.items():
+        if observed.get(key) != signature:
+            return key, path, signature
+    return None
+
+
 def _desktop_registry_path() -> Path | None:
     if os.name != "nt":
         return None
@@ -1081,9 +1116,9 @@ def _desktop_release_agent_mutex(handle: int | None) -> None:
 def _desktop_source_signature(path: Path) -> str:
     try:
         stat = path.stat()
-        raw = f"{path.resolve()}|{stat.st_size}|{stat.st_mtime_ns}".encode(
-            "utf-8", errors="surrogatepass"
-        )
+        raw = (
+            f"{path.resolve()}|{stat.st_size}|{stat.st_mtime_ns}|{stat.st_ctime_ns}"
+        ).encode("utf-8", errors="surrogatepass")
     except OSError:
         raw = str(path).encode("utf-8", errors="surrogatepass")
     return hashlib.sha256(raw).hexdigest()
@@ -1107,9 +1142,14 @@ def run_desktop_intake_agent() -> int:
     if handle is None:
         return 0
 
-    recently_launched: dict[str, float] = {}
     try:
         root = desktop_intake_ensure_root()
+        # Existing files are baseline state, not a launch request.  Only a file
+        # that appears or changes after the watcher is alive may wake the GUI.
+        observed = {
+            key: signature
+            for key, (_path, signature) in _desktop_candidate_snapshot(root).items()
+        }
         _desktop_touch_agent_heartbeat()
         _desktop_agent_log("agent started")
         while True:
@@ -1123,30 +1163,32 @@ def run_desktop_intake_agent() -> int:
                 root, rebound = _desktop_rebind_intake_root(root)
                 if rebound:
                     _desktop_agent_log("intake root rebound to current Desktop")
+                    observed = {
+                        key: signature
+                        for key, (_path, signature) in _desktop_candidate_snapshot(root).items()
+                    }
                 elif root_missing:
                     _desktop_agent_log("intake root restored")
+                    observed = {}
             except OSError:
                 _desktop_agent_log("intake root unavailable; retry scheduled")
                 time.sleep(_DESKTOP_INTAKE_AGENT_POLL_SECONDS)
                 continue
 
-            now = time.time()
-            recently_launched = {
-                signature: launched_at
-                for signature, launched_at in recently_launched.items()
-                if now - launched_at < _DESKTOP_INTAKE_AGENT_RELAUNCH_COOLDOWN_SECONDS
-            }
             if not _desktop_gui_is_active():
-                for path in desktop_intake_scan_wake_candidates(root):
-                    signature = _desktop_source_signature(path)
-                    if signature in recently_launched:
-                        continue
+                current = _desktop_candidate_snapshot(root)
+                observed = _desktop_prune_observed_snapshot(observed, current)
+                arrival = _desktop_first_new_or_changed_candidate(observed, current)
+                if arrival is not None:
+                    key, path, signature = arrival
+                    # Mark before launch so closing the GUI cannot re-launch the
+                    # same unchanged file forever. A modified/re-copied file gets
+                    # a new signature and is eligible again.
+                    observed[key] = signature
                     if _desktop_launch_gui_for_primary(path):
-                        recently_launched[signature] = now
-                        _desktop_agent_log("primary detected; GUI launch requested")
+                        _desktop_agent_log("new Word arrival; GUI launch requested")
                     else:
-                        _desktop_agent_log("primary detected; GUI launch failed")
-                    break
+                        _desktop_agent_log("new Word arrival; GUI launch failed")
             time.sleep(_DESKTOP_INTAKE_AGENT_POLL_SECONDS)
     except KeyboardInterrupt:
         return 0
@@ -1234,20 +1276,35 @@ def _desktop_schedule_agent_health(app) -> None:
 
 
 def _desktop_poll_intake(app, intake_root: Path) -> None:
+    """React once to new/changed files; never re-parse the folder on every tick."""
     try:
         if not app.root.winfo_exists():
             return
         intake_root, rebound = _desktop_rebind_intake_root(intake_root)
+        current = _desktop_candidate_snapshot(intake_root)
         if rebound:
             _desktop_agent_log("GUI intake root rebound to current Desktop")
-        if not getattr(app, "_desktop_intake_processing", False):
-            candidates = desktop_intake_scan_primary_candidates(intake_root)
-            if candidates:
-                app._desktop_intake_processing = True
-                try:
-                    _desktop_process_primary(app, candidates[0])
-                finally:
-                    app._desktop_intake_processing = False
+            app._desktop_intake_observed = {
+                key: signature for key, (_path, signature) in current.items()
+            }
+        else:
+            observed = dict(getattr(app, "_desktop_intake_observed", {}))
+            observed = _desktop_prune_observed_snapshot(observed, current)
+            if not getattr(app, "_desktop_intake_processing", False):
+                arrival = _desktop_first_new_or_changed_candidate(observed, current)
+                if arrival is not None:
+                    key, path, signature = arrival
+                    # Consume this exact filesystem event before parsing.  An
+                    # invalid/non-primary file remains harmless and cannot freeze
+                    # Tk every 1.6 seconds; modifying/re-copying it retries.
+                    observed[key] = signature
+                    app._desktop_intake_observed = observed
+                    app._desktop_intake_processing = True
+                    try:
+                        _desktop_process_primary(app, path)
+                    finally:
+                        app._desktop_intake_processing = False
+            app._desktop_intake_observed = observed
         app.root.after(
             _DESKTOP_INTAKE_GUI_POLL_MS,
             lambda: _desktop_poll_intake(app, intake_root),
@@ -1288,6 +1345,12 @@ def start_desktop_intake_runtime(app, *, initial_primary: str | Path | None = No
         return
 
     app._desktop_intake_processing = False
+    # Baseline files already present when the GUI opens. They are not repeatedly
+    # classified in the Tk thread; only a later arrival/change is processed.
+    app._desktop_intake_observed = {
+        key: signature
+        for key, (_path, signature) in _desktop_candidate_snapshot(intake_root).items()
+    }
     _desktop_schedule_heartbeat(app)
     app.root.after(1200, lambda: _desktop_schedule_agent_health(app))
 

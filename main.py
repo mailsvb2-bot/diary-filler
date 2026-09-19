@@ -16,7 +16,6 @@ import traceback
 from pathlib import Path
 from tkinter import messagebox
 
-from app import CombinedMedicalDiaryApp
 from app_config import (
     APP_TITLE,
     APP_VERSION,
@@ -43,6 +42,16 @@ from startup import (
 
 SELF_CHECK_ARGUMENT = "--self-check"
 UNINSTALL_INTAKE_ARGUMENT = "--uninstall-intake-agent"
+
+
+def __getattr__(name: str):
+    """Preserve legacy module access without loading the GUI in watcher mode."""
+    if name == "CombinedMedicalDiaryApp":
+        from app import CombinedMedicalDiaryApp as app_class
+
+        globals()[name] = app_class
+        return app_class
+    raise AttributeError(name)
 
 
 def _installation_onboarding_marker_path() -> Path:
@@ -117,6 +126,9 @@ def _write_startup_probe_result(text: str) -> None:
 
 def _run_startup_probe() -> None:
     """Exercise the packaged GUI/TkDND runtime and exit without user interaction."""
+    # Keep the heavy application graph out of watcher/self-check modes.
+    from app import CombinedMedicalDiaryApp
+
     root = _create_root(require_dnd=True)
     try:
         root.withdraw()
@@ -426,6 +438,11 @@ def main() -> None:
             return
 
         root = _create_root()
+        # Import the large GUI/document graph only for a real visible session.
+        # The persistent --intake-agent stays lightweight and no longer pays the
+        # import cost of parsers/renderers/templates at logon.
+        from app import CombinedMedicalDiaryApp
+
         app = CombinedMedicalDiaryApp(root)
         _first_launch_onboarding(app)
 

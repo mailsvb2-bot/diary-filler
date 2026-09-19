@@ -200,7 +200,7 @@ try {
 
     $launchLogCountBeforeDrop = 0
     if (Test-Path -LiteralPath $agentLog) {
-        $launchLogCountBeforeDrop = @((Get-Content -LiteralPath $agentLog) | Where-Object { $_ -match 'primary detected; GUI launch requested' }).Count
+        $launchLogCountBeforeDrop = @((Get-Content -LiteralPath $agentLog) | Where-Object { $_ -match 'new Word arrival; GUI launch requested' }).Count
     }
 
     $builder = Join-Path $testRoot 'make_intake_fixture.py'
@@ -229,7 +229,7 @@ d.save(p)
         $records = @(Get-AppProcessRecords)
         $nonAgents = @($records | Where-Object { $_.CommandLine -notmatch '--intake-agent' })
         if ($nonAgents.Count -lt 1 -or -not (Test-Path -LiteralPath $agentLog)) { return $false }
-        $launchLogCount = @((Get-Content -LiteralPath $agentLog) | Where-Object { $_ -match 'primary detected; GUI launch requested' }).Count
+        $launchLogCount = @((Get-Content -LiteralPath $agentLog) | Where-Object { $_ -match 'new Word arrival; GUI launch requested' }).Count
         if ($launchLogCount -le $launchLogCountBeforeDrop) { return $false }
         return (Test-AppHasVisibleWindow)
     }
@@ -251,7 +251,7 @@ d.save(p)
         throw 'Watcher technical log was not created'
     }
     $logText = Get-Content -LiteralPath $agentLog -Raw
-    if ($logText -notmatch 'primary detected; GUI launch requested') {
+    if ($logText -notmatch 'new Word arrival; GUI launch requested') {
         throw 'Watcher did not record a GUI launch request for the dropped primary DOCX'
     }
 

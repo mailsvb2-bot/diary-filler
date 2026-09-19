@@ -18,15 +18,17 @@ class ActionsUiStateMixin:
         elif field == "discharge_date":
             self._manual_discharge_date = True
         elif field == "diagnosis":
+            # Preserve immediate clinical state semantics, but keep StringVar
+            # writes O(1): no ICD search, folder scan or automatic text matching.
             self._manual_diagnosis = True
-            # StringVar writes are the earliest reliable signal that the doctor
-            # changed the visible Diagnosis field. Promote that value immediately
-            # instead of waiting for a platform-dependent <KeyRelease> event.
-            # Programmatic parser/UI fills use _set_ui_var(), which suspends this
-            # trace, so only an actual user-visible edit enters this path.
-            commit_visible = getattr(self, "_commit_visible_diagnosis_change", None)
-            if callable(commit_visible):
-                commit_visible()
+            sync_visible = getattr(self, "_sync_visible_diagnosis_state", None)
+            if callable(sync_visible):
+                normalized = sync_visible()
+                schedule_auto = getattr(
+                    self, "_schedule_diagnosis_auto_text_refresh", None
+                )
+                if callable(schedule_auto):
+                    schedule_auto(normalized)
 
     def _set_ui_var(self, variable: tk.StringVar, value: str) -> None:
         self._suspend_user_edit_tracking = True

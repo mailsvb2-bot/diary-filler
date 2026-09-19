@@ -7,6 +7,7 @@ import tempfile
 import time
 from datetime import date
 from pathlib import Path
+from types import ModuleType
 
 from docx import Document
 
@@ -113,10 +114,14 @@ def _assert_canonical_primary_parser_contract() -> None:
             assert legacy_data.admission_date == canonical_data.admission_date
             assert legacy_data.diagnosis == canonical_data.diagnosis
             assert legacy_data.input_document_kind == canonical_data.input_document_kind
-            assert conversion_calls == [(legacy, conversion_calls[0][1])], conversion_calls
+            assert len(conversion_calls) == 1, conversion_calls
+            assert conversion_calls[0][0].samefile(legacy), conversion_calls
             assert conversion_calls[0][1].suffix.lower() == ".docx"
             conversion_calls.clear()
             assert startup.desktop_intake_is_primary_document(legacy), "DOC primary was rejected"
+            assert conversion_calls == [], "same .doc revision was converted more than once"
+            legacy.write_bytes(b"legacy-doc-placeholder-updated")
+            assert startup.desktop_intake_is_primary_document(legacy), "updated DOC primary was rejected"
             assert len(conversion_calls) == 1, conversion_calls
         finally:
             medical_docx_blocks.convert_legacy_doc_to_docx = original_converter
@@ -158,8 +163,100 @@ def _assert_closed_gui_wake_is_classification_free() -> None:
     start = agent_source.index("def run_desktop_intake_agent")
     end = agent_source.index("# Existing-GUI handoff", start)
     agent_body = agent_source[start:end]
-    assert "desktop_intake_scan_wake_candidates(root)" in agent_body
+    assert "_desktop_candidate_snapshot(root)" in agent_body
     assert "desktop_intake_scan_primary_candidates(root)" not in agent_body
+    assert "recently_launched" not in agent_body
+
+
+def _assert_legacy_word_conversion_never_quits_user_word() -> None:
+    """COM conversion may close its own Word instance, never the doctor's."""
+    if medical_docx_blocks.os.name != "nt":
+        return
+
+    original_pythoncom = sys.modules.get("pythoncom")
+    original_win32com = sys.modules.get("win32com")
+    original_client = sys.modules.get("win32com.client")
+
+    class FakeOpened:
+        def __init__(self) -> None:
+            self.closed = 0
+
+        def SaveAs2(self, target, **_kwargs) -> None:
+            Path(target).write_bytes(b"fake-docx")
+
+        def Close(self, _save) -> None:
+            self.closed += 1
+
+    class FakeDocuments:
+        def __init__(self, opened) -> None:
+            self.opened = opened
+
+        def Open(self, *_args, **_kwargs):
+            return self.opened
+
+    class FakeWord:
+        def __init__(self, hwnd: int, *, user_control: bool) -> None:
+            self.Hwnd = hwnd
+            self.UserControl = user_control
+            self.Visible = True
+            self.DisplayAlerts = 1
+            self.opened = FakeOpened()
+            self.Documents = FakeDocuments(self.opened)
+            self.quit_calls = 0
+
+        def Quit(self) -> None:
+            self.quit_calls += 1
+
+    pythoncom = ModuleType("pythoncom")
+    pythoncom.CoInitialize = lambda: None  # type: ignore[attr-defined]
+    pythoncom.CoUninitialize = lambda: None  # type: ignore[attr-defined]
+    package = ModuleType("win32com")
+    package.__path__ = []  # type: ignore[attr-defined]
+    client = ModuleType("win32com.client")
+    package.client = client  # type: ignore[attr-defined]
+
+    with tempfile.TemporaryDirectory() as tmp:
+        source = Path(tmp) / "source.doc"
+        source.write_bytes(b"legacy")
+
+        user_word = FakeWord(101, user_control=True)
+        client.GetActiveObject = lambda _name: user_word  # type: ignore[attr-defined]
+        client.DispatchEx = lambda _name: user_word  # type: ignore[attr-defined]
+
+        sys.modules["pythoncom"] = pythoncom
+        sys.modules["win32com"] = package
+        sys.modules["win32com.client"] = client
+        try:
+            target = Path(tmp) / "same-user.docx"
+            medical_docx_blocks.convert_legacy_doc_to_docx(source, target)
+            assert target.is_file()
+            assert user_word.opened.closed == 1
+            assert user_word.quit_calls == 0, "existing user Word was terminated"
+
+            automation_word = FakeWord(202, user_control=False)
+
+            def no_active_word(_name):
+                raise RuntimeError("no active Word")
+
+            client.GetActiveObject = no_active_word  # type: ignore[attr-defined]
+            client.DispatchEx = lambda _name: automation_word  # type: ignore[attr-defined]
+            target2 = Path(tmp) / "owned-automation.docx"
+            medical_docx_blocks.convert_legacy_doc_to_docx(source, target2)
+            assert automation_word.opened.closed == 1
+            assert automation_word.quit_calls == 1, "owned automation Word was leaked"
+        finally:
+            if original_pythoncom is None:
+                sys.modules.pop("pythoncom", None)
+            else:
+                sys.modules["pythoncom"] = original_pythoncom
+            if original_win32com is None:
+                sys.modules.pop("win32com", None)
+            else:
+                sys.modules["win32com"] = original_win32com
+            if original_client is None:
+                sys.modules.pop("win32com.client", None)
+            else:
+                sys.modules["win32com.client"] = original_client
 
 
 def _assert_agent_heartbeat_contract() -> None:
@@ -369,6 +466,7 @@ def main() -> None:
     _assert_top_level_only_and_safe_move()
     _assert_agent_update_and_encoding_contract()
     _assert_closed_gui_wake_is_classification_free()
+    _assert_legacy_word_conversion_never_quits_user_word()
     _assert_agent_heartbeat_contract()
     _assert_stale_disabled_intake_self_heals()
     print("desktop intake contract: PASS")
