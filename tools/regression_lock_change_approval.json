@@ -31,6 +31,7 @@
     "tests/intake_lifecycle_regression.py": "d191e6de2c965399047745cd15f42904983daae0",
     "tools/document_mechanics_change_approval.json": "59d6e7e668bd755b1ae9c0ba964a0bb5cfdab741",
     "tools/production_safety_gate.py": "6dc013c012ac4b9690d678145200468bc8197b53",
-    "tools/windows_installer_smoke.ps1": "24dc703e3b22b1335a16f48222fbc1b37023dcf6"
+    "tools/windows_installer_smoke.ps1": "24dc703e3b22b1335a16f48222fbc1b37023dcf6",
+    "tools/windows_desktop_intake_e2e.ps1": "1409d8cd0e63e752dd211b17292f0a3834ed4084"
   }
 }
