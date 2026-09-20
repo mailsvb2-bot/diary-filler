@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "1c5f5f8635c11e787b82dfbbb943aabab5efb7dc",
-  "baseline_note": "PR #151 fixed the Word COM ownership race: exact head b6a457410e0ea9d5b5ea34ab0abf43a1be59e365 passed the full Windows contour on rerun 35470265691, merged as 1c5f5f8635c11e787b82dfbbb943aabab5efb7dc, and post-merge main run 35470707073 completed SUCCESS. This cleanup removes the temporary document-mechanics approval while retaining only a narrowed regression approval for that deletion.",
+  "baseline_ref": "6acb0eb1e26596915c77b3513b950d259903fd20",
+  "baseline_note": "PR #151 fixed the Word COM ownership race and PR #152 removed the temporary document-mechanics approval under a narrowed regression approval. Exact-head CI 35470944978 and post-merge main CI 35471157482 both completed SUCCESS. This is the clean tested Word-race tree before removing the final temporary regression approval.",
   "required_approval_evidence": [
     "ci_gate_lock"
   ],
