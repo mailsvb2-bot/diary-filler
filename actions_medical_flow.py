@@ -53,10 +53,19 @@ class ActionsMedicalFlowMixin:
             data.diagnosis = sanitize_diagnosis(ui_diag)
         elif popup_diag:
             data.diagnosis = sanitize_diagnosis(popup_diag)
+        parsed_source_epi = (data.epi_text or "").strip()
         data.epi_present = self._normalize_yes_no(self.epi_present_var.get())
-        if data.epi_present == "да" and self.epi_path_var.get().strip():
-            data.epi_text = self.service.load_epi_text(self.epi_path_var.get().strip())
-        else:
+        if not data.epi_present and parsed_source_epi:
+            data.epi_present = "да"
+        if data.epi_present == "да":
+            if self.epi_path_var.get().strip():
+                # A separately selected ЭПИ file is an explicit doctor override.
+                data.epi_text = self.service.load_epi_text(self.epi_path_var.get().strip())
+            else:
+                # Universal-source path: preserve ЭПИ already embedded in the
+                # selected discharge/commission/VK/RVK document.
+                data.epi_text = parsed_source_epi
+        elif data.epi_present == "нет":
             data.epi_text = ""
 
         # Экспертный анамнез строго из UI/popup. Если врач заполнил эти поля,
