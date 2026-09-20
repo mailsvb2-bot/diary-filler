@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from datetime import datetime
 from pathlib import Path
 from typing import List
 import tkinter as tk
@@ -704,6 +705,104 @@ class DialogExpertMixin:
             return bool(self._primary_treatment_missing_for_medical_docs())
         except Exception:
             return False
+    def _source_identity_defaults(self) -> tuple[str, str]:
+        """Return reliable FIO/birth defaults for a sparse medical source."""
+        data = getattr(self, "data", None)
+        fio = (getattr(self, "_popup_fio_override", "") or "").strip()
+        birth = (getattr(self, "_popup_birth_override", "") or "").strip()
+        if data is not None:
+            fio = fio or (getattr(data, "fio", "") or "").strip()
+            birth = birth or (getattr(data, "birth", "") or "").strip()
+
+        # Programmatic/restored UI state may reach creation before a visible
+        # reparse. Read the selected source once more only when identity facts
+        # are actually missing; never overwrite an explicit popup answer.
+        if not fio or not birth:
+            navigation_var = getattr(self, "navigation_path_var", None)
+            navigation = navigation_var.get().strip() if navigation_var is not None else ""
+            if navigation and Path(navigation).is_file():
+                try:
+                    parsed = self._parse_primary_document(navigation)
+                except Exception:
+                    parsed = None
+                if parsed is not None:
+                    fio = fio or (getattr(parsed, "fio", "") or "").strip()
+                    birth = birth or (getattr(parsed, "birth", "") or "").strip()
+        return fio, birth
+
+    @staticmethod
+    def _normalize_birth_popup_value(value: str) -> str:
+        """Normalize an explicit birth year/date without inventing a value."""
+        raw = " ".join((value or "").strip().split())
+        raw = re.sub(r"(?i)\s*г\.?\s*р\.?\s*$", "", raw).strip(" ,.;")
+        if not raw:
+            return ""
+        if re.fullmatch(r"\d{4}", raw):
+            year = int(raw)
+            return raw if 1800 <= year <= datetime.now().year else ""
+        parsed = parse_date(raw)
+        if not parsed or parsed.date() > datetime.now().date():
+            return ""
+        return parsed.strftime("%d.%m.%Y")
+
+    def _prompt_missing_patient_identity_if_needed(self) -> bool:
+        """Ask only for identity facts absent from the selected source document.
+
+        patient_name_var remains an output-file naming field. A FIO entered
+        here is a separate explicit source override and therefore may populate
+        the medical documents themselves.
+        """
+        fio, birth = self._source_identity_defaults()
+        rows: list[tuple[str, str]] = []
+        fields: list[str] = []
+        if not fio:
+            rows.append(("Ф.И.О. пациента", ""))
+            fields.append("fio")
+        if not birth:
+            rows.append(("Дата / год рождения", ""))
+            fields.append("birth")
+        if not rows:
+            return True
+
+        values = self._prompt_fields(
+            title="Недостающие данные пациента",
+            rows=rows,
+            width=64,
+        )
+        if values is None:
+            return False
+
+        for field, raw_value in zip(fields, values):
+            value = raw_value.strip()
+            if field == "fio":
+                if not value:
+                    messagebox.showwarning("Не заполнено поле", "Укажите Ф.И.О. пациента.")
+                    return False
+                self._popup_fio_override = value
+                if hasattr(self, "data"):
+                    self.data.fio = value
+                patient_name_var = getattr(self, "patient_name_var", None)
+                if patient_name_var is not None and (
+                    not getattr(self, "_manual_patient_name", False)
+                    or not patient_name_var.get().strip()
+                ):
+                    setter = getattr(self, "_set_ui_var", None)
+                    if callable(setter):
+                        setter(patient_name_var, value)
+                    else:
+                        patient_name_var.set(value)
+            elif field == "birth":
+                normalized = self._normalize_birth_popup_value(value)
+                if not normalized:
+                    messagebox.showwarning(
+                        "Некорректная дата рождения",
+                        "Укажите дату рождения или четырёхзначный год рождения.",
+                    )
+                    return False
+                self._popup_birth_override = normalized
+                if hasattr(self, "data"):
+                    self.data.birth = normalized
+        return True
 
     def _prompt_common_output_requirements(self, *, include_discharge_date: bool, include_case_number: bool = True, include_medical_details: bool = True, include_admission_occurrence: bool = False, include_admission_date: bool = False) -> bool:
         """Единый popup для общих недостающих полей выбора документов.
