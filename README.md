@@ -1,8 +1,8 @@
 # Медицинский автозаполнитель
 
-**Версия:** `v1.4.19-super-production`
+**Версия:** `v1.4.20-word-safety`
 
-**Super-production:** установленный onedir-runtime теперь имеет fail-closed бюджеты запуска и автооткрытия из `Выписанные пациенты`; генерация документов имеет performance-gate; исходный первичный DOCX/ЭПИ проверяются на байт-в-байт неизменность; production-дневники зафиксированы как текстовый документ с границами дат госпитализации.
+**Word safety:** исправлена гонка legacy `.doc` COM-конвертации: программа больше не вызывает `Quit()` для экземпляра Microsoft Word, который стал видимым, пользовательским, получил пользовательский документ, совпал с ранее открытым Word или перестал однозначно принадлежать automation. COM-прокси освобождаются до завершения COM-контекста, чтобы не оставлять Word в подвисшем состоянии. Все super-production проверки v1.4.19 сохранены.
 
 **Final user-flow gate:** Windows CI теперь проверяет не только Python-код и сборку, но и реальный Tk UI, TkDND, запуск уже собранного EXE, packaged desktop-intake auto-launch и install/uninstall сценарий Windows installer. Официальный GitHub Release вынесен в отдельный fail-closed workflow и публикует проверенный unsigned EXE/installer; Windows может показывать предупреждение Unknown Publisher/SmartScreen до добавления code-signing сертификата.
 
