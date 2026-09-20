@@ -1,21 +1,11 @@
 {
   "schema_version": 1,
-  "base_sha": "139bf4766e0f6b25cfc68b3f153819373a71c65f",
-  "reason": "Explicit universal-source mechanics change: allow primary exam, admission-doctor exam, discharge epicrisis, commission, VK/MSE and RVK documents to feed one canonical PatientData card; extract only strongly evidenced episode dates and prompt for missing admission facts.",
+  "base_sha": "8ff0d86f0c87a6f59742c576a19661aa6eb9532e",
+  "reason": "Explicit universal-source round-trip hardening: recover source admission occurrence, admit safe treatment-period dates, and recognize explicit VK treatment rows without inferring from prose.",
   "approved_blobs": {
-    "actions_creation_orchestrator.py": "422acf48aef2cc0f4fb4b2ec0743c72fad29ec70",
-    "actions_diary_flow.py": "57320f2e5128b93a057ee08983e6a567b88b7503",
-    "actions_medical_flow.py": "c2903bfc509310114e70082f9c5d26291135e887",
-    "actions_navigation.py": "40fc1edb5132494661088df38fb94f5eb8275c94",
-    "app_initialization.py": "43d23547c3e2186d1b41c5fa536e1b59b214fc46",
-    "dialog_document_details.py": "6fe88e63bd16791a40883ec419e27f1029209b93",
-    "dialog_expert.py": "a98a3c3dbc324c693ac8d12cade4d3a1592eca4c",
-    "files_mixin.py": "499d2081876bc26e913d5d949e8ab06845dc6ab5",
-    "layout_sources.py": "639358b80f41286f352626a6c7ce1fe0625e2cba",
-    "medical_parser_core.py": "27f58967ec5e3a2f07232d26107398a6f4b20496",
-    "medical_parser_blocks.py": "1d662a305c805743d35c61cc200ed6e7f0ce73d8",
-    "medical_parser.py": "02754910e3e34a728f7496d05906864f88f63363",
-    "medical_preview.py": "120081f4957175fa798748b71ea5bfa3e1ea7a35",
-    "diary_template_selection.py": "5439def6ffd6ebe7e50417d26de125c537b7ff8b"
+    "medical_models.py": "c2da89b5246100f0735ee346d685546bd9de3a0f",
+    "medical_parser_blocks.py": "920b2721d2915f451921c4f956bac0d89205eb0f",
+    "medical_parser_core.py": "84a296eab709e5487082ac5ec7e709ebe44140d4",
+    "medical_treatment_detection.py": "7b14ac36f72b59ef5615ef65a513ea2da1542a44"
   }
 }
