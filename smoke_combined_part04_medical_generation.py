@@ -129,6 +129,18 @@ assert rvk_roundtrip.discharge_date == manual_data.discharge_date, (rvk_roundtri
 assert rvk_roundtrip.case_number == manual_data.case_number, rvk_roundtrip.case_number
 assert rvk_roundtrip.admission_occurrence == manual_data.admission_occurrence, rvk_roundtrip.admission_occurrence
 
+# Real DnD classification must route an epicrisis to the patient-source slot,
+# while a standalone ЭПИ document remains in the auxiliary ЭПИ slot.
+from dnd_mixin import DragDropMixin
+
+class _UniversalSourceDropProbe(DragDropMixin):
+    def _parse_primary_document(self, path):
+        return service.parse_primary_document(path)
+
+universal_drop_probe = _UniversalSourceDropProbe()
+assert universal_drop_probe._classify_dropped_file(str(discharge_path)) == "primary"
+assert universal_drop_probe._classify_dropped_file(str(epi)) == "epi"
+
 # The program must be able to consume its own generated admission-doctor DOCX
 # as the next source without losing the hospitalization date from its title.
 admission_doctor_roundtrip = service.parse_primary_document(admission_doctor_path)
