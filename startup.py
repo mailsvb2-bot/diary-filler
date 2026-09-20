@@ -82,12 +82,20 @@ _DESKTOP_INTAKE_MAX_LOG_BYTES = 128 * 1024
 _DESKTOP_INTAKE_HANDOFF_SCHEMA = 1
 
 _DESKTOP_INTAKE_STRONG_PRIMARY_MARKERS = (
+    # Compatibility name: this is now the strong medical-source marker set.
     "первичный осмотр",
     "первичный прием",
     "направление на госпитализацию",
+    "осмотр врача приемного покоя",
+    "выписной эпикриз",
+    "совместный осмотр",
+    "комиссионный осмотр",
+    "вк на мсэ",
+    "вк больничный",
+    "акт для рвк",
+    "о состоянии здоровья гражданина",
 )
 _DESKTOP_INTAKE_EXCLUDED_MARKERS = (
-    "выписной эпикриз",
     "переводной эпикриз",
     "посмертный эпикриз",
     "этапный эпикриз",
@@ -207,9 +215,9 @@ def desktop_intake_is_candidate_word_file(path: str | Path) -> bool:
 def desktop_intake_is_primary_document(path: str | Path) -> bool:
     """Use the canonical parser first; legacy score is only a compatibility fallback.
 
-    The watcher must not maintain a second, stricter definition of a primary
-    document than the application itself.  Otherwise a DOCX that the normal UI
-    parses correctly can be silently ignored before the GUI is even launched.
+    The watcher accepts the same medical patient sources as the visible UI.
+    Otherwise a discharge/commission/VK/RVK document that the app can parse
+    would be silently ignored before the GUI is even launched.
     """
     candidate = Path(path)
     if not candidate.is_file() or not desktop_intake_is_candidate_word_file(candidate):
@@ -228,7 +236,12 @@ def desktop_intake_is_primary_document(path: str | Path) -> bool:
         if kind in {
             "первичный осмотр",
             "направление на госпитализацию",
-            "первичный документ пациента",
+            "осмотр врача приемного покоя",
+            "выписной эпикриз",
+            "совместный осмотр",
+            "вк на мсэ",
+            "вк больничный",
+            "акт для рвк",
         }:
             return True
 
