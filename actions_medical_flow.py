@@ -19,6 +19,12 @@ from medical_models import PatientData, normalize_admission_occurrence
 class ActionsMedicalFlowMixin:
     def _medical_override_data(self, navigation: str) -> PatientData:
         data = self._parse_primary_document(navigation)
+        popup_fio = (getattr(self, "_popup_fio_override", "") or "").strip()
+        popup_birth = (getattr(self, "_popup_birth_override", "") or "").strip()
+        if popup_fio:
+            data.fio = popup_fio
+        if popup_birth:
+            data.birth = popup_birth
         # Тип источника определяется парсером. Ручные значения врача могут
         # дополнить любой источник, но не переписывают его тип.
         if self.assigned_treatment_var.get().strip():
