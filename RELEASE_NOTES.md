@@ -1,3 +1,17 @@
+# Release notes — v1.4.20-word-safety
+
+## v1.4.20-word-safety
+
+- Исправлена гонка Microsoft Word после генерации/чтения legacy `.doc`: скрытый COM-инстанс больше не может закрыть Word, который пользователь успел открыть.
+- Перед любым `Word.Quit()` программа повторно доказывает ownership: automation-HWND должен отличаться от ранее открытого пользовательского Word, `UserControl` должен оставаться `False`, окно — скрытым, а `Documents.Count` — нулевым.
+- Проверка ownership выполняется повторно после короткого grace-периода, чтобы поймать сценарий «пользователь открыл Word сразу после генерации/конвертации».
+- При любом неоднозначном состоянии программа fail-closed: отпускает свою COM-ссылку и не вызывает `Quit()`.
+- COM-прокси освобождаются до `CoUninitialize()`, чтобы программа не удерживала Word и не провоцировала торможение последующих запусков.
+- Добавлена regression-проверка всех опасных состояний ownership; document-mechanics guard и production-safety gate проходят.
+- Word-fix PR #151 exact-head и post-merge Windows CI прошли полный production-контур: golden DOCX/full patient replay, дневники, performance, EXE, packaged intake, installer install/uninstall.
+- Медицинские формулировки, parser/renderer, структура DOCX и правила дневников не изменялись.
+- Версия программы и installer: `1.4.20` / `v1.4.20-word-safety`; installer: `MedicalDiaryAutofill-Setup-1.4.20.exe`.
+
 # Release notes — v1.4.19-super-production
 
 ## v1.4.19-super-production
