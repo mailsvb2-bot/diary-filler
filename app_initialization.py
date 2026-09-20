@@ -95,6 +95,11 @@ class AppInitializationMixin:
         # заменить дату выписки датой поступления.
         self._popup_diagnosis_override = ""
         self._popup_discharge_date_override = ""
+        # Missing identity facts may be supplied once for a sparse/unknown
+        # medical source. They are distinct from patient_name_var, which remains
+        # only the output-file naming field.
+        self._popup_fio_override = ""
+        self._popup_birth_override = ""
         self.output_dir_var = tk.StringVar()
         # Папка результата по умолчанию должна следовать за первичным
         # документом пациента. Ручной выбор через кнопку/ручной ввод
