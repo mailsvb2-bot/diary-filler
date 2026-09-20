@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "6acb0eb1e26596915c77b3513b950d259903fd20",
+  "reason": "Prepare v1.4.20-word-safety release metadata and exact release topology for the fully validated Word COM ownership fix without changing medical, diary, parser, renderer or Word-fix runtime logic.",
+  "required_evidence": [
+    "document_mechanics_guard",
+    "full_patient_replay",
+    "golden_docx",
+    "staff_profile_regression",
+    "gender_generation_matrix",
+    "desktop_intake_contract",
+    "intake_lifecycle_regression",
+    "packaged_desktop_intake_e2e",
+    "installer_uninstall_smoke",
+    "ci_gate_lock"
+  ],
+  "approved_blobs": {
+    ".github/workflows/release.yml": "3dca617a5fc9ede4a21d23a3bbf283536c0d685a",
+    ".github/workflows/windows-build.yml": "6fdc89e5de3c9f154801e1ab5ca05ab22284ff70",
+    "BUILD_WINDOWS_INSTALLER.bat": "08c6c5416106e17e574a0cf787373e2b62d39189",
+    "app_config.py": "dd93144d7a575840ce9fa5ee8bd1f89445f2be5b",
+    "installer/MedicalDiaryAutofill.iss": "abc892f4b55155dfba3da11bbdd408b19cf6e2a1",
+    "prod_audit.py": "727650cc711b850bcf2cd058fcad0e256ec25a6d",
+    "pyproject.toml": "a732b83e733c814382ae85f12135a3c8055dfd17",
+    "release_check.py": "3764ef30ea593d11a1479c8c79d44d38c2f0974e",
+    "tools/ci_gate_lock.py": "5b12a89f418a88e0b23844859f1ee1f93acb0057",
+    "version_info.txt": "155f7cf393f5f664b02bdd4ede5c25e8b2947ede",
+    "tools/document_mechanics_change_approval.json": "8fa375482173211083d1dce0e72a329500a9edd5"
+  }
+}
