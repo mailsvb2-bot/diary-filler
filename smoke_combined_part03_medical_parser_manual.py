@@ -99,6 +99,12 @@ assert line_has_treatment_marker("Получает лечение: риспер�
 assert not line_has_treatment_marker("Получает лечение в стационаре в течение недели")
 assert not line_has_treatment_marker("За время лечения состояние улучшилось")
 
+from medical_models import parse_admission_occurrence_value
+assert parse_admission_occurrence_value("повторно добровольно") == "повторно"
+assert parse_admission_occurrence_value("повторно, добровольно") == "повторно"
+assert parse_admission_occurrence_value("первично; добровольно") == "первично"
+assert parse_admission_occurrence_value("добровольно") == ""
+
 # Repeated UI requests for the same admission-title date must not reopen the
 # unchanged Word file. Editing/replacing the file must invalidate that cache.
 import os as _title_cache_os
