@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "base_sha": "139bf4766e0f6b25cfc68b3f153819373a71c65f",
-  "reason": "Explicit universal-source mechanics change: allow primary exam, admission-doctor exam, discharge epicrisis, commission, VK/MSЭ and RVK documents to feed one canonical PatientData card; extract only strongly evidenced episode dates and prompt for missing admission facts.",
+  "reason": "Explicit universal-source mechanics change: allow primary exam, admission-doctor exam, discharge epicrisis, commission, VK/MSE and RVK documents to feed one canonical PatientData card; extract only strongly evidenced episode dates and prompt for missing admission facts.",
   "approved_blobs": {
     "actions_creation_orchestrator.py": "422acf48aef2cc0f4fb4b2ec0743c72fad29ec70",
     "actions_diary_flow.py": "57320f2e5128b93a057ee08983e6a567b88b7503",
