@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "8ff0d86f0c87a6f59742c576a19661aa6eb9532e",
-  "reason": "Harden universal medical-source round-trips: prevent epicrisis/EPI drag-drop confusion, recover explicit admission occurrence and active-treatment admission dates, and lock a generated-source matrix across discharge, commission, VK and RVK forms.",
+  "reason": "Harden universal medical-source round-trips: prevent epicrisis/EPI drag-drop confusion, recover explicit admission occurrence and treatment-period admission dates, preserve embedded EPI, and lock generated-source behavior across discharge, commission, VK and RVK forms.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -15,15 +15,19 @@
     "ci_gate_lock"
   ],
   "approved_blobs": {
+    "actions_medical_flow.py": "c49da6a0d5093ceec4f2115c9d9a0ffc9ff0023f",
+    "dialog_expert.py": "3dc8d5b51b8df6486929b065bfb91c00d0561cfc",
     "dnd_contract_check.py": "f6de7bdd4298d586ad83ce855b3da470c5dab929",
     "dnd_mixin.py": "26e3e1e3b67dd036bd59f85009a04349783c58ec",
     "medical_models.py": "582e16577f8b832655d0fcb7ab9fbbed0ff9bd57",
+    "medical_parser.py": "886c7fcaa19d27a64e2ef4e75b449377ff749d20",
     "medical_parser_blocks.py": "920b2721d2915f451921c4f956bac0d89205eb0f",
     "medical_parser_core.py": "84a296eab709e5487082ac5ec7e709ebe44140d4",
     "medical_treatment_detection.py": "7b14ac36f72b59ef5615ef65a513ea2da1542a44",
     "smoke_combined_part01_setup_contracts.py": "b99984b70a48ed49e0288c9d0cc66297eee6a68e",
+    "smoke_combined_part02_ui_parser_regressions.py": "dd61bad37dee368249f7335ad513ab4c3eb629e9",
     "smoke_combined_part03_medical_parser_manual.py": "45aa486e6c7ab5c356ff9c412da85c40a4effb77",
-    "smoke_combined_part04_medical_generation.py": "5d47b2944c2bacd9848a7f71265631762d3071fa",
-    "tools/document_mechanics_change_approval.json": "3daf037d0fe68594fd443de49ade3fd5c57d194f"
+    "smoke_combined_part04_medical_generation.py": "e4dcb1a3efd0364c40f4b52ed1fa4ebf91457cb4",
+    "tools/document_mechanics_change_approval.json": "f75db5f86c7e5dc8fad548929f028b53b1c3a185"
   }
 }
