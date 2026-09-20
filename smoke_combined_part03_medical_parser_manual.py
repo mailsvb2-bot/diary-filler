@@ -67,6 +67,32 @@ assert service.parser.parse_text(
     "Тестова Анна Сергеевна, 24.07.1997, по адресу: Н. Новгород, ул. Тестовая, д. 1."
 ).admission_date == "30.09.2025"
 
+# Universal source regression: a discharge epicrisis is a first-class source.
+# Admission/discharge dates must come from the current treatment period, while
+# the header date remains the discharge date and never replaces admission.
+universal_discharge = service.parser.parse_text("""
+11.06.2026      Выписной эпикриз № К-900
+Петров Пётр Петрович, 04.01.1980, зарегистрирован по адресу: Нижний Новгород, ул. Тестовая, 1
+Находился на лечении в ГБУЗ НО «НКЦПЗ» диспансер №2 с 10.06.2026 по 11.06.2026
+В 3 отделение КДП поступает повторно добровольно
+Жалобы при поступлении: тревога
+Анамнез жизни: тест
+Анамнез заболевания: тест
+Психический статус при поступлении: контактен
+Диагноз: F41.2 тест
+Лечение: терапия
+""")
+assert universal_discharge.input_document_kind == "выписной эпикриз", universal_discharge.input_document_kind
+assert universal_discharge.admission_date == "10.06.2026", universal_discharge.admission_date
+assert universal_discharge.discharge_date == "11.06.2026", universal_discharge.discharge_date
+assert universal_discharge.case_number == "К-900", universal_discharge.case_number
+assert universal_discharge.treatment_plan == "терапия", universal_discharge.treatment_plan
+
+# Strong type signatures must win over clinical words embedded in the body.
+assert service.parser._detect_document_kind("20.06.2026 Совместный осмотр с зам глав врача № 7\nПервичный осмотр упомянут в анамнезе") == "совместный осмотр"
+assert service.parser._detect_document_kind("О СОСТОЯНИИ ЗДОРОВЬЯ ГРАЖДАНИНА № 5\nГоспитализируется по направлению военного комиссариата Ленинского района") == "акт для РВК"
+assert service.parser._detect_document_kind("Ф.И.О.: Тестов Т.Т.\nДиагноз: F20.0 тест", "Тестов ВК на МСЭ.docx") == "ВК на МСЭ"
+
 # Repeated UI requests for the same admission-title date must not reopen the
 # unchanged Word file. Editing/replacing the file must invalidate that cache.
 import os as _title_cache_os
