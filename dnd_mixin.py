@@ -228,6 +228,13 @@ class DragDropMixin:
         except Exception:
             pass
 
+        # Once a real patient document has had first refusal, a standalone
+        # auxiliary ЭПИ file must be recognized before diary heuristics. Some
+        # diary-text parsers can legitimately extract prose from an ЭПИ DOCX,
+        # but that does not make it a diary-status source.
+        if self._looks_like_epi_label(stem_low) or self._looks_like_epi_label(low.strip()):
+            return "epi"
+
         try:
             from diary_table import detect_first_month_year_from_docx
             if detect_first_month_year_from_docx(path) is not None:
@@ -243,6 +250,4 @@ class DragDropMixin:
         except Exception:
             pass
 
-        if self._looks_like_epi_label(stem_low) or self._looks_like_epi_label(low.strip()):
-            return "epi"
         return "unknown"
