@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "base_sha": "db6c454ee47aad9dab37db68e9434dc3e3cac878",
+  "reason": "Version-label-only app_config update for v1.4.20-word-safety; the verified Word COM ownership fix and all document mechanics are unchanged from clean main.",
+  "approved_blobs": {
+    "app_config.py": "dd93144d7a575840ce9fa5ee8bd1f89445f2be5b"
+  }
+}
