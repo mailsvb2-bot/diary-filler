@@ -96,6 +96,13 @@ class MedicalTextParser(
         "Результаты исследований",
         "ЭЭГ",
         "ЭПИ",
+        # VK/MSЭ templates continue with fixed decision/prognosis sections.
+        # They are boundaries for patient treatment text and must never become
+        # part of treatment_plan when a VK document is reused as a source.
+        "Прогноз восстановления трудоспособности",
+        "Клинический",
+        "Цель направления на ВК",
+        "Цель направления на ВК с обоснованием",
         "За время лечения",
         "Рекомендовано",
         "Лечение",
