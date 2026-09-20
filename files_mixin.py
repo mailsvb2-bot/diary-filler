@@ -74,6 +74,8 @@ PATIENT_SESSION_ALWAYS_ATTR_DEFAULTS = (
     ("_manual_diagnosis", False),
     ("_popup_diagnosis_override", ""),
     ("_popup_discharge_date_override", ""),
+    ("_popup_fio_override", ""),
+    ("_popup_birth_override", ""),
 )
 
 PATIENT_SESSION_SWITCH_ONLY_ATTR_DEFAULTS = (
