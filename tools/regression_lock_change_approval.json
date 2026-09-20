@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "d36ad04344e6b31fe268d41fe8bbb4bc9c06190c",
-  "reason": "Fix reproduced admission-date loss when a generated admission-doctor examination document is loaded again as the patient source; add synthetic and generator-roundtrip regression coverage without committing real patient data.",
+  "baseline_ref": "6c63a8dda3b386263f7feed8d7a69d18f28654e8",
+  "reason": "Remove the temporary document-mechanics approval after the fully verified admission-doctor source-date fix.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -15,11 +15,6 @@
     "ci_gate_lock"
   ],
   "approved_blobs": {
-    "medical_docx_title_context.py": "c879530201a02cf8523c373bf9709c689bd902f1",
-    "medical_docx_title_finder.py": "5d90db666a7f3f5973327f44d68cb0db605b7f3e",
-    "medical_parser_core.py": "6960a13a00607ea029b56e73869c6c20133fc1d6",
-    "smoke_combined_part03_medical_parser_manual.py": "5665e6b0dfc6c4fe3f4dc9ccc749ac9c63047265",
-    "smoke_combined_part04_medical_generation.py": "67678a136f0a73622feb77e290c8f026f5ddbbc2",
-    "tools/document_mechanics_change_approval.json": "1630a34fbaedeb2702961fe4eec373a4b74ed8af"
+    "tools/document_mechanics_change_approval.json": "<deleted>"
   }
 }
