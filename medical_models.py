@@ -92,6 +92,15 @@ def normalize_admission_occurrence(value: str) -> str:
     return normalized if normalized in ADMISSION_OCCURRENCE_OPTIONS else ""
 
 
+def parse_admission_occurrence_value(value: str) -> str:
+    """Recover an explicit первично/повторно fact from a rendered admission line."""
+    normalized = " ".join(str(value or "").strip().lower().replace("ё", "е").split())
+    for option in ADMISSION_OCCURRENCE_OPTIONS:
+        if normalized == option or normalized.startswith(option + " "):
+            return option
+    return ""
+
+
 def strip_admission_occurrence_prefix(value: str) -> str:
     """Remove a legacy leading occurrence token from the clinical admission tail.
 
