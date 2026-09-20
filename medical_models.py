@@ -96,7 +96,7 @@ def parse_admission_occurrence_value(value: str) -> str:
     """Recover an explicit первично/повторно fact from a rendered admission line."""
     normalized = " ".join(str(value or "").strip().lower().replace("ё", "е").split())
     for option in ADMISSION_OCCURRENCE_OPTIONS:
-        if normalized == option or normalized.startswith(option + " "):
+        if re.match(rf"^{re.escape(option)}(?:$|[\s,.;:–—-])", normalized):
             return option
     return ""
 
