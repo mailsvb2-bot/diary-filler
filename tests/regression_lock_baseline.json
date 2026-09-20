@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "6c63a8dda3b386263f7feed8d7a69d18f28654e8",
-  "baseline_note": "Admission-doctor source-date fix fully validated. PR #160 exact-head run 35531329040 and post-merge main run 35531498350 passed every required Windows production check, including full patient replay, packaged desktop intake E2E, installer smoke, and generated admission-doctor round-trip coverage.",
+  "baseline_ref": "8ff0d86f0c87a6f59742c576a19661aa6eb9532e",
+  "baseline_note": "Universal medical-source slice #162 fully validated. Exact PR head 9c0fad826eed16e9c3c3211f81dc9e5cfcaf2d46 passed Windows production CI, and post-merge main 8ff0d86f0c87a6f59742c576a19661aa6eb9532e passed run 35534112072 including release gate, full patient replay, packaged desktop intake E2E and installer smoke.",
   "required_approval_evidence": [
     "ci_gate_lock"
   ],
