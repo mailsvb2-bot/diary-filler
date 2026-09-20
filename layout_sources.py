@@ -40,7 +40,7 @@ class LayoutSourcesMixin:
 
         title = tk.Label(
             drop,
-            text="Перетащите сюда первичный осмотр/направление на госпитализацию",
+            text="Перетащите сюда медицинский документ пациента",
             bg=FIELD,
             fg=TEXT,
             font=self._font(12, weight="bold"),
@@ -96,49 +96,45 @@ class LayoutSourcesMixin:
             self.primary_selected_status_var.set(" ")
 
     def _set_primary_drop_selected(self, path: str) -> None:
-        """Показать выбранный первичный файл без распирания блока 01."""
+        """Показать выбранный источник пациента без распирания блока 01."""
         filename = Path(path).name if path else ""
         max_chars = 54 if self._compact_ui else 82
         if hasattr(self, "_truncate_label_text"):
             filename = self._truncate_label_text(filename, max_chars=max_chars)
         elif len(filename) > max_chars:
             filename = filename[: max_chars - 1].rstrip() + "…"
-        kind_text = (
-            "Выбрано направление"
-            if self.primary_document_type_var.get() == "hospitalization_referral"
-            else "Выбран первичный осмотр"
-        )
+        kind_text = self.primary_document_type_display_var.get().strip() or "Медицинский документ пациента"
         if hasattr(self, "primary_drop_hint_label"):
             # После выбора файла фраза «или нажмите здесь…» уже не нужна.
             # Но сам label не снимаем с grid: строка остаётся зарезервированной,
             # поэтому первый блок и кнопки «Нет/Да» не меняют координаты.
             self.primary_drop_hint_label.config(text="", fg=FIELD)
         if hasattr(self, "primary_selected_status_var"):
-            self.primary_selected_status_var.set(f"{kind_text}: {filename}")
+            self.primary_selected_status_var.set(f"Выбран источник ({kind_text}): {filename}")
 
     def _primary_type_row(self, parent: tk.Frame, row: int) -> None:
-        ttk.Label(parent, text="Тип первичного документа", style="Card.TLabel", font=self._font(11)).grid(
+        ttk.Label(parent, text="Тип источника", style="Card.TLabel", font=self._font(11)).grid(
             row=row, column=0, sticky="w", pady=self._px(4 if self._compact_ui else 5, 2)
         )
         # Визуально это теперь такое же тёмное поле, как в референсе, без квадратной combobox-стрелки.
         self._rounded_entry_canvas(parent, self.primary_document_type_display_var, height=self._px(40, 27), calendar=False, font=self._font(12)).grid(
             row=row, column=1, sticky="ew", padx=(self._px(16, 9), self._px(14, 8)), pady=self._px(4 if self._compact_ui else 5, 2)
         )
-        self._small_neon_button(parent, text="Выбрать", command=self._toggle_primary_document_type).grid(
+        self._small_neon_button(parent, text="Распознать", command=self._toggle_primary_document_type).grid(
             row=row, column=2, sticky="ew", pady=self._px(4 if self._compact_ui else 5, 2)
         )
 
     def _on_primary_type_display_selected(self, _event=None) -> None:
-        display = self.primary_document_type_display_var.get().strip()
-        self.primary_document_type_var.set("hospitalization_referral" if display.startswith("Направление") else "primary_exam")
-        self._on_primary_document_type_changed()
+        # Тип источника больше не выбирается между двумя жёстко заданными
+        # вариантами: он определяется по самому документу.
+        self._toggle_primary_document_type()
 
     def _toggle_primary_document_type(self) -> None:
-        current = self.primary_document_type_var.get()
-        self.primary_document_type_var.set("hospitalization_referral" if current == "primary_exam" else "primary_exam")
-        desired_display = "Направление на госпитализацию" if self.primary_document_type_var.get() == "hospitalization_referral" else "Первичный осмотр"
-        self.primary_document_type_display_var.set(desired_display)
-        self._on_primary_document_type_changed()
+        if self.navigation_path_var.get().strip():
+            self.reparse_navigation(silent=False)
+        else:
+            self.primary_document_type_var.set("medical_source")
+            self.primary_document_type_display_var.set("Определится автоматически")
 
     def _multi_file_row(self, parent, row: int, label: str, kind: str) -> None:
         ttk.Label(parent, text=label, style="Card.TLabel", font=self._font(11)).grid(row=row, column=0, sticky="w", pady=self._px(4 if self._compact_ui else 5, 2))
