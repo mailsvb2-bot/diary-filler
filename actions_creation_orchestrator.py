@@ -139,6 +139,7 @@ class ActionsCreationOrchestratorMixin:
                 include_case_number=non_special_medical_selected,
                 include_medical_details=non_special_medical_selected,
                 include_admission_occurrence=occurrence_selected,
+                include_admission_date=bool(selected_medical or selected_diaries),
             ):
                 return
         if "commission" in selected_medical and not all([
