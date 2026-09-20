@@ -95,6 +95,7 @@ assert discharge_roundtrip.case_number == manual_data.case_number, discharge_rou
 assert discharge_roundtrip.diagnosis == manual_data.diagnosis, discharge_roundtrip.diagnosis
 assert discharge_roundtrip.treatment_plan == manual_data.treatment_plan, discharge_roundtrip.treatment_plan
 assert discharge_roundtrip.admission_occurrence == manual_data.admission_occurrence, discharge_roundtrip.admission_occurrence
+assert "ЭПИ тестовая информация" in discharge_roundtrip.epi_text, discharge_roundtrip.epi_text
 
 # Every generated medical form is also a supported source. Dates that belong to
 # the form itself (commission/protocol date) must never be reinterpreted as the
