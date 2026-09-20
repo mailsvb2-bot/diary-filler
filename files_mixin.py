@@ -137,18 +137,28 @@ class FilesMixin:
             "Папка результата для нового пациента",
             "Вы выбрали папку результата вручную для предыдущего пациента.\n\n"
             f"Оставить эту же папку для нового пациента?\n{self.output_dir_var.get().strip()}\n\n"
-            "«Нет» — программа снова сохранит документы рядом с новым первичным файлом.",
+            "«Нет» — программа снова сохранит документы рядом с новым документом-источником.",
         )
         if not keep:
             self._manual_output_dir = False
         return keep
 
+    _SOURCE_TYPE_DISPLAY = {
+        "hospitalization_referral": "Направление на госпитализацию",
+        "primary_exam": "Первичный осмотр",
+        "admission_doctor_exam": "Осмотр врача приёмного покоя",
+        "discharge_summary": "Выписной эпикриз",
+        "commission_exam": "Совместный осмотр",
+        "vk_mse": "ВК на МСЭ",
+        "sick_leave_vk": "ВК больничный",
+        "rvk_act": "Акт для РВК",
+        "medical_source": "Медицинский документ пациента",
+    }
+
     def _set_primary_document_type(self, selected_type: str) -> None:
-        selected_type = "hospitalization_referral" if selected_type == "hospitalization_referral" else "primary_exam"
+        selected_type = selected_type if selected_type in self._SOURCE_TYPE_DISPLAY else "medical_source"
         self.primary_document_type_var.set(selected_type)
-        self.primary_document_type_display_var.set(
-            "Направление на госпитализацию" if selected_type == "hospitalization_referral" else "Первичный осмотр"
-        )
+        self.primary_document_type_display_var.set(self._SOURCE_TYPE_DISPLAY[selected_type])
 
     def _apply_patient_session_defaults(self, *, clear_patient_inputs: bool) -> None:
         """Apply the canonical patient-session reset registry."""
@@ -212,7 +222,21 @@ class FilesMixin:
         kind = (data.input_document_kind or "").lower().replace("ё", "е")
         if "направ" in kind or "госпитализируется" in kind:
             return "hospitalization_referral"
-        return "primary_exam"
+        if "выписной" in kind:
+            return "discharge_summary"
+        if "совмест" in kind or "комиссион" in kind:
+            return "commission_exam"
+        if "приемного покоя" in kind:
+            return "admission_doctor_exam"
+        if "вк на мсэ" in kind:
+            return "vk_mse"
+        if "вк больнич" in kind:
+            return "sick_leave_vk"
+        if "рвк" in kind:
+            return "rvk_act"
+        if "первичный осмотр" in kind:
+            return "primary_exam"
+        return "medical_source"
 
     def _apply_primary_document_path(self, path: str, *, prompt_for_referral: bool) -> None:
         path = str(path)
@@ -237,15 +261,15 @@ class FilesMixin:
             parsed = self._parse_primary_document(path)
             self._set_primary_document_type(self._primary_type_from_parsed_data(parsed))
         except Exception:
-            # Если файл формально выбран, но тип не удалось понять до основного
-            # разбора, оставляем безопасный режим первичного осмотра без popup.
-            self._set_primary_document_type("primary_exam")
+            # Если тип не удалось определить, сохраняем универсальный источник
+            # без предположений о конкретной форме документа.
+            self._set_primary_document_type("medical_source")
 
         if hasattr(self, "_set_primary_drop_selected"):
             self._set_primary_drop_selected(path)
         elif hasattr(self, "primary_selected_status_var"):
-            kind_text = "Выбрано направление на госпитализацию" if self.primary_document_type_var.get() == "hospitalization_referral" else "Выбран первичный осмотр"
-            self.primary_selected_status_var.set(f"{kind_text}: {Path(path).name}")
+            kind_text = self.primary_document_type_display_var.get().strip() or "Медицинский документ пациента"
+            self.primary_selected_status_var.set(f"Выбран источник ({kind_text}): {Path(path).name}")
         # Drop-зона показывает только короткое имя файла, чтобы длинный путь не
         # растягивал первый блок и не сдвигал поля/кнопки.
 
@@ -266,7 +290,7 @@ class FilesMixin:
                 self._manual_discharge_date = True
                 self.data.discharge_date = popup_discharge_after_prompt
         else:
-            self._set_status("Первичный осмотр распознан. Popup не требуется.")
+            self._set_status(f"Источник распознан: {self.primary_document_type_display_var.get().strip()}.")
         # После того как диагноз и дата поступления точно подтянуты, пробуем
         # автоматически подобрать тексты дневников по названию диагноза и
         # конкретный 01–31-шаблон по дате госпитализации.
@@ -275,7 +299,7 @@ class FilesMixin:
 
     def choose_navigation(self) -> None:
         path = filedialog.askopenfilename(
-            title="Выберите первичный документ",
+            title="Выберите медицинский документ пациента",
             initialdir=self._dialog_initial_dir(DIR_PRIMARY_DOCUMENTS),
             filetypes=[("Word документы (.doc/.docx/.docm)", ("*.doc", "*.docx", "*.docm"))],
         )
