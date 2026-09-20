@@ -3,7 +3,7 @@
   "base_sha": "8ff0d86f0c87a6f59742c576a19661aa6eb9532e",
   "reason": "Explicit universal-source round-trip hardening: recover source admission occurrence, admit safe treatment-period dates, and recognize explicit VK treatment rows without inferring from prose.",
   "approved_blobs": {
-    "medical_models.py": "c2da89b5246100f0735ee346d685546bd9de3a0f",
+    "medical_models.py": "582e16577f8b832655d0fcb7ab9fbbed0ff9bd57",
     "medical_parser_blocks.py": "920b2721d2915f451921c4f956bac0d89205eb0f",
     "medical_parser_core.py": "84a296eab709e5487082ac5ec7e709ebe44140d4",
     "medical_treatment_detection.py": "7b14ac36f72b59ef5615ef65a513ea2da1542a44"
