@@ -21,6 +21,12 @@ class ActionsNavigationMixin:
             return
         try:
             data = self._parse_primary_document(path)
+            popup_fio = (getattr(self, "_popup_fio_override", "") or "").strip()
+            popup_birth = (getattr(self, "_popup_birth_override", "") or "").strip()
+            if popup_fio:
+                data.fio = popup_fio
+            if popup_birth:
+                data.birth = popup_birth
             self._set_primary_document_type(self._primary_type_from_parsed_data(data))
             if self.assigned_treatment_var.get().strip():
                 data.treatment_plan = self.assigned_treatment_var.get().strip()
