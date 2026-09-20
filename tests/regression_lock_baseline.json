@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "6acb0eb1e26596915c77b3513b950d259903fd20",
-  "baseline_note": "PR #151 fixed the Word COM ownership race and PR #152 removed the temporary document-mechanics approval under a narrowed regression approval. Exact-head CI 35470944978 and post-merge main CI 35471157482 both completed SUCCESS. This is the clean tested Word-race tree before removing the final temporary regression approval.",
+  "baseline_ref": "01a861de1ad6d94ec3f072d09b895ca2e2515050",
+  "baseline_note": "PR #155 raised only the flaky portable PyInstaller one-file CI intake ceiling from 12s to 20s after hosted-runner extraction variance, while installed onedir production budgets remained unchanged. Exact-head run 35494522903 and post-merge main run 35494697777 both completed the full Windows contour SUCCESS. This is the clean tested baseline before removing the temporary regression approval.",
   "required_approval_evidence": [
     "ci_gate_lock"
   ],
