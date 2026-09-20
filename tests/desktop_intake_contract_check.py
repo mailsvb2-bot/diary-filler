@@ -63,7 +63,7 @@ def _assert_primary_detection_contract() -> None:
     """
     assert startup.desktop_intake_primary_score(primary) >= 5
     assert startup.desktop_intake_primary_score(referral) >= 5
-    assert startup.desktop_intake_primary_score(discharge) < 0
+    assert startup.desktop_intake_primary_score(discharge) >= 5
     assert startup.desktop_intake_is_candidate_word_file("Первичный.doc")
     assert startup.desktop_intake_is_candidate_word_file("Первичный.docx")
     assert startup.desktop_intake_is_candidate_word_file("Первичный.docm")
@@ -128,13 +128,47 @@ def _assert_canonical_primary_parser_contract() -> None:
 
         discharge = root / "discharge.docx"
         doc = Document()
-        doc.add_paragraph("Выписной эпикриз")
+        doc.add_paragraph("15.05.2026 Выписной эпикриз № 123")
         doc.add_paragraph("Ф.И.О.: Иванов Иван Иванович")
         doc.add_paragraph("Дата рождения: 01.01.1980")
+        doc.add_paragraph("Находился на лечении в стационаре с 12.05.2026 по 15.05.2026")
         doc.add_paragraph("Диагноз: F20.0")
         doc.add_paragraph("Лечение: терапия")
         doc.save(discharge)
-        assert not startup.desktop_intake_is_primary_document(discharge), "discharge must stay excluded"
+        assert startup.desktop_intake_is_primary_document(discharge), "discharge source was rejected"
+
+        universal_sources = (
+            ("Осмотр врача приёмного покоя.docx", "12.05.2026 Осмотр врача приёмного покоя."),
+            ("Совместный осмотр.docx", "18.05.2026 Совместный осмотр с зам глав врача № 2"),
+            ("Пациент ВК на МСЭ.docx", "ВК на МСЭ"),
+            ("Пациент ВК больничный.docx", "ВК больничный"),
+            ("Пациент Акт для РВК.docx", "О СОСТОЯНИИ ЗДОРОВЬЯ ГРАЖДАНИНА № 7"),
+        )
+        for filename, title in universal_sources:
+            source = root / filename
+            doc = Document()
+            doc.add_paragraph(title)
+            doc.add_paragraph("Ф.И.О.: Иванов Иван Иванович")
+            doc.add_paragraph("Дата рождения: 01.01.1980")
+            doc.add_paragraph("Диагноз: F20.0")
+            doc.add_paragraph("Лечение: терапия")
+            if "РВК" in filename:
+                doc.add_paragraph("Госпитализируется по направлению военного комиссариата Ленинского района.")
+            doc.save(source)
+            assert startup.desktop_intake_is_primary_document(source), f"universal source was rejected: {filename}"
+
+        epi_only = root / "ЭПИ.docx"
+        doc = Document()
+        doc.add_paragraph("ЭПИ: тестовая информация")
+        doc.save(epi_only)
+        assert not startup.desktop_intake_is_primary_document(epi_only), "standalone EPI must not become patient source"
+
+        diary_only = root / "Дневник наблюдения.docx"
+        doc = Document()
+        doc.add_paragraph("Дневник наблюдения")
+        doc.add_paragraph("Психический статус: без особенностей")
+        doc.save(diary_only)
+        assert not startup.desktop_intake_is_primary_document(diary_only), "diary must stay outside patient-source intake"
 
 
 def _assert_closed_gui_wake_is_classification_free() -> None:
