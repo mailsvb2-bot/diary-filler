@@ -203,6 +203,7 @@ class MedicalDocumentService:
         # empty patient identity, missing history number or clinically impossible
         # dates even though the manual UI would have asked the doctor first.
         data.fio = self._require_core_text(data.fio, "Ф.И.О.")
+        data.birth = self._require_core_text(data.birth, "год/дата рождения")
         data.admission_date = self._require_core_text(data.admission_date, "дата госпитализации")
         data.case_number = self._require_text(data.case_number, "номер истории болезни")
         data.diagnosis = self._require_text(data.diagnosis, "диагноз")
