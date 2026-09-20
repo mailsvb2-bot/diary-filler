@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "base_sha": "029be318173fb61c8846d5015800b62fee4aeeff",
+  "reason": "Version-label-only app_config update for v1.4.20-word-safety; Word fix and document mechanics are unchanged from the fully validated clean main.",
+  "approved_blobs": {
+    "app_config.py": "dd93144d7a575840ce9fa5ee8bd1f89445f2be5b"
+  }
+}
