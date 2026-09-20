@@ -83,6 +83,18 @@ primary_text = extract_docx_text(primary_path)
 commission_text = extract_docx_text(commission_path)
 admission_doctor_text = extract_docx_text(admission_doctor_path)
 
+# Universal-source round-trip: a generated discharge epicrisis must be usable
+# as the next patient source for commission/RVK/VK generation. The parser must
+# recover both episode dates and the shared case number without confusing the
+# discharge header date with admission.
+discharge_roundtrip = service.parse_primary_document(discharge_path)
+assert discharge_roundtrip.input_document_kind == "выписной эпикриз", discharge_roundtrip.input_document_kind
+assert discharge_roundtrip.admission_date == manual_data.admission_date, (discharge_roundtrip.admission_date, manual_data.admission_date)
+assert discharge_roundtrip.discharge_date == manual_data.discharge_date, (discharge_roundtrip.discharge_date, manual_data.discharge_date)
+assert discharge_roundtrip.case_number == manual_data.case_number, discharge_roundtrip.case_number
+assert discharge_roundtrip.diagnosis == manual_data.diagnosis, discharge_roundtrip.diagnosis
+assert discharge_roundtrip.treatment_plan == manual_data.treatment_plan, discharge_roundtrip.treatment_plan
+
 # The program must be able to consume its own generated admission-doctor DOCX
 # as the next source without losing the hospitalization date from its title.
 admission_doctor_roundtrip = service.parse_primary_document(admission_doctor_path)
