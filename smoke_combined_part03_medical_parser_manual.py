@@ -43,6 +43,30 @@ split_fio_data = service.parse_primary_document(split_fio_doc)
 assert split_fio_data.fio == "Тестов М.А.", split_fio_data.fio
 assert "Ф.И.О." not in split_fio_data.fio, split_fio_data.fio
 
+# A generated «Осмотр врача приёмного покоя» is also a valid patient source.
+# Its first-line date is the hospitalization date and must win over the birth
+# date on the next line when that generated document is loaded again.
+admission_doctor_source = OUT / "Осмотр_врача_приёмного_покоя_повторный_ввод.docx"
+admission_doctor_doc = Document()
+admission_doctor_doc.add_paragraph("30.09.2025 10:00 Осмотр врача приёмного покоя.")
+admission_doctor_doc.add_paragraph(
+    "Тестова Анна Сергеевна, 24.07.1997, по адресу: Н. Новгород, ул. Тестовая, д. 1."
+)
+admission_doctor_doc.add_paragraph("Работает в организации: ООО Тест")
+admission_doctor_doc.add_paragraph("Должность: инженер")
+admission_doctor_doc.add_paragraph("В 3 отделение КДП поступает повторно")
+admission_doctor_doc.add_paragraph("Психический статус: контакту доступна")
+admission_doctor_doc.add_paragraph("Диагноз: F20.0 Тестовый диагноз")
+admission_doctor_doc.save(admission_doctor_source)
+admission_doctor_data = service.parse_primary_document(admission_doctor_source)
+assert admission_doctor_data.admission_date == "30.09.2025", admission_doctor_data.admission_date
+assert admission_doctor_data.birth == "24.07.1997", admission_doctor_data.birth
+assert admission_doctor_data.input_document_kind == "осмотр врача приёмного покоя", admission_doctor_data.input_document_kind
+assert service.parser.parse_text(
+    "30.09.2025 10:00 Осмотр врача приёмного покоя.\n"
+    "Тестова Анна Сергеевна, 24.07.1997, по адресу: Н. Новгород, ул. Тестовая, д. 1."
+).admission_date == "30.09.2025"
+
 # Repeated UI requests for the same admission-title date must not reopen the
 # unchanged Word file. Editing/replacing the file must invalidate that cache.
 import os as _title_cache_os

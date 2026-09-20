@@ -25,7 +25,12 @@ def _best_title_date_in_text(value: str) -> str:
     if not text or not _is_primary_title_context(text):
         return ""
     title_positions = []
-    for marker in ("первичный осмотр", "направление на госпитализацию", "госпитализацию"):
+    for marker in (
+        "первичный осмотр",
+        "осмотр врача приемного покоя",
+        "направление на госпитализацию",
+        "госпитализацию",
+    ):
         idx = normalize_match(text).find(marker)
         if idx >= 0:
             title_positions.append(idx)
@@ -67,7 +72,11 @@ def _admission_date_from_filename(path: str | Path) -> str:
             return found
         # Частый вариант: файл называется просто "12.01.2026 Первичный осмотр.docx".
         low = normalize_match(value)
-        title_match = re.search(r"первичн\w*\s+осмотр|направлени[ея]\s+на\s+госпитализац\w+|госпитализац\w+", low)
+        title_match = re.search(
+            r"первичн\w*\s+осмотр|осмотр\s+врача\s+приемного\s+покоя|"
+            r"направлени[ея]\s+на\s+госпитализац\w+|госпитализац\w+",
+            low,
+        )
         if title_match:
             window_start = max(0, title_match.start() - 80)
             window_end = min(len(value), title_match.end() + 80)
@@ -216,7 +225,11 @@ def _extract_admission_date_from_title_docx_uncached(path: str | Path) -> str:
     if xml_fragments:
         joined = normalize_text(" | ".join(xml_fragments[:180]))
         # Ищем дату строго рядом с заголовком, не шире 120 символов.
-        title_re = re.compile(r"первичн\w*\s+осмотр|направлени[ея]\s+на\s+госпитализац\w+", re.IGNORECASE)
+        title_re = re.compile(
+            r"первичн\w*\s+осмотр|осмотр\s+врача\s+при[её]много\s+покоя|"
+            r"направлени[ея]\s+на\s+госпитализац\w+",
+            re.IGNORECASE,
+        )
         for title_match in title_re.finditer(joined):
             window_start = max(0, title_match.start() - 120)
             window_end = min(len(joined), title_match.end() + 120)

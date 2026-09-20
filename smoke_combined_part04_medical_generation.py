@@ -82,6 +82,16 @@ rvk_text = extract_docx_text(rvk_path)
 primary_text = extract_docx_text(primary_path)
 commission_text = extract_docx_text(commission_path)
 admission_doctor_text = extract_docx_text(admission_doctor_path)
+
+# The program must be able to consume its own generated admission-doctor DOCX
+# as the next source without losing the hospitalization date from its title.
+admission_doctor_roundtrip = service.parse_primary_document(admission_doctor_path)
+assert admission_doctor_roundtrip.admission_date == manual_data.admission_date, (
+    admission_doctor_roundtrip.admission_date,
+    manual_data.admission_date,
+)
+assert admission_doctor_roundtrip.input_document_kind == "осмотр врача приёмного покоя"
+
 # Public service round-trip: a generated primary exam renders the sick-leave
 # decision as "нужен с <date>". Parsing that DOCX and regenerating it must
 # reconstruct the canonical decision/date rather than rejecting its own output.
