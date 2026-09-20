@@ -27,30 +27,42 @@ from medical_text_utils import (
 
 class MedicalParserCoreMixin:
     @staticmethod
-    def _detect_document_kind(text: str) -> str:
-        """Определить тип входного первичного документа для статуса/диагностики.
+    def _detect_document_kind(text: str, filename: str = "") -> str:
+        """Определить тип любого медицинского документа-источника пациента.
 
-        Это не влияет на схему данных: и направление, и первичный осмотр
-        разбираются в один PatientData и затем используются всеми выбранными
-        документами.
+        Тип источника нужен только для корректного извлечения фактов и UX.
+        Все распознанные документы сводятся в один PatientData и могут быть
+        источником для любого выбранного выходного документа.
         """
         low = normalize_match(text)
-        # Сначала направление: в реальных файлах оно может содержать слова
-        # «первичный осмотр» как часть текста/шапки, но popup нужен именно для
-        # направления на госпитализацию.
+        name = normalize_match(filename)
+        combined = f"{name} {low}".strip()
+
+        # Сначала самые специфичные документы. Они могут содержать слова
+        # «первичный», «госпитализация» и т.п. внутри клинического текста.
+        if "выписной эпикриз" in combined:
+            return "выписной эпикриз"
+        if "совместный осмотр" in combined or "комиссионный осмотр" in combined:
+            return "совместный осмотр"
+        if "акт для рвк" in combined or ("о состоянии здоровья гражданина" in combined and "военного комиссариата" in combined):
+            return "акт для РВК"
+        if "вк больничный" in combined or "вк по больнич" in combined:
+            return "ВК больничный"
+        if "вк на мсэ" in combined or "на мсэ" in combined or "медико-социальн" in combined:
+            return "ВК на МСЭ"
+        if "осмотр врача приемного покоя" in combined:
+            return "осмотр врача приёмного покоя"
         if (
-            "направление на госпитализацию" in low
-            or "госпитализируется по направлению" in low
-            or "целесообразна госпитализация" in low
+            "направление на госпитализацию" in combined
+            or "госпитализируется по направлению" in combined
+            or "целесообразна госпитализация" in combined
         ):
             return "направление на госпитализацию"
-        if "осмотр врача приемного покоя" in low:
-            return "осмотр врача приёмного покоя"
-        if "первичный осмотр" in low:
+        if "первичный осмотр" in combined:
             return "первичный осмотр"
         if "в 3 отделение кдп поступает" in low and "анамнез жизни" in low and "психический статус" in low:
-            return "первичный документ пациента"
-        return "первичный документ"
+            return "медицинский документ пациента"
+        return "медицинский документ пациента"
 
     def parse_docx(self, path: str | Path) -> PatientData:
         # Native DOCX/DOCM are read directly. Legacy binary DOC is materialized
@@ -60,12 +72,19 @@ class MedicalParserCoreMixin:
         with materialize_word_source_as_docx(path) as readable_path:
             text = extract_docx_text(readable_path)
             data = self.parse_text(text)
-            # Дата поступления имеет один источник истины: заголовок документа /
-            # имя файла рядом с названием. The temporary DOCX keeps source.stem,
-            # so filename-based title dates remain available for legacy DOC too.
+            data.input_document_kind = self._detect_document_kind(text, Path(path).stem)
+            episode_admission, episode_discharge = self._extract_episode_dates(text, data.input_document_kind)
+            # Для первичного осмотра/направления/приёмного покоя дата рядом с
+            # заголовком остаётся самым строгим источником даты поступления.
+            # Для выписного эпикриза дата в заголовке — дата выписки, поэтому
+            # поступление извлекается из периода лечения.
             title_date = extract_admission_date_from_title_docx(readable_path)
-        if title_date:
+        if episode_admission:
+            data.admission_date = episode_admission
+        elif title_date:
             data.admission_date = title_date
+        if episode_discharge:
+            data.discharge_date = episode_discharge
         self._refresh_warnings(data)
         return data
 
@@ -96,8 +115,13 @@ class MedicalParserCoreMixin:
                 setattr(data, field_name, value)
 
         data.admission_date = self._extract_admission_date(text)
+        episode_admission, episode_discharge = self._extract_episode_dates(text, data.input_document_kind)
+        if episode_admission:
+            data.admission_date = episode_admission
+        if episode_discharge:
+            data.discharge_date = episode_discharge
 
-        # Поддержка компактных первичных документов: ФИО, возраст и адрес
+        # Поддержка компактных медицинских документов: ФИО, возраст и адрес
         # могут быть написаны в одну строку, а не в отдельный столбец.
         self._repair_compact_demographics(data, text)
 
