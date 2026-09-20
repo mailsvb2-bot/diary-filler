@@ -107,6 +107,7 @@ class MedicalParserCoreMixin:
                     continue
                 setattr(data, field_name, value)
 
+        data.admission_occurrence = parse_admission_occurrence_value(data.admission)
         data.admission = strip_admission_occurrence_prefix(data.admission)
 
         for field_name, aliases in self.BLOCK_ALIASES.items():
