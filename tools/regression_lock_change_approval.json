@@ -24,7 +24,7 @@
     "pyproject.toml": "a732b83e733c814382ae85f12135a3c8055dfd17",
     "release_check.py": "3764ef30ea593d11a1479c8c79d44d38c2f0974e",
     "tools/ci_gate_lock.py": "5b12a89f418a88e0b23844859f1ee1f93acb0057",
-    "version_info.txt": "155f7cf393f5f664b02bdd4ede5c25e8b2947ede",
+    "version_info.txt": "ad1da67c734b3c1283a1857249c3c3f9fe785b62",
     "tools/document_mechanics_change_approval.json": "8fa375482173211083d1dce0e72a329500a9edd5"
   }
 }
