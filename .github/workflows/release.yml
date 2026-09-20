@@ -8,13 +8,13 @@ on:
         required: true
         type: string
   push:
-    branches: [production-v1.4.19]
+    branches: [production-v1.4.20]
 
 permissions:
   contents: write
 
 concurrency:
-  group: release-${{ github.event_name == 'workflow_dispatch' && inputs.tag || 'v1.4.19' }}
+  group: release-${{ github.event_name == 'workflow_dispatch' && inputs.tag || 'v1.4.20' }}
   cancel-in-progress: false
 
 jobs:
@@ -36,8 +36,8 @@ jobs:
         run: |
           $recoverExistingTag = $false
           if ("${{ github.event_name }}" -eq "push") {
-            if ("${{ github.ref }}" -ne "refs/heads/production-v1.4.19") {
-              throw "One-shot release may run only from refs/heads/production-v1.4.19."
+            if ("${{ github.ref }}" -ne "refs/heads/production-v1.4.20") {
+              throw "One-shot release may run only from refs/heads/production-v1.4.20."
             }
             $mainSha = gh api "repos/${{ github.repository }}/git/ref/heads/main" --jq ".object.sha"
             if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($mainSha)) {
@@ -46,7 +46,7 @@ jobs:
             if ($mainSha.Trim() -ne "${{ github.sha }}") {
               throw "One-shot release branch is not the exact current main SHA; refusing to publish."
             }
-            $tag = "v1.4.19"
+            $tag = "v1.4.20"
             $matchingTagRefs = @(gh api "repos/${{ github.repository }}/git/matching-refs/tags/$tag" --jq ".[].ref")
             if ($LASTEXITCODE -ne 0) {
               throw "Unable to inspect existing release tags."
@@ -196,7 +196,7 @@ jobs:
 
       - name: Smoke installed and uninstalled application
         shell: pwsh
-        run: ./tools/windows_installer_smoke.ps1 -InstallerPath ./dist/MedicalDiaryAutofill-Setup-1.4.19.exe
+        run: ./tools/windows_installer_smoke.ps1 -InstallerPath ./dist/MedicalDiaryAutofill-Setup-1.4.20.exe
 
       - name: Build clean source archive
         run: python make_release_zip.py
@@ -239,4 +239,4 @@ jobs:
           $releaseTags = @(gh api --paginate "repos/${{ github.repository }}/releases" --jq ".[].tag_name")
           if ($LASTEXITCODE -ne 0) { throw "Unable to inspect existing GitHub Releases." }
           if ($releaseTags -contains $env:RELEASE_TAG) { throw "Release $env:RELEASE_TAG already exists; refusing to overwrite it." }
-          gh release create "$env:RELEASE_TAG" dist\MedicalDiaryAutofill.exe dist\MedicalDiaryAutofill-Setup-1.4.19.exe release\MedicalDiaryAutofill_PRODUCTION_SOURCE.zip --verify-tag --title "MedicalDiaryAutofill $env:RELEASE_TAG" --generate-notes
+          gh release create "$env:RELEASE_TAG" dist\MedicalDiaryAutofill.exe dist\MedicalDiaryAutofill-Setup-1.4.20.exe release\MedicalDiaryAutofill_PRODUCTION_SOURCE.zip --verify-tag --title "MedicalDiaryAutofill $env:RELEASE_TAG" --generate-notes
