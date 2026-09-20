@@ -18,7 +18,7 @@
     "actions_medical_flow.py": "c49da6a0d5093ceec4f2115c9d9a0ffc9ff0023f",
     "dialog_expert.py": "b8ca4802bf4d7514a6f55aba53bd3c6b38482d24",
     "dnd_contract_check.py": "f6de7bdd4298d586ad83ce855b3da470c5dab929",
-    "dnd_mixin.py": "26e3e1e3b67dd036bd59f85009a04349783c58ec",
+    "dnd_mixin.py": "95c7369b6c1ce3b1953d6291fea3493c7c1a540d",
     "medical_models.py": "582e16577f8b832655d0fcb7ab9fbbed0ff9bd57",
     "medical_parser.py": "f934491be5a1ca4959acbd21a127405fca9cf185",
     "medical_parser_blocks.py": "920b2721d2915f451921c4f956bac0d89205eb0f",
