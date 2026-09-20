@@ -117,6 +117,19 @@ class MedicalParserBlocksMixin:
 
         admission = ""
         discharge = ""
+
+        # ВК по больничному и некоторые сторонние формы указывают только
+        # начало текущего лечения: «Находится на лечении с 10.06.2026».
+        # Это надёжная дата поступления, но не источник даты выписки.
+        current_treatment = re.search(
+            rf"(?i)(?:находил(?:ся|ась)?|находится)\s+[^\n]{{0,180}}?\bс\s+({date_token})",
+            value,
+        )
+        if current_treatment:
+            admission = norm(current_treatment.group(1))
+            if admission:
+                return admission, ""
+
         # Явные подписи безопаснее любых дат внутри анамнеза.
         for pattern in (
             rf"(?i)дата\s+(?:поступления|госпитализации)\s*[:.-]?\s*({date_token})",
