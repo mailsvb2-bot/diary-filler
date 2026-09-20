@@ -218,8 +218,9 @@ class DialogExpertMixin:
 
         if selected & epi_docs:
             epi_path = self.epi_path_var.get().strip()
+            source_epi = (getattr(getattr(self, "data", None), "epi_text", "") or "").strip()
             epi = self._normalize_yes_no(self.epi_present_var.get())
-            if epi_path and Path(epi_path).exists() and not epi:
+            if (source_epi or (epi_path and Path(epi_path).exists())) and not epi:
                 epi = "да"
                 self.epi_present_var.set(epi)
             label = "Есть ли ЭПИ"
