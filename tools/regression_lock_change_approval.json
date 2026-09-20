@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "6acb0eb1e26596915c77b3513b950d259903fd20",
+  "reason": "Increase only the portable PyInstaller one-file CI latency ceiling from 12s to 20s after repeated GitHub-hosted runner extraction variance (14.75s and 15.72s). The installed onedir production startup/intake budgets remain unchanged and strict.",
+  "required_evidence": [
+    "document_mechanics_guard",
+    "full_patient_replay",
+    "golden_docx",
+    "staff_profile_regression",
+    "gender_generation_matrix",
+    "desktop_intake_contract",
+    "intake_lifecycle_regression",
+    "packaged_desktop_intake_e2e",
+    "installer_uninstall_smoke",
+    "ci_gate_lock"
+  ],
+  "approved_blobs": {
+    "tools/windows_desktop_intake_e2e.ps1": "beb89851eb9e85fe289f5ffa79f80798c391a24d"
+  }
+}

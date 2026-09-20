@@ -241,8 +241,8 @@ d.save(p)
     # which includes extraction overhead and is not the installed production
     # runtime. Keep a generous regression ceiling here; the installed onedir
     # path is separately gated at 5 seconds in windows_installer_smoke.ps1.
-    if ($dropToVisible.Elapsed.TotalSeconds -gt 12.0) {
-        throw "Portable one-file watcher-triggered GUI exceeded CI latency budget: $dropToVisibleMs ms > 12000 ms"
+    if ($dropToVisible.Elapsed.TotalSeconds -gt 20.0) {
+        throw "Portable one-file watcher-triggered GUI exceeded CI latency budget: $dropToVisibleMs ms > 20000 ms"
     }
 
     Wait-Until -Description 'primary DOCX moved into patient subfolder' -TimeoutSeconds 20 -Condition {
