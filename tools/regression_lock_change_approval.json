@@ -33,6 +33,6 @@
     "smoke_combined_part02_ui_parser_regressions.py": "ae51a67f5dcb0e7c00941d5c89c191abc6e51a20",
     "smoke_combined_part03_medical_parser_manual.py": "6aad8fe12a63aae2322e83ca45629c129c43ac70",
     "smoke_combined_part04_medical_generation.py": "71952e1d64c9d73a013ffc9d2c582938d848d47e",
-    "tools/document_mechanics_change_approval.json": "7b3ddd2f664c458485d2723a983474eda81108c9"
+    "tools/document_mechanics_change_approval.json": "368c67acdbcec6b8f516f06112a9f09069cd03f3"
   }
 }
