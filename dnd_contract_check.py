@@ -46,6 +46,18 @@ def _assert_drop_parser_handles_windows_lists() -> None:
             _fail(f"Drop parser regression for {raw!r}: {parsed!r} != {expected!r}")
 
 
+def _assert_epi_label_does_not_match_epicrisis() -> None:
+    probe = _DropParserProbe()
+    positive = ("ЭПИ", "ЭПИ пациент", "эпи: текст", "файл ЭПИ 2026")
+    negative = ("Выписной эпикриз", "эпикриз", "Совместный осмотр", "эпидемиологический анамнез")
+    for value in positive:
+        if not probe._looks_like_epi_label(value):
+            _fail(f"Standalone ЭПИ label was not recognized: {value!r}")
+    for value in negative:
+        if probe._looks_like_epi_label(value):
+            _fail(f"Non-ЭПИ source was misclassified by label: {value!r}")
+
+
 def _assert_drop_zone_is_registered_in_ui() -> None:
     layout = _read("layout_sources.py")
     required = [
@@ -82,6 +94,7 @@ def main() -> None:
     _assert_tkinterdnd_runtime_path_exists()
     _assert_drop_zone_is_registered_in_ui()
     _assert_drop_parser_handles_windows_lists()
+    _assert_epi_label_does_not_match_epicrisis()
     print("DND CONTRACT OK")
 
 
