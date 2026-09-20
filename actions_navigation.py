@@ -70,6 +70,6 @@ class ActionsNavigationMixin:
             self._auto_select_diary_text_by_diagnosis(ask_folder=False)
             self._auto_select_numbered_diary_template(ask_folder=False)
             self._set_preview(_format_preview_lazy(data))
-            self._log(f"\n✅ Первичный документ прочитан ({data.input_document_kind or 'тип не определён'}). Данные подтянуты в общую карточку пациента.\n")
+            self._log(f"\n✅ Источник данных прочитан ({data.input_document_kind or 'тип не определён'}). Данные подтянуты в общую карточку пациента.\n")
         except Exception as exc:
             self._show_error("Не удалось прочитать медицинский документ", exc)
