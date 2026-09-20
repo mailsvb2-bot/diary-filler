@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "d5932d66d521c10a5dff026434fa60f70df65d16",
-  "reason": "Cleanup after fully green universal-source hardening #163: advance the locked baseline and remove the consumed temporary document-mechanics approval.",
+  "reason": "Harden sparse universal medical sources: collect only missing FIO and birth facts, preserve explicit identity overrides across reparses, and enforce complete patient identity at the service generation boundary.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -15,6 +15,15 @@
     "ci_gate_lock"
   ],
   "approved_blobs": {
-    "tools/document_mechanics_change_approval.json": "<deleted>"
+    "actions_creation_orchestrator.py": "596ebfbfaf513b2dee3103c152cc5621d430f252",
+    "actions_medical_flow.py": "c3f6d303b245f6b4b839a6646926422d5100ae1e",
+    "actions_navigation.py": "8bb66efaa42d726c83933df8a17f87e286c9c5c1",
+    "app_initialization.py": "2ea5ce1c1410d92dc232923c9d243a995d3d66ad",
+    "dialog_expert.py": "434ea300c6a28ccf40cf287fd8645fa6507c1786",
+    "files_mixin.py": "de27cc62804104361bf46b77ae7bc468435b4e6d",
+    "medical_service.py": "7296ff293b5b855fca9f7f3654b350cfec4b722f",
+    "smoke_combined_part02_ui_parser_regressions.py": "2dbb050d4ad0a11e7a46665730b57ffa0e8f2482",
+    "smoke_combined_part03_medical_parser_manual.py": "9a8eb5915c5986bc5ee6e7b2288dc20a4ad11504",
+    "tools/document_mechanics_change_approval.json": "1be67d75b7c6f4c924f5d1125b4f2f6b4123c7dd"
   }
 }
