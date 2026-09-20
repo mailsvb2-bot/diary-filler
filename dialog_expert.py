@@ -167,6 +167,14 @@ class DialogExpertMixin:
         disability_docs = {"primary", "admission_doctor_referral"}
         epi_docs = {"discharge", "commission", "vk_mse", "sick_leave_vk", "rvk"}
         rvk_referral_docs = {"primary", "admission_doctor_referral"}
+        # Freeze embedded source EPI before any popup/UI mutation. A doctor may
+        # confirm «Есть ли ЭПИ: да» without selecting a second file when the
+        # chosen medical source already contains a real ЭПИ section.
+        source_epi_text = (
+            (getattr(getattr(self, "data", None), "epi_text", "") or "").strip()
+            if selected & epi_docs
+            else ""
+        )
 
         # Every medical document carries the psychiatric-registration context.
         # Seed the checkbox from an already parsed/rendered value only when the
@@ -218,9 +226,8 @@ class DialogExpertMixin:
 
         if selected & epi_docs:
             epi_path = self.epi_path_var.get().strip()
-            source_epi = (getattr(getattr(self, "data", None), "epi_text", "") or "").strip()
             epi = self._normalize_yes_no(self.epi_present_var.get())
-            if (source_epi or (epi_path and Path(epi_path).exists())) and not epi:
+            if (source_epi_text or (epi_path and Path(epi_path).exists())) and not epi:
                 epi = "да"
                 self.epi_present_var.set(epi)
             label = "Есть ли ЭПИ"
@@ -293,19 +300,30 @@ class DialogExpertMixin:
                     self.data.epi_text = ""
             elif epi == "да":
                 epi_path = self.epi_path_var.get().strip()
-                if not epi_path or not Path(epi_path).is_file():
+                epi_text = source_epi_text
+                if epi_path and Path(epi_path).is_file():
+                    # A separately selected ЭПИ file is an explicit override.
+                    try:
+                        epi_text = self.service.load_epi_text(epi_path)
+                    except Exception as exc:
+                        messagebox.showwarning("Не удалось прочитать ЭПИ", str(exc))
+                        return False
+                elif not epi_text:
                     self.choose_epi()
                     epi_path = self.epi_path_var.get().strip()
-                if not epi_path or not Path(epi_path).is_file():
-                    messagebox.showwarning("ЭПИ не выбрано", "При ответе «Да» выберите DOCX или TXT с текстом ЭПИ.")
-                    return False
-                try:
-                    epi_text = self.service.load_epi_text(epi_path)
-                except Exception as exc:
-                    messagebox.showwarning("Не удалось прочитать ЭПИ", str(exc))
-                    return False
+                    if not epi_path or not Path(epi_path).is_file():
+                        messagebox.showwarning(
+                            "ЭПИ не найдено",
+                            "В документе-источнике нет ЭПИ. Выберите DOCX или TXT с текстом ЭПИ.",
+                        )
+                        return False
+                    try:
+                        epi_text = self.service.load_epi_text(epi_path)
+                    except Exception as exc:
+                        messagebox.showwarning("Не удалось прочитать ЭПИ", str(exc))
+                        return False
                 if not epi_text.strip():
-                    messagebox.showwarning("Пустое ЭПИ", "В выбранном файле не найден текст ЭПИ.")
+                    messagebox.showwarning("Пустое ЭПИ", "Не найден текст ЭПИ.")
                     return False
                 if hasattr(self, "data"):
                     self.data.epi_present = "да"
