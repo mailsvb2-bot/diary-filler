@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "base_sha": "4097bbe641149d1f40197947055ead8826829568",
+  "reason": "Explicit universal-source identity hardening: ask only for FIO and birth facts missing from sparse medical sources, preserve explicit overrides across reparses, and enforce birth at the service generation boundary.",
+  "approved_blobs": {
+    "actions_creation_orchestrator.py": "596ebfbfaf513b2dee3103c152cc5621d430f252",
+    "actions_medical_flow.py": "c3f6d303b245f6b4b839a6646926422d5100ae1e",
+    "actions_navigation.py": "8bb66efaa42d726c83933df8a17f87e286c9c5c1",
+    "app_initialization.py": "2ea5ce1c1410d92dc232923c9d243a995d3d66ad",
+    "dialog_expert.py": "434ea300c6a28ccf40cf287fd8645fa6507c1786",
+    "files_mixin.py": "de27cc62804104361bf46b77ae7bc468435b4e6d",
+    "medical_service.py": "7296ff293b5b855fca9f7f3654b350cfec4b722f"
+  }
+}
