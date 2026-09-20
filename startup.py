@@ -677,7 +677,7 @@ def _desktop_available_destination(folder: Path, filename: str) -> Path:
         candidate = folder / f"{stem} ({index}){suffix}"
         if not candidate.exists():
             return candidate
-    raise RuntimeError("Не удалось подобрать свободное имя для первичного документа")
+    raise RuntimeError("Не удалось подобрать свободное имя для медицинского документа пациента")
 
 
 def desktop_intake_prepare_patient_folder(
@@ -691,7 +691,7 @@ def desktop_intake_prepare_patient_folder(
     if not source.is_file():
         raise FileNotFoundError(source)
     if not desktop_intake_is_candidate_word_file(source):
-        raise ValueError(f"Неподдерживаемый первичный документ: {source.name}")
+        raise ValueError(f"Неподдерживаемый медицинский документ пациента: {source.name}")
 
     root = Path(intake_root) if intake_root is not None else desktop_intake_ensure_root()
     root.mkdir(parents=True, exist_ok=True)
@@ -1248,7 +1248,7 @@ def _desktop_process_primary(app, source_path: str | Path) -> bool:
         _desktop_agent_log(f"GUI intake processing failed after {type(exc).__name__}")
         _desktop_show_intake_error(
             app,
-            "Не удалось обработать первичный документ из папки «Выписанные пациенты».\n\n"
+            "Не удалось обработать медицинский документ из папки «Выписанные пациенты».\n\n"
             f"Тип ошибки: {type(exc).__name__}",
         )
         return False
