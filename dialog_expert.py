@@ -83,7 +83,7 @@ class DialogExpertMixin:
         # physician correct a valid-but-wrong date on a later generation run.
         default = (
             self._normalize_date_for_ui(current) if current and parse_date(current) else current
-        ) or self.admission_date_var.get().strip() or getattr(getattr(self, "data", None), "admission_date", "")
+        ) or self._admission_date_popup_default()
         values = self._prompt_fields(
             title="Больничный лист",
             rows=[("С какого числа", default)],
@@ -99,7 +99,7 @@ class DialogExpertMixin:
                 "Укажите дату начала больничного, например 12.09.2026 или 120926.",
             )
             return False
-        admission = parse_date(self.admission_date_var.get().strip() or getattr(getattr(self, "data", None), "admission_date", ""))
+        admission = parse_date(self._admission_date_popup_default())
         if admission and parsed.date() < admission.date():
             messagebox.showwarning("Некорректная дата", "Дата начала больничного не может быть раньше даты госпитализации.")
             return False
