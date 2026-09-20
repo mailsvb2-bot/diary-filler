@@ -111,12 +111,10 @@ class AppInitializationMixin:
         self._settings = self._load_settings()
 
     def _init_primary_and_expert_state(self) -> None:
-        # Тип входного первичного документа.
-        # - направление на госпитализацию: номер истории болезни, лечение и
-        #   диагноз подтверждаются вручную в popup;
-        # - первичный осмотр: popup не открывается, данные берутся из DOCX.
-        self.primary_document_type_var = tk.StringVar(value="primary_exam")
-        self.primary_document_type_display_var = tk.StringVar(value="Первичный осмотр")
+        # Тип медицинского документа-источника определяется автоматически.
+        # Имя переменной оставлено для совместимости со старым UI/тестами.
+        self.primary_document_type_var = tk.StringVar(value="medical_source")
+        self.primary_document_type_display_var = tk.StringVar(value="Определится автоматически")
         self.assigned_treatment_var = tk.StringVar()
         self.case_number_var = tk.StringVar()
 
