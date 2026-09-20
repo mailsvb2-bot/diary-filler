@@ -137,6 +137,10 @@ def _assert_canonical_primary_parser_contract() -> None:
         doc.save(discharge)
         assert startup.desktop_intake_is_primary_document(discharge), "discharge source was rejected"
 
+        discharge_info = startup._desktop_patient_folder_info(discharge)
+        assert discharge_info.admission_date == "12.05.2026", discharge_info
+        assert "май" in discharge_info.folder_name.lower(), discharge_info.folder_name
+
         universal_sources = (
             ("Осмотр врача приёмного покоя.docx", "12.05.2026 Осмотр врача приёмного покоя."),
             ("Совместный осмотр.docx", "18.05.2026 Совместный осмотр с зам глав врача № 2"),
