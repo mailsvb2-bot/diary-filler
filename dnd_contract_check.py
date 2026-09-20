@@ -49,7 +49,7 @@ def _assert_drop_parser_handles_windows_lists() -> None:
 def _assert_drop_zone_is_registered_in_ui() -> None:
     layout = _read("layout_sources.py")
     required = [
-        "Перетащите сюда первичный осмотр/направление на госпитализацию",
+        "Перетащите сюда медицинский документ пациента",
         "или нажмите здесь, чтобы выбрать файл",
         "self.drop_zone = drop",
         "self._drop_widgets = [drop, title, hint, status]",

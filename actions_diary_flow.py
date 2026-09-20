@@ -23,8 +23,8 @@ class ActionsDiaryFlowMixin:
             diary_admission_value = patient_data_snapshot.admission_date.strip()
         if self.navigation_path_var.get().strip() and not diary_admission_value:
             raise ValueError(
-                "Не удалось найти дату поступления рядом с названием документа. "
-                "В первичном документе должна быть строка или имя файла вида: 12.01.2026 Первичный осмотр."
+                "Не удалось определить дату поступления из документа-источника. "
+                "Введите дату поступления вручную или используйте документ, где она указана явно."
             )
 
         # FIRST resolve the diary text from the visible/frozen diagnosis. The
@@ -89,11 +89,11 @@ class ActionsDiaryFlowMixin:
             diary_patient_name = (patient_data_snapshot.output_fio or patient_data_snapshot.fio).strip()
             source_patient_fio = patient_data_snapshot.fio.strip()
         if not diary_patient_name:
-            raise ValueError("Введите ФИО для названия файлов или выберите первичный документ с ФИО пациента.")
+            raise ValueError("Введите ФИО для названия файлов или выберите медицинский документ с ФИО пациента.")
         if not diary_admission_value:
             raise ValueError(
-                "Не удалось найти дату поступления рядом с названием документа. "
-                "В первичном документе должна быть строка или имя файла вида: 12.01.2026 Первичный осмотр."
+                "Не удалось определить дату поступления из документа-источника. "
+                "Введите дату поступления вручную или используйте документ, где она указана явно."
             )
         out_dir = str(output_dir_override if output_dir_override is not None else self._result_output_dir())
         staff_profile = self._effective_staff_profile()

@@ -201,7 +201,11 @@ class DragDropMixin:
         try:
             data = self._parse_primary_document(path)
             kind = (data.input_document_kind or "").lower().replace("ё", "е")
-            if "направ" in kind or "первичный осмотр" in kind:
+            known_source_markers = (
+                "направ", "первичный осмотр", "приемного покоя", "выписной",
+                "совмест", "вк на мсэ", "вк больнич", "рвк", "медицинский документ",
+            )
+            if any(marker in kind for marker in known_source_markers):
                 return "primary"
             if data.fio and (data.birth or data.admission_date) and (data.complaints or data.mental_status or data.diagnosis):
                 return "primary"

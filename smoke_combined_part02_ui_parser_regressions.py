@@ -155,11 +155,37 @@ assert common_logic.assigned_treatment_var.get() == "терапия"
 assert common_logic.diagnosis_var.get() == "F41.2 тест"
 assert common_logic.discharge_date_var.get() == "11.06.2026"
 
+# A universal source may not contain an admission date. Before generating any
+# medical output the common popup asks for that missing fact instead of failing
+# later at the service boundary.
+universal_date_logic = _main_module.CombinedMedicalDiaryApp.__new__(_main_module.CombinedMedicalDiaryApp)
+universal_date_logic.admission_date_var = _FakeVar("")
+universal_date_logic._manual_admission_date = False
+universal_date_logic._set_ui_var = lambda var, value: var.set(value)
+universal_date_logic.data = PatientData()
+universal_date_logic._hospitalization_details_missing = lambda: False
+universal_date_logic._manual_treatment_missing = lambda: False
+universal_date_logic._current_admission_occurrence = lambda: "повторно"
+universal_date_logic._case_number_missing = lambda: False
+universal_date_logic._selected_outputs_require_discharge_date = lambda: False
+universal_date_calls = []
+universal_date_logic._prompt_fields = lambda title, rows, width=72, **kwargs: universal_date_calls.append(rows) or ["10062026"]
+universal_date_logic._prompt_common_output_requirements = _main_module.CombinedMedicalDiaryApp._prompt_common_output_requirements.__get__(universal_date_logic, _main_module.CombinedMedicalDiaryApp)
+assert universal_date_logic._prompt_common_output_requirements(
+    include_discharge_date=False, include_case_number=False, include_medical_details=False, include_admission_date=True
+) is True
+assert [label for label, _default in universal_date_calls[0]] == ["Дата поступления"]
+assert universal_date_logic.admission_date_var.get() == "10.06.2026"
+assert universal_date_logic.data.admission_date == "10.06.2026"
+
 # Discharge popup owns the explicit episode-occurrence fact. It must ask even
 # when every other discharge requirement is already complete, and store the
 # canonical value in both session state and PatientData.
 occurrence_logic = _main_module.CombinedMedicalDiaryApp.__new__(_main_module.CombinedMedicalDiaryApp)
 occurrence_logic.admission_occurrence_var = _FakeVar("")
+occurrence_logic.admission_date_var = _FakeVar("")
+occurrence_logic._manual_admission_date = False
+occurrence_logic._set_ui_var = lambda var, value: var.set(value)
 occurrence_logic.data = PatientData()
 occurrence_logic._hospitalization_details_missing = lambda: False
 occurrence_logic._manual_treatment_missing = lambda: False
@@ -169,11 +195,13 @@ occurrence_logic._case_number_missing = lambda: False
 occurrence_logic._current_admission_occurrence = _main_module.CombinedMedicalDiaryApp._current_admission_occurrence.__get__(occurrence_logic, _main_module.CombinedMedicalDiaryApp)
 occurrence_logic._store_admission_occurrence_value = _main_module.CombinedMedicalDiaryApp._store_admission_occurrence_value.__get__(occurrence_logic, _main_module.CombinedMedicalDiaryApp)
 occurrence_calls = []
-occurrence_logic._prompt_fields = lambda title, rows, width=72, choice_options=None: occurrence_calls.append((title, rows, choice_options)) or ["повторно"]
+occurrence_logic._prompt_fields = lambda title, rows, width=72, choice_options=None: occurrence_calls.append((title, rows, choice_options)) or ["10062026", "повторно"]
 occurrence_logic._prompt_discharge_output_requirements = _main_module.CombinedMedicalDiaryApp._prompt_discharge_output_requirements.__get__(occurrence_logic, _main_module.CombinedMedicalDiaryApp)
 assert occurrence_logic._prompt_discharge_output_requirements() is True
-assert [label for label, _default in occurrence_calls[0][1]] == ["Поступает в 3 отделение КДП"]
+assert [label for label, _default in occurrence_calls[0][1]] == ["Дата поступления", "Поступает в 3 отделение КДП"]
 assert occurrence_calls[0][2] == {"Поступает в 3 отделение КДП": ("первично", "повторно")}
+assert occurrence_logic.admission_date_var.get() == "10.06.2026"
+assert occurrence_logic.data.admission_date == "10.06.2026"
 assert occurrence_logic.admission_occurrence_var.get() == "повторно"
 assert occurrence_logic.data.admission_occurrence == "повторно"
 
@@ -243,6 +271,16 @@ referral_logic._prompt_fields = lambda title, rows, width=72: referral_popup_cal
 referral_logic._prompt_assigned_treatment_if_needed = _main_module.CombinedMedicalDiaryApp._prompt_assigned_treatment_if_needed.__get__(referral_logic, _main_module.CombinedMedicalDiaryApp)
 assert referral_logic._prompt_assigned_treatment_if_needed(force=True) is True
 assert [label for label, _default in referral_popup_calls[0][1]] == ["Номер истории болезни", "Лечение", "Диагноз"]
+
+# Any recognized non-referral source (for example a discharge epicrisis) uses
+# the generic missing-field path; it must never be treated like a referral.
+universal_source_logic = _main_module.CombinedMedicalDiaryApp.__new__(_main_module.CombinedMedicalDiaryApp)
+universal_source_logic.primary_document_type_var = _FakeVar("discharge_summary")
+universal_generic_calls = []
+universal_source_logic._prompt_primary_exam_details_if_needed = lambda force=False: universal_generic_calls.append(force) or True
+universal_source_logic._prompt_assigned_treatment_if_needed = _main_module.CombinedMedicalDiaryApp._prompt_assigned_treatment_if_needed.__get__(universal_source_logic, _main_module.CombinedMedicalDiaryApp)
+assert universal_source_logic._prompt_assigned_treatment_if_needed(force=True) is True
+assert universal_generic_calls == [True]
 
 
 # Shared case-number regression: every block-03 medical popup includes the

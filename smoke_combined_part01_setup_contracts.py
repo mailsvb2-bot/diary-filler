@@ -123,7 +123,9 @@ assert 'def _ensure_discharge_date' in main_source
 assert 'title="Дата выписки"' in main_source
 assert 'self.output_vars[DIARY_KIND] = tk.BooleanVar(value=False)' in main_source
 assert 'admission_doctor_referral' in main_source
-assert 'Перетащите сюда первичный осмотр/направление на госпитализацию' in main_source
+assert 'Перетащите сюда медицинский документ пациента' in main_source
+assert 'text="Тип источника"' in main_source
+assert 'text="Распознать"' in main_source
 assert 'label = "Нужен ли больничный лист"' in main_source
 assert 'label = "Нужно ли оформление инвалидности"' in main_source
 assert 'label = "Есть ли ЭПИ"' in main_source

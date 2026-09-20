@@ -62,6 +62,7 @@ class DialogDocumentDetailsMixin:
         case_var = tk.StringVar(value=self._case_number_popup_default())
         treatment_var = tk.StringVar(value=self.assigned_treatment_var.get().strip() or self._treatment_popup_default())
         diagnosis_var = tk.StringVar(value=self.diagnosis_var.get().strip() or sanitize_diagnosis(getattr(getattr(self, "data", None), "diagnosis", "")))
+        admission_var = tk.StringVar(value=self._admission_date_popup_default())
         discharge_var = tk.StringVar(value=self._discharge_popup_default())
         act_var = tk.StringVar(value=self.rvk_act_number_var.get().strip())
         military_var = tk.StringVar(value=self.rvk_military_commissariat_var.get().strip())
@@ -69,6 +70,7 @@ class DialogDocumentDetailsMixin:
 
         need_hospitalization_details = self._hospitalization_details_missing()
         need_manual_treatment = (not need_hospitalization_details) and self._manual_treatment_missing()
+        need_admission_date = self._admission_date_missing_or_invalid()
         need_discharge_date = self._selected_outputs_require_discharge_date() and self._discharge_date_missing_or_invalid()
 
         frame = tk.Frame(win, bg=PANEL, padx=18, pady=16)
@@ -96,6 +98,9 @@ class DialogDocumentDetailsMixin:
             add_entry("Диагноз", diagnosis_var, width=64)
         elif need_manual_treatment:
             add_entry("Лечение", treatment_var, width=64)
+
+        if need_admission_date:
+            add_entry("Дата поступления", admission_var, width=28)
 
         if need_discharge_date:
             add_entry("Дата выписки", discharge_var, width=28)
@@ -225,6 +230,14 @@ class DialogDocumentDetailsMixin:
                 self.assigned_treatment_var.set(treatment_value)
                 if hasattr(self, "data"):
                     self.data.treatment_plan = treatment_value
+
+            if need_admission_date and not self._store_admission_date_value(admission_var.get().strip()):
+                messagebox.showwarning(
+                    "Некорректная дата поступления",
+                    "Дата поступления должна быть в формате ДД.ММ.ГГГГ, ДДММГГГГ или ДДММГГ.",
+                    parent=win,
+                )
+                return
 
             if need_discharge_date and not self._store_discharge_date_value(discharge_var.get().strip()):
                 messagebox.showwarning(
@@ -360,21 +373,17 @@ class DialogDocumentDetailsMixin:
         return True
 
     def _on_primary_document_type_changed(self) -> None:
-        """Реакция на выбор типа первичного документа."""
-        selected_type = self.primary_document_type_var.get()
-        desired_display = "Направление на госпитализацию" if selected_type == "hospitalization_referral" else "Первичный осмотр"
-        if hasattr(self, "primary_document_type_display_var") and self.primary_document_type_display_var.get() != desired_display:
-            self.primary_document_type_display_var.set(desired_display)
-        self.assigned_treatment_var.set("")
-        self.case_number_var.set("")
+        """Совместимый хук: тип источника теперь определяется автоматически."""
         if self.navigation_path_var.get().strip():
             self.reparse_navigation(silent=True)
             if self.primary_document_type_var.get() == "hospitalization_referral":
                 self._prompt_assigned_treatment_if_needed(force=True)
                 self.reparse_navigation(silent=True)
             else:
-                self._set_status("Тип изменён на первичный осмотр. Popup не требуется.")
+                self._set_status(f"Источник распознан: {self.primary_document_type_display_var.get().strip()}.")
         else:
+            self.primary_document_type_var.set("medical_source")
+            self.primary_document_type_display_var.set("Определится автоматически")
             self.status_label.config(text="Готово")
 
     def _treatment_popup_default(self) -> str:

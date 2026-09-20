@@ -13,7 +13,7 @@ from medical_text_utils import normalize_text
 def format_preview(data: PatientData) -> str:
     lines = [
         "📋 Извлечённые данные",
-        f"Тип первичного документа: {data.input_document_kind or '—'}",
+        f"Тип источника: {data.input_document_kind or '—'}",
         f"Ф.И.О.: {data.fio or '—'}",
         f"История болезни №: {data.case_number or '—'}",
         f"Год/дата рождения: {data.birth or '—'}",

@@ -41,6 +41,34 @@ class DialogExpertMixin:
             self.data.admission_occurrence = occurrence
         return True
 
+    def _admission_date_missing_or_invalid(self) -> bool:
+        var = getattr(self, "admission_date_var", None)
+        ui_value = var.get().strip() if var is not None else ""
+        value = ui_value or getattr(getattr(self, "data", None), "admission_date", "")
+        return not bool(parse_date(value))
+
+    def _store_admission_date_value(self, value: str) -> bool:
+        parsed = parse_date((value or "").strip())
+        if not parsed:
+            return False
+        normalized = parsed.strftime("%d.%m.%Y")
+        var = getattr(self, "admission_date_var", None)
+        if var is not None:
+            setter = getattr(self, "_set_ui_var", None)
+            if callable(setter):
+                setter(var, normalized)
+            else:
+                var.set(normalized)
+        self._manual_admission_date = True
+        if hasattr(self, "data"):
+            self.data.admission_date = normalized
+        return True
+
+    def _admission_date_popup_default(self) -> str:
+        var = getattr(self, "admission_date_var", None)
+        ui_value = var.get().strip() if var is not None else ""
+        return ui_value or getattr(getattr(self, "data", None), "admission_date", "")
+
     @staticmethod
     def _normalize_yes_no(value: str) -> str:
         return normalize_yes_no(value)
@@ -55,7 +83,7 @@ class DialogExpertMixin:
         # physician correct a valid-but-wrong date on a later generation run.
         default = (
             self._normalize_date_for_ui(current) if current and parse_date(current) else current
-        ) or self.admission_date_var.get().strip() or getattr(getattr(self, "data", None), "admission_date", "")
+        ) or self._admission_date_popup_default()
         values = self._prompt_fields(
             title="Больничный лист",
             rows=[("С какого числа", default)],
@@ -71,7 +99,7 @@ class DialogExpertMixin:
                 "Укажите дату начала больничного, например 12.09.2026 или 120926.",
             )
             return False
-        admission = parse_date(self.admission_date_var.get().strip() or getattr(getattr(self, "data", None), "admission_date", ""))
+        admission = parse_date(self._admission_date_popup_default())
         if admission and parsed.date() < admission.date():
             messagebox.showwarning("Некорректная дата", "Дата начала больничного не может быть раньше даты госпитализации.")
             return False
@@ -658,7 +686,7 @@ class DialogExpertMixin:
         except Exception:
             return False
 
-    def _prompt_common_output_requirements(self, *, include_discharge_date: bool, include_case_number: bool = True, include_medical_details: bool = True, include_admission_occurrence: bool = False) -> bool:
+    def _prompt_common_output_requirements(self, *, include_discharge_date: bool, include_case_number: bool = True, include_medical_details: bool = True, include_admission_occurrence: bool = False, include_admission_date: bool = False) -> bool:
         """Единый popup для общих недостающих полей выбора документов.
 
         Используется для сценариев без специальных merged-popup документов
@@ -681,6 +709,10 @@ class DialogExpertMixin:
             elif self._manual_treatment_missing():
                 detail_rows.append(("Лечение", self.assigned_treatment_var.get().strip() or self._treatment_popup_default()))
                 detail_fields.append("treatment")
+
+        if include_admission_date and self._admission_date_missing_or_invalid():
+            detail_rows.append(("Дата поступления", self._admission_date_popup_default()))
+            detail_fields.append("admission_date")
 
         if include_admission_occurrence and not self._current_admission_occurrence():
             detail_rows.append(("Поступает в 3 отделение КДП", ""))
@@ -736,6 +768,10 @@ class DialogExpertMixin:
                 self._manual_diagnosis = True
                 if hasattr(self, "data"):
                     self.data.diagnosis = diagnosis
+            elif field == "admission_date":
+                if not self._store_admission_date_value(value):
+                    messagebox.showwarning("Некорректная дата поступления", "Укажите дату поступления в формате ДД.ММ.ГГГГ или ДДММГГ.")
+                    return False
             elif field == "admission_occurrence":
                 if not self._store_admission_occurrence_value(value):
                     messagebox.showwarning(
@@ -771,6 +807,10 @@ class DialogExpertMixin:
         elif self._manual_treatment_missing():
             detail_rows.append(("Лечение", self.assigned_treatment_var.get().strip() or self._treatment_popup_default()))
             detail_fields.append("treatment")
+
+        if self._admission_date_missing_or_invalid():
+            detail_rows.append(("Дата поступления", self._admission_date_popup_default()))
+            detail_fields.append("admission_date")
 
         if not self._current_admission_occurrence():
             detail_rows.append(("Поступает в 3 отделение КДП", ""))
@@ -830,6 +870,10 @@ class DialogExpertMixin:
                 self._manual_diagnosis = True
                 if hasattr(self, "data"):
                     self.data.diagnosis = diagnosis
+            elif field == "admission_date":
+                if not self._store_admission_date_value(value):
+                    messagebox.showwarning("Некорректная дата поступления", "Укажите дату поступления в формате ДД.ММ.ГГГГ или ДДММГГ.")
+                    return False
             elif field == "admission_occurrence":
                 if not self._store_admission_occurrence_value(value):
                     messagebox.showwarning(
@@ -864,7 +908,7 @@ class DialogExpertMixin:
         дату выписки добавляем в то же окно только для документов, которым она
         действительно нужна: выписной эпикриз, дневники или Акт РВК.
         """
-        if self.primary_document_type_var.get() == "primary_exam":
+        if self.primary_document_type_var.get() != "hospitalization_referral":
             return self._prompt_primary_exam_details_if_needed(force=force)
 
         default_treatment = self._treatment_popup_default()

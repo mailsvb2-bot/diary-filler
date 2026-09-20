@@ -135,11 +135,11 @@ class DiaryTemplateSelectionMixin:
         return None, None, "", None
 
     def _sync_admission_date_from_title(self, *, force: bool = False) -> str:
-        """Подтянуть дату поступления строго из заголовка первичного DOCX.
+        """Подтянуть дату поступления из надёжного факта документа-источника.
 
-        Это UI-обвязка вокруг парсера. Она не меняет diary_filler.py и нужна
-        только для того, чтобы поле "Дата поступления / месяц, год" не
-        оставалось пустым и не подхватывало дату рождения пациента.
+        Для первичного осмотра/направления это дата в заголовке. Для выписного
+        эпикриза/Акта РВК она может быть извлечена из периода пребывания.
+        Дата рождения никогда не используется как fallback.
         """
         path = self.navigation_path_var.get().strip()
         if not path or not Path(path).exists():
@@ -149,6 +149,9 @@ class DiaryTemplateSelectionMixin:
             title_date = extract_admission_date_from_title_docx(path)
         except Exception:
             title_date = ""
+        if not title_date:
+            parsed_data = getattr(self, "data", None)
+            title_date = (getattr(parsed_data, "admission_date", "") or "").strip()
         if not title_date:
             return ""
         current = self.admission_date_var.get().strip()
