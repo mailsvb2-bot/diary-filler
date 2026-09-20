@@ -17,13 +17,13 @@
   "approved_blobs": {
     "dnd_contract_check.py": "f6de7bdd4298d586ad83ce855b3da470c5dab929",
     "dnd_mixin.py": "26e3e1e3b67dd036bd59f85009a04349783c58ec",
-    "medical_models.py": "c2da89b5246100f0735ee346d685546bd9de3a0f",
+    "medical_models.py": "582e16577f8b832655d0fcb7ab9fbbed0ff9bd57",
     "medical_parser_blocks.py": "920b2721d2915f451921c4f956bac0d89205eb0f",
     "medical_parser_core.py": "84a296eab709e5487082ac5ec7e709ebe44140d4",
     "medical_treatment_detection.py": "7b14ac36f72b59ef5615ef65a513ea2da1542a44",
     "smoke_combined_part01_setup_contracts.py": "b99984b70a48ed49e0288c9d0cc66297eee6a68e",
-    "smoke_combined_part03_medical_parser_manual.py": "090d027c355a0d236d069fd1345082652f8eeeac",
-    "smoke_combined_part04_medical_generation.py": "86e47c126207c45cbef97a26f318502f8cf5ba80",
-    "tools/document_mechanics_change_approval.json": "78580aaea0770111e3a733661ffd3515f7b79e8d"
+    "smoke_combined_part03_medical_parser_manual.py": "45aa486e6c7ab5c356ff9c412da85c40a4effb77",
+    "smoke_combined_part04_medical_generation.py": "5d47b2944c2bacd9848a7f71265631762d3071fa",
+    "tools/document_mechanics_change_approval.json": "3daf037d0fe68594fd443de49ade3fd5c57d194f"
   }
 }
