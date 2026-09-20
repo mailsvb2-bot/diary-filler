@@ -178,6 +178,47 @@ assert [label for label, _default in universal_date_calls[0]] == ["Дата по
 assert universal_date_logic.admission_date_var.get() == "10.06.2026"
 assert universal_date_logic.data.admission_date == "10.06.2026"
 
+# Sparse universal sources must ask only for identity facts that are really
+# absent. The entered FIO is a medical-source override, not a side effect of the
+# output filename field.
+identity_logic = _main_module.CombinedMedicalDiaryApp.__new__(_main_module.CombinedMedicalDiaryApp)
+identity_logic.data = PatientData()
+identity_logic.navigation_path_var = _FakeVar("")
+identity_logic.patient_name_var = _FakeVar("")
+identity_logic._manual_patient_name = False
+identity_logic._popup_fio_override = ""
+identity_logic._popup_birth_override = ""
+identity_logic._set_ui_var = lambda var, value: var.set(value)
+identity_calls = []
+identity_logic._prompt_fields = lambda title, rows, width=64: identity_calls.append((title, rows)) or [
+    "Тестов Тест Тестович",
+    "01011980",
+]
+assert identity_logic._prompt_missing_patient_identity_if_needed() is True
+assert [label for label, _default in identity_calls[0][1]] == ["Ф.И.О. пациента", "Дата / год рождения"]
+assert identity_logic._popup_fio_override == "Тестов Тест Тестович"
+assert identity_logic._popup_birth_override == "01.01.1980"
+assert identity_logic.data.fio == "Тестов Тест Тестович"
+assert identity_logic.data.birth == "01.01.1980"
+assert identity_logic.patient_name_var.get() == "Тестов Тест Тестович"
+
+birth_only_logic = _main_module.CombinedMedicalDiaryApp.__new__(_main_module.CombinedMedicalDiaryApp)
+birth_only_logic.data = PatientData(fio="Иванов Иван Иванович")
+birth_only_logic.navigation_path_var = _FakeVar("")
+birth_only_logic.patient_name_var = _FakeVar("Свое имя файла")
+birth_only_logic._manual_patient_name = True
+birth_only_logic._popup_fio_override = ""
+birth_only_logic._popup_birth_override = ""
+birth_only_calls = []
+birth_only_logic._prompt_fields = lambda title, rows, width=64: birth_only_calls.append(rows) or ["1985"]
+assert birth_only_logic._prompt_missing_patient_identity_if_needed() is True
+assert [label for label, _default in birth_only_calls[0]] == ["Дата / год рождения"]
+assert birth_only_logic._popup_fio_override == ""
+assert birth_only_logic._popup_birth_override == "1985"
+assert birth_only_logic.patient_name_var.get() == "Свое имя файла"
+assert _main_module.CombinedMedicalDiaryApp._normalize_birth_popup_value("2999") == ""
+assert _main_module.CombinedMedicalDiaryApp._normalize_birth_popup_value("1980 г.р.") == "1980"
+
 # Discharge popup owns the explicit episode-occurrence fact. It must ask even
 # when every other discharge requirement is already complete, and store the
 # canonical value in both session state and PatientData.
