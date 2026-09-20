@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "base_sha": "c113a65a6e4aff393ec96bcd12fcdd62061c66be",
-  "reason": "Explicit document-mechanics fix for re-ingesting a generated «Осмотр врача приёмного покоя»: recognize its title as a hospitalization-date source while preserving strict birth-date rejection.",
+  "reason": "Explicit document-mechanics fix for re-ingesting a generated admission-doctor examination document: recognize its title as the hospitalization-date source while preserving strict birth-date rejection.",
   "approved_blobs": {
     "medical_docx_title_context.py": "c879530201a02cf8523c373bf9709c689bd902f1",
     "medical_docx_title_finder.py": "5d90db666a7f3f5973327f44d68cb0db605b7f3e",
