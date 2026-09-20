@@ -1,9 +1,12 @@
 {
   "schema_version": 1,
   "base_sha": "8ff0d86f0c87a6f59742c576a19661aa6eb9532e",
-  "reason": "Explicit universal-source round-trip hardening: recover source admission occurrence, admit safe treatment-period dates, and recognize explicit VK treatment rows without inferring from prose.",
+  "reason": "Explicit universal-source round-trip hardening: recover source admission occurrence and safe episode dates, recognize explicit VK treatment rows, and preserve embedded EPI from a medical source without inventing facts.",
   "approved_blobs": {
+    "actions_medical_flow.py": "c49da6a0d5093ceec4f2115c9d9a0ffc9ff0023f",
+    "dialog_expert.py": "3dc8d5b51b8df6486929b065bfb91c00d0561cfc",
     "medical_models.py": "582e16577f8b832655d0fcb7ab9fbbed0ff9bd57",
+    "medical_parser.py": "886c7fcaa19d27a64e2ef4e75b449377ff749d20",
     "medical_parser_blocks.py": "920b2721d2915f451921c4f956bac0d89205eb0f",
     "medical_parser_core.py": "84a296eab709e5487082ac5ec7e709ebe44140d4",
     "medical_treatment_detection.py": "7b14ac36f72b59ef5615ef65a513ea2da1542a44"
