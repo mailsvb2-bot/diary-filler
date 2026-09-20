@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "d36ad04344e6b31fe268d41fe8bbb4bc9c06190c",
-  "baseline_note": "v1.4.20-word-safety final release candidate and cleanup are fully validated. PR #157 exact-head run 35503906558 and post-merge main run 35504110563 passed; PR #158 mechanics-approval cleanup and post-merge main run 35504602416 also passed. This metadata-only commit seals current main d36ad04344e6b31fe268d41fe8bbb4bc9c06190c as the clean baseline and removes the final temporary regression approval.",
+  "baseline_ref": "6c63a8dda3b386263f7feed8d7a69d18f28654e8",
+  "baseline_note": "Admission-doctor source-date fix fully validated. PR #160 exact-head run 35531329040 and post-merge main run 35531498350 passed every required Windows production check, including full patient replay, packaged desktop intake E2E, installer smoke, and generated admission-doctor round-trip coverage.",
   "required_approval_evidence": [
     "ci_gate_lock"
   ],
