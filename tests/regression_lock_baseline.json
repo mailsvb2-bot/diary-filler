@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "8ff0d86f0c87a6f59742c576a19661aa6eb9532e",
-  "baseline_note": "Universal medical-source slice #162 fully validated. Exact PR head 9c0fad826eed16e9c3c3211f81dc9e5cfcaf2d46 passed Windows production CI, and post-merge main 8ff0d86f0c87a6f59742c576a19661aa6eb9532e passed run 35534112072 including release gate, full patient replay, packaged desktop intake E2E and installer smoke.",
+  "baseline_ref": "d5932d66d521c10a5dff026434fa60f70df65d16",
+  "baseline_note": "Universal medical-source hardening #163 fully validated. Exact PR head 6c948473c231ca484bf175900ac426cf75113116 passed Windows production CI run 35535391453, and post-merge main d5932d66d521c10a5dff026434fa60f70df65d16 passed run 35536133917 including release gate, full patient replay, packaged desktop intake E2E, installer build and installed/uninstalled smoke.",
   "required_approval_evidence": [
     "ci_gate_lock"
   ],
