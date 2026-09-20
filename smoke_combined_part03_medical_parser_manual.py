@@ -88,6 +88,22 @@ assert universal_discharge.discharge_date == "11.06.2026", universal_discharge.d
 assert universal_discharge.case_number == "К-900", universal_discharge.case_number
 assert universal_discharge.treatment_plan == "терапия", universal_discharge.treatment_plan
 
+# Direct service callers must obey the same patient-identity safety boundary as
+# the UI. Missing birth is no longer allowed to silently render an incomplete
+# medical document.
+_missing_birth = PatientData(
+    fio="Тестов Тест Тестович",
+    admission_date="10.06.2026",
+    case_number="123",
+    diagnosis="F41.2 тест",
+)
+try:
+    service._validate_and_normalize_selected_data(_missing_birth, ())
+except ValueError as exc:
+    assert "год/дата рождения" in str(exc), exc
+else:
+    raise AssertionError("service accepted medical generation data without birth")
+
 # Strong type signatures must win over clinical words embedded in the body.
 assert service.parser._detect_document_kind("20.06.2026 Совместный осмотр с зам глав врача № 7\nПервичный осмотр упомянут в анамнезе") == "совместный осмотр"
 assert service.parser._detect_document_kind("О СОСТОЯНИИ ЗДОРОВЬЯ ГРАЖДАНИНА № 5\nГоспитализируется по направлению военного комиссариата Ленинского района") == "акт для РВК"
