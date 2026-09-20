@@ -47,7 +47,17 @@ def _test_missing_patient_facts() -> None:
         "Лечение: тестовое лечение"
     )
     assert legacy_admission.admission == "добровольно", legacy_admission.admission
-    assert legacy_admission.admission_occurrence == "", "occurrence must be explicitly confirmed in popup"
+    assert legacy_admission.admission_occurrence == "повторно", legacy_admission.admission_occurrence
+    # Universal-source reuse may trust an occurrence only when the source states
+    # it explicitly. A generic admission line must still remain unknown.
+    unspecified_admission = MedicalTextParser().parse_text(
+        "12.01.2026 Первичный осмотр\n"
+        "Ф.И.О.: Иванов Иван Иванович\n"
+        "В 3 отделение КДП поступает добровольно\n"
+        "Диагноз: F41.2 тест\n"
+        "Лечение: тестовое лечение"
+    )
+    assert unspecified_admission.admission_occurrence == "", unspecified_admission.admission_occurrence
 
 
 def _test_conservative_gender() -> None:
