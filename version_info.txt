@@ -16,11 +16,11 @@ VSVersionInfo(
         '040904B0',
         [StringStruct('CompanyName', 'Medical Diary Autofill'),
          StringStruct('FileDescription', 'Medical documents and diary autofill utility'),
-         StringStruct('FileVersion', 'v1.4.19-super-production'),
+         StringStruct('FileVersion', 'v1.4.20-word-safety'),
          StringStruct('InternalName', 'MedicalDiaryAutofill'),
          StringStruct('OriginalFilename', 'MedicalDiaryAutofill.exe'),
          StringStruct('ProductName', 'Medical Diary Autofill'),
-         StringStruct('ProductVersion', 'v1.4.19-super-production')])
+         StringStruct('ProductVersion', 'v1.4.20-word-safety')])
     ]),
     VarFileInfo([VarStruct('Translation', [1033, 1200])])
   ]
