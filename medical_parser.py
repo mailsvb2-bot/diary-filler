@@ -14,7 +14,6 @@ from medical_parser_core import MedicalParserCoreMixin
 from medical_parser_demographics import MedicalParserDemographicsMixin
 from medical_parser_inline import MedicalParserInlineMixin
 from medical_parser_sanitize import sanitize_diagnosis
-from medical_models import parse_admission_occurrence_value
 from medical_parser_work import MedicalParserWorkMixin
 
 
