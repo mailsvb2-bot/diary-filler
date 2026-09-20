@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "01a861de1ad6d94ec3f072d09b895ca2e2515050",
-  "baseline_note": "PR #155 raised only the flaky portable PyInstaller one-file CI intake ceiling from 12s to 20s after hosted-runner extraction variance, while installed onedir production budgets remained unchanged. Exact-head run 35494522903 and post-merge main run 35494697777 both completed the full Windows contour SUCCESS. This is the clean tested baseline before removing the temporary regression approval.",
+  "baseline_ref": "16bc62b4f049ef786fae6284159bbd9bed6c078e",
+  "baseline_note": "PR #157 prepared the final v1.4.20-word-safety release candidate on current clean main. Exact-head run 35503906558 and post-merge main run 35504110563 both completed the full Windows production contour SUCCESS, including Word safety gates, golden DOCX/full replay, portable intake, installed onedir smoke and uninstall. This cleanup removes the temporary document-mechanics approval while retaining only a narrowed regression approval for that deletion.",
   "required_approval_evidence": [
     "ci_gate_lock"
   ],
