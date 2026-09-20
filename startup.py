@@ -82,12 +82,20 @@ _DESKTOP_INTAKE_MAX_LOG_BYTES = 128 * 1024
 _DESKTOP_INTAKE_HANDOFF_SCHEMA = 1
 
 _DESKTOP_INTAKE_STRONG_PRIMARY_MARKERS = (
+    # Compatibility name: this is now the strong medical-source marker set.
     "первичный осмотр",
     "первичный прием",
     "направление на госпитализацию",
+    "осмотр врача приемного покоя",
+    "выписной эпикриз",
+    "совместный осмотр",
+    "комиссионный осмотр",
+    "вк на мсэ",
+    "вк больничный",
+    "акт для рвк",
+    "о состоянии здоровья гражданина",
 )
 _DESKTOP_INTAKE_EXCLUDED_MARKERS = (
-    "выписной эпикриз",
     "переводной эпикриз",
     "посмертный эпикриз",
     "этапный эпикриз",
@@ -207,9 +215,9 @@ def desktop_intake_is_candidate_word_file(path: str | Path) -> bool:
 def desktop_intake_is_primary_document(path: str | Path) -> bool:
     """Use the canonical parser first; legacy score is only a compatibility fallback.
 
-    The watcher must not maintain a second, stricter definition of a primary
-    document than the application itself.  Otherwise a DOCX that the normal UI
-    parses correctly can be silently ignored before the GUI is even launched.
+    The watcher accepts the same medical patient sources as the visible UI.
+    Otherwise a discharge/commission/VK/RVK document that the app can parse
+    would be silently ignored before the GUI is even launched.
     """
     candidate = Path(path)
     if not candidate.is_file() or not desktop_intake_is_candidate_word_file(candidate):
@@ -228,7 +236,12 @@ def desktop_intake_is_primary_document(path: str | Path) -> bool:
         if kind in {
             "первичный осмотр",
             "направление на госпитализацию",
-            "первичный документ пациента",
+            "осмотр врача приемного покоя",
+            "выписной эпикриз",
+            "совместный осмотр",
+            "вк на мсэ",
+            "вк больничный",
+            "акт для рвк",
         }:
             return True
 
@@ -575,6 +588,7 @@ def _desktop_patient_folder_info(primary_path: str | Path) -> DesktopPatientFold
     """Read only naming fields; never feed values back into document generation."""
     path = Path(primary_path)
     fio = ""
+    parsed_admission_date = ""
     try:
         from medical_parser import MedicalTextParser
 
@@ -582,12 +596,14 @@ def _desktop_patient_folder_info(primary_path: str | Path) -> DesktopPatientFold
         candidate = str(getattr(parsed, "fio", "") or "").strip()
         if _desktop_looks_like_human_fio(candidate):
             fio = candidate
+        parsed_admission_date = str(getattr(parsed, "admission_date", "") or "").strip()
     except Exception:
         pass
 
-    # Use the project's already-hardened title-date resolver for the folder
-    # name.  It rejects demographic/birth-date context.  If it finds no safe
-    # admission/title date, omitting the month is safer than inventing one.
+    # Prefer the hardened title-date resolver for classic primary/referral
+    # sources. For discharge/RVK/VK-style universal sources there may be no
+    # admission date in the title, so fall back to the canonical parser's
+    # strictly evidenced episode date. Never fall back to birth/demographic dates.
     admission_date = ""
     try:
         from medical_docx_title_dates import extract_admission_date_from_title_docx
@@ -595,6 +611,8 @@ def _desktop_patient_folder_info(primary_path: str | Path) -> DesktopPatientFold
         admission_date = str(extract_admission_date_from_title_docx(path) or "").strip()
     except Exception:
         pass
+    if not admission_date:
+        admission_date = parsed_admission_date
 
     folder_name = desktop_build_patient_folder_name(
         fio=fio,
@@ -664,7 +682,7 @@ def _desktop_available_destination(folder: Path, filename: str) -> Path:
         candidate = folder / f"{stem} ({index}){suffix}"
         if not candidate.exists():
             return candidate
-    raise RuntimeError("Не удалось подобрать свободное имя для первичного документа")
+    raise RuntimeError("Не удалось подобрать свободное имя для медицинского документа пациента")
 
 
 def desktop_intake_prepare_patient_folder(
@@ -678,7 +696,7 @@ def desktop_intake_prepare_patient_folder(
     if not source.is_file():
         raise FileNotFoundError(source)
     if not desktop_intake_is_candidate_word_file(source):
-        raise ValueError(f"Неподдерживаемый первичный документ: {source.name}")
+        raise ValueError(f"Неподдерживаемый медицинский документ пациента: {source.name}")
 
     root = Path(intake_root) if intake_root is not None else desktop_intake_ensure_root()
     root.mkdir(parents=True, exist_ok=True)
@@ -1235,7 +1253,7 @@ def _desktop_process_primary(app, source_path: str | Path) -> bool:
         _desktop_agent_log(f"GUI intake processing failed after {type(exc).__name__}")
         _desktop_show_intake_error(
             app,
-            "Не удалось обработать первичный документ из папки «Выписанные пациенты».\n\n"
+            "Не удалось обработать медицинский документ из папки «Выписанные пациенты».\n\n"
             f"Тип ошибки: {type(exc).__name__}",
         )
         return False

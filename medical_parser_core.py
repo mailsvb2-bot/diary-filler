@@ -13,7 +13,7 @@ from medical_docx_reader import (
     _is_birth_or_demographic_context,
     _is_primary_title_context,
 )
-from medical_models import PatientData, strip_admission_occurrence_prefix
+from medical_models import PatientData, parse_admission_occurrence_value, strip_admission_occurrence_prefix
 from medical_parser_sanitize import sanitize_diagnosis
 from medical_treatment_detection import has_treatment_section_marker
 from medical_text_utils import (
@@ -107,6 +107,7 @@ class MedicalParserCoreMixin:
                     continue
                 setattr(data, field_name, value)
 
+        data.admission_occurrence = parse_admission_occurrence_value(data.admission)
         data.admission = strip_admission_occurrence_prefix(data.admission)
 
         for field_name, aliases in self.BLOCK_ALIASES.items():

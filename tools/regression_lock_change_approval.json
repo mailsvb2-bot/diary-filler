@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "6c63a8dda3b386263f7feed8d7a69d18f28654e8",
-  "reason": "Introduce the first universal medical-source slice: auto-detect source type, recover strongly evidenced episode dates from discharge/RVK-style documents, preserve source discharge facts, and ask only for missing admission data; lock generated discharge round-trip and popup behavior.",
+  "baseline_ref": "8ff0d86f0c87a6f59742c576a19661aa6eb9532e",
+  "reason": "Harden universal medical-source round-trips: prevent epicrisis/EPI drag-drop confusion, recover explicit admission occurrence and treatment-period admission dates, preserve embedded EPI, and lock generated-source behavior across discharge, commission, VK and RVK forms.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -15,26 +15,22 @@
     "ci_gate_lock"
   ],
   "approved_blobs": {
-    "actions_creation_orchestrator.py": "422acf48aef2cc0f4fb4b2ec0743c72fad29ec70",
-    "actions_diary_flow.py": "57320f2e5128b93a057ee08983e6a567b88b7503",
-    "actions_medical_flow.py": "c2903bfc509310114e70082f9c5d26291135e887",
-    "actions_navigation.py": "40fc1edb5132494661088df38fb94f5eb8275c94",
-    "app_initialization.py": "43d23547c3e2186d1b41c5fa536e1b59b214fc46",
-    "dialog_document_details.py": "6fe88e63bd16791a40883ec419e27f1029209b93",
-    "dialog_expert.py": "a98a3c3dbc324c693ac8d12cade4d3a1592eca4c",
-    "diary_template_selection.py": "5439def6ffd6ebe7e50417d26de125c537b7ff8b",
-    "dnd_mixin.py": "62c0bee8b1e56ac626a7afb75ac4fb729471f1a9",
-    "files_mixin.py": "499d2081876bc26e913d5d949e8ab06845dc6ab5",
-    "layout_sources.py": "639358b80f41286f352626a6c7ce1fe0625e2cba",
-    "medical_parser.py": "02754910e3e34a728f7496d05906864f88f63363",
-    "medical_parser_blocks.py": "1d662a305c805743d35c61cc200ed6e7f0ce73d8",
-    "medical_parser_core.py": "27f58967ec5e3a2f07232d26107398a6f4b20496",
-    "medical_preview.py": "120081f4957175fa798748b71ea5bfa3e1ea7a35",
-    "smoke_combined_part02_ui_parser_regressions.py": "ae51a67f5dcb0e7c00941d5c89c191abc6e51a20",
-    "smoke_combined_part03_medical_parser_manual.py": "6aad8fe12a63aae2322e83ca45629c129c43ac70",
-    "smoke_combined_part04_medical_generation.py": "71952e1d64c9d73a013ffc9d2c582938d848d47e",
-    "tools/document_mechanics_change_approval.json": "368c67acdbcec6b8f516f06112a9f09069cd03f3",
-    "dnd_contract_check.py": "085d0a182f26a6d1ad56527d776704e98abbe7b0",
-    "smoke_combined_part01_setup_contracts.py": "5883cdbc809eec4ddd0bffedccc30435d1da8cce"
+    "actions_medical_flow.py": "c49da6a0d5093ceec4f2115c9d9a0ffc9ff0023f",
+    "dialog_expert.py": "b8ca4802bf4d7514a6f55aba53bd3c6b38482d24",
+    "dnd_contract_check.py": "f6de7bdd4298d586ad83ce855b3da470c5dab929",
+    "dnd_mixin.py": "95c7369b6c1ce3b1953d6291fea3493c7c1a540d",
+    "medical_models.py": "582e16577f8b832655d0fcb7ab9fbbed0ff9bd57",
+    "medical_parser.py": "f934491be5a1ca4959acbd21a127405fca9cf185",
+    "medical_parser_blocks.py": "920b2721d2915f451921c4f956bac0d89205eb0f",
+    "medical_parser_core.py": "84a296eab709e5487082ac5ec7e709ebe44140d4",
+    "medical_treatment_detection.py": "7b14ac36f72b59ef5615ef65a513ea2da1542a44",
+    "smoke_combined_part01_setup_contracts.py": "b99984b70a48ed49e0288c9d0cc66297eee6a68e",
+    "smoke_combined_part02_ui_parser_regressions.py": "dd61bad37dee368249f7335ad513ab4c3eb629e9",
+    "smoke_combined_part03_medical_parser_manual.py": "45aa486e6c7ab5c356ff9c412da85c40a4effb77",
+    "smoke_combined_part04_medical_generation.py": "e4dcb1a3efd0364c40f4b52ed1fa4ebf91457cb4",
+    "tools/document_mechanics_change_approval.json": "1bfbbb7cbdf4ae851c8f55d9a37a5cf59d436a96",
+    "safety_integrity_check.py": "c52f2348bf478e70959345fb1f6fe587df18fcd8",
+    "startup.py": "b9fd1d8b8ac971b2091a343b763221d485113268",
+    "tests/desktop_intake_contract_check.py": "89717ac53575e13d1545b0665c9fcca6358a2754"
   }
 }

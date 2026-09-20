@@ -22,6 +22,11 @@ def line_has_treatment_marker(line: str) -> bool:
     if not cleaned:
         return False
     normalized = normalize_match(cleaned)
+    # «Получает лечение: ...» is an explicit field in VK forms and must
+    # round-trip as real treatment evidence. The same words inside ordinary
+    # prose remain insufficient without section punctuation.
+    if re.match(r"^\s*получает\s+лечение\s*[:№#Nn.\-–—]", cleaned, flags=re.IGNORECASE):
+        return True
     # Guard against prose sentences that only contain the word treatment.
     if normalized.startswith(("за время лечения", "находится на лечении", "получал лечение", "получает лечение")):
         return False

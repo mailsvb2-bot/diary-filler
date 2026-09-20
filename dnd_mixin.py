@@ -164,6 +164,20 @@ class DragDropMixin:
                 continue
         return raw.decode("utf-8", errors="replace")
 
+    @staticmethod
+    def _looks_like_epi_label(value: str) -> bool:
+        """Recognize a standalone ЭПИ label without confusing it with «эпикриз».
+
+        A discharge epicrisis is now a first-class patient source. Substring
+        checks for the three letters ЭПИ are unsafe because «эпикриз» starts
+        with the same letters.
+        """
+        normalized = " ".join((value or "").lower().replace("ё", "е").split())
+        if not normalized:
+            return False
+        if normalized == "эпи":
+            return True
+        return bool(re.search(r"(?:^|[\s._-])эпи(?:$|[\s:._-])", normalized))
     def _classify_dropped_file(self, path: str) -> str:
         p = Path(path)
         if p.is_dir():
@@ -181,7 +195,7 @@ class DragDropMixin:
         if suffix == ".txt":
             txt = self._read_text_snippet_for_classification(p)
             txt_low = txt.lower().replace("ё", "е")
-            if "эпи" in stem_low or txt_low.strip().startswith("эпи") or "эпи:" in txt_low or "эпидемиологическ" in txt_low:
+            if self._looks_like_epi_label(stem_low) or self._looks_like_epi_label(txt_low.strip()) or txt_low.strip().startswith("эпидемиологическ"):
                 return "epi"
             return "unknown"
         if suffix not in {".doc", ".docx", ".docm"}:
@@ -195,22 +209,31 @@ class DragDropMixin:
             text = ""
         low = text.lower().replace("ё", "е")
 
-        if "эпи" in stem_low or low.strip().startswith("эпи") or "эпи:" in low:
-            return "epi"
-
+        # Medical patient documents win over auxiliary ЭПИ classification.
+        # In particular, «Выписной эпикриз.docx» must never be routed into
+        # the standalone ЭПИ input merely because «эпикриз» starts with «эпи».
         try:
             data = self._parse_primary_document(path)
             kind = (data.input_document_kind or "").lower().replace("ё", "е")
-            known_source_markers = (
+            explicit_source_markers = (
                 "направ", "первичный осмотр", "приемного покоя", "выписной",
-                "совмест", "вк на мсэ", "вк больнич", "рвк", "медицинский документ",
+                "совмест", "комиссион", "вк на мсэ", "вк больнич", "рвк",
             )
-            if any(marker in kind for marker in known_source_markers):
+            if any(marker in kind for marker in explicit_source_markers):
                 return "primary"
+            # Unknown forms are accepted only when a convincing patient card was
+            # actually recovered. The generic kind fallback alone is insufficient.
             if data.fio and (data.birth or data.admission_date) and (data.complaints or data.mental_status or data.diagnosis):
                 return "primary"
         except Exception:
             pass
+
+        # Once a real patient document has had first refusal, a standalone
+        # auxiliary ЭПИ file must be recognized before diary heuristics. Some
+        # diary-text parsers can legitimately extract prose from an ЭПИ DOCX,
+        # but that does not make it a diary-status source.
+        if self._looks_like_epi_label(stem_low) or self._looks_like_epi_label(low.strip()):
+            return "epi"
 
         try:
             from diary_table import detect_first_month_year_from_docx
@@ -227,6 +250,4 @@ class DragDropMixin:
         except Exception:
             pass
 
-        if "эпи" in low or "эпидемиологическ" in low:
-            return "epi"
         return "unknown"

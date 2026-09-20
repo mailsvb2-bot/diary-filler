@@ -93,6 +93,18 @@ assert service.parser._detect_document_kind("20.06.2026 Совместный о�
 assert service.parser._detect_document_kind("О СОСТОЯНИИ ЗДОРОВЬЯ ГРАЖДАНИНА № 5\nГоспитализируется по направлению военного комиссариата Ленинского района") == "акт для РВК"
 assert service.parser._detect_document_kind("Ф.И.О.: Тестов Т.Т.\nДиагноз: F20.0 тест", "Тестов ВК на МСЭ.docx") == "ВК на МСЭ"
 
+# Explicit VK treatment row is source evidence; prose is not.
+from medical_treatment_detection import line_has_treatment_marker
+assert line_has_treatment_marker("Получает лечение: рисперидон 4 мг/сут")
+assert not line_has_treatment_marker("Получает лечение в стационаре в течение недели")
+assert not line_has_treatment_marker("За время лечения состояние улучшилось")
+
+from medical_models import parse_admission_occurrence_value
+assert parse_admission_occurrence_value("повторно добровольно") == "повторно"
+assert parse_admission_occurrence_value("повторно, добровольно") == "повторно"
+assert parse_admission_occurrence_value("первично; добровольно") == "первично"
+assert parse_admission_occurrence_value("добровольно") == ""
+
 # Repeated UI requests for the same admission-title date must not reopen the
 # unchanged Word file. Editing/replacing the file must invalidate that cache.
 import os as _title_cache_os

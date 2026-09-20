@@ -94,6 +94,55 @@ assert discharge_roundtrip.discharge_date == manual_data.discharge_date, (discha
 assert discharge_roundtrip.case_number == manual_data.case_number, discharge_roundtrip.case_number
 assert discharge_roundtrip.diagnosis == manual_data.diagnosis, discharge_roundtrip.diagnosis
 assert discharge_roundtrip.treatment_plan == manual_data.treatment_plan, discharge_roundtrip.treatment_plan
+assert discharge_roundtrip.admission_occurrence == manual_data.admission_occurrence, discharge_roundtrip.admission_occurrence
+assert "ЭПИ тестовая информация" in discharge_roundtrip.epi_text, discharge_roundtrip.epi_text
+
+# Every generated medical form is also a supported source. Dates that belong to
+# the form itself (commission/protocol date) must never be reinterpreted as the
+# hospitalization date; only explicit episode evidence may fill admission_date.
+commission_roundtrip = service.parse_primary_document(commission_path)
+assert commission_roundtrip.input_document_kind == "совместный осмотр", commission_roundtrip.input_document_kind
+assert commission_roundtrip.admission_date == "", commission_roundtrip.admission_date
+assert commission_roundtrip.admission_occurrence == manual_data.admission_occurrence, commission_roundtrip.admission_occurrence
+assert commission_roundtrip.diagnosis == manual_data.diagnosis, commission_roundtrip.diagnosis
+assert commission_roundtrip.treatment_plan == manual_data.treatment_plan, commission_roundtrip.treatment_plan
+
+vk_mse_roundtrip = service.parse_primary_document(vk_mse_path)
+assert vk_mse_roundtrip.input_document_kind == "ВК на МСЭ", vk_mse_roundtrip.input_document_kind
+assert vk_mse_roundtrip.admission_date == "", vk_mse_roundtrip.admission_date
+assert vk_mse_roundtrip.diagnosis == manual_data.diagnosis, vk_mse_roundtrip.diagnosis
+assert vk_mse_roundtrip.treatment_plan == manual_data.treatment_plan, vk_mse_roundtrip.treatment_plan
+assert vk_mse_roundtrip.has_treatment_section is True
+
+sick_leave_vk_roundtrip = service.parse_primary_document(sick_leave_vk_path)
+assert sick_leave_vk_roundtrip.input_document_kind == "ВК больничный", sick_leave_vk_roundtrip.input_document_kind
+assert sick_leave_vk_roundtrip.admission_date == manual_data.admission_date, (
+    sick_leave_vk_roundtrip.admission_date,
+    manual_data.admission_date,
+)
+assert sick_leave_vk_roundtrip.discharge_date == "", sick_leave_vk_roundtrip.discharge_date
+assert sick_leave_vk_roundtrip.diagnosis == manual_data.diagnosis, sick_leave_vk_roundtrip.diagnosis
+assert sick_leave_vk_roundtrip.treatment_plan == manual_data.treatment_plan, sick_leave_vk_roundtrip.treatment_plan
+assert sick_leave_vk_roundtrip.has_treatment_section is True
+
+rvk_roundtrip = service.parse_primary_document(rvk_path)
+assert rvk_roundtrip.input_document_kind == "акт для РВК", rvk_roundtrip.input_document_kind
+assert rvk_roundtrip.admission_date == manual_data.admission_date, (rvk_roundtrip.admission_date, manual_data.admission_date)
+assert rvk_roundtrip.discharge_date == manual_data.discharge_date, (rvk_roundtrip.discharge_date, manual_data.discharge_date)
+assert rvk_roundtrip.case_number == manual_data.case_number, rvk_roundtrip.case_number
+assert rvk_roundtrip.admission_occurrence == manual_data.admission_occurrence, rvk_roundtrip.admission_occurrence
+
+# Real DnD classification must route an epicrisis to the patient-source slot,
+# while a standalone ЭПИ document remains in the auxiliary ЭПИ slot.
+from dnd_mixin import DragDropMixin
+
+class _UniversalSourceDropProbe(DragDropMixin):
+    def _parse_primary_document(self, path):
+        return service.parse_primary_document(path)
+
+universal_drop_probe = _UniversalSourceDropProbe()
+assert universal_drop_probe._classify_dropped_file(str(discharge_path)) == "primary"
+assert universal_drop_probe._classify_dropped_file(str(epi)) == "epi"
 
 # The program must be able to consume its own generated admission-doctor DOCX
 # as the next source without losing the hospitalization date from its title.
@@ -111,9 +160,7 @@ roundtrip_data = service.parse_primary_document(primary_path)
 assert roundtrip_data.sick_leave == "нужен с 15.06.2026", roundtrip_data.sick_leave
 assert roundtrip_data.expert_sick_leave_needed == ""
 assert roundtrip_data.expert_sick_leave_from == ""
-# Admission occurrence intentionally remains a doctor-confirmed fact at the
-# public boundary, so preserve the already-confirmed value for this round-trip.
-roundtrip_data.admission_occurrence = manual_data.admission_occurrence
+assert roundtrip_data.admission_occurrence == manual_data.admission_occurrence, roundtrip_data.admission_occurrence
 roundtrip_created, roundtrip_used = service.create_documents(
     navigation_path=primary_path,
     output_dir=OUT / "primary_roundtrip",

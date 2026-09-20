@@ -642,6 +642,30 @@ assert epi_logic.epi_present_var.get() == "да"
 assert epi_logic.epi_path_var.get() == str(epi)
 assert "EPI_PLACEMENT_SENTINEL_7F31" in epi_logic.data.epi_text
 
+# Universal-source EPI must be reusable without forcing a second file picker.
+source_epi_logic = _main_module.CombinedMedicalDiaryApp.__new__(_main_module.CombinedMedicalDiaryApp)
+source_epi_logic.expert_sick_leave_needed_var = _FakeVar("нет")
+source_epi_logic.expert_sick_leave_from_var = _FakeVar("")
+source_epi_logic.expert_sick_leave_number_var = _FakeVar("")
+source_epi_logic.disability_needed_var = _FakeVar("нет")
+source_epi_logic.psych_account_status_var = _FakeVar("")
+source_epi_logic.psych_account_since_year_var = _FakeVar("")
+source_epi_logic.rvk_referral_present_var = _FakeVar("")
+source_epi_logic.rvk_referral_commissariat_var = _FakeVar("")
+source_epi_logic.rvk_military_commissariat_var = _FakeVar("")
+source_epi_logic.epi_present_var = _FakeVar("")
+source_epi_logic.epi_path_var = _FakeVar("")
+source_epi_logic.admission_date_var = _FakeVar("10.06.2026")
+source_epi_logic.data = PatientData(admission_date="10.06.2026", epi_text="SOURCE_EPI_SENTINEL")
+source_epi_logic.service = service
+source_epi_logic._update_expert_sick_leave_display = lambda: None
+source_epi_logic._prompt_fields = _epi_prompt
+source_epi_logic.choose_epi = lambda: (_ for _ in ()).throw(AssertionError("source EPI must not open file picker"))
+assert source_epi_logic._prompt_shared_clinical_options_if_needed(["commission"]) is True
+assert source_epi_logic.epi_present_var.get() == "да"
+assert source_epi_logic.epi_path_var.get() == ""
+assert source_epi_logic.data.epi_text == "SOURCE_EPI_SENTINEL"
+
 # --- Patient switch isolation regression ---
 # Switching from one primary file to another must never reuse patient-specific
 # EPI/commission/VK/RVK values or manually selected diary inputs. Reusable
