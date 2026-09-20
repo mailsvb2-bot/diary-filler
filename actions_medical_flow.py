@@ -19,27 +19,18 @@ from medical_models import PatientData, normalize_admission_occurrence
 class ActionsMedicalFlowMixin:
     def _medical_override_data(self, navigation: str) -> PatientData:
         data = self._parse_primary_document(navigation)
-        selected_source_type = self.primary_document_type_var.get()
-        if selected_source_type == "hospitalization_referral":
-            data.input_document_kind = "направление на госпитализацию"
-            # Для направления лечение вводится вручную через UI, потому что
-            # в самом направлении блока «План лечения» может не быть.
-            if self.assigned_treatment_var.get().strip():
-                data.treatment_plan = self.assigned_treatment_var.get().strip()
-        elif selected_source_type == "primary_exam":
-            data.input_document_kind = "первичный осмотр"
-            if self.assigned_treatment_var.get().strip():
-                data.treatment_plan = self.assigned_treatment_var.get().strip()
-            if self.case_number_var.get().strip():
-                data.case_number = self.case_number_var.get().strip()
+        # Тип источника определяется парсером. Ручные значения врача могут
+        # дополнить любой источник, но не переписывают его тип.
+        if self.assigned_treatment_var.get().strip():
+            data.treatment_plan = self.assigned_treatment_var.get().strip()
         if self.case_number_var.get().strip():
             data.case_number = self.case_number_var.get().strip()
         # UI-ФИО используется только для имени создаваемых файлов.
         # ФИО внутри документов не подменяется вручную введённым названием файла.
         data.output_fio = self.patient_name_var.get().strip() or data.fio
-        # Дата поступления для медицинских документов тоже сначала берётся
-        # из заголовка первичного документа. UI-значение допускается только
-        # как ручная замена, если оно является полной датой и заголовок не найден.
+        # Для первичного/направления дата поступления может идти из заголовка;
+        # для выписного/РВК парсер уже извлекает её из периода эпизода.
+        # Ручное UI-значение используется только когда надёжного факта нет.
         from medical_docx_title_finder import extract_admission_date_from_title_docx
         title_date = extract_admission_date_from_title_docx(navigation)
         if title_date:
@@ -133,7 +124,7 @@ class ActionsMedicalFlowMixin:
         navigation = self.navigation_path_var.get().strip()
         navigation_exists = bool(navigation and Path(navigation).exists())
         if require_primary and not navigation_exists:
-            raise ValueError("Выберите первичный документ: направление на госпитализацию или первичный осмотр.")
+            raise ValueError("Выберите медицинский документ пациента — источник данных для создаваемых документов.")
 
         if require_primary:
             discharge = self.discharge_date_var.get().strip()
@@ -201,7 +192,7 @@ class ActionsMedicalFlowMixin:
     ) -> List[Path]:
         navigation = self.navigation_path_var.get().strip()
         if not navigation or not Path(navigation).exists():
-            raise ValueError("Выберите первичный документ: направление на госпитализацию или первичный осмотр.")
+            raise ValueError("Выберите медицинский документ пациента — источник данных для создаваемых документов.")
         if patient_data_snapshot is None:
             discharge = self.discharge_date_var.get().strip()
             if discharge and not parse_date(discharge):
