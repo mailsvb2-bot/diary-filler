@@ -85,6 +85,68 @@ class MedicalParserBlocksMixin:
 
         return ""
 
+    def _extract_episode_dates(self, text: str, document_kind: str = "") -> tuple[str, str]:
+        """Извлечь даты текущего эпизода без угадывания по случайным датам.
+
+        Возвращает ``(дата поступления, дата выписки)``. Для выписного
+        эпикриза/Акта РВК обе даты надёжно задаются периодом ``с ... по ...``.
+        Для ВК по больничному конец периода — дата комиссии, поэтому как дату
+        выписки его не используем.
+        """
+        value = normalize_text(text or "")
+        if not value:
+            return "", ""
+        kind = normalize_match(document_kind)
+        date_token = r"(?:\d{1,2}\s*[./-]\s*\d{1,2}\s*[./-]\s*\d{2,4}|\d{6,8})"
+
+        def norm(raw: str) -> str:
+            return _first_valid_full_date(raw or "")
+
+        # Самый сильный источник: период именно текущего пребывания/обследования.
+        period_re = re.compile(
+            rf"(?i)(?:находил(?:ся|ась)?|находится)\s+[^\n]{{0,220}}?\bс\s+({date_token})\s+\bпо\s+({date_token})"
+        )
+        match = period_re.search(value)
+        if match:
+            admission = norm(match.group(1))
+            end_date = norm(match.group(2))
+            if admission:
+                if "выписной эпикриз" in kind or "акт для рвк" in kind:
+                    return admission, end_date
+                return admission, ""
+
+        admission = ""
+        discharge = ""
+        # Явные подписи безопаснее любых дат внутри анамнеза.
+        for pattern in (
+            rf"(?i)дата\s+(?:поступления|госпитализации)\s*[:.-]?\s*({date_token})",
+            rf"(?i)поступил(?:а)?\s+в\s+стационар\s*[:.-]?\s*({date_token})",
+        ):
+            match = re.search(pattern, value)
+            if match:
+                admission = norm(match.group(1))
+                if admission:
+                    break
+        for pattern in (
+            rf"(?i)дата\s+выписки\s*[:.-]?\s*({date_token})",
+            rf"(?i)выписан(?:а)?\s+из\s+стационара\s*[:.-]?\s*({date_token})",
+        ):
+            match = re.search(pattern, value)
+            if match:
+                discharge = norm(match.group(1))
+                if discharge:
+                    break
+
+        # В заголовке выписного эпикриза первая дата — это дата выписки.
+        if "выписной эпикриз" in kind and not discharge:
+            for line in value.splitlines()[:40]:
+                if "выписной эпикриз" not in normalize_match(line):
+                    continue
+                discharge = _first_valid_full_date(line)
+                if discharge:
+                    break
+        return admission, discharge
+
     def _find_alias_span(self, text: str, alias: str) -> Optional[Tuple[int, int]]:
         """Найти метку раздела, а не случайное слово внутри текста.
 
