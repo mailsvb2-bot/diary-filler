@@ -588,6 +588,7 @@ def _desktop_patient_folder_info(primary_path: str | Path) -> DesktopPatientFold
     """Read only naming fields; never feed values back into document generation."""
     path = Path(primary_path)
     fio = ""
+    parsed_admission_date = ""
     try:
         from medical_parser import MedicalTextParser
 
@@ -595,12 +596,14 @@ def _desktop_patient_folder_info(primary_path: str | Path) -> DesktopPatientFold
         candidate = str(getattr(parsed, "fio", "") or "").strip()
         if _desktop_looks_like_human_fio(candidate):
             fio = candidate
+        parsed_admission_date = str(getattr(parsed, "admission_date", "") or "").strip()
     except Exception:
         pass
 
-    # Use the project's already-hardened title-date resolver for the folder
-    # name.  It rejects demographic/birth-date context.  If it finds no safe
-    # admission/title date, omitting the month is safer than inventing one.
+    # Prefer the hardened title-date resolver for classic primary/referral
+    # sources. For discharge/RVK/VK-style universal sources there may be no
+    # admission date in the title, so fall back to the canonical parser's
+    # strictly evidenced episode date. Never fall back to birth/demographic dates.
     admission_date = ""
     try:
         from medical_docx_title_dates import extract_admission_date_from_title_docx
@@ -608,6 +611,8 @@ def _desktop_patient_folder_info(primary_path: str | Path) -> DesktopPatientFold
         admission_date = str(extract_admission_date_from_title_docx(path) or "").strip()
     except Exception:
         pass
+    if not admission_date:
+        admission_date = parsed_admission_date
 
     folder_name = desktop_build_patient_folder_name(
         fio=fio,
