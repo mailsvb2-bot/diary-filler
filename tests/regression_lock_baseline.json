@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "16bc62b4f049ef786fae6284159bbd9bed6c078e",
-  "baseline_note": "PR #157 prepared the final v1.4.20-word-safety release candidate on current clean main. Exact-head run 35503906558 and post-merge main run 35504110563 both completed the full Windows production contour SUCCESS, including Word safety gates, golden DOCX/full replay, portable intake, installed onedir smoke and uninstall. This cleanup removes the temporary document-mechanics approval while retaining only a narrowed regression approval for that deletion.",
+  "baseline_ref": "d36ad04344e6b31fe268d41fe8bbb4bc9c06190c",
+  "baseline_note": "v1.4.20-word-safety final release candidate and cleanup are fully validated. PR #157 exact-head run 35503906558 and post-merge main run 35504110563 passed; PR #158 mechanics-approval cleanup and post-merge main run 35504602416 also passed. This metadata-only commit seals current main d36ad04344e6b31fe268d41fe8bbb4bc9c06190c as the clean baseline and removes the final temporary regression approval.",
   "required_approval_evidence": [
     "ci_gate_lock"
   ],
