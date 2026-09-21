@@ -676,14 +676,14 @@ def _desktop_allocate_patient_folder(
     root: Path,
     base_name: str,
     source_digest: str,
-) -> tuple[Path, Path | None]:
+) -> tuple[Path, Path | None, bool]:
     for folder in _desktop_patient_folder_candidates(root, base_name):
         if not folder.exists():
             folder.mkdir(parents=False, exist_ok=False)
-            return folder, None
+            return folder, None, True
         existing = _desktop_folder_contains_digest(folder, source_digest)
         if existing is not None:
-            return folder, existing
+            return folder, existing, False
     raise RuntimeError("Не удалось подобрать свободную подпапку пациента")
 
 
@@ -719,7 +719,9 @@ def desktop_intake_prepare_patient_folder(
     info = _desktop_patient_folder_info(source, settings=folder_settings)
     base_name = _desktop_sanitize_folder_component(folder_name or info.folder_name)
     source_digest = _desktop_sha256_file(source)
-    patient_folder, existing_primary = _desktop_allocate_patient_folder(root, base_name, source_digest)
+    patient_folder, existing_primary, patient_folder_created = _desktop_allocate_patient_folder(
+        root, base_name, source_digest
+    )
 
     if existing_primary is not None:
         try:
@@ -730,14 +732,57 @@ def desktop_intake_prepare_patient_folder(
         return existing_primary
 
     destination = _desktop_available_destination(patient_folder, source.name)
+
+    def cleanup_failed_transfer() -> None:
+        try:
+            if destination.exists():
+                destination.unlink()
+        except OSError:
+            pass
+        if patient_folder_created:
+            try:
+                patient_folder.rmdir()
+            except OSError:
+                pass
+
     try:
         os.replace(source, destination)
+        return destination
     except OSError:
-        try:
-            shutil.move(str(source), str(destination))
-        except OSError:
-            shutil.copy2(source, destination)
-            source.unlink()
+        pass
+
+    try:
+        shutil.move(str(source), str(destination))
+        return destination
+    except OSError:
+        # Some Windows move implementations may copy the complete file and fail
+        # only while deleting the original. Accept the verified destination and
+        # leave source cleanup for the next intake scan instead of reporting a
+        # false failure after the patient's document is already safe.
+        if _desktop_same_file_content(destination, source_digest):
+            try:
+                source.unlink()
+            except OSError:
+                pass
+            return destination
+
+    try:
+        shutil.copy2(source, destination)
+    except OSError:
+        cleanup_failed_transfer()
+        raise
+
+    if not _desktop_same_file_content(destination, source_digest):
+        cleanup_failed_transfer()
+        raise OSError("Копия медицинского документа не прошла проверку целостности")
+
+    try:
+        source.unlink()
+    except OSError:
+        # A complete verified copy is sufficient for safe intake. The original
+        # may still be locked by Word; keeping it is safer than treating the
+        # already-copied patient document as a failed transfer.
+        pass
     return destination
 
 
