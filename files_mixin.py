@@ -756,5 +756,10 @@ class FilesMixin:
         selected = self.printer_var.get().strip()
         if selected:
             self._settings["printer"] = selected
-            self._save_settings()
-            self._log(f"\n🖨 Принтер сохранён: {selected}\n")
+            if self._save_settings():
+                self._log(f"\n🖨 Принтер сохранён: {selected}\n")
+            else:
+                self._log(
+                    f"\n⚠️ Принтер выбран на текущий сеанс, но настройку не удалось сохранить: {selected}\n"
+                )
+                self._set_status("Принтер выбран, но настройка не сохранена")
