@@ -852,6 +852,18 @@ assert 'def _truncate_label_text' in files_mixin_text
 assert 'self._confirm_manual_output_dir_for_patient_switch()' in files_mixin_text
 assert ('single_line=self._compact_ui' in Path("dnd_mixin.py").read_text(encoding="utf-8") or '_update_diary_text_label(success=True)' in Path("dnd_mixin.py").read_text(encoding="utf-8"))
 from files_mixin import FilesMixin
+
+# Regression for production crash on source load: the classifier is invoked as
+# a bound method from FilesMixin/CombinedMedicalDiaryApp, so it must not receive
+# an unexpected implicit self argument.
+_bound_source_classifier = _main_module.CombinedMedicalDiaryApp.__new__(_main_module.CombinedMedicalDiaryApp)
+assert _bound_source_classifier._primary_type_from_parsed_data(
+    PatientData(input_document_kind="направление на госпитализацию")
+) == "hospitalization_referral"
+assert _bound_source_classifier._primary_type_from_parsed_data(
+    PatientData(input_document_kind="выписной эпикриз")
+) == "discharge_summary"
+
 _long_name = "Очень длинное название первичного документа пациента Иванова Ирина Ивановна 10052026.docx"
 assert "…" in FilesMixin._truncate_label_text(_long_name, max_chars=40)
 
