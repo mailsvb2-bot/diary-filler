@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "base_sha": "e6ebe2251481411efb51121a8ea8823f95df618f",
+  "reason": "Explicit universal-source round-trip hardening: recover an explicit sick-leave decision from rendered expert anamnesis so a discharge epicrisis can safely generate commission/RVK/VK outputs without losing the source fact.",
+  "approved_blobs": {
+    "medical_parser_core.py": "b9df9c652f54b3be151b66719595a04114ee7dc6"
+  }
+}
