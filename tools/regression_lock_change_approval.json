@@ -18,10 +18,10 @@
     "app_initialization.py": "4f76344c1b2725970f92384084e99296b7b3a3f1",
     "dnd_mixin.py": "95c0db13644da556a2761fab9c3f951cb54d9381",
     "files_mixin.py": "377234d9a11868d08715cc9a609d73a6aadbad06",
-    "startup.py": "c46819a657c844bb5dff0b62846de642d94f8488",
+    "startup.py": "3e7867b609e30ee2e5e563af6c49215d7df86d73",
     "tests/desktop_intake_contract_check.py": "13b10384e787491ebf2ebcefc19238cb4c3d6062",
     "tests/diagnosis_override_regression.py": "90c6a8054b3ac39f2c365c22f3ee182b07e6857c",
-    "tests/intake_lifecycle_regression.py": "4250b592a24a8ec9cd82ef68a057f03908cdcc8b",
+    "tests/intake_lifecycle_regression.py": "ca6f48442592e455f18d7aa7e8a66806cdcbec81",
     "tools/document_mechanics_change_approval.json": "399e8c815afe1a302cd69f81c15d4f432d9c86ec"
   }
 }
