@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 import re
+from tkinter import messagebox
 
 _TEXT_SNIFF_ENCODINGS = ("utf-8-sig", "utf-8", "cp1251")
 
@@ -67,7 +68,7 @@ class DragDropMixin:
             return [data.strip("{} ")]
 
     def _handle_dropped_files(self, paths: list[str]) -> None:
-        primary_path = ""
+        primary_paths: list[str] = []
         epi_path = ""
         status_paths: list[str] = []
         diary_paths: list[str] = []
@@ -81,7 +82,7 @@ class DragDropMixin:
                 continue
             kind = self._classify_dropped_file(path)
             if kind == "primary":
-                primary_path = path
+                primary_paths.append(path)
             elif kind == "epi":
                 epi_path = path
             elif kind == "diary_template":
@@ -95,6 +96,25 @@ class DragDropMixin:
             else:
                 ignored.append(Path(path).name)
 
+        if len(primary_paths) > 1:
+            # Never pick a patient source by drag order. A batch containing two
+            # medical documents may represent different patients or episodes;
+            # silently taking the last file is unsafe and highly surprising.
+            try:
+                messagebox.showwarning(
+                    "Несколько документов пациента",
+                    "Перетащено несколько медицинских документов пациента.\n\n"
+                    "Чтобы программа не выбрала источник случайно, перетащите один "
+                    "основной документ за раз.",
+                    parent=getattr(self, "root", None),
+                )
+            except Exception:
+                pass
+            self._log("\n⚠️ Drag-and-drop отменён: найдено несколько медицинских источников.\n")
+            self._set_status("Выберите один медицинский документ пациента")
+            return
+
+        primary_path = primary_paths[0] if primary_paths else ""
         if primary_path:
             self._apply_primary_document_path(primary_path, prompt_for_referral=True)
         if epi_path:
