@@ -153,6 +153,114 @@ class ActionsCreationOrchestratorMixin:
             except Exception:
                 pass
 
+    def _clear_output_selections_for_print_retry(
+        self,
+        *,
+        selected_medical: List[str],
+        selected_diaries: bool,
+    ) -> None:
+        """Clear already-created outputs so print retry cannot regenerate duplicates."""
+        output_vars = getattr(self, "output_vars", {})
+        if not isinstance(output_vars, dict):
+            return
+        changed = False
+        for kind in selected_medical:
+            var = output_vars.get(kind)
+            if var is not None:
+                try:
+                    var.set(False)
+                    changed = True
+                except Exception:
+                    pass
+        if selected_diaries:
+            var = output_vars.get("diaries")
+            if var is not None:
+                try:
+                    var.set(False)
+                    changed = True
+                except Exception:
+                    pass
+        if changed and hasattr(self, "_redraw_selection_controls"):
+            try:
+                self._redraw_selection_controls()
+            except Exception:
+                pass
+
+    def _set_pending_print_retry_files(self, paths: List[Path]) -> None:
+        pending: List[Path] = []
+        seen: set[str] = set()
+        for value in paths:
+            path = Path(value)
+            key = str(path)
+            if key in seen or not path.exists() or not path.is_file():
+                continue
+            seen.add(key)
+            pending.append(path)
+        self._pending_print_retry_files = pending
+
+    def _run_print_files_safely(self, paths: List[Path]):
+        """Return a structured print result even if the print backend itself crashes."""
+        from printer_support import PrintResult, print_files
+
+        try:
+            return print_files(paths, self.printer_var.get().strip())
+        except Exception as exc:
+            return PrintResult([], [f"Сбой подсистемы печати: {exc}"])
+
+    def _retry_pending_print_if_requested(
+        self,
+        *,
+        print_after: bool,
+        selected_medical: List[str],
+        selected_diaries: bool,
+    ) -> bool:
+        """Retry only saved files when the previous print attempt was incomplete."""
+        if not print_after or selected_medical or selected_diaries:
+            return False
+        pending = [
+            Path(path)
+            for path in getattr(self, "_pending_print_retry_files", [])
+            if Path(path).exists() and Path(path).is_file()
+        ]
+        self._pending_print_retry_files = pending
+        if not pending:
+            return False
+
+        if not self.printer_var.get().strip() and not self._select_default_printer_sync():
+            messagebox.showwarning(
+                "Принтер не выбран",
+                "Документы уже сохранены. Выберите принтер и нажмите кнопку печати ещё раз — "
+                "повторно создавать документы не нужно.",
+            )
+            self._set_status("Печать ожидает повторной попытки")
+            return True
+
+        self._set_status("Повторно отправляю сохранённые документы на печать...")
+        try:
+            self.root.update_idletasks()
+        except Exception:
+            pass
+        result = self._run_print_files_safely(pending)
+        printed = {Path(path) for path in result.printed_files}
+        remaining = [path for path in pending if path not in printed]
+        self._set_pending_print_retry_files(remaining)
+
+        if result.errors:
+            messagebox.showwarning(
+                "Печать снова не завершена",
+                "Документы уже сохранены и повторно не создавались. "
+                "Не удалось отправить на печать:\n\n"
+                + "\n".join(result.errors[:10])
+                + "\n\nИсправьте принтер и нажмите кнопку печати ещё раз.",
+            )
+            self._set_status(f"Печать не завершена: ожидают повтора {len(self._pending_print_retry_files)} файл(ов)")
+            self._log("\n⚠️ Повторная печать завершилась с ошибками; генерация документов не запускалась.\n")
+        else:
+            self._pending_print_retry_files = []
+            self._set_status("Готово: сохранённые документы отправлены на печать")
+            self._log("\n✅ Повторная печать сохранённых документов отправлена без повторной генерации.\n")
+        return True
+
     def _ensure_staff_profile_for_generation(self) -> bool:
         """Fail closed before creating documents with unconfirmed staff names."""
         is_configured = getattr(self, "_staff_profile_is_configured", None)
@@ -188,6 +296,12 @@ class ActionsCreationOrchestratorMixin:
     def create_selected_outputs(self, *, print_after: bool = False) -> None:
         selected_medical = self.selected_medical_docs()
         selected_diaries = self.diaries_selected()
+        if self._retry_pending_print_if_requested(
+            print_after=print_after,
+            selected_medical=selected_medical,
+            selected_diaries=selected_diaries,
+        ):
+            return
         if not selected_medical and not selected_diaries:
             messagebox.showwarning("Ничего не выбрано", "Отметьте хотя бы один документ или «Дневники наблюдения».")
             return
@@ -430,6 +544,11 @@ class ActionsCreationOrchestratorMixin:
         if diary_result is not None:
             created_files.extend(list(diary_result.created_files))
 
+        # Any newly saved set supersedes an older print-retry queue. This keeps
+        # retry patient-scoped and prevents an old set from being printed later.
+        if created_files:
+            self._pending_print_retry_files = []
+
         print_result = None
         if print_after and errors:
             # Never auto-print an incomplete selected set. The successful files
@@ -439,15 +558,29 @@ class ActionsCreationOrchestratorMixin:
             self._log("\n⚠️ Автоматическая печать отменена: комплект создан не полностью.\n")
         elif print_after:
             self._set_status("Отправляю документы на печать...")
-            self.root.update_idletasks()
-            from printer_support import print_files
-            print_result = print_files(created_files, self.printer_var.get().strip())
+            try:
+                self.root.update_idletasks()
+            except Exception:
+                pass
+            print_result = self._run_print_files_safely(created_files)
             if print_result.errors:
+                printed = {Path(path) for path in print_result.printed_files}
+                pending = [path for path in created_files if path not in printed]
+                self._set_pending_print_retry_files(pending)
+                self._clear_output_selections_for_print_retry(
+                    selected_medical=selected_medical,
+                    selected_diaries=selected_diaries,
+                )
                 messagebox.showwarning(
                     "Создано, но печать с ошибками",
                     "Файлы сохранены, но часть документов не удалось отправить на печать:\n\n"
                     + "\n".join(print_result.errors[:10])
+                    + "\n\nУже созданные пункты сняты с выбора. Исправьте принтер и снова нажмите "
+                    "«Создать, сохранить, распечатать» — программа повторит только печать "
+                    "неотправленных файлов, без создания копий."
                 )
+            else:
+                self._pending_print_retry_files = []
 
         creation_report = self._write_creation_report(
             selected_medical=selected_medical,
@@ -480,6 +613,10 @@ class ActionsCreationOrchestratorMixin:
         if errors:
             self._set_status("Готово частично: доступные документы сохранены")
             self._log("\n⚠️ Готово частично: доступные документы сохранены.{}\n".format(" Папка результата открыта." if opened_folder else ""))
+        elif print_result is not None and print_result.errors:
+            pending_count = len(getattr(self, "_pending_print_retry_files", []))
+            self._set_status(f"Файлы сохранены; печать не завершена: ожидают повтора {pending_count} файл(ов)")
+            self._log("\n⚠️ Файлы сохранены, но печать не завершена; доступен безопасный повтор без генерации копий.\n")
         else:
             self._set_status("Готово: файлы сохранены")
             self._log("\n✅ Готово: файлы сохранены.{}\n".format(" Папка результата открыта." if opened_folder else ""))
