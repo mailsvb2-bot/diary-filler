@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "base_sha": "f8741c1d607bfe9ccb2b411ee268c329bddd5f1a",
-  "reason": "Explicit fix for exported primary documents whose patient FIO is a standalone demographic-header line without an FIO label, plus the visible application version bump to v1.4.22. The parser accepts only a tightly-bound name followed by an explicit birth/age field and does not infer names from titles or signatures.",
+  "base_sha": "2e4332e4a6ddfc45ffd2fa3f90b68afb7cf63065",
+  "reason": "Explicit production crash fix: FilesMixin._primary_type_from_parsed_data is called as a bound method during source loading but lacked @staticmethod, causing 'takes 1 positional argument but 2 were given'. Also bumps the visible app version to v1.4.23 so the corrected installer cannot be confused with v1.4.22.",
   "approved_blobs": {
-    "app_config.py": "7c29f067a0ffcf1ca5d6b69f03bbd408c02a40f7",
-    "medical_parser_demographics.py": "56db8cfe8d8362a196eb2649286f6f0733fe0228"
+    "app_config.py": "281e2956a49a7bd8569e768bd627702cec862bd0",
+    "files_mixin.py": "a8ef29a04df3333df6ec74a3209a98b85343f020"
   }
 }
