@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "f8741c1d607bfe9ccb2b411ee268c329bddd5f1a",
-  "reason": "Fix the real standalone-FIO primary-document failure reproduced from the user screenshot and build a visibly distinct v1.4.22 release. The parser recovers FIO only from a strict demographic header followed by explicit birth/age data, with doctor-title false-positive coverage.",
+  "baseline_ref": "2e4332e4a6ddfc45ffd2fa3f90b68afb7cf63065",
+  "reason": "Fix the production source-load TypeError caused by FilesMixin._primary_type_from_parsed_data being bound incorrectly, add a regression that calls it through a CombinedMedicalDiaryApp instance, and produce a distinct v1.4.23 release.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -15,18 +15,18 @@
     "ci_gate_lock"
   ],
   "approved_blobs": {
-    ".github/workflows/release.yml": "a908576813fe33b12f8eb728822851eb4904a9d8",
-    ".github/workflows/windows-build.yml": "99db380895f2077bddccd36e1f28a819e7a13b44",
-    "BUILD_WINDOWS_INSTALLER.bat": "2189e96375d762d5954f84f7fb53e78dbf3fe192",
-    "app_config.py": "7c29f067a0ffcf1ca5d6b69f03bbd408c02a40f7",
-    "installer/MedicalDiaryAutofill.iss": "ebe412c0f0e03d2e6dee1a98b5323bfc41155693",
-    "medical_parser_demographics.py": "56db8cfe8d8362a196eb2649286f6f0733fe0228",
-    "prod_audit.py": "fdd11701b45ab5f193d276f45fb9f4e3999b4905",
-    "pyproject.toml": "da21fab14745d5b7c51d6b020f381b7ef559a4bd",
-    "release_check.py": "826400676f20b723c03db17dd28124b528de7a0c",
-    "smoke_combined_part03_medical_parser_manual.py": "a70c8f590210c24bec9ef392cd555f8947818907",
-    "tools/ci_gate_lock.py": "fbb321ec3907a715482fee102a581eb1cc3a6f56",
-    "version_info.txt": "28cd4943f7b3e92854a73228c36d43210f1076bc",
-    "tools/document_mechanics_change_approval.json": "80d5c6951f8d600931bb2a96def749f39ddf1f14"
+    ".github/workflows/release.yml": "d5c19ac78683d0511d39fc63baf50ace7b137d58",
+    ".github/workflows/windows-build.yml": "735013a896df594e0e32649bb16808f0d7adaf26",
+    "BUILD_WINDOWS_INSTALLER.bat": "4ec6c582e88cb993a9360bfe56d819ef0b01cc95",
+    "app_config.py": "281e2956a49a7bd8569e768bd627702cec862bd0",
+    "files_mixin.py": "a8ef29a04df3333df6ec74a3209a98b85343f020",
+    "installer/MedicalDiaryAutofill.iss": "976cb9e079b7d075d1a7406c6282f19da3d71464",
+    "prod_audit.py": "ab0075f99678cbb29fdb99ae2615751a77772042",
+    "pyproject.toml": "f6225b01647d0a7e5d850d2646fc10e453932a2d",
+    "release_check.py": "cd0b593ab70bbebda7885ca2834474a26264e157",
+    "smoke_combined_part02_ui_parser_regressions.py": "ff68649e99a401c4c86b5753a32c66f848d4b88c",
+    "tools/ci_gate_lock.py": "0477d35a158e00b003eb84692ab0e4e1a21c35c2",
+    "version_info.txt": "f0a053f24ab08ea973491fbcd9f19ef8eb9fefb9",
+    "tools/document_mechanics_change_approval.json": "27b9459e898a632dca8974b2818fab849ad8546b"
   }
 }
