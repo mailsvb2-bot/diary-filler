@@ -150,6 +150,10 @@ assert sick_leave_vk_roundtrip.has_treatment_section is True
 assert sick_leave_vk_roundtrip.sick_leave_vk_date == manual_data.sick_leave_vk_date, sick_leave_vk_roundtrip.sick_leave_vk_date
 assert sick_leave_vk_roundtrip.sick_leave_vk_protocol_number == manual_data.sick_leave_vk_protocol_number, sick_leave_vk_roundtrip.sick_leave_vk_protocol_number
 assert sick_leave_vk_roundtrip.sick_leave_vk_protocol_date == manual_data.sick_leave_vk_protocol_date, sick_leave_vk_roundtrip.sick_leave_vk_protocol_date
+# Filename-aware final classification must clear provisional ВК/МСЭ metadata.
+assert sick_leave_vk_roundtrip.vk_date == "", sick_leave_vk_roundtrip.vk_date
+assert sick_leave_vk_roundtrip.vk_protocol_number == "", sick_leave_vk_roundtrip.vk_protocol_number
+assert sick_leave_vk_roundtrip.vk_protocol_date == "", sick_leave_vk_roundtrip.vk_protocol_date
 
 rvk_roundtrip = service.parse_primary_document(rvk_path)
 assert rvk_roundtrip.input_document_kind == "акт для РВК", rvk_roundtrip.input_document_kind
@@ -186,9 +190,13 @@ for source_name, source_path in _source_target_cases:
             source_name,
             source_data.diagnosis,
         )
-        source_data.case_number = source_data.case_number or manual_data.case_number
-        source_data.admission_occurrence = (
-            source_data.admission_occurrence or manual_data.admission_occurrence
+        assert source_data.case_number == manual_data.case_number, (
+            source_name,
+            source_data.case_number,
+        )
+        assert source_data.admission_occurrence == manual_data.admission_occurrence, (
+            source_name,
+            source_data.admission_occurrence,
         )
 
         if target_kind == "commission":
@@ -240,6 +248,18 @@ class _UniversalSourceDropProbe(DragDropMixin):
 universal_drop_probe = _UniversalSourceDropProbe()
 assert universal_drop_probe._classify_dropped_file(str(discharge_path)) == "primary"
 assert universal_drop_probe._classify_dropped_file(str(epi)) == "epi"
+
+# A standalone ЭПИ may legitimately carry demographics and a diagnosis. Those
+# patient-card facts must not make it replace the main medical source.
+rich_epi = OUT / "ЭПИ Иванов.docx"
+rich_epi_doc = Document()
+rich_epi_doc.add_paragraph("ЭПИ")
+rich_epi_doc.add_paragraph("Ф.И.О.: Иванов Иван Иванович")
+rich_epi_doc.add_paragraph("Дата рождения: 01.01.1980")
+rich_epi_doc.add_paragraph("Диагноз: F41.2 тест")
+rich_epi_doc.add_paragraph("Эпидемиологический анамнез без особенностей.")
+rich_epi_doc.save(rich_epi)
+assert universal_drop_probe._classify_dropped_file(str(rich_epi)) == "epi"
 
 # The program must be able to consume its own generated admission-doctor DOCX
 # as the next source without losing the hospitalization date from its title.

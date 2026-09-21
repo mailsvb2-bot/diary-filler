@@ -218,6 +218,8 @@ assert birth_only_logic._popup_birth_override == "1985"
 assert birth_only_logic.patient_name_var.get() == "Свое имя файла"
 assert _main_module.CombinedMedicalDiaryApp._normalize_birth_popup_value("2999") == ""
 assert _main_module.CombinedMedicalDiaryApp._normalize_birth_popup_value("1980 г.р.") == "1980"
+assert _main_module.CombinedMedicalDiaryApp._normalize_birth_popup_value("1980 г.") == "1980"
+assert _main_module.CombinedMedicalDiaryApp._normalize_birth_popup_value("1980 год") == "1980"
 
 # Discharge popup owns the explicit episode-occurrence fact. It must ask even
 # when every other discharge requirement is already complete, and store the

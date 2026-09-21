@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "d591d3d16107f09dfce92ba18caf13a4a07e38bd",
+  "reason": "Close unresolved universal-source review defects with exact regressions for episode-date context, standalone EPI routing, year-only birth input, nearest patient FIO, custom RVK names, final VK metadata isolation, and source-owned case/occurrence facts.",
+  "required_evidence": [
+    "document_mechanics_guard",
+    "full_patient_replay",
+    "golden_docx",
+    "staff_profile_regression",
+    "gender_generation_matrix",
+    "desktop_intake_contract",
+    "intake_lifecycle_regression",
+    "packaged_desktop_intake_e2e",
+    "installer_uninstall_smoke",
+    "ci_gate_lock"
+  ],
+  "approved_blobs": {
+    "dialog_expert.py": "bcba45bb3182da1c5acea73eed1d527d7286bf37",
+    "dnd_mixin.py": "fbd195354d9330705dc45e95d3b43fd8fb63a64d",
+    "medical_parser_blocks.py": "9b059f3325cbeeceddd21686fa476ae466172f09",
+    "medical_parser_core.py": "5d2beaafe3bdbe9477c6aa8c8e86d33e465698c0",
+    "medical_parser_demographics.py": "ba46f671e7559f6d90a96a06cbf3af44f2fe7203",
+    "smoke_combined_part02_ui_parser_regressions.py": "d412f8723c3c9594b53bb5f005c8b7021ca50dbe",
+    "smoke_combined_part03_medical_parser_manual.py": "6c5ac19ab0a4f7e2809b9c6b36f49d562cfcfe2f",
+    "smoke_combined_part04_medical_generation.py": "66b6a7e0a1bd0bbaeba7ddb8902990f4f0d7ad56",
+    "tools/document_mechanics_change_approval.json": "48d32d20d048c6b3a6ed0be46ffcfa30fc2701ca"
+  }
+}

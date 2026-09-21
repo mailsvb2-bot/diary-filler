@@ -104,7 +104,9 @@ class MedicalParserBlocksMixin:
 
         # Самый сильный источник: период именно текущего пребывания/обследования.
         period_re = re.compile(
-            rf"(?i)(?:находил(?:ся|ась)?|находится)\s+[^\n]{{0,220}}?\bс\s+({date_token})\s+\bпо\s+({date_token})"
+            rf"(?i)(?:находил(?:ся|ась)?|находится)\s+"
+            rf"[^\n]{{0,100}}?\b(?:лечени\w*|обследован\w*|стационар\w*)\b"
+            rf"[^\n]{{0,120}}?\bс\s+({date_token})\s+\bпо\s+({date_token})"
         )
         match = period_re.search(value)
         if match:
@@ -118,19 +120,8 @@ class MedicalParserBlocksMixin:
         admission = ""
         discharge = ""
 
-        # ВК по больничному и некоторые сторонние формы указывают только
-        # начало текущего лечения: «Находится на лечении с 10.06.2026».
-        # Это надёжная дата поступления, но не источник даты выписки.
-        current_treatment = re.search(
-            rf"(?i)(?:находил(?:ся|ась)?|находится)\s+[^\n]{{0,180}}?\bс\s+({date_token})",
-            value,
-        )
-        if current_treatment:
-            admission = norm(current_treatment.group(1))
-            if admission:
-                return admission, ""
-
-        # Явные подписи безопаснее любых дат внутри анамнеза.
+        # Явные подписи безопаснее любых свободных фраз внутри анамнеза и
+        # поэтому имеют приоритет над одиночным «Находится ... с <дата>».
         for pattern in (
             rf"(?i)дата\s+(?:поступления|госпитализации)\s*[:.-]?\s*({date_token})",
             rf"(?i)поступил(?:а)?\s+в\s+стационар\s*[:.-]?\s*({date_token})",
@@ -149,6 +140,20 @@ class MedicalParserBlocksMixin:
                 discharge = norm(match.group(1))
                 if discharge:
                     break
+
+        # Некоторые формы указывают только начало текущего лечения:
+        # «Находится на лечении с 10.06.2026». Принимаем такую дату только
+        # при явном контексте лечения/обследования/стационара. Формулировки
+        # вроде «Находится на учёте у психиатра с ...» не относятся к эпизоду.
+        if not admission:
+            current_treatment = re.search(
+                rf"(?i)(?:находил(?:ся|ась)?|находится)\s+"
+                rf"[^\n]{{0,100}}?\b(?:лечени\w*|обследован\w*|стационар\w*)\b"
+                rf"[^\n]{{0,120}}?\bс\s+({date_token})",
+                value,
+            )
+            if current_treatment:
+                admission = norm(current_treatment.group(1))
 
         # В заголовке выписного эпикриза первая дата — это дата выписки.
         if "выписной эпикриз" in kind and not discharge:
@@ -236,7 +241,7 @@ class MedicalParserBlocksMixin:
                         data.rvk_act_number = clean_value(match.group(1)).strip(" .,:;")
                 if not data.rvk_military_commissariat and "военного комиссариата" in normalized:
                     match = re.search(
-                        r"(?i)военного\s+комиссариата\s+(.+?)(?:[.;]|$)",
+                        r"(?i)военного\s+комиссариата\s+(.+?)\s*$",
                         line,
                     )
                     if match:

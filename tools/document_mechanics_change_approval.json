@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "base_sha": "3c9b24ec1d15f382770340d9435fbea45b3dee90",
+  "reason": "Explicit universal medical-source parser and popup hardening for reviewed P1 defects: hospitalization date context, year-only birth values, nearest patient FIO, and final source metadata isolation.",
+  "approved_blobs": {
+    "dialog_expert.py": "bcba45bb3182da1c5acea73eed1d527d7286bf37",
+    "medical_parser_blocks.py": "9b059f3325cbeeceddd21686fa476ae466172f09",
+    "medical_parser_core.py": "5d2beaafe3bdbe9477c6aa8c8e86d33e465698c0",
+    "medical_parser_demographics.py": "ba46f671e7559f6d90a96a06cbf3af44f2fe7203"
+  }
+}

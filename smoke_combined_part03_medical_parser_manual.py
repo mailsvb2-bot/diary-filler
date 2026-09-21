@@ -88,6 +88,36 @@ assert universal_discharge.discharge_date == "11.06.2026", universal_discharge.d
 assert universal_discharge.case_number == "К-900", universal_discharge.case_number
 assert universal_discharge.treatment_plan == "терапия", universal_discharge.treatment_plan
 
+# Historical observation dates must never become the current admission date.
+# An explicit admission label outranks unrelated «Находится ... с ...» prose.
+_psych_account_with_admission = service.parser.parse_text(
+    "Совместный осмотр\n"
+    "Находится на учёте у психиатра с 01.02.2020\n"
+    "Дата поступления: 10.06.2026\n"
+    "Диагноз: F41.2 тест"
+)
+assert _psych_account_with_admission.admission_date == "10.06.2026", _psych_account_with_admission.admission_date
+_psych_account_only = service.parser.parse_text(
+    "Совместный осмотр\n"
+    "Находится на учёте у психиатра с 01.02.2020\n"
+    "Диагноз: F41.2 тест"
+)
+assert _psych_account_only.admission_date == "", _psych_account_only.admission_date
+_current_treatment_date = service.parser.parse_text(
+    "ВК больничный\n"
+    "Находится на лечении в стационаре с 10.06.2026\n"
+    "Диагноз: F41.2 тест"
+)
+assert _current_treatment_date.admission_date == "10.06.2026", _current_treatment_date.admission_date
+
+# Custom military commissariat names may contain internal periods.
+_custom_rvk = service.parser.parse_text(
+    "О СОСТОЯНИИ ЗДОРОВЬЯ ГРАЖДАНИНА № 5\n"
+    "Госпитализируется по направлению военного комиссариата г. Дзержинска.\n"
+    "Диагноз: F41.2 тест"
+)
+assert _custom_rvk.rvk_military_commissariat == "г. Дзержинска", _custom_rvk.rvk_military_commissariat
+
 # Real exported primary documents may print the patient FIO as a standalone
 # header line without any «Ф.И.О.» label. This exact layout is taken from the
 # production failure reported by the user.
@@ -110,6 +140,16 @@ _bare_header_initials = service.parser.parse_text(
     "Диагноз: F20.0 Тестовый диагноз"
 )
 assert _bare_header_initials.fio == "Новичихин С. Е.", _bare_header_initials.fio
+
+# If a standalone doctor name precedes the patient, bind the birth row to the
+# nearest plausible name instead of the first name in a broad look-ahead.
+_nearest_bare_header_fio = service.parser.parse_text(
+    "Можарова Елена Александровна\n"
+    "Волгин Дмитрий Александрович\n"
+    "Дата рождения: 14.08.2006\n"
+    "Диагноз: F31.6 Тестовый диагноз"
+)
+assert _nearest_bare_header_fio.fio == "Волгин Дмитрий Александрович", _nearest_bare_header_fio.fio
 
 # A doctor name in the title must never become the patient name.
 _title_doctor_only = service.parser.parse_text(

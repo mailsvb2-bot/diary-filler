@@ -2,6 +2,29 @@
 
 ## v1.4.23-word-safety
 
+- Исправлен production-crash при загрузке медицинского источника: `FilesMixin._primary_type_from_parsed_data() takes 1 positional argument but 2 were given`.
+- `_primary_type_from_parsed_data` закреплён как `@staticmethod`; regression вызывает его через настоящий `CombinedMedicalDiaryApp`, то есть тем же способом, которым падал установленный интерфейс.
+- Сохранено универсальное определение направления/первичного осмотра/приёмного покоя/выписного/совместного/ВК/РВК.
+- Версия программы и installer: `1.4.23` / `v1.4.23-word-safety`; installer: `MedicalDiaryAutofill-Setup-1.4.23.exe`.
+- Release PR #171 и последующее method-binding hardening прошли полный Windows production-контур.
+
+## v1.4.22-word-safety
+
+- Исправлено распознавание реальных Word-экспортов, где Ф.И.О. пациента стоит отдельной строкой без метки `Ф.И.О.`, а следующая строка содержит дату/год рождения или возраст.
+- Поддержан строгий вариант `Фамилия И. О.`.
+- Имя врача из заголовка не принимается за пациента; восстановление Ф.И.О. остаётся evidence-bound и не угадывает личность по имени файла.
+- Добавлен regression на реальный layout `Волгин Дмитрий Александрович → Дата рождения: 14.08.2006`.
+- Версия программы и installer: `1.4.22` / `v1.4.22-word-safety`; installer: `MedicalDiaryAutofill-Setup-1.4.22.exe`.
+- Release PR #170 и post-merge Windows CI прошли parser, GUI, EXE, packaged intake, installer и install/uninstall smoke.
+
+## v1.4.21-word-safety
+
+- Универсальный медицинский источник и source→output контур были вынесены в отдельную различимую сборку после серии parser/round-trip исправлений.
+- Версия программы и installer: `1.4.21` / `v1.4.21-word-safety`.
+- Эта версия была быстро заменена `v1.4.22`, потому что standalone Ф.И.О. без явной метки ещё не распознавался во всех реальных экспортированных DOCX.
+
+## v1.4.20-word-safety
+
 - Исправлена гонка Microsoft Word после генерации/чтения legacy `.doc`: скрытый COM-инстанс больше не может закрыть Word, который пользователь успел открыть.
 - Перед любым `Word.Quit()` программа повторно доказывает ownership: automation-HWND должен отличаться от ранее открытого пользовательского Word, `UserControl` должен оставаться `False`, окно — скрытым, а `Documents.Count` — нулевым.
 - Проверка ownership выполняется повторно после короткого grace-периода, чтобы поймать сценарий «пользователь открыл Word сразу после генерации/конвертации».
@@ -10,7 +33,7 @@
 - Добавлена regression-проверка всех опасных состояний ownership; document-mechanics guard и production-safety gate проходят.
 - Word-fix PR #151 exact-head и post-merge Windows CI прошли полный production-контур: golden DOCX/full patient replay, дневники, performance, EXE, packaged intake, installer install/uninstall.
 - Медицинские формулировки, parser/renderer, структура DOCX и правила дневников не изменялись.
-- Версия программы и installer: `1.4.23` / `v1.4.23-word-safety`; installer: `MedicalDiaryAutofill-Setup-1.4.23.exe`.
+- Версия программы и installer: `1.4.20` / `v1.4.20-word-safety`; installer: `MedicalDiaryAutofill-Setup-1.4.20.exe`.
 
 # Release notes — v1.4.19-super-production
 

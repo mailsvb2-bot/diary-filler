@@ -212,6 +212,7 @@ class DragDropMixin:
         # Medical patient documents win over auxiliary ЭПИ classification.
         # In particular, «Выписной эпикриз.docx» must never be routed into
         # the standalone ЭПИ input merely because «эпикриз» starts with «эпи».
+        generic_patient_card = False
         try:
             data = self._parse_primary_document(path)
             kind = (data.input_document_kind or "").lower().replace("ё", "е")
@@ -221,19 +222,24 @@ class DragDropMixin:
             )
             if any(marker in kind for marker in explicit_source_markers):
                 return "primary"
-            # Unknown forms are accepted only when a convincing patient card was
-            # actually recovered. The generic kind fallback alone is insufficient.
-            if data.fio and (data.birth or data.admission_date) and (data.complaints or data.mental_status or data.diagnosis):
-                return "primary"
+            generic_patient_card = bool(
+                data.fio
+                and (data.birth or data.admission_date)
+                and (data.complaints or data.mental_status or data.diagnosis)
+            )
         except Exception:
             pass
 
-        # Once a real patient document has had first refusal, a standalone
-        # auxiliary ЭПИ file must be recognized before diary heuristics. Some
-        # diary-text parsers can legitimately extract prose from an ЭПИ DOCX,
-        # but that does not make it a diary-status source.
+        # An exact standalone ЭПИ label outranks only the generic patient-card
+        # heuristic. Explicit medical forms above (especially «Выписной
+        # эпикриз») still win and remain patient sources.
         if self._looks_like_epi_label(stem_low) or self._looks_like_epi_label(low.strip()):
             return "epi"
+
+        # Unknown forms are accepted only when a convincing patient card was
+        # actually recovered. The generic kind fallback alone is insufficient.
+        if generic_patient_card:
+            return "primary"
 
         try:
             from diary_table import detect_first_month_year_from_docx

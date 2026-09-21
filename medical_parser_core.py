@@ -85,6 +85,26 @@ class MedicalParserCoreMixin:
             data.admission_date = title_date
         if episode_discharge:
             data.discharge_date = episode_discharge
+
+        # parse_text() can only classify by body text. A filename-aware DOCX
+        # decision may select a different final form (for example ВК больничный
+        # instead of ВК на МСЭ). Clear preliminary form-specific requisites so
+        # metadata from the wrong provisional kind cannot leak into UI fields.
+        for field_name in (
+            "commission_date",
+            "commission_number",
+            "vk_date",
+            "vk_protocol_number",
+            "vk_protocol_date",
+            "sick_leave_vk_date",
+            "sick_leave_vk_protocol_number",
+            "sick_leave_vk_protocol_date",
+            "sick_leave_vk_commission_date",
+            "rvk_act_number",
+            "rvk_military_commissariat",
+        ):
+            setattr(data, field_name, "")
+
         # Filename-aware kind detection happens at DOCX level, so repeat the
         # strict metadata pass after the final kind is known.
         self._extract_source_document_metadata(data, text)
