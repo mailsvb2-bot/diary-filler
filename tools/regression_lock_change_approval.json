@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "addada1dc452c3fbcbf094a94dbf76b9c6a94185",
-  "reason": "Cleanup after fully green v1.4.23 source-load crash fix: advance the locked baseline and remove the consumed document-mechanics approval.",
+  "reason": "Prevent recurrence of the v1.4.22 source-load TypeError by adding a production AST audit that rejects class methods lacking self/cls unless explicitly declared staticmethod/classmethod.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -15,6 +15,7 @@
     "ci_gate_lock"
   ],
   "approved_blobs": {
+    "prod_audit.py": "478f77cd21e692dc1c296c8de365ad6a7a01278a",
     "tools/document_mechanics_change_approval.json": "<deleted>"
   }
 }

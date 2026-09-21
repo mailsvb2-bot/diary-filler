@@ -154,6 +154,50 @@ def _assert_version_sync() -> None:
         _fail("Version metadata is not synchronized: " + ", ".join(missing))
 
 
+def _assert_method_binding_contract() -> None:
+    """Reject class methods that accidentally bind an implicit instance argument.
+
+    Production crash #171 came from a method declared with one data argument
+    but invoked through the application instance. Python supplied self plus
+    data and raised at runtime. This AST guard makes that entire bug class a
+    CI failure: ordinary methods must start with self/cls, while no-self
+    helpers must be explicitly marked staticmethod/classmethod.
+    """
+    bad: list[str] = []
+
+    def decorator_name(node: ast.expr) -> str:
+        if isinstance(node, ast.Name):
+            return node.id
+        if isinstance(node, ast.Attribute):
+            return node.attr
+        return ""
+
+    for path in _python_files():
+        source = path.read_text(encoding="utf-8", errors="replace")
+        try:
+            tree = ast.parse(source, filename=path.name)
+        except SyntaxError as exc:
+            _fail(f"Syntax error in {path.name}: {exc}")
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.ClassDef):
+                continue
+            for member in node.body:
+                if not isinstance(member, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    continue
+                decorators = {decorator_name(item) for item in member.decorator_list}
+                if decorators & {"staticmethod", "classmethod"}:
+                    continue
+                positional = [*member.args.posonlyargs, *member.args.args]
+                first = positional[0].arg if positional else ""
+                if first not in {"self", "cls"}:
+                    bad.append(
+                        f"{path.name}:{member.lineno}: {node.name}.{member.name}"
+                        f" must start with self/cls or declare @staticmethod/@classmethod"
+                    )
+    if bad:
+        _fail("Unsafe class-method binding contract:\n" + "\n".join(sorted(bad)))
+
+
 def _assert_architecture_hygiene() -> None:
     py_files = _python_files()
     names = {p.name for p in py_files}
@@ -1226,6 +1270,7 @@ def _assert_quality_100_contract() -> None:
 
 def main() -> None:
     _assert_version_sync()
+    _assert_method_binding_contract()
     _assert_architecture_hygiene()
     _assert_no_import_cycles()
     _assert_no_deleted_module_references()
