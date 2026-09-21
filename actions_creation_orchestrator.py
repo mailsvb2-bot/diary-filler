@@ -11,6 +11,12 @@ import sys
 from app_config import *
 
 
+class _GenerationCommitError(RuntimeError):
+    def __init__(self, cause: Exception, *, rollback_remaining: int = 0):
+        super().__init__(str(cause))
+        self.rollback_remaining = max(0, int(rollback_remaining))
+
+
 class ActionsCreationOrchestratorMixin:
     def _open_result_folder_silent(self, folder: Path) -> bool:
         """Открыть папку результата без дополнительного popup-уведомления."""
@@ -101,18 +107,39 @@ class ActionsCreationOrchestratorMixin:
                     final_diaries.append(commit_one(Path(staged_path), style="underscore"))
                 if diary_result.report_path is not None:
                     final_diary_report = commit_one(Path(diary_result.report_path), style="underscore")
-        except Exception:
+        except Exception as exc:
+            rollback_remaining = 0
             for path in reversed(committed):
                 try:
                     path.unlink()
                 except OSError:
                     pass
+                try:
+                    if path.exists():
+                        rollback_remaining += 1
+                except OSError:
+                    rollback_remaining += 1
+            if rollback_remaining:
+                raise _GenerationCommitError(
+                    exc,
+                    rollback_remaining=rollback_remaining,
+                ) from exc
             raise
 
         if diary_result is not None:
             diary_result.created_files = final_diaries
             diary_result.report_path = final_diary_report
         return final_medical, diary_result
+
+    @staticmethod
+    def _commit_failure_rollback_note(exc: Exception) -> str:
+        remaining = max(0, int(getattr(exc, "rollback_remaining", 0) or 0))
+        if remaining:
+            return (
+                f"Откат завершён не полностью: в папке результата осталось "
+                f"{remaining} файл(ов) этой попытки. Проверьте папку результата перед повторным созданием."
+            )
+        return "Файлы, уже перенесённые этой попыткой, удалены."
 
     def _focus_retry_on_failed_outputs(
         self,
@@ -513,7 +540,7 @@ class ActionsCreationOrchestratorMixin:
                         messagebox.showerror(
                             "Комплект не сохранён",
                             f"Не удалось сохранить подготовленный комплект:\n\n{exc}\n\n"
-                            "Файлы, уже перенесённые этой попыткой, удалены.",
+                            + self._commit_failure_rollback_note(exc),
                         )
                         return
             except Exception as exc:
