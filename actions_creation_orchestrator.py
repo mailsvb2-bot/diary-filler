@@ -114,6 +114,45 @@ class ActionsCreationOrchestratorMixin:
             diary_result.report_path = final_diary_report
         return final_medical, diary_result
 
+    def _focus_retry_on_failed_outputs(
+        self,
+        *,
+        selected_medical: List[str],
+        selected_diaries: bool,
+        created_medical: List[Path],
+        diary_result,
+        errors: List[str],
+    ) -> None:
+        """After partial success, leave only the failed part selected for retry."""
+        if not errors:
+            return
+        output_vars = getattr(self, "output_vars", {})
+        changed = False
+        if created_medical:
+            for kind in selected_medical:
+                var = output_vars.get(kind) if isinstance(output_vars, dict) else None
+                if var is not None:
+                    try:
+                        var.set(False)
+                        changed = True
+                    except Exception:
+                        pass
+        # Diaries remain selected when they were requested but failed. If they
+        # succeeded, clear them too so a later click cannot duplicate them.
+        if selected_diaries and diary_result is not None:
+            var = output_vars.get("diaries") if isinstance(output_vars, dict) else None
+            if var is not None:
+                try:
+                    var.set(False)
+                    changed = True
+                except Exception:
+                    pass
+        if changed and hasattr(self, "_redraw_selection_controls"):
+            try:
+                self._redraw_selection_controls()
+            except Exception:
+                pass
+
     def create_selected_outputs(self, *, print_after: bool = False) -> None:
         selected_medical = self.selected_medical_docs()
         selected_diaries = self.diaries_selected()
@@ -357,7 +396,13 @@ class ActionsCreationOrchestratorMixin:
             created_files.extend(list(diary_result.created_files))
 
         print_result = None
-        if print_after:
+        if print_after and errors:
+            # Never auto-print an incomplete selected set. The successful files
+            # stay saved, but the doctor must see the partial-generation warning
+            # before deciding what to print. Sending paper first and warning
+            # afterwards can create an incomplete physical chart by surprise.
+            self._log("\n⚠️ Автоматическая печать отменена: комплект создан не полностью.\n")
+        elif print_after:
             self._set_status("Отправляю документы на печать...")
             self.root.update_idletasks()
             from printer_support import print_files
@@ -378,11 +423,19 @@ class ActionsCreationOrchestratorMixin:
         )
 
         if errors and created_files:
+            self._focus_retry_on_failed_outputs(
+                selected_medical=selected_medical,
+                selected_diaries=selected_diaries,
+                created_medical=created_medical,
+                diary_result=diary_result,
+                errors=errors,
+            )
             messagebox.showwarning(
                 "Комплект создан частично",
                 "Созданы и сохранены все документы, которые удалось подготовить.\n\n"
                 "Не создано:\n" + "\n".join(errors) +
-                "\n\nИсправьте источник дневников и при необходимости создайте только дневники повторно.",
+                ("\n\nАвтоматическая печать не запускалась, потому что комплект неполный." if print_after else "") +
+                "\n\nУже созданные пункты сняты с выбора. Исправьте источник дневников и повторите создание.",
             )
 
         opened_folder = self._open_output_folder_after_creation(
