@@ -6,6 +6,7 @@
     "ci_gate_lock"
   ],
   "approved_blobs": {
-    "prod_audit.py": "b33247025ecfc9b3e4615c128e1d16e4e02dc682"
+    "prod_audit.py": "b33247025ecfc9b3e4615c128e1d16e4e02dc682",
+    "tools/document_mechanics_change_approval.json": "<deleted>"
   }
 }
