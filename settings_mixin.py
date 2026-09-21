@@ -149,7 +149,8 @@ class SettingsMixin:
                 payload[_STAFF_PROFILE_KEY] = profile
         return payload
 
-    def _save_settings(self) -> None:
+    def _save_settings(self) -> bool:
+        """Atomically persist technical settings and report whether they reached disk."""
         tmp_path = self._settings_path.with_name(self._settings_path.name + ".tmp")
         try:
             self._settings_path.parent.mkdir(parents=True, exist_ok=True)
@@ -158,14 +159,17 @@ class SettingsMixin:
                 encoding="utf-8",
             )
             os.replace(tmp_path, self._settings_path)
+            return True
         except Exception:
-            # Настройки — удобство, не критичная функция. Ошибку не показываем врачу,
-            # но не оставляем рядом битый settings.json.tmp после неудачной записи.
+            # Never leave a partial JSON beside the real settings file. Callers
+            # that promise persistence can now fail closed instead of reporting
+            # "saved" when Windows/antivirus/disk permissions rejected the write.
             try:
                 if tmp_path.exists():
                     tmp_path.unlink()
             except Exception:
                 pass
+            return False
 
     def _staff_profile_defaults(self) -> dict[str, str]:
         return dict(_STAFF_PROFILE_DEFAULTS)
@@ -196,17 +200,23 @@ class SettingsMixin:
         }
         if not all(values.values()):
             return False
+        previous = self._settings.get(_STAFF_PROFILE_KEY)
         self._settings[_STAFF_PROFILE_KEY] = {**values, "configured": True}
-        self._save_settings()
-        return True
+        if self._save_settings():
+            return True
+        if previous is None:
+            self._settings.pop(_STAFF_PROFILE_KEY, None)
+        else:
+            self._settings[_STAFF_PROFILE_KEY] = previous
+        return False
 
     def _desktop_intake_preference(self) -> bool | None:
         value = self._settings.get(_DESKTOP_INTAKE_KEY)
         return value if isinstance(value, bool) else None
 
-    def _set_desktop_intake_preference(self, enabled: bool) -> None:
+    def _set_desktop_intake_preference(self, enabled: bool) -> bool:
         self._settings[_DESKTOP_INTAKE_KEY] = bool(enabled)
-        self._save_settings()
+        return self._save_settings()
 
     @staticmethod
     def _normalize_patient_folder_naming_settings(value) -> dict:
@@ -218,12 +228,19 @@ class SettingsMixin:
         current = self._settings.get(_PATIENT_FOLDER_NAMING_KEY)
         return self._normalize_patient_folder_naming_settings(current)
 
-    def _set_patient_folder_naming_settings(self, *, parts, date_format: str) -> None:
+    def _set_patient_folder_naming_settings(self, *, parts, date_format: str) -> bool:
         normalized = self._normalize_patient_folder_naming_settings(
             {"parts": list(parts), "date_format": date_format}
         )
+        previous = self._settings.get(_PATIENT_FOLDER_NAMING_KEY)
         self._settings[_PATIENT_FOLDER_NAMING_KEY] = normalized
-        self._save_settings()
+        if self._save_settings():
+            return True
+        if previous is None:
+            self._settings.pop(_PATIENT_FOLDER_NAMING_KEY, None)
+        else:
+            self._settings[_PATIENT_FOLDER_NAMING_KEY] = previous
+        return False
 
     def _prompt_patient_folder_naming(self) -> bool:
         import tkinter as tk
@@ -328,10 +345,16 @@ class SettingsMixin:
                     parent=win,
                 )
                 return
-            self._set_patient_folder_naming_settings(
+            if not self._set_patient_folder_naming_settings(
                 parts=parts,
                 date_format=date_format_var.get(),
-            )
+            ):
+                messagebox.showerror(
+                    "Папка пациента",
+                    "Не удалось сохранить настройку на диск. Проверьте доступ к папке настроек Windows и повторите попытку.",
+                    parent=win,
+                )
+                return
             result = True
             win.destroy()
 
@@ -399,6 +422,11 @@ class SettingsMixin:
             department_head=values["department_head"],
             deputy_chief=values["deputy_chief"],
         ):
+            messagebox.showerror(
+                "Сотрудники отделения",
+                "Не удалось сохранить ФИО сотрудников на диск. Документы не будут создаваться с неподтверждёнными данными. Проверьте доступ к папке настроек Windows и повторите попытку.",
+                parent=self.root,
+            )
             return False
         if not first_run:
             messagebox.showinfo(

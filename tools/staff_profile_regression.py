@@ -101,6 +101,31 @@ def _assert_fresh_staff_prompt_has_no_foreign_defaults(root: Path) -> None:
     assert app._effective_staff_profile()["doctor"] == "Орлов Олег Олегович"
 
 
+def _assert_persistence_failure_fails_closed(root: Path) -> None:
+    blocker = root / "blocked-settings-parent"
+    blocker.write_text("not-a-directory", encoding="utf-8")
+
+    app = _SettingsHarness()
+    app._settings_path = blocker / "settings.json"
+    app._settings = {}
+
+    assert not app._set_staff_profile(
+        doctor="Орлов Олег Олегович",
+        department_head="Соколова Светлана Сергеевна",
+        deputy_chief="Кузнецова Кира Константиновна",
+    )
+    assert not app._staff_profile_is_configured(), app._settings
+
+    before = app._patient_folder_naming_settings()
+    assert not app._set_patient_folder_naming_settings(
+        parts=["full_fio", "admission_date"],
+        date_format="full",
+    )
+    assert app._patient_folder_naming_settings() == before, app._settings
+
+    assert app._set_desktop_intake_preference(True) is False
+
+
 def _assert_settings(root: Path) -> None:
     settings = root / "settings.json"
     app = _SettingsHarness()
@@ -233,12 +258,13 @@ def main() -> None:
         root = Path(tmp)
         _assert_name_formatting()
         _assert_settings(root)
+        _assert_persistence_failure_fails_closed(root)
         _assert_fresh_staff_prompt_has_no_foreign_defaults(root)
         _assert_unconfigured_generation_fails_closed()
         _assert_staff_replacement_scope()
         _assert_medical_documents(root)
         _assert_diaries(root)
-    print("STAFF PROFILE REGRESSION OK: fail-closed onboarding + blank fresh defaults + settings + 7 medical documents + production diary")
+    print("STAFF PROFILE REGRESSION OK: fail-closed onboarding + persistence failure rollback + blank fresh defaults + settings + 7 medical documents + production diary")
 
 
 if __name__ == "__main__":

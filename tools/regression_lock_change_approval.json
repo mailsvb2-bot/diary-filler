@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "e70c5cd8909cfb8c31dbbf6900585f3ad8b83857",
-  "reason": "Printing safety hardening: restore the PrintResult runtime constructor, cover the structured print path, retry only already-saved files after printer failure without duplicate generation, and clear print retry state on patient switch.",
+  "reason": "Settings persistence integrity: preserve prior printing hardening while making critical staff/patient-folder settings transactional and reporting printer persistence failure honestly.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -16,10 +16,12 @@
   ],
   "approved_blobs": {
     "actions_creation_orchestrator.py": "c5c570d4883fcecabcbc148e84d938e92a5536c6",
-    "files_mixin.py": "be41b293479ecd08d42a2df060516f6e08d1cc78",
+    "files_mixin.py": "f0b4ec41ff2ae55e0d0423b6adbab5cf166dd1e1",
     "printer_models.py": "4d142106ac06f57f2641bd0c8af81e12e40b2f24",
     "smoke_combined_part01_setup_contracts.py": "e4dc3dc12b9674a6f6146c6b5141cb1987a62350",
     "tests/diagnosis_override_regression.py": "83e112a3bd6617fc04f9206a4593565e8097cc77",
-    "tools/document_mechanics_change_approval.json": "f8597823c85b0e7cbf0545690d32fc5422d74fb3"
+    "tools/document_mechanics_change_approval.json": "1aaf79d32c9c68eda29199b93a369f6bfea4290a",
+    "settings_mixin.py": "cfab5d4ac2c671a087ddae2626b8596e1a1c7c9d",
+    "tools/staff_profile_regression.py": "2a882ab9d65cc01caf0e3216866779f93b0963bd"
   }
 }
