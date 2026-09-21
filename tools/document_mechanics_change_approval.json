@@ -1,8 +1,9 @@
 {
   "schema_version": 1,
-  "base_sha": "39a2a03852cc8d8a72a75190adb81ac59558400c",
-  "reason": "Release identity bump only: app_config.py changes the visible application version from v1.4.20-word-safety to v1.4.21-word-safety; no medical parsing, rendering, popup, or generation behavior changes.",
+  "base_sha": "f8741c1d607bfe9ccb2b411ee268c329bddd5f1a",
+  "reason": "Explicit fix for exported primary documents whose patient FIO is a standalone demographic-header line without an FIO label, plus the visible application version bump to v1.4.22. The parser accepts only a tightly-bound name followed by an explicit birth/age field and does not infer names from titles or signatures.",
   "approved_blobs": {
-    "app_config.py": "374debec74a430dde845b75f201dbe7cb39b6bfc"
+    "app_config.py": "7c29f067a0ffcf1ca5d6b69f03bbd408c02a40f7",
+    "medical_parser_demographics.py": "ef03bf32c72e33243d5a53c7b68644a50bd1083b"
   }
 }
