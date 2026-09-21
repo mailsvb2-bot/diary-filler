@@ -96,15 +96,22 @@ class MedicalParserDemographicsMixin:
             r"план\s+обследования|эпидемиологическ)"
         )
 
-        for index, line in enumerate(lines[:60]):
+        header_lines: list[str] = []
+        for line in lines[:60]:
             if hard_stop_re.search(line):
                 break
-            candidate = clean_value(line).strip(" ,;:")
-            if not (full_name_re.fullmatch(candidate) or initials_re.fullmatch(candidate)):
+            header_lines.append(line)
+
+        # Bind the birth row to the nearest preceding plausible name. This
+        # prevents a standalone doctor name above the patient from winning just
+        # because the same birth marker is still inside a broad look-ahead.
+        for birth_index, line in enumerate(header_lines):
+            if not birth_marker_re.search(line):
                 continue
-            following = lines[index + 1 : min(len(lines), index + 4)]
-            if any(birth_marker_re.search(item) for item in following):
-                return candidate
+            for candidate_index in range(birth_index - 1, max(-1, birth_index - 4), -1):
+                candidate = clean_value(header_lines[candidate_index]).strip(" ,;:")
+                if full_name_re.fullmatch(candidate) or initials_re.fullmatch(candidate):
+                    return candidate
         return ""
 
     @staticmethod
