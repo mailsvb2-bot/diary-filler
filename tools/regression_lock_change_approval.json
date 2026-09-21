@@ -3,6 +3,15 @@
   "baseline_ref": "addada1dc452c3fbcbf094a94dbf76b9c6a94185",
   "reason": "Prevent recurrence of the v1.4.22 source-load TypeError by adding a production AST audit that rejects class methods lacking self/cls unless explicitly declared staticmethod/classmethod.",
   "required_evidence": [
+    "document_mechanics_guard",
+    "full_patient_replay",
+    "golden_docx",
+    "staff_profile_regression",
+    "gender_generation_matrix",
+    "desktop_intake_contract",
+    "intake_lifecycle_regression",
+    "packaged_desktop_intake_e2e",
+    "installer_uninstall_smoke",
     "ci_gate_lock"
   ],
   "approved_blobs": {
