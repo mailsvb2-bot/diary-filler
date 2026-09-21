@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "e70c5cd8909cfb8c31dbbf6900585f3ad8b83857",
-  "reason": "Desktop intake transfer safety: preserve prior settings/printing hardening while making patient-folder source transfer transactional, cleaning orphan folders after failed moves, and accepting verified copies when only source cleanup is blocked.",
+  "reason": "User-journey intake hardening: preserve prior printing/settings fixes while making patient-source transfer transactional, cleaning failed empty folders, and accepting verified copies when the original remains locked.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
