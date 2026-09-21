@@ -1,6 +1,7 @@
 """Headless contract checks for the optional desktop patient-folder workflow."""
 from __future__ import annotations
 
+import json
 import shutil
 import sys
 import tempfile
@@ -19,6 +20,7 @@ import startup
 import main as app_main
 import medical_docx_blocks
 from medical_service import MedicalDocumentService
+from settings_mixin import SettingsMixin
 
 
 def _assert_naming_contract() -> None:
@@ -37,6 +39,76 @@ def _assert_naming_contract() -> None:
         settings={"parts": ["full_fio", "admission_discharge_dates"], "date_format": "short"},
     )
     assert custom == "Петров Пётр Петрович 03.09.26 — 19.09.26", custom
+
+
+def _assert_folder_naming_settings_persist_without_patient_data() -> None:
+    class SettingsHarness(SettingsMixin):
+        pass
+
+    with tempfile.TemporaryDirectory() as tmp:
+        settings_path = Path(tmp) / "settings.json"
+        app = SettingsHarness()
+        app._settings_path = settings_path
+        app._settings = {}
+        app._set_patient_folder_naming_settings(
+            parts=["full_fio", "discharge_date"],
+            date_format="full",
+        )
+        payload = json.loads(settings_path.read_text(encoding="utf-8"))
+        assert payload["patient_folder_naming"] == {
+            "parts": ["full_fio", "discharge_date"],
+            "date_format": "full",
+        }, payload
+        serialized = settings_path.read_text(encoding="utf-8")
+        assert "Иванов" not in serialized and "F20.0" not in serialized
+
+        restored = SettingsHarness()
+        restored._settings_path = settings_path
+        restored._settings = restored._load_settings()
+        assert restored._patient_folder_naming_settings() == {
+            "parts": ["full_fio", "discharge_date"],
+            "date_format": "full",
+        }
+
+
+def _assert_intake_uses_saved_folder_naming() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        source = Path(tmp) / "patient.docx"
+        source.write_bytes(b"fixture")
+        captured: list[dict | None] = []
+
+        class Root:
+            def deiconify(self): pass
+            def lift(self): pass
+            def focus_force(self): pass
+
+        class App:
+            root = Root()
+            def _patient_folder_naming_settings(self):
+                return {"parts": ["full_fio", "discharge_date"], "date_format": "full"}
+            def _apply_primary_document_path(self, path, prompt_for_referral=True):
+                self.applied = (path, prompt_for_referral)
+
+        original_quiet = startup.desktop_intake_file_is_quiet
+        original_classifier = startup.desktop_intake_is_primary_document
+        original_prepare = startup.desktop_intake_prepare_patient_folder
+        try:
+            startup.desktop_intake_file_is_quiet = lambda _path: True  # type: ignore[assignment]
+            startup.desktop_intake_is_primary_document = lambda _path: True  # type: ignore[assignment]
+            def fake_prepare(path, **kwargs):
+                captured.append(kwargs.get("folder_settings"))
+                return Path(path)
+            startup.desktop_intake_prepare_patient_folder = fake_prepare  # type: ignore[assignment]
+            app = App()
+            assert startup._desktop_process_primary(app, source)
+            assert captured == [
+                {"parts": ["full_fio", "discharge_date"], "date_format": "full"}
+            ], captured
+            assert app.applied == (str(source), True)
+        finally:
+            startup.desktop_intake_file_is_quiet = original_quiet  # type: ignore[assignment]
+            startup.desktop_intake_is_primary_document = original_classifier  # type: ignore[assignment]
+            startup.desktop_intake_prepare_patient_folder = original_prepare  # type: ignore[assignment]
 
 
 def _assert_primary_detection_contract() -> None:
@@ -137,9 +209,13 @@ def _assert_canonical_primary_parser_contract() -> None:
         doc.save(discharge)
         assert startup.desktop_intake_is_primary_document(discharge), "discharge source was rejected"
 
-        discharge_info = startup._desktop_patient_folder_info(discharge)
+        discharge_info = startup._desktop_patient_folder_info(
+            discharge,
+            settings={"parts": ["full_fio", "discharge_date"], "date_format": "full"},
+        )
         assert discharge_info.admission_date == "12.05.2026", discharge_info
-        assert "май" in discharge_info.folder_name.lower(), discharge_info.folder_name
+        assert discharge_info.discharge_date == "15.05.2026", discharge_info
+        assert discharge_info.folder_name == "Иванов Иван Иванович 15.05.2026", discharge_info.folder_name
 
         universal_sources = (
             ("Осмотр врача приёмного покоя.docx", "12.05.2026 Осмотр врача приёмного покоя."),
@@ -499,6 +575,8 @@ def _assert_stale_disabled_intake_self_heals() -> None:
 
 def main() -> None:
     _assert_naming_contract()
+    _assert_folder_naming_settings_persist_without_patient_data()
+    _assert_intake_uses_saved_folder_naming()
     _assert_primary_detection_contract()
     _assert_canonical_primary_parser_contract()
     _assert_top_level_only_and_safe_move()
