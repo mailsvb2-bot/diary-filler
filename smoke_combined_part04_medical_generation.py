@@ -95,7 +95,25 @@ assert discharge_roundtrip.case_number == manual_data.case_number, discharge_rou
 assert discharge_roundtrip.diagnosis == manual_data.diagnosis, discharge_roundtrip.diagnosis
 assert discharge_roundtrip.treatment_plan == manual_data.treatment_plan, discharge_roundtrip.treatment_plan
 assert discharge_roundtrip.admission_occurrence == manual_data.admission_occurrence, discharge_roundtrip.admission_occurrence
+assert discharge_roundtrip.sick_leave == "нужен", discharge_roundtrip.sick_leave
 assert "ЭПИ тестовая информация" in discharge_roundtrip.epi_text, discharge_roundtrip.epi_text
+
+# Both explicit expert-anamnesis decisions must be reversible. A treatment
+# period alone is never enough; the repair is scoped to the rendered expert
+# block and its sick-leave wording.
+_positive_expert_sick = service.parser.parse_text(
+    "Экспертный анамнез: Работает в ООО Тест, в должности инженер. "
+    "Больничный лист. Срок лечения с 10.06.2026 по 11.06.2026."
+)
+assert _positive_expert_sick.sick_leave == "нужен", _positive_expert_sick.sick_leave
+_negative_expert_sick = service.parser.parse_text(
+    "Экспертный анамнез: Не работает. В выдаче ЛН не нуждается."
+)
+assert _negative_expert_sick.sick_leave == "не нужен", _negative_expert_sick.sick_leave
+_unrelated_treatment_period = service.parser.parse_text(
+    "Анамнез заболевания: Срок лечения с 10.06.2026 по 11.06.2026."
+)
+assert _unrelated_treatment_period.sick_leave == "", _unrelated_treatment_period.sick_leave
 
 # Every generated medical form is also a supported source. Dates that belong to
 # the form itself (commission/protocol date) must never be reinterpreted as the
@@ -141,6 +159,75 @@ assert rvk_roundtrip.case_number == manual_data.case_number, rvk_roundtrip.case_
 assert rvk_roundtrip.admission_occurrence == manual_data.admission_occurrence, rvk_roundtrip.admission_occurrence
 assert rvk_roundtrip.rvk_act_number == manual_data.rvk_act_number, rvk_roundtrip.rvk_act_number
 assert "ленинск" in rvk_roundtrip.rvk_military_commissariat.lower(), rvk_roundtrip.rvk_military_commissariat
+
+# Real cross-source generation contract: the two common patient sources the
+# doctor is expected to upload (primary exam and discharge epicrisis) must each
+# be able to produce commission/RVK/VK output after supplying only the
+# destination-specific requisites that are absent from that source.
+_source_target_cases = (
+    ("primary", primary_path),
+    ("discharge", discharge_path),
+)
+for source_name, source_path in _source_target_cases:
+    for target_kind in ("commission", "rvk", "vk_mse"):
+        source_data = service.parse_primary_document(source_path)
+        # Common episode facts should come from the source itself. Only a
+        # destination-specific form number/date may be supplied here.
+        assert source_data.fio == manual_data.fio, (source_name, source_data.fio)
+        assert str(manual_data.birth).split()[0] in source_data.birth, (
+            source_name,
+            source_data.birth,
+        )
+        assert source_data.admission_date == manual_data.admission_date, (
+            source_name,
+            source_data.admission_date,
+        )
+        assert source_data.diagnosis == manual_data.diagnosis, (
+            source_name,
+            source_data.diagnosis,
+        )
+        source_data.case_number = source_data.case_number or manual_data.case_number
+        source_data.admission_occurrence = (
+            source_data.admission_occurrence or manual_data.admission_occurrence
+        )
+
+        if target_kind == "commission":
+            source_data.commission_date = manual_data.commission_date
+            source_data.commission_number = manual_data.commission_number
+            if source_name == "discharge" and source_data.sick_leave == "нужен":
+                # The discharge form explicitly preserves the positive decision,
+                # but intentionally does not print the original opening date of
+                # the sick-leave certificate. That one genuinely missing fact
+                # must be supplied by the doctor instead of being guessed.
+                source_data.expert_sick_leave_from = manual_data.expert_sick_leave_from
+        elif target_kind == "rvk":
+            source_data.discharge_date = source_data.discharge_date or manual_data.discharge_date
+            source_data.rvk_act_number = manual_data.rvk_act_number
+            source_data.rvk_military_commissariat = manual_data.rvk_military_commissariat
+        elif target_kind == "vk_mse":
+            source_data.vk_date = manual_data.vk_date
+            source_data.vk_protocol_number = manual_data.vk_protocol_number
+            source_data.vk_protocol_date = manual_data.vk_protocol_date
+            # Work/position are shared patient facts and must be recovered from
+            # either source rather than injected as target-only metadata.
+            assert source_data.work_org, (source_name, source_data.work_org)
+            assert source_data.position, (source_name, source_data.position)
+
+        cross_created, cross_used = service.create_documents(
+            navigation_path=source_path,
+            output_dir=OUT / f"cross_{source_name}_{target_kind}",
+            selected_docs=[target_kind],
+            override_data=source_data,
+        )
+        assert len(cross_created) == 1, (source_name, target_kind, cross_created)
+        cross_text = extract_docx_text(cross_created[0])
+        assert manual_data.fio in cross_text, (source_name, target_kind, cross_text)
+        assert "Тестовый диагноз из UI" in cross_text, (source_name, target_kind, cross_text)
+        assert cross_used.admission_date == manual_data.admission_date, (
+            source_name,
+            target_kind,
+            cross_used.admission_date,
+        )
 
 # Real DnD classification must route an epicrisis to the patient-source slot,
 # while a standalone ЭПИ document remains in the auxiliary ЭПИ slot.

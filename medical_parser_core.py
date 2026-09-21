@@ -13,7 +13,7 @@ from medical_docx_reader import (
     _is_birth_or_demographic_context,
     _is_primary_title_context,
 )
-from medical_models import PatientData, parse_admission_occurrence_value, strip_admission_occurrence_prefix
+from medical_models import PatientData, parse_admission_occurrence_value, parse_sick_leave_value, strip_admission_occurrence_prefix
 from medical_parser_sanitize import sanitize_diagnosis
 from medical_treatment_detection import has_treatment_section_marker
 from medical_text_utils import (
@@ -136,6 +136,11 @@ class MedicalParserCoreMixin:
         # «Работает в ..., в должности ...».
         self._repair_work_details(data, text)
 
+        # Generated discharge/commission documents store the sick-leave
+        # decision inside «Экспертный анамнез». Preserve that explicit fact when
+        # such a document is reused as the next universal patient source.
+        self._repair_rendered_expert_sick_leave(data, text)
+
         # Анамнез жизни может быть не только таблицей/столбцом с явной меткой
         # «Анамнез жизни», но и свободным абзацем: "наследственность - ...
         # Родился... Беременность и роды...". Берём исходные слова и стиль
@@ -169,6 +174,60 @@ class MedicalParserCoreMixin:
         self._refresh_warnings(data)
 
         return data
+
+    @staticmethod
+    def _repair_rendered_expert_sick_leave(data: PatientData, text: str) -> None:
+        """Recover an explicit sick-leave decision from rendered expert anamnesis.
+
+        A discharge epicrisis intentionally renders positive sick leave as
+        «Больничный лист. Срок лечения ...» rather than «нужен с ...». The
+        generic inline parser therefore captures only the tail after the label
+        and cannot reconstruct the yes/no decision. We only repair lines that
+        explicitly belong to «Экспертный анамнез» and never infer from an
+        arbitrary treatment-period sentence elsewhere in the document.
+        """
+        decision, _date = parse_sick_leave_value(data.sick_leave)
+        if decision:
+            return
+
+        date_token = r"(?:\d{1,2}[./-]\d{1,2}[./-]\d{2,4}|\d{6,8})"
+        for raw_line in normalize_text(text or "").splitlines():
+            line = normalize_text(raw_line)
+            normalized = normalize_match(line)
+            if "экспертный анамнез" not in normalized:
+                continue
+
+            if re.search(r"(?i)\bв\s+выдаче\s+лн\s+не\s+нуждается\b", line):
+                data.sick_leave = "не нужен"
+                return
+
+            marker = re.search(
+                r"(?i)\bбольничный\s+лист(?:\s*№\s*([^\s.,;]+))?",
+                line,
+            )
+            if not marker:
+                continue
+
+            if re.search(r"(?i)\b(?:не\s+нуж(?:ен|на|но)|не\s+требуется)\b", line):
+                data.sick_leave = "не нужен"
+                return
+
+            opened = re.search(
+                rf"(?i)\b(?:нужен|открыт)\s+с\s+({date_token})",
+                line,
+            )
+            if opened:
+                data.sick_leave = f"нужен с {opened.group(1)}"
+            else:
+                # The rendered discharge form uses exactly «Больничный лист.»
+                # before the treatment-period sentence. Presence of this marker
+                # inside expert anamnesis is itself the explicit positive fact.
+                data.sick_leave = "нужен"
+
+            number = (marker.group(1) or "").strip()
+            if number and not data.expert_sick_leave_number:
+                data.expert_sick_leave_number = number
+            return
 
     @staticmethod
     def _refresh_warnings(data: PatientData) -> None:

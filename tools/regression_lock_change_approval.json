@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "0b3214c5b0a4c2e750bab08cc2db461558b88585",
-  "reason": "Cleanup after fully green universal-source identity and metadata hardening: advance the locked baseline and remove the consumed temporary document-mechanics approval.",
+  "reason": "Lock the universal source-to-output matrix and repair explicit sick-leave round-trip from rendered expert anamnesis; the source fact is reused only when the rendered expert block explicitly states it.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -15,6 +15,8 @@
     "ci_gate_lock"
   ],
   "approved_blobs": {
-    "tools/document_mechanics_change_approval.json": "<deleted>"
+    "medical_parser_core.py": "b9df9c652f54b3be151b66719595a04114ee7dc6",
+    "smoke_combined_part04_medical_generation.py": "c2fb0b64416f5f30895054e88ecf15e035d685a0",
+    "tools/document_mechanics_change_approval.json": "52128df1ebf478224da1153c8b1d472913ace013"
   }
 }
