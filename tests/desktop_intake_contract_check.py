@@ -552,6 +552,52 @@ def _assert_agent_update_and_encoding_contract() -> None:
 
 
 
+def _assert_onboarding_marker_survives_unsaved_intake_preference() -> None:
+    class FakeApp:
+        def __init__(self) -> None:
+            self.root = object()
+            self._desktop_intake_enabled_for_session = False
+
+        def _desktop_intake_preference(self):
+            return False
+
+        def _set_desktop_intake_preference(self, enabled: bool) -> bool:
+            assert enabled is True
+            return False
+
+        def _staff_profile_is_configured(self) -> bool:
+            return True
+
+        def _prompt_staff_profile(self, *, first_run: bool = False) -> bool:
+            return True
+
+    with tempfile.TemporaryDirectory() as tmp:
+        base = Path(tmp)
+        intake_root = base / "Desktop" / "Выписанные пациенты"
+        marker_path = base / "onboarding-required.flag"
+        marker_path.write_text("1", encoding="ascii")
+        original_root = app_main.desktop_intake_root_path
+        original_marker = app_main._installation_onboarding_marker_path
+        original_os = app_main.os
+        original_warning = app_main.messagebox.showwarning
+        warnings: list[str] = []
+        try:
+            app_main.os = SimpleNamespace(name="nt", environ={})  # type: ignore[assignment]
+            app_main.desktop_intake_root_path = lambda: intake_root  # type: ignore[assignment]
+            app_main._installation_onboarding_marker_path = lambda: marker_path  # type: ignore[assignment]
+            app_main.messagebox.showwarning = lambda _title, message, **_kwargs: warnings.append(str(message))
+            app = FakeApp()
+            app_main._first_launch_onboarding(app)
+            assert app._desktop_intake_enabled_for_session is True
+            assert marker_path.is_file(), "onboarding marker was deleted after failed settings persistence"
+            assert any("не удалось сохранить" in item for item in warnings), warnings
+        finally:
+            app_main.messagebox.showwarning = original_warning
+            app_main.os = original_os  # type: ignore[assignment]
+            app_main.desktop_intake_root_path = original_root  # type: ignore[assignment]
+            app_main._installation_onboarding_marker_path = original_marker  # type: ignore[assignment]
+
+
 def _assert_stale_disabled_intake_self_heals() -> None:
     class FakeApp:
         def __init__(self) -> None:
@@ -654,6 +700,7 @@ def main() -> None:
     _assert_closed_gui_wake_is_classification_free()
     _assert_legacy_word_conversion_never_quits_user_word()
     _assert_agent_heartbeat_contract()
+    _assert_onboarding_marker_survives_unsaved_intake_preference()
     _assert_stale_disabled_intake_self_heals()
     print("desktop intake contract: PASS")
 
