@@ -357,7 +357,13 @@ class ActionsCreationOrchestratorMixin:
             created_files.extend(list(diary_result.created_files))
 
         print_result = None
-        if print_after:
+        if print_after and errors:
+            # Never auto-print an incomplete selected set. The successful files
+            # stay saved, but the doctor must see the partial-generation warning
+            # before deciding what to print. Sending paper first and warning
+            # afterwards can create an incomplete physical chart by surprise.
+            self._log("\n⚠️ Автоматическая печать отменена: комплект создан не полностью.\n")
+        elif print_after:
             self._set_status("Отправляю документы на печать...")
             self.root.update_idletasks()
             from printer_support import print_files
@@ -382,6 +388,7 @@ class ActionsCreationOrchestratorMixin:
                 "Комплект создан частично",
                 "Созданы и сохранены все документы, которые удалось подготовить.\n\n"
                 "Не создано:\n" + "\n".join(errors) +
+                ("\n\nАвтоматическая печать не запускалась, потому что комплект неполный." if print_after else "") +
                 "\n\nИсправьте источник дневников и при необходимости создайте только дневники повторно.",
             )
 
