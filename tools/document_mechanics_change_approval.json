@@ -1,9 +1,0 @@
-{
-  "schema_version": 1,
-  "base_sha": "2e4332e4a6ddfc45ffd2fa3f90b68afb7cf63065",
-  "reason": "Explicit production crash fix: FilesMixin._primary_type_from_parsed_data is called as a bound method during source loading but lacked @staticmethod, causing 'takes 1 positional argument but 2 were given'. Also bumps the visible app version to v1.4.23 so the corrected installer cannot be confused with v1.4.22.",
-  "approved_blobs": {
-    "app_config.py": "281e2956a49a7bd8569e768bd627702cec862bd0",
-    "files_mixin.py": "a8ef29a04df3333df6ec74a3209a98b85343f020"
-  }
-}
