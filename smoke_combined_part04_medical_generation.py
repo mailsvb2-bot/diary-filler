@@ -98,6 +98,23 @@ assert discharge_roundtrip.admission_occurrence == manual_data.admission_occurre
 assert discharge_roundtrip.sick_leave == "нужен", discharge_roundtrip.sick_leave
 assert "ЭПИ тестовая информация" in discharge_roundtrip.epi_text, discharge_roundtrip.epi_text
 
+# Both explicit expert-anamnesis decisions must be reversible. A treatment
+# period alone is never enough; the repair is scoped to the rendered expert
+# block and its sick-leave wording.
+_positive_expert_sick = service.parser.parse_text(
+    "Экспертный анамнез: Работает в ООО Тест, в должности инженер. "
+    "Больничный лист. Срок лечения с 10.06.2026 по 11.06.2026."
+)
+assert _positive_expert_sick.sick_leave == "нужен", _positive_expert_sick.sick_leave
+_negative_expert_sick = service.parser.parse_text(
+    "Экспертный анамнез: Не работает. В выдаче ЛН не нуждается."
+)
+assert _negative_expert_sick.sick_leave == "не нужен", _negative_expert_sick.sick_leave
+_unrelated_treatment_period = service.parser.parse_text(
+    "Анамнез заболевания: Срок лечения с 10.06.2026 по 11.06.2026."
+)
+assert _unrelated_treatment_period.sick_leave == "", _unrelated_treatment_period.sick_leave
+
 # Every generated medical form is also a supported source. Dates that belong to
 # the form itself (commission/protocol date) must never be reinterpreted as the
 # hospitalization date; only explicit episode evidence may fill admission_date.
