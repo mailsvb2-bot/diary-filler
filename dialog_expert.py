@@ -734,7 +734,11 @@ class DialogExpertMixin:
     def _normalize_birth_popup_value(value: str) -> str:
         """Normalize an explicit birth year/date without inventing a value."""
         raw = " ".join((value or "").strip().split())
-        raw = re.sub(r"(?i)\s*г\.?\s*р\.?\s*$", "", raw).strip(" ,.;")
+        raw = re.sub(
+            r"(?i)\s*(?:г\.?\s*р\.?|г\.?|год(?:а)?)\s*$",
+            "",
+            raw,
+        ).strip(" ,.;")
         if not raw:
             return ""
         if re.fullmatch(r"\d{4}", raw):
