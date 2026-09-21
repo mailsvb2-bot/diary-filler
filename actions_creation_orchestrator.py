@@ -153,11 +153,46 @@ class ActionsCreationOrchestratorMixin:
             except Exception:
                 pass
 
+    def _ensure_staff_profile_for_generation(self) -> bool:
+        """Fail closed before creating documents with unconfirmed staff names."""
+        is_configured = getattr(self, "_staff_profile_is_configured", None)
+        prompt = getattr(self, "_prompt_staff_profile", None)
+        # Small test/embedding harnesses that do not own SettingsMixin keep the
+        # historical contract; the production app always provides both methods.
+        if not callable(is_configured) or not callable(prompt):
+            return True
+        try:
+            if is_configured():
+                return True
+        except Exception:
+            pass
+
+        try:
+            messagebox.showwarning(
+                "Сотрудники не настроены",
+                "Перед созданием документов укажите лечащего врача, заведующего "
+                "отделением и начмеда / заместителя главного врача.\n\n"
+                "Программа не будет подставлять неподтверждённые ФИО в медицинские документы.",
+                parent=getattr(self, "root", None),
+            )
+        except Exception:
+            pass
+
+        try:
+            if not prompt(first_run=False):
+                return False
+            return bool(is_configured())
+        except Exception:
+            return False
+
     def create_selected_outputs(self, *, print_after: bool = False) -> None:
         selected_medical = self.selected_medical_docs()
         selected_diaries = self.diaries_selected()
         if not selected_medical and not selected_diaries:
             messagebox.showwarning("Ничего не выбрано", "Отметьте хотя бы один документ или «Дневники наблюдения».")
+            return
+        if not self._ensure_staff_profile_for_generation():
+            self._set_status("Создание отменено: укажите сотрудников")
             return
         self._log("\n▶ Выбрано для создания: " + ", ".join(self._selected_output_names(selected_medical, selected_diaries)) + "\n")
         # A universal source may contain rich clinical text but omit FIO or
