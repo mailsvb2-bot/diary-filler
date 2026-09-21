@@ -68,6 +68,8 @@ class ActionsNavigationMixin:
                 self._set_ui_var(self.discharge_date_var, data.discharge_date)
             if data.case_number and not self.case_number_var.get().strip():
                 self.case_number_var.set(data.case_number)
+            if data.admission_occurrence and not self.admission_occurrence_var.get().strip():
+                self.admission_occurrence_var.set(data.admission_occurrence)
 
             # Reusable commission/VK/RVK documents already contain some of
             # their own requisites. Seed only empty UI fields so a doctor's
