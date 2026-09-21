@@ -3,6 +3,6 @@
   "base_sha": "61d0f09e557d9e6104f7ad0bf302e0eceb013951",
   "reason": "Explicit user-journey safety fix: an incomplete selected set may be saved as partial success, but must never be automatically sent to the printer before the doctor sees that the set is incomplete.",
   "approved_blobs": {
-    "actions_creation_orchestrator.py": "94c9ac08aa2b871e72645b9b679a8d90a637bb2d"
+    "actions_creation_orchestrator.py": "85761b81bd2c8718bf256713e9236fcf795c8b67"
   }
 }
