@@ -16,6 +16,7 @@ from docx import Document
 import diary_batch
 import diary_text_parser
 import files_mixin
+import dnd_mixin
 import actions_creation_orchestrator
 from actions_medical_flow import ActionsMedicalFlowMixin
 from actions_diary_flow import ActionsDiaryFlowMixin
@@ -26,6 +27,7 @@ from diary_text_selection import (
     normalize_diary_diagnosis_name,
 )
 from files_mixin import FilesMixin
+from dnd_mixin import DragDropMixin
 from medical_constants import DOCUMENT_ORDER
 from medical_docx_reader import extract_docx_text
 from medical_models import PatientData
@@ -98,6 +100,11 @@ class _PatientSwitchHarness(FilesMixin):
             setattr(self, name, [])
         self.diary_texts_dir = ""
         self.diary_template_dir = ""
+        self.output_vars = {
+            "primary": _Var(False),
+            "discharge": _Var(False),
+            "diaries": _Var(False),
+        }
         self.data = PatientData()
 
     def _set_ui_var(self, var, value):
@@ -114,6 +121,45 @@ class _PatientSwitchHarness(FilesMixin):
 
     def _set_primary_drop_empty(self):
         pass
+
+    def _redraw_selection_controls(self):
+        pass
+
+
+class _InvalidPrimaryHarness(FilesMixin):
+    def __init__(self, current_path: str):
+        self.navigation_path_var = _Var(current_path)
+        self.errors: list[tuple[str, str]] = []
+        self.reset_calls = 0
+
+    def _parse_primary_document(self, _path):
+        raise ValueError("broken-docx")
+
+    def _show_error(self, title, exc):
+        self.errors.append((str(title), type(exc).__name__))
+
+    def _reset_primary_document_runtime_state(self, **_kwargs):
+        self.reset_calls += 1
+
+
+class _DropBatchHarness(DragDropMixin):
+    def __init__(self):
+        self.root = None
+        self.applied: list[str] = []
+        self.logs: list[str] = []
+        self.status = ""
+
+    def _classify_dropped_file(self, _path):
+        return "primary"
+
+    def _apply_primary_document_path(self, path, **_kwargs):
+        self.applied.append(str(path))
+
+    def _log(self, text):
+        self.logs.append(str(text))
+
+    def _set_status(self, text):
+        self.status = str(text)
 
 
 class _DiaryFallbackHarness(ActionsDiaryFlowMixin):
@@ -417,6 +463,8 @@ def _assert_full_patient_switch_reset_matrix() -> None:
         setattr(app, name, True if isinstance(default, bool) else "PATIENT_A_LEAK")
     app.status_files = ["patient-a-text.docx"]
     app.diary_files = ["patient-a-dates.docx"]
+    for var in app.output_vars.values():
+        var.set(True)
     app.data = PatientData(
         fio="Пациент А",
         admission_date="01.09.2026",
@@ -438,7 +486,52 @@ def _assert_full_patient_switch_reset_matrix() -> None:
         assert getattr(app, name) == switch_attrs[name], (name, getattr(app, name))
     assert app.status_files == []
     assert app.diary_files == []
+    assert all(not var.get() for var in app.output_vars.values()), app.output_vars
     assert app.data == PatientData(), app.data
+
+
+def _assert_same_path_replacement_is_patient_switch(root: Path) -> None:
+    source = root / "Первичный осмотр.docx"
+    source.write_bytes(b"patient-a")
+    app = _PatientSwitchHarness()
+    first_signature = app._primary_document_source_signature(source)
+    app._loaded_primary_source_signature = first_signature
+
+    source.write_bytes(b"patient-b-replacement")
+    second_signature = app._primary_document_source_signature(source)
+    assert first_signature != second_signature, (first_signature, second_signature)
+    assert app._is_primary_document_switch(str(source), str(source), second_signature) is True
+    assert app._is_primary_document_switch("", str(source), second_signature) is False
+
+
+def _assert_invalid_new_source_preserves_open_patient(root: Path) -> None:
+    current = root / "current.docx"
+    current.write_bytes(b"current")
+    broken = root / "broken.docx"
+    broken.write_bytes(b"not-a-valid-docx")
+    app = _InvalidPrimaryHarness(str(current))
+    app._apply_primary_document_path(str(broken), prompt_for_referral=True)
+    assert app.navigation_path_var.get() == str(current), app.navigation_path_var.get()
+    assert app.reset_calls == 0, app.reset_calls
+    assert app.errors == [("Не удалось прочитать медицинский документ", "ValueError")], app.errors
+
+
+def _assert_multi_primary_drop_fails_safe(root: Path) -> None:
+    first = root / "patient-a.docx"
+    second = root / "patient-b.docx"
+    first.write_bytes(b"a")
+    second.write_bytes(b"b")
+    app = _DropBatchHarness()
+    warnings: list[str] = []
+    original_warning = dnd_mixin.messagebox.showwarning
+    try:
+        dnd_mixin.messagebox.showwarning = lambda _title, message, **_kwargs: warnings.append(str(message))
+        app._handle_dropped_files([str(first), str(second)])
+    finally:
+        dnd_mixin.messagebox.showwarning = original_warning
+    assert app.applied == [], app.applied
+    assert len(warnings) == 1 and "несколько медицинских документов" in warnings[0].lower(), warnings
+    assert "Выберите один" in app.status, app.status
 
 
 def _assert_manual_picker_accepts_doc(root: Path) -> None:
@@ -603,6 +696,9 @@ def main() -> None:
     _assert_diary_source_buttons_route_to_expected_picker()
     with TemporaryDirectory(prefix="diagnosis-override-regression-") as temp_dir:
         root = Path(temp_dir)
+        _assert_same_path_replacement_is_patient_switch(root)
+        _assert_invalid_new_source_preserves_open_patient(root)
+        _assert_multi_primary_drop_fails_safe(root)
         _assert_all_medical_documents_receive_new_diagnosis(root)
         _assert_verbal_matching_and_word_formats(root)
         _assert_auto_refresh_and_manual_pin(root)
@@ -614,7 +710,7 @@ def main() -> None:
     _assert_diary_creation_path_offers_manual_fallback()
     print(
         "DIAGNOSIS OVERRIDE REGRESSION OK: UI diagnosis + verbal matching + "
-        "manual fallback + visible Word picker + partial-set survival + .doc/.docx source + complete patient-session reset matrix"
+        "manual fallback + visible Word picker + partial-set survival + .doc/.docx source + same-path replacement isolation + transactional invalid-source handling + multi-primary DnD fail-safe + complete patient-session reset matrix"
     )
 
 
