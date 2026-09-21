@@ -85,6 +85,9 @@ class MedicalParserCoreMixin:
             data.admission_date = title_date
         if episode_discharge:
             data.discharge_date = episode_discharge
+        # Filename-aware kind detection happens at DOCX level, so repeat the
+        # strict metadata pass after the final kind is known.
+        self._extract_source_document_metadata(data, text)
         self._refresh_warnings(data)
         return data
 
@@ -121,6 +124,7 @@ class MedicalParserCoreMixin:
             data.admission_date = episode_admission
         if episode_discharge:
             data.discharge_date = episode_discharge
+        self._extract_source_document_metadata(data, text)
 
         # Поддержка компактных медицинских документов: ФИО, возраст и адрес
         # могут быть написаны в одну строку, а не в отдельный столбец.
