@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "39a2a03852cc8d8a72a75190adb81ac59558400c",
-  "baseline_note": "Universal-source FIO and source-to-output hardening fully validated on main 39a2a03852cc8d8a72a75190adb81ac59558400c by Windows production CI run 35563769457, including release gate, full patient replay and golden DOCX, packaged desktop intake E2E, installer build, and installed/uninstalled smoke.",
+  "baseline_ref": "f8741c1d607bfe9ccb2b411ee268c329bddd5f1a",
+  "baseline_note": "Main v1.4.21 release identity baseline fully validated at f8741c1d607bfe9ccb2b411ee268c329bddd5f1a by Windows production CI run 35574438376, including release gate, full patient replay and golden DOCX, packaged desktop intake E2E, installer build, and installed/uninstalled smoke.",
   "required_approval_evidence": [
     "ci_gate_lock"
   ],
