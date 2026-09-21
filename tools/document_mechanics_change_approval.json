@@ -1,11 +1,9 @@
 {
   "schema_version": 1,
-  "base_sha": "3c9b24ec1d15f382770340d9435fbea45b3dee90",
-  "reason": "Explicit universal medical-source parser and popup hardening for reviewed P1 defects: hospitalization date context, year-only birth values, nearest patient FIO, and final source metadata isolation.",
+  "base_sha": "fd67418f522baf4bf5ced1ec213503203859c855",
+  "reason": "Explicit user-journey hardening: preserve the current patient on unreadable source selection, isolate same-path source replacement as a patient switch, reset patient-scoped output choices, and harden the primary parse cache against in-place replacement.",
   "approved_blobs": {
-    "dialog_expert.py": "bcba45bb3182da1c5acea73eed1d527d7286bf37",
-    "medical_parser_blocks.py": "9b059f3325cbeeceddd21686fa476ae466172f09",
-    "medical_parser_core.py": "5d2beaafe3bdbe9477c6aa8c8e86d33e465698c0",
-    "medical_parser_demographics.py": "ba46f671e7559f6d90a96a06cbf3af44f2fe7203"
+    "app_initialization.py": "4f76344c1b2725970f92384084e99296b7b3a3f1",
+    "files_mixin.py": "377234d9a11868d08715cc9a609d73a6aadbad06"
   }
 }
