@@ -2,6 +2,7 @@
 
 ## v1.4.23-word-safety
 
+- Восстановлена каноническая доставка `main` только через обычный GitHub PR merge commit; исправления универсального медицинского источника из PR #175 сохранены без изменений runtime.
 - Исправлен production-crash при загрузке медицинского источника: `FilesMixin._primary_type_from_parsed_data() takes 1 positional argument but 2 were given`.
 - `_primary_type_from_parsed_data` закреплён как `@staticmethod`; regression вызывает его через настоящий `CombinedMedicalDiaryApp`, то есть тем же способом, которым падал установленный интерфейс.
 - Сохранено универсальное определение направления/первичного осмотра/приёмного покоя/выписного/совместного/ВК/РВК.
