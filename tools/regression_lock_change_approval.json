@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "e70c5cd8909cfb8c31dbbf6900585f3ad8b83857",
-  "reason": "Cleanup after fully green user-journey and patient-folder hardening: advance the locked baseline and remove the consumed temporary document-mechanics approval.",
+  "reason": "Printing runtime safety: restore the constructible PrintResult contract and add smoke coverage that executes the structured print result path; preserve the already-consumed document-mechanics approval deletion from the finalized baseline.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -15,6 +15,8 @@
     "ci_gate_lock"
   ],
   "approved_blobs": {
+    "printer_models.py": "4d142106ac06f57f2641bd0c8af81e12e40b2f24",
+    "smoke_combined_part01_setup_contracts.py": "e4dc3dc12b9674a6f6146c6b5141cb1987a62350",
     "tools/document_mechanics_change_approval.json": "<deleted>"
   }
 }
