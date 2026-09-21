@@ -105,26 +105,50 @@ class ActionsMedicalFlowMixin:
         elif data.expert_sick_leave_needed == "нет":
             data.sick_leave = "не нужен"
 
+        source_admission_occurrence = data.admission_occurrence
         data.admission_occurrence = normalize_admission_occurrence(self.admission_occurrence_var.get())
-        data.rvk_act_number = self.rvk_act_number_var.get().strip()
-        data.rvk_military_commissariat = self.rvk_military_commissariat_var.get().strip()
-        data.rvk_work_position = self.rvk_work_position_var.get().strip()
-        data.vk_date = self.vk_date_var.get().strip()
-        data.vk_protocol_number = self.vk_protocol_number_var.get().strip()
-        data.vk_protocol_date = self.vk_protocol_date_var.get().strip()
-        data.vk_mse_work_org = self.vk_mse_work_org_var.get().strip() or shared_org
-        data.vk_mse_position = self.vk_mse_position_var.get().strip() or shared_position
-        data.sick_leave_vk_date = self.sick_leave_vk_date_var.get().strip()
-        data.sick_leave_vk_protocol_number = self.sick_leave_vk_protocol_number_var.get().strip()
-        data.sick_leave_vk_protocol_date = self.sick_leave_vk_protocol_date_var.get().strip()
-        data.sick_leave_vk_commission_date = self.sick_leave_vk_commission_date_var.get().strip()
-        data.sick_leave_vk_work_org = self.sick_leave_vk_work_org_var.get().strip() or shared_org
-        data.sick_leave_vk_position = self.sick_leave_vk_position_var.get().strip() or shared_position
-        data.sick_leave_vk_work_position = self.sick_leave_vk_work_position_var.get().strip() or ", ".join(
-            part for part in [data.sick_leave_vk_work_org, data.sick_leave_vk_position] if part
+        if not data.admission_occurrence:
+            data.admission_occurrence = source_admission_occurrence
+        data.rvk_act_number = self.rvk_act_number_var.get().strip() or data.rvk_act_number
+        data.rvk_military_commissariat = (
+            self.rvk_military_commissariat_var.get().strip() or data.rvk_military_commissariat
         )
-        data.commission_date = self.commission_date_var.get().strip()
-        data.commission_number = self.commission_number_var.get().strip()
+        data.rvk_work_position = self.rvk_work_position_var.get().strip() or data.rvk_work_position
+        data.vk_date = self.vk_date_var.get().strip() or data.vk_date
+        data.vk_protocol_number = self.vk_protocol_number_var.get().strip() or data.vk_protocol_number
+        data.vk_protocol_date = self.vk_protocol_date_var.get().strip() or data.vk_protocol_date
+        data.vk_mse_work_org = self.vk_mse_work_org_var.get().strip() or data.vk_mse_work_org or shared_org
+        data.vk_mse_position = self.vk_mse_position_var.get().strip() or data.vk_mse_position or shared_position
+        data.sick_leave_vk_date = self.sick_leave_vk_date_var.get().strip() or data.sick_leave_vk_date
+        data.sick_leave_vk_protocol_number = (
+            self.sick_leave_vk_protocol_number_var.get().strip()
+            or data.sick_leave_vk_protocol_number
+        )
+        data.sick_leave_vk_protocol_date = (
+            self.sick_leave_vk_protocol_date_var.get().strip()
+            or data.sick_leave_vk_protocol_date
+        )
+        data.sick_leave_vk_commission_date = (
+            self.sick_leave_vk_commission_date_var.get().strip()
+            or data.sick_leave_vk_commission_date
+        )
+        data.sick_leave_vk_work_org = (
+            self.sick_leave_vk_work_org_var.get().strip()
+            or data.sick_leave_vk_work_org
+            or shared_org
+        )
+        data.sick_leave_vk_position = (
+            self.sick_leave_vk_position_var.get().strip()
+            or data.sick_leave_vk_position
+            or shared_position
+        )
+        data.sick_leave_vk_work_position = (
+            self.sick_leave_vk_work_position_var.get().strip()
+            or data.sick_leave_vk_work_position
+            or ", ".join(part for part in [data.sick_leave_vk_work_org, data.sick_leave_vk_position] if part)
+        )
+        data.commission_date = self.commission_date_var.get().strip() or data.commission_date
+        data.commission_number = self.commission_number_var.get().strip() or data.commission_number
         self._apply_staff_profile_to_patient_data(data)
         return data
 

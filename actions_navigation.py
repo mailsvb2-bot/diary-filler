@@ -68,6 +68,30 @@ class ActionsNavigationMixin:
                 self._set_ui_var(self.discharge_date_var, data.discharge_date)
             if data.case_number and not self.case_number_var.get().strip():
                 self.case_number_var.set(data.case_number)
+            if data.admission_occurrence and not self.admission_occurrence_var.get().strip():
+                self.admission_occurrence_var.set(data.admission_occurrence)
+
+            # Reusable commission/VK/RVK documents already contain some of
+            # their own requisites. Seed only empty UI fields so a doctor's
+            # explicit edits keep absolute priority.
+            metadata_var_pairs = (
+                ("commission_date", self.commission_date_var),
+                ("commission_number", self.commission_number_var),
+                ("vk_date", self.vk_date_var),
+                ("vk_protocol_number", self.vk_protocol_number_var),
+                ("vk_protocol_date", self.vk_protocol_date_var),
+                ("sick_leave_vk_date", self.sick_leave_vk_date_var),
+                ("sick_leave_vk_protocol_number", self.sick_leave_vk_protocol_number_var),
+                ("sick_leave_vk_protocol_date", self.sick_leave_vk_protocol_date_var),
+                ("sick_leave_vk_commission_date", self.sick_leave_vk_commission_date_var),
+                ("rvk_act_number", self.rvk_act_number_var),
+                ("rvk_military_commissariat", self.rvk_military_commissariat_var),
+            )
+            for field_name, var in metadata_var_pairs:
+                parsed_value = (getattr(data, field_name, "") or "").strip()
+                if parsed_value and not var.get().strip():
+                    var.set(parsed_value)
+
             if data.diagnosis and (not self._manual_diagnosis or not self.diagnosis_var.get().strip()):
                 self._set_ui_var(self.diagnosis_var, data.diagnosis)
             # Если папки уже известны, автоматически подставляем:
