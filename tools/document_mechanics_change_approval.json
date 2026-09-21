@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "base_sha": "2ceea4c620270dca91da586aaa2f17d999b3e903",
-  "reason": "Explicit print-safety fix: when printing is withheld because the selected document set is incomplete, successfully saved files must remain queued and be printed together with the corrected retry without regenerating them.",
+  "base_sha": "7a12c54e7f1d3159323189384137434536a9f66f",
+  "reason": "Explicit generation safety fix: commit rollback must report residual visible files truthfully when Windows cannot delete one of the files already moved into the result folder.",
   "approved_blobs": {
-    "actions_creation_orchestrator.py": "e3455431908407c36e7346e7282f681e9fcfcc67"
+    "actions_creation_orchestrator.py": "48e708eefe787bd3c6a3ce359d613a731a1f15cc"
   }
 }
