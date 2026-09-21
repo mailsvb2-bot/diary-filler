@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "base_sha": "e33d4dd38b5a95a7eafb1a6fcf85ea6dbd2df18f",
+  "reason": "Explicit user-journey safety fix: failed printing must retry already-saved files without regenerating duplicate medical documents, and the retry queue must be cleared on patient switch.",
+  "approved_blobs": {
+    "actions_creation_orchestrator.py": "6514d350b9be46eb13050a0f11bcf728ecf2d985",
+    "files_mixin.py": "be41b293479ecd08d42a2df060516f6e08d1cc78"
+  }
+}
