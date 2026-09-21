@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "d5932d66d521c10a5dff026434fa60f70df65d16",
-  "baseline_note": "Universal medical-source hardening #163 fully validated. Exact PR head 6c948473c231ca484bf175900ac426cf75113116 passed Windows production CI run 35535391453, and post-merge main d5932d66d521c10a5dff026434fa60f70df65d16 passed run 35536133917 including release gate, full patient replay, packaged desktop intake E2E, installer build and installed/uninstalled smoke.",
+  "baseline_ref": "0b3214c5b0a4c2e750bab08cc2db461558b88585",
+  "baseline_note": "Universal medical-source identity and reusable metadata hardening (#165 and #166) fully validated. Exact PR #166 head f43cec012597b33b2dd42e4cad81480ee9757122 passed Windows production CI run 35561782102, and post-merge main 0b3214c5b0a4c2e750bab08cc2db461558b88585 passed run 35562486980 including release gate, full patient replay and golden DOCX, packaged desktop intake E2E, installer build, and installed/uninstalled smoke.",
   "required_approval_evidence": [
     "ci_gate_lock"
   ],
