@@ -739,6 +739,74 @@ def _desktop_agent_heartbeat_path() -> Path:
     return _desktop_runtime_dir() / "desktop-intake-agent.heartbeat"
 
 
+def _desktop_gui_launch_observed_path() -> Path:
+    return _desktop_runtime_dir() / "desktop-intake-gui-launch-observed.json"
+
+
+def _desktop_launch_observed_key(path_key: str) -> str:
+    # Runtime handoff must not persist patient paths/FIO. Only an opaque digest
+    # of the normalized path plus the already-opaque source signature is stored.
+    return hashlib.sha256(str(path_key).encode("utf-8", errors="surrogatepass")).hexdigest()
+
+
+def _desktop_write_gui_launch_observed(observed: dict[str, str]) -> None:
+    tmp: Path | None = None
+    try:
+        path = _desktop_gui_launch_observed_path()
+        tmp = path.with_suffix(".tmp")
+        payload = {
+            "schema": 1,
+            "observed": {
+                _desktop_launch_observed_key(key): str(signature)
+                for key, signature in observed.items()
+            },
+        }
+        tmp.write_text(json.dumps(payload, ensure_ascii=True), encoding="ascii")
+        os.replace(tmp, path)
+    except OSError:
+        if tmp is not None:
+            try:
+                tmp.unlink(missing_ok=True)
+            except OSError:
+                pass
+
+
+def _desktop_read_gui_launch_observed() -> dict[str, str] | None:
+    path = _desktop_gui_launch_observed_path()
+    try:
+        payload = json.loads(path.read_text(encoding="ascii"))
+    except (OSError, ValueError, TypeError, json.JSONDecodeError):
+        return None
+    finally:
+        try:
+            path.unlink(missing_ok=True)
+        except OSError:
+            pass
+    if not isinstance(payload, dict) or payload.get("schema") != 1:
+        return None
+    raw = payload.get("observed")
+    if not isinstance(raw, dict):
+        return None
+    result: dict[str, str] = {}
+    for key, signature in raw.items():
+        if isinstance(key, str) and key and isinstance(signature, str) and signature:
+            result[key] = signature
+    return result
+
+
+def _desktop_gui_observed_from_launch_handoff(
+    current: dict[str, tuple[Path, str]],
+) -> dict[str, str] | None:
+    handoff = _desktop_read_gui_launch_observed()
+    if handoff is None:
+        return None
+    observed: dict[str, str] = {}
+    for key, (_path, signature) in current.items():
+        if handoff.get(_desktop_launch_observed_key(key)) == signature:
+            observed[key] = signature
+    return observed
+
+
 def _desktop_touch_agent_heartbeat() -> None:
     tmp: Path | None = None
     try:
@@ -1230,6 +1298,9 @@ def run_desktop_intake_agent() -> int:
                 )
                 if arrival is not None and retry_ready:
                     key, path, signature = arrival
+                    launch_observed = dict(observed)
+                    launch_observed[key] = signature
+                    _desktop_write_gui_launch_observed(launch_observed)
                     if _desktop_launch_gui_for_primary(path):
                         pending_launch = (key, signature)
                         pending_launch_started = now
@@ -1407,12 +1478,22 @@ def start_desktop_intake_runtime(app, *, initial_primary: str | Path | None = No
         return
 
     app._desktop_intake_processing = False
-    # Baseline files already present when the GUI opens. They are not repeatedly
-    # classified in the Tk thread; only a later arrival/change is processed.
-    app._desktop_intake_observed = {
-        key: signature
-        for key, (_path, signature) in _desktop_candidate_snapshot(intake_root).items()
-    }
+    current_snapshot = _desktop_candidate_snapshot(intake_root)
+    # A watcher-launched GUI receives the agent's pre-launch observed baseline.
+    # This keeps stale files ignored but deliberately leaves a second simultaneous
+    # arrival unobserved, so the already-open GUI processes it on its next poll.
+    # Manual GUI starts retain the conservative "everything currently present is
+    # baseline" behavior.
+    launch_observed = (
+        _desktop_gui_observed_from_launch_handoff(current_snapshot)
+        if initial_primary
+        else None
+    )
+    app._desktop_intake_observed = (
+        launch_observed
+        if launch_observed is not None
+        else {key: signature for key, (_path, signature) in current_snapshot.items()}
+    )
     _desktop_schedule_heartbeat(app)
     app.root.after(1200, lambda: _desktop_schedule_agent_health(app))
 
