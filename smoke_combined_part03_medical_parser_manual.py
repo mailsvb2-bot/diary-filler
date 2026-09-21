@@ -88,6 +88,35 @@ assert universal_discharge.discharge_date == "11.06.2026", universal_discharge.d
 assert universal_discharge.case_number == "К-900", universal_discharge.case_number
 assert universal_discharge.treatment_plan == "терапия", universal_discharge.treatment_plan
 
+# Real EHR/Word primary documents may print FIO as a bare header line rather
+# than with an explicit «Ф.И.О.» label. Recover it only when the next few header
+# lines explicitly identify birth/age.
+_bare_fio = service.parser.parse_text(
+    "16.03.2026 09:00 Первичный осмотр с зав. отд. Можаровой Е.А.\n"
+    "История болезни № 375\n"
+    "Волгин Дмитрий Александрович\n"
+    "Дата рождения: 14.08.2006\n"
+    "Регистрация по месту пребывания: г. Нижний Новгород, ул. Тестовая, д. 1\n"
+    "Диагноз: F31.6 Тестовый диагноз"
+)
+assert _bare_fio.fio == "Волгин Дмитрий Александрович", _bare_fio.fio
+assert _bare_fio.birth == "14.08.2006", _bare_fio.birth
+
+_bare_initials = service.parser.parse_text(
+    "История болезни № 91\n"
+    "Новичихин С. Е.\n"
+    "Дата рождения: 01.02.1980\n"
+    "Диагноз: F20.0 Тестовый диагноз"
+)
+assert _bare_initials.fio == "Новичихин С. Е.", _bare_initials.fio
+
+_doctor_name_not_patient = service.parser.parse_text(
+    "16.03.2026 09:00 Первичный осмотр с зав. отд. Можаровой Е.А.\n"
+    "История болезни № 375\n"
+    "Диагноз: F31.6 Тестовый диагноз"
+)
+assert _doctor_name_not_patient.fio == "", _doctor_name_not_patient.fio
+
 # Direct service callers must obey the same patient-identity safety boundary as
 # the UI. Missing birth is no longer allowed to silently render an incomplete
 # medical document.
