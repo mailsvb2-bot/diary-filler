@@ -15,11 +15,11 @@
     "ci_gate_lock"
   ],
   "approved_blobs": {
-    "actions_creation_orchestrator.py": "6514d350b9be46eb13050a0f11bcf728ecf2d985",
+    "actions_creation_orchestrator.py": "c5c570d4883fcecabcbc148e84d938e92a5536c6",
     "files_mixin.py": "be41b293479ecd08d42a2df060516f6e08d1cc78",
     "printer_models.py": "4d142106ac06f57f2641bd0c8af81e12e40b2f24",
     "smoke_combined_part01_setup_contracts.py": "e4dc3dc12b9674a6f6146c6b5141cb1987a62350",
     "tests/diagnosis_override_regression.py": "83e112a3bd6617fc04f9206a4593565e8097cc77",
-    "tools/document_mechanics_change_approval.json": "363a4b12869adb52974825689ca67db9b50fbffd"
+    "tools/document_mechanics_change_approval.json": "f8597823c85b0e7cbf0545690d32fc5422d74fb3"
   }
 }
