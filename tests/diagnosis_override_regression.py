@@ -772,6 +772,58 @@ def _assert_diary_creation_path_offers_manual_fallback() -> None:
     assert app.manual_offer[0] == snapshot.diagnosis, app.manual_offer
 
 
+def _assert_commit_rollback_reports_residual_file(root: Path) -> None:
+    final_dir = root / "commit-rollback-output"
+    staging_dir = root / "commit-rollback-staging"
+    final_dir.mkdir()
+    staging_dir.mkdir()
+    first = staging_dir / "first.docx"
+    second = staging_dir / "second.docx"
+    first.write_bytes(b"first")
+    second.write_bytes(b"second")
+
+    app = ActionsCreationOrchestratorMixin()
+    original_replace = actions_creation_orchestrator.os.replace
+    original_unlink = Path.unlink
+    replace_calls = 0
+
+    def fail_second_replace(src, dst):
+        nonlocal replace_calls
+        replace_calls += 1
+        if replace_calls == 2:
+            raise OSError("synthetic second commit failure")
+        return original_replace(src, dst)
+
+    def block_committed_unlink(path_obj, *args, **kwargs):
+        if Path(path_obj) == final_dir / "first.docx":
+            raise OSError("synthetic rollback lock")
+        return original_unlink(path_obj, *args, **kwargs)
+
+    caught = None
+    try:
+        actions_creation_orchestrator.os.replace = fail_second_replace  # type: ignore[assignment]
+        Path.unlink = block_committed_unlink  # type: ignore[assignment]
+        try:
+            app._commit_staged_generation(
+                final_output_dir=final_dir,
+                staged_medical=[first, second],
+                diary_result=None,
+            )
+        except Exception as exc:
+            caught = exc
+    finally:
+        Path.unlink = original_unlink  # type: ignore[assignment]
+        actions_creation_orchestrator.os.replace = original_replace  # type: ignore[assignment]
+
+    assert caught is not None
+    assert getattr(caught, "rollback_remaining", 0) == 1, caught
+    assert (final_dir / "first.docx").is_file()
+    note = app._commit_failure_rollback_note(caught)
+    assert "Откат завершён не полностью" in note, note
+    assert "осталось 1 файл(ов)" in note, note
+    assert "Файлы, уже перенесённые этой попыткой, удалены." not in note, note
+
+
 def _assert_print_failure_retries_same_saved_file_without_regeneration(root: Path) -> None:
     output = root / "print-retry-output"
     app = _PrintRetryHarness(output)
@@ -892,6 +944,7 @@ def main() -> None:
         _assert_manual_text_is_patient_scoped(root)
         _assert_manual_picker_accepts_doc(root)
         _assert_failed_auto_match_offers_manual_word_file(root)
+        _assert_commit_rollback_reports_residual_file(root)
         _assert_print_failure_retries_same_saved_file_without_regeneration(root)
         _assert_diary_failure_keeps_medical_documents(root)
         _assert_legacy_doc_parser_route(root)
