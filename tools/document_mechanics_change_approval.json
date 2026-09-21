@@ -4,6 +4,6 @@
   "reason": "Explicit fix for exported primary documents whose patient FIO is a standalone demographic-header line without an FIO label, plus the visible application version bump to v1.4.22. The parser accepts only a tightly-bound name followed by an explicit birth/age field and does not infer names from titles or signatures.",
   "approved_blobs": {
     "app_config.py": "7c29f067a0ffcf1ca5d6b69f03bbd408c02a40f7",
-    "medical_parser_demographics.py": "a63f9e7d88cbc7e6125197e429f8bfd09d10a851"
+    "medical_parser_demographics.py": "56db8cfe8d8362a196eb2649286f6f0733fe0228"
   }
 }
