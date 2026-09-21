@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "d591d3d16107f09dfce92ba18caf13a4a07e38bd",
+  "reason": "Close the unresolved universal-source review gap by requiring generated primary and discharge sources to round-trip their own history number and admission occurrence without test backfills.",
+  "required_evidence": [
+    "document_mechanics_guard",
+    "full_patient_replay",
+    "golden_docx",
+    "staff_profile_regression",
+    "gender_generation_matrix",
+    "desktop_intake_contract",
+    "intake_lifecycle_regression",
+    "packaged_desktop_intake_e2e",
+    "installer_uninstall_smoke",
+    "ci_gate_lock"
+  ],
+  "approved_blobs": {
+    "smoke_combined_part04_medical_generation.py": "dc7fce1096ccb87d49ddbfb8d94f7472492e6a91"
+  }
+}
