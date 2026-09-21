@@ -178,6 +178,16 @@ class FilesMixin:
         if clear_patient_inputs:
             for name in PATIENT_SESSION_SWITCH_ONLY_LIST_ATTRS:
                 setattr(self, name, [])
+            # Output choices belong to one patient too. Carrying a checked
+            # discharge/commission/diary tile into the next patient can create
+            # the wrong document set with a single click, so switch is fail-safe.
+            for var in getattr(self, "output_vars", {}).values():
+                try:
+                    var.set(False)
+                except Exception:
+                    pass
+            if hasattr(self, "_redraw_selection_controls"):
+                self._redraw_selection_controls()
         self.data = PatientData()
 
     def _reset_primary_document_runtime_state(self, *, clear_patient_inputs: bool = False) -> None:
@@ -221,6 +231,45 @@ class FilesMixin:
             self.primary_selected_status_var.set(" ")
 
     @staticmethod
+    def _primary_document_source_signature(path: str | Path) -> tuple[str, int, int, int]:
+        """Identify one concrete filesystem revision of a patient source."""
+        candidate = Path(path)
+        try:
+            stat = candidate.stat()
+            resolved = str(candidate.resolve()).casefold()
+            return (
+                resolved,
+                int(stat.st_size),
+                int(getattr(stat, "st_mtime_ns", int(stat.st_mtime * 1_000_000_000))),
+                int(getattr(stat, "st_ctime_ns", int(stat.st_ctime * 1_000_000_000))),
+            )
+        except OSError:
+            try:
+                resolved = str(candidate.resolve()).casefold()
+            except Exception:
+                resolved = str(candidate).casefold()
+            return (resolved, -1, -1, -1)
+
+    def _is_primary_document_switch(
+        self,
+        previous_primary: str,
+        path: str,
+        candidate_signature: tuple[str, int, int, int],
+    ) -> bool:
+        """Treat a replaced same-name export as a new patient session."""
+        previous_primary = str(previous_primary or "").strip()
+        if not previous_primary:
+            return False
+        try:
+            if Path(previous_primary).resolve() != Path(path).resolve():
+                return True
+        except Exception:
+            if previous_primary != path:
+                return True
+        previous_signature = getattr(self, "_loaded_primary_source_signature", None)
+        return bool(previous_signature and previous_signature != candidate_signature)
+
+    @staticmethod
     def _primary_type_from_parsed_data(data: PatientData) -> str:
         kind = (data.input_document_kind or "").lower().replace("ё", "е")
         if "направ" in kind or "госпитализируется" in kind:
@@ -245,28 +294,29 @@ class FilesMixin:
         path = str(path)
         if not path or not Path(path).exists():
             return
-        previous_primary = self.navigation_path_var.get().strip()
+
+        # Transactional user path: prove that the candidate is readable before
+        # changing navigation or clearing any state from the current patient.
+        # A corrupt/locked export must never destroy a valid open patient card.
+        candidate_signature = self._primary_document_source_signature(path)
         try:
-            switching_primary = bool(
-                previous_primary
-                and Path(previous_primary).resolve() != Path(path).resolve()
-            )
-        except Exception:
-            switching_primary = bool(previous_primary and previous_primary != path)
+            parsed = self._parse_primary_document(path)
+        except Exception as exc:
+            self._show_error("Не удалось прочитать медицинский документ", exc)
+            return
+
+        previous_primary = self.navigation_path_var.get().strip()
+        switching_primary = self._is_primary_document_switch(
+            previous_primary, path, candidate_signature
+        )
         if switching_primary:
             self._confirm_manual_output_dir_for_patient_switch()
         self.navigation_path_var.set(path)
         self._remember_dialog_directory(DIR_PRIMARY_DOCUMENTS, path)
         self._reset_primary_document_runtime_state(clear_patient_inputs=switching_primary)
         self._set_output_dir_from_primary_default(path)
-
-        try:
-            parsed = self._parse_primary_document(path)
-            self._set_primary_document_type(self._primary_type_from_parsed_data(parsed))
-        except Exception:
-            # Если тип не удалось определить, сохраняем универсальный источник
-            # без предположений о конкретной форме документа.
-            self._set_primary_document_type("medical_source")
+        self._set_primary_document_type(self._primary_type_from_parsed_data(parsed))
+        self._loaded_primary_source_signature = candidate_signature
 
         if hasattr(self, "_set_primary_drop_selected"):
             self._set_primary_drop_selected(path)
