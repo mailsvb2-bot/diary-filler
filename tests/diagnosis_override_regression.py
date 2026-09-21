@@ -154,6 +154,9 @@ class _PartialSetHarness(ActionsCreationOrchestratorMixin):
     def _selected_output_names(self, selected_medical, selected_diaries):
         return [*selected_medical, "diaries"] if selected_diaries else list(selected_medical)
 
+    def _prompt_missing_patient_identity_if_needed(self):
+        return True
+
     def _prompt_shared_clinical_options_if_needed(self, _selected):
         return True
 
@@ -381,6 +384,8 @@ def _assert_full_patient_switch_reset_matrix() -> None:
         "_manual_diagnosis",
         "_popup_diagnosis_override",
         "_popup_discharge_date_override",
+        "_popup_fio_override",
+        "_popup_birth_override",
     }
     required_switch_attrs = {
         "_last_committee_date",

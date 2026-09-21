@@ -268,6 +268,7 @@ def _test_medical_transaction(tmp: Path) -> None:
     data = PatientData(
         case_number="123",
         fio="Иванов Иван Иванович",
+        birth="01.01.1980",
         admission_date="10.06.2026",
         discharge_date="11.06.2026",
         diagnosis="F41.2 тест",
