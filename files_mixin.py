@@ -88,6 +88,7 @@ PATIENT_SESSION_SWITCH_ONLY_ATTR_DEFAULTS = (
 PATIENT_SESSION_SWITCH_ONLY_LIST_ATTRS = (
     "status_files",
     "diary_files",
+    "_pending_print_retry_files",
 )
 
 

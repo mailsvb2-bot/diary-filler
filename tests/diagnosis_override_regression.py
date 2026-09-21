@@ -183,6 +183,91 @@ class _DiaryFallbackHarness(ActionsDiaryFlowMixin):
         return False
 
 
+class _PrintRetryHarness(ActionsCreationOrchestratorMixin):
+    def __init__(self, output_dir: Path):
+        self.output_dir = output_dir
+        self.expert_sick_leave_needed_var = _Var("нет")
+        self.printer_var = _Var("Test Printer")
+        self.open_result_folder_var = _Var(False)
+        self.output_vars = {"primary": _Var(True)}
+        self.root = SimpleNamespace(update_idletasks=lambda: None)
+        self.logs: list[str] = []
+        self.status = ""
+        self.generation_calls = 0
+        self.print_calls: list[list[Path]] = []
+        self._pending_print_retry_files: list[Path] = []
+        self.redraw_count = 0
+
+    def selected_medical_docs(self):
+        return ["primary"] if self.output_vars["primary"].get() else []
+
+    def diaries_selected(self):
+        return False
+
+    def _selected_output_names(self, selected_medical, selected_diaries):
+        return list(selected_medical)
+
+    def _prompt_missing_patient_identity_if_needed(self):
+        return True
+
+    def _prompt_shared_clinical_options_if_needed(self, _selected):
+        return True
+
+    def _prompt_common_output_requirements(self, **_kwargs):
+        return True
+
+    def _selected_docs_need_expert_anamnesis(self, _selected):
+        return False
+
+    def _prompt_assigned_treatment_if_needed(self, **_kwargs):
+        return True
+
+    def _start_progress(self):
+        pass
+
+    def _stop_progress(self):
+        pass
+
+    def _result_output_dir(self):
+        return self.output_dir
+
+    def _capture_generation_patient_data(self, **_kwargs):
+        return PatientData(
+            fio="Печатнов Тест Тестович",
+            output_fio="Печатнов Тест Тестович",
+            admission_date="01.09.2026",
+            diagnosis="F42.2 Тест",
+        )
+
+    def _create_medical_documents_impl(self, _selected, *, output_dir_override, **_kwargs):
+        self.generation_calls += 1
+        path = Path(output_dir_override) / "Печатнов Тест Тестович Первичный осмотр.docx"
+        path.write_bytes(b"single-generated-document")
+        return [path]
+
+    def _run_print_files_safely(self, paths):
+        paths = [Path(path) for path in paths]
+        self.print_calls.append(paths)
+        if len(self.print_calls) == 1:
+            return printer_support.PrintResult([], [f"{paths[0].name}: printer offline"])
+        return printer_support.PrintResult(paths, [])
+
+    def _write_creation_report(self, **_kwargs):
+        return None
+
+    def _open_output_folder_after_creation(self, **_kwargs):
+        return False
+
+    def _log(self, text):
+        self.logs.append(str(text))
+
+    def _set_status(self, text):
+        self.status = str(text)
+
+    def _redraw_selection_controls(self):
+        self.redraw_count += 1
+
+
 class _PartialSetHarness(ActionsCreationOrchestratorMixin):
     def __init__(self, output_dir: Path):
         self.output_dir = output_dir
@@ -450,7 +535,7 @@ def _assert_full_patient_switch_reset_matrix() -> None:
         "_diary_text_files_auto_selected",
         "_diary_files_auto_selected",
     }
-    required_switch_lists = {"status_files", "diary_files"}
+    required_switch_lists = {"status_files", "diary_files", "_pending_print_retry_files"}
 
     always_vars = dict(files_mixin.PATIENT_SESSION_ALWAYS_VAR_DEFAULTS)
     tracked_ui_vars = dict(files_mixin.PATIENT_SESSION_TRACKED_UI_VAR_DEFAULTS)
@@ -474,6 +559,7 @@ def _assert_full_patient_switch_reset_matrix() -> None:
         setattr(app, name, True if isinstance(default, bool) else "PATIENT_A_LEAK")
     app.status_files = ["patient-a-text.docx"]
     app.diary_files = ["patient-a-dates.docx"]
+    app._pending_print_retry_files = [Path("patient-a-unprinted.docx")]
     for var in app.output_vars.values():
         var.set(True)
     app.data = PatientData(
@@ -497,6 +583,7 @@ def _assert_full_patient_switch_reset_matrix() -> None:
         assert getattr(app, name) == switch_attrs[name], (name, getattr(app, name))
     assert app.status_files == []
     assert app.diary_files == []
+    assert app._pending_print_retry_files == []
     assert all(not var.get() for var in app.output_vars.values()), app.output_vars
     assert app.data == PatientData(), app.data
 
@@ -667,6 +754,42 @@ def _assert_diary_creation_path_offers_manual_fallback() -> None:
     assert app.manual_offer[0] == snapshot.diagnosis, app.manual_offer
 
 
+def _assert_print_failure_retries_same_saved_file_without_regeneration(root: Path) -> None:
+    output = root / "print-retry-output"
+    app = _PrintRetryHarness(output)
+    warnings: list[tuple[str, str]] = []
+    original_warning = actions_creation_orchestrator.messagebox.showwarning
+    try:
+        actions_creation_orchestrator.messagebox.showwarning = (
+            lambda title, message, **_kwargs: warnings.append((str(title), str(message)))
+        )
+        app.create_selected_outputs(print_after=True)
+
+        saved_after_first = sorted(output.glob("*.docx"))
+        assert len(saved_after_first) == 1, saved_after_first
+        assert app.generation_calls == 1, app.generation_calls
+        assert len(app.print_calls) == 1, app.print_calls
+        assert app.output_vars["primary"].get() is False
+        assert app._pending_print_retry_files == saved_after_first, app._pending_print_retry_files
+        assert "печать не завершена" in app.status.lower(), app.status
+        assert warnings and warnings[-1][0] == "Создано, но печать с ошибками", warnings
+
+        # With no outputs selected, the same print button is now a print-only
+        # retry. No document generation or collision-suffix copy may happen.
+        app.create_selected_outputs(print_after=True)
+    finally:
+        actions_creation_orchestrator.messagebox.showwarning = original_warning
+
+    saved_after_retry = sorted(output.glob("*.docx"))
+    assert saved_after_retry == saved_after_first, (saved_after_first, saved_after_retry)
+    assert app.generation_calls == 1, app.generation_calls
+    assert len(app.print_calls) == 2, app.print_calls
+    assert app.print_calls[1] == saved_after_first, app.print_calls
+    assert app._pending_print_retry_files == [], app._pending_print_retry_files
+    assert app.status == "Готово: сохранённые документы отправлены на печать", app.status
+    assert not list(output.glob("* (2).docx")), saved_after_retry
+
+
 def _assert_diary_failure_keeps_medical_documents(root: Path) -> None:
     output = root / "partial-set-output"
     app = _PartialSetHarness(output)
@@ -725,12 +848,13 @@ def main() -> None:
         _assert_manual_text_is_patient_scoped(root)
         _assert_manual_picker_accepts_doc(root)
         _assert_failed_auto_match_offers_manual_word_file(root)
+        _assert_print_failure_retries_same_saved_file_without_regeneration(root)
         _assert_diary_failure_keeps_medical_documents(root)
         _assert_legacy_doc_parser_route(root)
     _assert_diary_creation_path_offers_manual_fallback()
     print(
         "DIAGNOSIS OVERRIDE REGRESSION OK: UI diagnosis + verbal matching + "
-        "manual fallback + visible Word picker + partial-set survival + .doc/.docx source + same-path replacement isolation + transactional invalid-source handling + multi-primary DnD fail-safe + complete patient-session reset matrix"
+        "manual fallback + visible Word picker + partial-set survival + print retry without regeneration + .doc/.docx source + same-path replacement isolation + transactional invalid-source handling + multi-primary DnD fail-safe + complete patient-session reset matrix"
     )
 
 
