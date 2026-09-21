@@ -186,9 +186,13 @@ for source_name, source_path in _source_target_cases:
             source_name,
             source_data.diagnosis,
         )
-        source_data.case_number = source_data.case_number or manual_data.case_number
-        source_data.admission_occurrence = (
-            source_data.admission_occurrence or manual_data.admission_occurrence
+        assert source_data.case_number == manual_data.case_number, (
+            source_name,
+            source_data.case_number,
+        )
+        assert source_data.admission_occurrence == manual_data.admission_occurrence, (
+            source_name,
+            source_data.admission_occurrence,
         )
 
         if target_kind == "commission":
