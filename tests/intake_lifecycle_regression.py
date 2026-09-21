@@ -262,6 +262,30 @@ def assert_old_watcher_retires_after_in_place_update() -> None:
 
 
 
+def assert_gui_launch_handoff_preserves_queued_arrivals() -> None:
+    """Watcher baseline must ignore stale files without swallowing a second arrival."""
+    stale = Path("stale.docx")
+    first = Path("first.docx")
+    second = Path("second.docx")
+    current = {
+        "stale-key": (stale, "sig-stale"),
+        "first-key": (first, "sig-first"),
+        "second-key": (second, "sig-second"),
+    }
+    handed = {
+        startup._desktop_launch_observed_key("stale-key"): "sig-stale",
+        startup._desktop_launch_observed_key("first-key"): "sig-first",
+    }
+    original_read = startup._desktop_read_gui_launch_observed
+    try:
+        startup._desktop_read_gui_launch_observed = lambda: dict(handed)  # type: ignore[assignment]
+        observed = startup._desktop_gui_observed_from_launch_handoff(current)
+    finally:
+        startup._desktop_read_gui_launch_observed = original_read  # type: ignore[assignment]
+    assert observed == {"stale-key": "sig-stale", "first-key": "sig-first"}, observed
+    assert "second-key" not in observed, observed
+
+
 def assert_agent_suppresses_duplicate_gui_launch_until_heartbeat() -> None:
     """Two quick arrivals must not spawn two visible GUI processes during startup."""
     with tempfile.TemporaryDirectory() as tmp:
@@ -291,9 +315,11 @@ def assert_agent_suppresses_duplicate_gui_launch_until_heartbeat() -> None:
         original_gui = startup._desktop_gui_is_active
         original_snapshot = startup._desktop_candidate_snapshot
         original_launch = startup._desktop_launch_gui_for_primary
+        original_write_launch_observed = startup._desktop_write_gui_launch_observed
         original_sleep = startup.time.sleep
         original_monotonic = startup.time.monotonic
         original_log = startup._desktop_agent_log
+        launch_handoffs: list[dict[str, str]] = []
 
         def snapshot(_root):
             if snapshots:
@@ -318,6 +344,7 @@ def assert_agent_suppresses_duplicate_gui_launch_until_heartbeat() -> None:
             startup._desktop_gui_is_active = lambda: next(gui_states, False)  # type: ignore[assignment]
             startup._desktop_candidate_snapshot = snapshot  # type: ignore[assignment]
             startup._desktop_launch_gui_for_primary = lambda path: launches.append(Path(path)) or True  # type: ignore[assignment]
+            startup._desktop_write_gui_launch_observed = lambda observed: launch_handoffs.append(dict(observed))  # type: ignore[assignment]
             startup.time.monotonic = lambda: now["value"]  # type: ignore[assignment]
             startup.time.sleep = sleep  # type: ignore[assignment]
             startup._desktop_agent_log = lambda _message: None  # type: ignore[assignment]
@@ -327,6 +354,7 @@ def assert_agent_suppresses_duplicate_gui_launch_until_heartbeat() -> None:
             startup._desktop_agent_log = original_log  # type: ignore[assignment]
             startup.time.sleep = original_sleep  # type: ignore[assignment]
             startup.time.monotonic = original_monotonic  # type: ignore[assignment]
+            startup._desktop_write_gui_launch_observed = original_write_launch_observed  # type: ignore[assignment]
             startup._desktop_launch_gui_for_primary = original_launch  # type: ignore[assignment]
             startup._desktop_candidate_snapshot = original_snapshot  # type: ignore[assignment]
             startup._desktop_gui_is_active = original_gui  # type: ignore[assignment]
@@ -339,6 +367,7 @@ def assert_agent_suppresses_duplicate_gui_launch_until_heartbeat() -> None:
             startup.os = original_os  # type: ignore[assignment]
 
         assert launches == [first], launches
+        assert launch_handoffs == [{"first": "sig-first"}], launch_handoffs
 
 
 def assert_agent_retries_failed_visible_launch() -> None:
@@ -364,6 +393,7 @@ def assert_agent_retries_failed_visible_launch() -> None:
         original_gui = startup._desktop_gui_is_active
         original_snapshot = startup._desktop_candidate_snapshot
         original_launch = startup._desktop_launch_gui_for_primary
+        original_write_launch_observed = startup._desktop_write_gui_launch_observed
         original_sleep = startup.time.sleep
         original_monotonic = startup.time.monotonic
         original_log = startup._desktop_agent_log
@@ -393,6 +423,7 @@ def assert_agent_retries_failed_visible_launch() -> None:
             startup._desktop_gui_is_active = lambda: False  # type: ignore[assignment]
             startup._desktop_candidate_snapshot = snapshot  # type: ignore[assignment]
             startup._desktop_launch_gui_for_primary = launch  # type: ignore[assignment]
+            startup._desktop_write_gui_launch_observed = lambda _observed: None  # type: ignore[assignment]
             startup.time.monotonic = lambda: now["value"]  # type: ignore[assignment]
             startup.time.sleep = sleep  # type: ignore[assignment]
             startup._desktop_agent_log = lambda _message: None  # type: ignore[assignment]
@@ -402,6 +433,7 @@ def assert_agent_retries_failed_visible_launch() -> None:
             startup._desktop_agent_log = original_log  # type: ignore[assignment]
             startup.time.sleep = original_sleep  # type: ignore[assignment]
             startup.time.monotonic = original_monotonic  # type: ignore[assignment]
+            startup._desktop_write_gui_launch_observed = original_write_launch_observed  # type: ignore[assignment]
             startup._desktop_launch_gui_for_primary = original_launch  # type: ignore[assignment]
             startup._desktop_candidate_snapshot = original_snapshot  # type: ignore[assignment]
             startup._desktop_gui_is_active = original_gui  # type: ignore[assignment]
@@ -598,6 +630,7 @@ def main() -> None:
     assert_gui_poll_rebinds_when_desktop_moves()
     assert_gui_poll_processes_only_new_or_changed_arrivals()
     assert_old_watcher_retires_after_in_place_update()
+    assert_gui_launch_handoff_preserves_queued_arrivals()
     assert_agent_suppresses_duplicate_gui_launch_until_heartbeat()
     assert_agent_retries_failed_visible_launch()
     assert_unrecognized_word_arrival_gets_one_visible_explanation()
@@ -605,7 +638,7 @@ def main() -> None:
     assert_install_marker_forces_folder_and_staff_onboarding()
     assert_legacy_disabled_preference_heals_and_preserves_user_folder()
     print(
-        "INTAKE LIFECYCLE REGRESSION OK: self-heal + Desktop rebind + event-driven intake + in-place watcher replacement + duplicate-launch suppression + failed-launch retry + visible unrecognized-file feedback + independent PyInstaller child runtime + mandatory install intake"
+        "INTAKE LIFECYCLE REGRESSION OK: self-heal + Desktop rebind + event-driven intake + in-place watcher replacement + queued-arrival handoff + duplicate-launch suppression + failed-launch retry + visible unrecognized-file feedback + independent PyInstaller child runtime + mandatory install intake"
     )
 
 
