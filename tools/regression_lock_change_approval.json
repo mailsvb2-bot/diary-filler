@@ -21,7 +21,6 @@
     "BUILD_WINDOWS_INSTALLER.bat": "7011e7ad3ed86d7750697bca5c3b9cd3f6efda44",
     ".github/workflows/windows-build.yml": "8ee5fa7ef6b7dd1645daba3aae9f35edce73c926",
     ".github/workflows/release.yml": "5ea695574cb5d3a4cace02e3b6db02702d92d320",
-    "README.md": "50496dfe5137c20cdd7afdfc4d92e56319003c28",
     "tools/document_mechanics_change_approval.json": "<deleted>"
   }
 }
