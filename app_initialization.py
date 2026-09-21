@@ -44,26 +44,31 @@ class AppInitializationMixin:
 
 
     def _parse_primary_document(self, path: str | Path) -> PatientData:
-        """Parse a primary DOCX with a small mtime/size cache for UI responsiveness.
+        """Parse a primary DOCX with a small filesystem-signature cache.
 
         Selecting a file, updating the preview, opening dialogs and creating files
         can ask for the same primary document several times. Re-reading DOCX each
-        time makes the interface feel sticky. The cache is invalidated by size or
-        modification time and returns a deep copy so callers may safely mutate the
-        PatientData for their own document flow.
+        time makes the interface feel sticky. The cache is invalidated by size plus
+        nanosecond modification/change timestamps so an exported document replaced
+        in-place under the same filename cannot reuse another patient's parsed data.
+        Callers receive a deep copy so they may safely mutate PatientData.
         """
         p = Path(path)
         key = str(p.resolve()) if p.exists() else str(p)
         try:
             stat = p.stat()
-            signature = (stat.st_mtime, stat.st_size)
+            signature = (
+                int(getattr(stat, "st_mtime_ns", int(stat.st_mtime * 1_000_000_000))),
+                int(getattr(stat, "st_ctime_ns", int(stat.st_ctime * 1_000_000_000))),
+                int(stat.st_size),
+            )
         except Exception:
-            signature = (0.0, -1)
+            signature = (0, 0, -1)
         cached = self._primary_parse_cache.get(key)
-        if cached and cached[0] == signature[0] and cached[1] == signature[1]:
-            return copy.deepcopy(cached[2])
+        if cached and cached[:3] == signature:
+            return copy.deepcopy(cached[3])
         data = self.service.parse_primary_document(p)
-        self._primary_parse_cache[key] = (signature[0], signature[1], copy.deepcopy(data))
+        self._primary_parse_cache[key] = (*signature, copy.deepcopy(data))
         # Keep cache tiny: the UI works with one current patient document.
         if len(self._primary_parse_cache) > 3:
             for old_key in list(self._primary_parse_cache)[:-3]:
@@ -73,7 +78,7 @@ class AppInitializationMixin:
     def _init_core_state(self, root: tk.Tk) -> None:
         self.root = root
         self.service = _LazyMedicalDocumentService()
-        self._primary_parse_cache: dict[str, tuple[float, int, PatientData]] = {}
+        self._primary_parse_cache: dict[str, tuple[int, int, int, PatientData]] = {}
         self._diary_template_files_cache: dict[tuple[str, int], list[Path]] = {}
         self._diary_template_day_cache: dict[tuple[str, int, int], int | None] = {}
         self._diary_template_folder_contains_cache: dict[tuple[str, int], bool] = {}
