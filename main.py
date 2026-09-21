@@ -77,7 +77,17 @@ def _first_launch_onboarding(app) -> None:
         intake_root.mkdir(parents=True, exist_ok=True)
         app._desktop_intake_enabled_for_session = True
         if app._desktop_intake_preference() is not True:
-            app._set_desktop_intake_preference(True)
+            if app._set_desktop_intake_preference(True) is not True:
+                onboarding_complete = False
+                try:
+                    messagebox.showwarning(
+                        "Выписанные пациенты",
+                        "Фоновое наблюдение включено для текущего сеанса, но настройку не удалось сохранить на диск. "
+                        "Программа повторит настройку при следующем запуске.",
+                        parent=app.root,
+                    )
+                except Exception:
+                    pass
     except OSError as exc:
         app._desktop_intake_enabled_for_session = True
         onboarding_complete = False

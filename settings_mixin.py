@@ -215,8 +215,15 @@ class SettingsMixin:
         return value if isinstance(value, bool) else None
 
     def _set_desktop_intake_preference(self, enabled: bool) -> bool:
+        previous = self._settings.get(_DESKTOP_INTAKE_KEY)
         self._settings[_DESKTOP_INTAKE_KEY] = bool(enabled)
-        return self._save_settings()
+        if self._save_settings():
+            return True
+        if previous is None:
+            self._settings.pop(_DESKTOP_INTAKE_KEY, None)
+        else:
+            self._settings[_DESKTOP_INTAKE_KEY] = previous
+        return False
 
     @staticmethod
     def _normalize_patient_folder_naming_settings(value) -> dict:

@@ -546,6 +546,7 @@ def assert_install_marker_forces_folder_and_staff_onboarding() -> None:
 
             def _set_desktop_intake_preference(self, enabled):
                 self.preference = bool(enabled)
+                return True
 
             def _staff_profile_is_configured(self):
                 return True
@@ -599,6 +600,7 @@ def assert_legacy_disabled_preference_heals_and_preserves_user_folder() -> None:
 
             def _set_desktop_intake_preference(self, enabled):
                 self.preference = bool(enabled)
+                return True
 
             def _staff_profile_is_configured(self):
                 return True

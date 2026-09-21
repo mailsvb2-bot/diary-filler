@@ -124,6 +124,7 @@ def _assert_persistence_failure_fails_closed(root: Path) -> None:
     assert app._patient_folder_naming_settings() == before, app._settings
 
     assert app._set_desktop_intake_preference(True) is False
+    assert app._desktop_intake_preference() is None, app._settings
 
 
 def _assert_settings(root: Path) -> None:
