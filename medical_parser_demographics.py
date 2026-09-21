@@ -89,15 +89,15 @@ class MedicalParserDemographicsMixin:
             return ""
 
         name_part = r"[А-ЯЁ][А-ЯЁа-яё]+(?:-[А-ЯЁ][А-ЯЁа-яё]+)?"
-        full_name_re = re.compile(rf"^{name_part}\\s+{name_part}\\s+{name_part}$")
-        initials_re = re.compile(rf"^{name_part}\\s+[А-ЯЁ]\\.?(?:\\s*)[А-ЯЁ]\\.?$")
+        full_name_re = re.compile(rf"^{name_part}\s+{name_part}\s+{name_part}$")
+        initials_re = re.compile(rf"^{name_part}\s+[А-ЯЁ]\.?(?:\s*)[А-ЯЁ]\.?$")
         birth_marker_re = re.compile(
-            r"(?i)^(?:дата\\s+рождения|год\\s+рождения|г\\.\\s*р\\.|возраст)\\b"
+            r"(?i)^(?:дата\s+рождения|год\s+рождения|г\.\s*р\.|возраст)\b"
         )
         hard_stop_re = re.compile(
-            r"(?i)^(?:жалобы|анамнез|психический\\s+статус|соматическ|"
-            r"сомато-неврологическ|диагноз|лечение|план\\s+лечения|"
-            r"план\\s+обследования|эпидемиологическ)"
+            r"(?i)^(?:жалобы|анамнез|психический\s+статус|соматическ|"
+            r"сомато-неврологическ|диагноз|лечение|план\s+лечения|"
+            r"план\s+обследования|эпидемиологическ)"
         )
 
         for index, line in enumerate(lines[:60]):
@@ -112,7 +112,8 @@ class MedicalParserDemographicsMixin:
         return ""
 
     @staticmethod
-    def _extract_split_fio_label_value(text: str) -> str:        """Read FIO when a DOCX table flattens label and value into adjacent lines.
+    def _extract_split_fio_label_value(text: str) -> str:
+        """Read FIO when a DOCX table flattens label and value into adjacent lines.
 
         A common Word layout stores ``Ф.И.О.`` in the left cell and the actual
         name in the right cell. ``extract_docx_text`` intentionally preserves
