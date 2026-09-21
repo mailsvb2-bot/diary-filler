@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "5401f74649390c833df9368a6e4bacced3d1a743",
-  "baseline_note": "v1.4.23 universal medical-source hardening plus canonical PR provenance recovery fully validated on main 5401f74649390c833df9368a6e4bacced3d1a743 by Windows production CI run 35595000373 (#715), including regression locks, document mechanics guard, production audit, release gate, full patient replay and golden DOCX, GUI smoke, packaged desktop intake E2E, installer build, and installed/uninstalled smoke.",
+  "baseline_ref": "e70c5cd8909cfb8c31dbbf6900585f3ad8b83857",
+  "baseline_note": "v1.4.23 user-journey hardening through PRs #178-#181, including patient-session isolation, intake launch safety, partial-generation print safety, fail-closed staff confirmation, and persisted patient-folder naming, fully validated on main e70c5cd8909cfb8c31dbbf6900585f3ad8b83857 by Windows production CI run 35622319726 (#734), including regression locks, production audit, release gate, full patient replay and golden DOCX, real Tk GUI smoke, packaged desktop intake E2E, installer build, and installed/uninstalled smoke.",
   "required_approval_evidence": [
     "ci_gate_lock"
   ],
