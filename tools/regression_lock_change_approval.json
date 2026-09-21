@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "e70c5cd8909cfb8c31dbbf6900585f3ad8b83857",
-  "reason": "Complete print-intent recovery after partial generation: preserve the already-saved successful subset in the session print queue, generate only the failed retry part, then print the entire originally requested set without duplicate regeneration.",
+  "reason": "Onboarding persistence integrity: preserve prior print/intake/settings hardening while keeping first-run onboarding incomplete until the mandatory desktop-intake preference is actually persisted.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -21,9 +21,10 @@
     "smoke_combined_part01_setup_contracts.py": "e4dc3dc12b9674a6f6146c6b5141cb1987a62350",
     "tests/diagnosis_override_regression.py": "8d9988cb08427e92c8c2fc1e4f6973c82831313e",
     "tools/document_mechanics_change_approval.json": "7826383b55079a8bd96b88e0e5153c4a38f39099",
-    "settings_mixin.py": "cfab5d4ac2c671a087ddae2626b8596e1a1c7c9d",
-    "tools/staff_profile_regression.py": "2a882ab9d65cc01caf0e3216866779f93b0963bd",
+    "settings_mixin.py": "988eec68abac613d607800950c9fed0a833c4f80",
+    "tools/staff_profile_regression.py": "5150fd35f82743759c830c492be2dee640d8be14",
     "startup.py": "7cc293d1ba1961b8d1cb90c66448bfd8edb487c8",
-    "tests/desktop_intake_contract_check.py": "3ca57b7592f2a94f86f7971709b570e571a6d4f4"
+    "tests/desktop_intake_contract_check.py": "4951cb83be781db0afb7f960034b8e2396c11450",
+    "main.py": "36c3fbed4965323ae0748be16b3d2017612016d6"
   }
 }
