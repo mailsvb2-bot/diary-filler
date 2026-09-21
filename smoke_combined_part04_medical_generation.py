@@ -106,6 +106,8 @@ assert commission_roundtrip.admission_date == "", commission_roundtrip.admission
 assert commission_roundtrip.admission_occurrence == manual_data.admission_occurrence, commission_roundtrip.admission_occurrence
 assert commission_roundtrip.diagnosis == manual_data.diagnosis, commission_roundtrip.diagnosis
 assert commission_roundtrip.treatment_plan == manual_data.treatment_plan, commission_roundtrip.treatment_plan
+assert commission_roundtrip.commission_date == manual_data.commission_date, commission_roundtrip.commission_date
+assert commission_roundtrip.commission_number == manual_data.commission_number, commission_roundtrip.commission_number
 
 vk_mse_roundtrip = service.parse_primary_document(vk_mse_path)
 assert vk_mse_roundtrip.input_document_kind == "ВК на МСЭ", vk_mse_roundtrip.input_document_kind
@@ -113,6 +115,9 @@ assert vk_mse_roundtrip.admission_date == "", vk_mse_roundtrip.admission_date
 assert vk_mse_roundtrip.diagnosis == manual_data.diagnosis, vk_mse_roundtrip.diagnosis
 assert vk_mse_roundtrip.treatment_plan == manual_data.treatment_plan, vk_mse_roundtrip.treatment_plan
 assert vk_mse_roundtrip.has_treatment_section is True
+assert vk_mse_roundtrip.vk_date == manual_data.vk_date, vk_mse_roundtrip.vk_date
+assert vk_mse_roundtrip.vk_protocol_number == manual_data.vk_protocol_number, vk_mse_roundtrip.vk_protocol_number
+assert vk_mse_roundtrip.vk_protocol_date == manual_data.vk_protocol_date, vk_mse_roundtrip.vk_protocol_date
 
 sick_leave_vk_roundtrip = service.parse_primary_document(sick_leave_vk_path)
 assert sick_leave_vk_roundtrip.input_document_kind == "ВК больничный", sick_leave_vk_roundtrip.input_document_kind
@@ -124,6 +129,9 @@ assert sick_leave_vk_roundtrip.discharge_date == "", sick_leave_vk_roundtrip.dis
 assert sick_leave_vk_roundtrip.diagnosis == manual_data.diagnosis, sick_leave_vk_roundtrip.diagnosis
 assert sick_leave_vk_roundtrip.treatment_plan == manual_data.treatment_plan, sick_leave_vk_roundtrip.treatment_plan
 assert sick_leave_vk_roundtrip.has_treatment_section is True
+assert sick_leave_vk_roundtrip.sick_leave_vk_date == manual_data.sick_leave_vk_date, sick_leave_vk_roundtrip.sick_leave_vk_date
+assert sick_leave_vk_roundtrip.sick_leave_vk_protocol_number == manual_data.sick_leave_vk_protocol_number, sick_leave_vk_roundtrip.sick_leave_vk_protocol_number
+assert sick_leave_vk_roundtrip.sick_leave_vk_protocol_date == manual_data.sick_leave_vk_protocol_date, sick_leave_vk_roundtrip.sick_leave_vk_protocol_date
 
 rvk_roundtrip = service.parse_primary_document(rvk_path)
 assert rvk_roundtrip.input_document_kind == "акт для РВК", rvk_roundtrip.input_document_kind
@@ -131,6 +139,8 @@ assert rvk_roundtrip.admission_date == manual_data.admission_date, (rvk_roundtri
 assert rvk_roundtrip.discharge_date == manual_data.discharge_date, (rvk_roundtrip.discharge_date, manual_data.discharge_date)
 assert rvk_roundtrip.case_number == manual_data.case_number, rvk_roundtrip.case_number
 assert rvk_roundtrip.admission_occurrence == manual_data.admission_occurrence, rvk_roundtrip.admission_occurrence
+assert rvk_roundtrip.rvk_act_number == manual_data.rvk_act_number, rvk_roundtrip.rvk_act_number
+assert "ленинск" in rvk_roundtrip.rvk_military_commissariat.lower(), rvk_roundtrip.rvk_military_commissariat
 
 # Real DnD classification must route an epicrisis to the patient-source slot,
 # while a standalone ЭПИ document remains in the auxiliary ЭПИ slot.
