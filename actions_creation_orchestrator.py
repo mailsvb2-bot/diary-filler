@@ -556,10 +556,11 @@ class ActionsCreationOrchestratorMixin:
 
         print_result = None
         if print_after and errors:
-            # Never auto-print an incomplete selected set. The successful files
-            # stay saved, but the doctor must see the partial-generation warning
-            # before deciding what to print. Sending paper first and warning
-            # afterwards can create an incomplete physical chart by surprise.
+            # Never auto-print an incomplete selected set. Preserve every
+            # successfully saved file in the session print queue so that after
+            # the failed part is fixed, the next "create and print" prints the
+            # whole originally requested set: old successful files + new retry.
+            self._set_pending_print_retry_files([*prior_pending_print, *created_files])
             self._log("\n⚠️ Автоматическая печать отменена: комплект создан не полностью.\n")
         elif print_after:
             self._set_status("Отправляю документы на печать...")
@@ -615,7 +616,12 @@ class ActionsCreationOrchestratorMixin:
                 "Комплект создан частично",
                 "Созданы и сохранены все документы, которые удалось подготовить.\n\n"
                 "Не создано:\n" + "\n".join(errors) +
-                ("\n\nАвтоматическая печать не запускалась, потому что комплект неполный." if print_after else "") +
+                (
+                    "\n\nАвтоматическая печать не запускалась, потому что комплект неполный. "
+                    "Уже сохранённые файлы поставлены в очередь и будут распечатаны вместе "
+                    "с исправленной частью при следующем «Создать, сохранить, распечатать»."
+                    if print_after else ""
+                ) +
                 "\n\nУже созданные пункты сняты с выбора. Исправьте источник дневников и повторите создание.",
             )
 

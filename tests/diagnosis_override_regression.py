@@ -283,12 +283,16 @@ class _PartialSetHarness(ActionsCreationOrchestratorMixin):
         self.logs: list[str] = []
         self.status = ""
         self.reports: list[dict] = []
+        self.medical_generation_calls = 0
+        self.diary_generation_calls = 0
+        self.diary_should_fail = True
+        self._pending_print_retry_files: list[Path] = []
 
     def selected_medical_docs(self):
-        return ["primary"]
+        return ["primary"] if self.output_vars["primary"].get() else []
 
     def diaries_selected(self):
-        return True
+        return bool(self.output_vars["diaries"].get())
 
     def _selected_output_names(self, selected_medical, selected_diaries):
         return [*selected_medical, "diaries"] if selected_diaries else list(selected_medical)
@@ -327,12 +331,26 @@ class _PartialSetHarness(ActionsCreationOrchestratorMixin):
         )
 
     def _create_medical_documents_impl(self, _selected, *, output_dir_override, **_kwargs):
+        self.medical_generation_calls += 1
         path = Path(output_dir_override) / "Первичный осмотр.docx"
         path.write_bytes(b"medical-document-ok")
         return [path]
 
-    def _create_diaries_impl(self, **_kwargs):
-        raise ValueError("Тексты дневников не выбраны")
+    def _create_diaries_impl(self, *, output_dir_override, **_kwargs):
+        self.diary_generation_calls += 1
+        if self.diary_should_fail:
+            raise ValueError("Тексты дневников не выбраны")
+        path = Path(output_dir_override) / "Дневники.docx"
+        path.write_bytes(b"diary-document-ok")
+        return SimpleNamespace(
+            created_files=[path],
+            report_path=None,
+            processed_files=1,
+            filled_rows=1,
+            month_cells_filled=1,
+            final_rows_filled=1,
+            removed_after_discharge_rows=0,
+        )
 
     def _write_creation_report(self, **kwargs):
         self.reports.append(kwargs)
@@ -799,28 +817,54 @@ def _assert_diary_failure_keeps_medical_documents(root: Path) -> None:
     warnings: list[tuple[str, str]] = []
     errors: list[tuple[str, str]] = []
     print_calls: list[tuple[list[Path], str]] = []
+
+    def fake_print_files(paths, printer):
+        normalized = [Path(path) for path in paths]
+        print_calls.append((normalized, printer))
+        return printer_support.PrintResult(normalized, [])
+
     try:
         actions_creation_orchestrator.messagebox.showwarning = lambda title, message, **_kwargs: warnings.append((title, message))
         actions_creation_orchestrator.messagebox.showerror = lambda title, message, **_kwargs: errors.append((title, message))
-        printer_support.print_files = lambda paths, printer: print_calls.append((list(paths), printer))  # type: ignore[assignment]
+        printer_support.print_files = fake_print_files  # type: ignore[assignment]
+        app.create_selected_outputs(print_after=True)
+
+        saved = list(output.glob("Первичный осмотр*.docx"))
+        assert len(saved) == 1 and saved[0].read_bytes() == b"medical-document-ok", saved
+        assert app._pending_print_retry_files == saved, app._pending_print_retry_files
+        assert not errors, errors
+        assert warnings and warnings[-1][0] == "Комплект создан частично", warnings
+        assert "Дневники" in warnings[-1][1] and "Тексты дневников не выбраны" in warnings[-1][1], warnings
+        assert "Автоматическая печать не запускалась" in warnings[-1][1], warnings
+        assert "поставлены в очередь" in warnings[-1][1], warnings
+        assert print_calls == [], print_calls
+        assert app.output_vars["primary"].get() is False, app.output_vars["primary"].get()
+        assert app.output_vars["diaries"].get() is True, app.output_vars["diaries"].get()
+        assert app.medical_generation_calls == 1, app.medical_generation_calls
+        assert app.diary_generation_calls == 1, app.diary_generation_calls
+        assert app.redraw_count == 1, app.redraw_count
+        assert app.reports and any("Дневники:" in item for item in (app.reports[-1].get("errors") or [])), app.reports
+        assert app.status == "Готово частично: доступные документы сохранены", app.status
+
+        # The doctor fixes the diary source and repeats the original print action.
+        # Only diaries are generated now, but printing must include both the
+        # previously saved medical file and the newly created diary.
+        app.diary_should_fail = False
         app.create_selected_outputs(print_after=True)
     finally:
         printer_support.print_files = original_print_files  # type: ignore[assignment]
         actions_creation_orchestrator.messagebox.showwarning = original_warning
         actions_creation_orchestrator.messagebox.showerror = original_error
 
-    saved = list(output.glob("Первичный осмотр*.docx"))
-    assert len(saved) == 1 and saved[0].read_bytes() == b"medical-document-ok", saved
-    assert not errors, errors
-    assert warnings and warnings[-1][0] == "Комплект создан частично", warnings
-    assert "Дневники" in warnings[-1][1] and "Тексты дневников не выбраны" in warnings[-1][1], warnings
-    assert "Автоматическая печать не запускалась" in warnings[-1][1], warnings
-    assert print_calls == [], print_calls
-    assert app.output_vars["primary"].get() is False, app.output_vars["primary"].get()
-    assert app.output_vars["diaries"].get() is True, app.output_vars["diaries"].get()
-    assert app.redraw_count == 1, app.redraw_count
-    assert app.reports and any("Дневники:" in item for item in (app.reports[-1].get("errors") or [])), app.reports
-    assert app.status == "Готово частично: доступные документы сохранены", app.status
+    diaries = list(output.glob("Дневники*.docx"))
+    assert len(diaries) == 1 and diaries[0].read_bytes() == b"diary-document-ok", diaries
+    assert app.medical_generation_calls == 1, app.medical_generation_calls
+    assert app.diary_generation_calls == 2, app.diary_generation_calls
+    assert len(print_calls) == 1, print_calls
+    assert print_calls[0][1] == "Test Printer", print_calls
+    assert print_calls[0][0] == [saved[0], diaries[0]], print_calls
+    assert app._pending_print_retry_files == [], app._pending_print_retry_files
+    assert len(list(output.glob("Первичный осмотр*.docx"))) == 1
 
 
 
@@ -854,7 +898,7 @@ def main() -> None:
     _assert_diary_creation_path_offers_manual_fallback()
     print(
         "DIAGNOSIS OVERRIDE REGRESSION OK: UI diagnosis + verbal matching + "
-        "manual fallback + visible Word picker + partial-set survival + print retry without regeneration + .doc/.docx source + same-path replacement isolation + transactional invalid-source handling + multi-primary DnD fail-safe + complete patient-session reset matrix"
+        "manual fallback + visible Word picker + partial-set survival + complete partial-print retry + print retry without regeneration + .doc/.docx source + same-path replacement isolation + transactional invalid-source handling + multi-primary DnD fail-safe + complete patient-session reset matrix"
     )
 
 

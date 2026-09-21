@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "base_sha": "dbd6d7e1bb174a5d043b71dde90332e4bbd3461a",
-  "reason": "Explicit user-journey integrity fix: printer selection must not report persistent success when settings.json cannot be written.",
+  "base_sha": "2ceea4c620270dca91da586aaa2f17d999b3e903",
+  "reason": "Explicit print-safety fix: when printing is withheld because the selected document set is incomplete, successfully saved files must remain queued and be printed together with the corrected retry without regenerating them.",
   "approved_blobs": {
-    "files_mixin.py": "f0b4ec41ff2ae55e0d0423b6adbab5cf166dd1e1"
+    "actions_creation_orchestrator.py": "e3455431908407c36e7346e7282f681e9fcfcc67"
   }
 }
