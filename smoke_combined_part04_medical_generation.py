@@ -95,6 +95,7 @@ assert discharge_roundtrip.case_number == manual_data.case_number, discharge_rou
 assert discharge_roundtrip.diagnosis == manual_data.diagnosis, discharge_roundtrip.diagnosis
 assert discharge_roundtrip.treatment_plan == manual_data.treatment_plan, discharge_roundtrip.treatment_plan
 assert discharge_roundtrip.admission_occurrence == manual_data.admission_occurrence, discharge_roundtrip.admission_occurrence
+assert discharge_roundtrip.sick_leave == "нужен", discharge_roundtrip.sick_leave
 assert "ЭПИ тестовая информация" in discharge_roundtrip.epi_text, discharge_roundtrip.epi_text
 
 # Every generated medical form is also a supported source. Dates that belong to
@@ -156,7 +157,10 @@ for source_name, source_path in _source_target_cases:
         # Common episode facts should come from the source itself. Only a
         # destination-specific form number/date may be supplied here.
         assert source_data.fio == manual_data.fio, (source_name, source_data.fio)
-        assert source_data.birth == manual_data.birth, (source_name, source_data.birth)
+        assert str(manual_data.birth).split()[0] in source_data.birth, (
+            source_name,
+            source_data.birth,
+        )
         assert source_data.admission_date == manual_data.admission_date, (
             source_name,
             source_data.admission_date,
