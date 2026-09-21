@@ -198,7 +198,8 @@ def _assert_method_binding_contract() -> None:
         _fail("Unsafe class-method binding contract:\n" + "\n".join(sorted(bad)))
 
 
-def _assert_architecture_hygiene() -> None:    py_files = _python_files()
+def _assert_architecture_hygiene() -> None:
+    py_files = _python_files()
     names = {p.name for p in py_files}
     dust = sorted(names & FORBIDDEN_DUST_FILES)
     if dust:
