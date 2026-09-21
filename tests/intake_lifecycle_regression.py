@@ -262,6 +262,184 @@ def assert_old_watcher_retires_after_in_place_update() -> None:
 
 
 
+def assert_agent_suppresses_duplicate_gui_launch_until_heartbeat() -> None:
+    """Two quick arrivals must not spawn two visible GUI processes during startup."""
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp) / startup.DESKTOP_INTAKE_FOLDER_NAME
+        root.mkdir()
+        first = root / "first.docx"
+        second = root / "second.docx"
+        first.write_bytes(b"first")
+        second.write_bytes(b"second")
+        snapshots = [
+            {},
+            {"first": (first, "sig-first"), "second": (second, "sig-second")},
+            {"first": (first, "sig-first"), "second": (second, "sig-second")},
+        ]
+        launches: list[Path] = []
+        gui_states = iter([False, False])
+        now = {"value": 100.0}
+        sleeps = 0
+
+        original_os = startup.os
+        original_acquire = startup._desktop_acquire_agent_mutex
+        original_release = startup._desktop_release_agent_mutex
+        original_root = startup.desktop_intake_ensure_root
+        original_rebind = startup._desktop_rebind_intake_root
+        original_touch = startup._desktop_touch_agent_heartbeat
+        original_retired = startup._desktop_agent_is_retired
+        original_gui = startup._desktop_gui_is_active
+        original_snapshot = startup._desktop_candidate_snapshot
+        original_launch = startup._desktop_launch_gui_for_primary
+        original_sleep = startup.time.sleep
+        original_monotonic = startup.time.monotonic
+        original_log = startup._desktop_agent_log
+
+        def snapshot(_root):
+            if snapshots:
+                return snapshots.pop(0)
+            return {"first": (first, "sig-first"), "second": (second, "sig-second")}
+
+        def sleep(_seconds):
+            nonlocal sleeps
+            sleeps += 1
+            now["value"] += 0.5
+            if sleeps >= 2:
+                raise KeyboardInterrupt
+
+        try:
+            startup.os = SimpleNamespace(name="nt", environ={})  # type: ignore[assignment]
+            startup._desktop_acquire_agent_mutex = lambda: 1  # type: ignore[assignment]
+            startup._desktop_release_agent_mutex = lambda _handle: None  # type: ignore[assignment]
+            startup.desktop_intake_ensure_root = lambda: root  # type: ignore[assignment]
+            startup._desktop_rebind_intake_root = lambda current: (Path(current), False)  # type: ignore[assignment]
+            startup._desktop_touch_agent_heartbeat = lambda: None  # type: ignore[assignment]
+            startup._desktop_agent_is_retired = lambda: False  # type: ignore[assignment]
+            startup._desktop_gui_is_active = lambda: next(gui_states, False)  # type: ignore[assignment]
+            startup._desktop_candidate_snapshot = snapshot  # type: ignore[assignment]
+            startup._desktop_launch_gui_for_primary = lambda path: launches.append(Path(path)) or True  # type: ignore[assignment]
+            startup.time.monotonic = lambda: now["value"]  # type: ignore[assignment]
+            startup.time.sleep = sleep  # type: ignore[assignment]
+            startup._desktop_agent_log = lambda _message: None  # type: ignore[assignment]
+
+            assert startup.run_desktop_intake_agent() == 0
+        finally:
+            startup._desktop_agent_log = original_log  # type: ignore[assignment]
+            startup.time.sleep = original_sleep  # type: ignore[assignment]
+            startup.time.monotonic = original_monotonic  # type: ignore[assignment]
+            startup._desktop_launch_gui_for_primary = original_launch  # type: ignore[assignment]
+            startup._desktop_candidate_snapshot = original_snapshot  # type: ignore[assignment]
+            startup._desktop_gui_is_active = original_gui  # type: ignore[assignment]
+            startup._desktop_agent_is_retired = original_retired  # type: ignore[assignment]
+            startup._desktop_touch_agent_heartbeat = original_touch  # type: ignore[assignment]
+            startup._desktop_rebind_intake_root = original_rebind  # type: ignore[assignment]
+            startup.desktop_intake_ensure_root = original_root  # type: ignore[assignment]
+            startup._desktop_release_agent_mutex = original_release  # type: ignore[assignment]
+            startup._desktop_acquire_agent_mutex = original_acquire  # type: ignore[assignment]
+            startup.os = original_os  # type: ignore[assignment]
+
+        assert launches == [first], launches
+
+
+def assert_agent_retries_failed_visible_launch() -> None:
+    """A transient Popen failure must not permanently consume a user's file."""
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp) / startup.DESKTOP_INTAKE_FOLDER_NAME
+        root.mkdir()
+        candidate = root / "patient.docx"
+        candidate.write_bytes(b"patient")
+        snapshots = [{}, {"k": (candidate, "sig")}, {"k": (candidate, "sig")}, {"k": (candidate, "sig")}]
+        outcomes = iter([False, True])
+        attempts: list[Path] = []
+        now = {"value": 100.0}
+        sleeps = 0
+
+        original_os = startup.os
+        original_acquire = startup._desktop_acquire_agent_mutex
+        original_release = startup._desktop_release_agent_mutex
+        original_root = startup.desktop_intake_ensure_root
+        original_rebind = startup._desktop_rebind_intake_root
+        original_touch = startup._desktop_touch_agent_heartbeat
+        original_retired = startup._desktop_agent_is_retired
+        original_gui = startup._desktop_gui_is_active
+        original_snapshot = startup._desktop_candidate_snapshot
+        original_launch = startup._desktop_launch_gui_for_primary
+        original_sleep = startup.time.sleep
+        original_monotonic = startup.time.monotonic
+        original_log = startup._desktop_agent_log
+
+        def snapshot(_root):
+            return snapshots.pop(0) if snapshots else {"k": (candidate, "sig")}
+
+        def launch(path):
+            attempts.append(Path(path))
+            return next(outcomes)
+
+        def sleep(_seconds):
+            nonlocal sleeps
+            sleeps += 1
+            now["value"] += 1.1
+            if sleeps >= 3:
+                raise KeyboardInterrupt
+
+        try:
+            startup.os = SimpleNamespace(name="nt", environ={})  # type: ignore[assignment]
+            startup._desktop_acquire_agent_mutex = lambda: 1  # type: ignore[assignment]
+            startup._desktop_release_agent_mutex = lambda _handle: None  # type: ignore[assignment]
+            startup.desktop_intake_ensure_root = lambda: root  # type: ignore[assignment]
+            startup._desktop_rebind_intake_root = lambda current: (Path(current), False)  # type: ignore[assignment]
+            startup._desktop_touch_agent_heartbeat = lambda: None  # type: ignore[assignment]
+            startup._desktop_agent_is_retired = lambda: False  # type: ignore[assignment]
+            startup._desktop_gui_is_active = lambda: False  # type: ignore[assignment]
+            startup._desktop_candidate_snapshot = snapshot  # type: ignore[assignment]
+            startup._desktop_launch_gui_for_primary = launch  # type: ignore[assignment]
+            startup.time.monotonic = lambda: now["value"]  # type: ignore[assignment]
+            startup.time.sleep = sleep  # type: ignore[assignment]
+            startup._desktop_agent_log = lambda _message: None  # type: ignore[assignment]
+
+            assert startup.run_desktop_intake_agent() == 0
+        finally:
+            startup._desktop_agent_log = original_log  # type: ignore[assignment]
+            startup.time.sleep = original_sleep  # type: ignore[assignment]
+            startup.time.monotonic = original_monotonic  # type: ignore[assignment]
+            startup._desktop_launch_gui_for_primary = original_launch  # type: ignore[assignment]
+            startup._desktop_candidate_snapshot = original_snapshot  # type: ignore[assignment]
+            startup._desktop_gui_is_active = original_gui  # type: ignore[assignment]
+            startup._desktop_agent_is_retired = original_retired  # type: ignore[assignment]
+            startup._desktop_touch_agent_heartbeat = original_touch  # type: ignore[assignment]
+            startup._desktop_rebind_intake_root = original_rebind  # type: ignore[assignment]
+            startup.desktop_intake_ensure_root = original_root  # type: ignore[assignment]
+            startup._desktop_release_agent_mutex = original_release  # type: ignore[assignment]
+            startup._desktop_acquire_agent_mutex = original_acquire  # type: ignore[assignment]
+            startup.os = original_os  # type: ignore[assignment]
+
+        assert attempts == [candidate, candidate], attempts
+
+
+def assert_unrecognized_word_arrival_gets_one_visible_explanation() -> None:
+    """A wake-up that cannot be classified must not look like a silent no-op."""
+    with tempfile.TemporaryDirectory() as tmp:
+        source = Path(tmp) / "unknown.docx"
+        source.write_bytes(b"unknown")
+        warnings: list[tuple[str, str]] = []
+        app = SimpleNamespace(root=object())
+        original_quiet = startup.desktop_intake_file_is_quiet
+        original_classifier = startup.desktop_intake_is_primary_document
+        original_warning = startup.messagebox.showwarning
+        try:
+            startup.desktop_intake_file_is_quiet = lambda _path: True  # type: ignore[assignment]
+            startup.desktop_intake_is_primary_document = lambda _path: False  # type: ignore[assignment]
+            startup.messagebox.showwarning = lambda title, message, **_kwargs: warnings.append((title, message))  # type: ignore[assignment]
+            assert startup._desktop_process_primary(app, source) is False
+        finally:
+            startup.messagebox.showwarning = original_warning
+            startup.desktop_intake_is_primary_document = original_classifier  # type: ignore[assignment]
+            startup.desktop_intake_file_is_quiet = original_quiet  # type: ignore[assignment]
+        assert len(warnings) == 1, warnings
+        assert "не смогла надёжно распознать" in warnings[0][1], warnings
+        assert source.is_file(), "unrecognized file must stay untouched"
+
+
 def assert_pyinstaller_children_are_independent_and_gui_is_visible() -> None:
     """Persistent watcher must not hold the GUI's _MEI dir; GUI launch must not be detached."""
     captured: list[tuple[list[str], dict[str, object]]] = []
@@ -420,11 +598,14 @@ def main() -> None:
     assert_gui_poll_rebinds_when_desktop_moves()
     assert_gui_poll_processes_only_new_or_changed_arrivals()
     assert_old_watcher_retires_after_in_place_update()
+    assert_agent_suppresses_duplicate_gui_launch_until_heartbeat()
+    assert_agent_retries_failed_visible_launch()
+    assert_unrecognized_word_arrival_gets_one_visible_explanation()
     assert_pyinstaller_children_are_independent_and_gui_is_visible()
     assert_install_marker_forces_folder_and_staff_onboarding()
     assert_legacy_disabled_preference_heals_and_preserves_user_folder()
     print(
-        "INTAKE LIFECYCLE REGRESSION OK: self-heal + Desktop rebind + event-driven intake + in-place watcher replacement + independent PyInstaller child runtime + mandatory install intake"
+        "INTAKE LIFECYCLE REGRESSION OK: self-heal + Desktop rebind + event-driven intake + in-place watcher replacement + duplicate-launch suppression + failed-launch retry + visible unrecognized-file feedback + independent PyInstaller child runtime + mandatory install intake"
     )
 
 
