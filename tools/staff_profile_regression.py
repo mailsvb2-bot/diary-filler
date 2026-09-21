@@ -3,9 +3,13 @@ from __future__ import annotations
 import json
 import tempfile
 from pathlib import Path
+from types import SimpleNamespace
+from tkinter import messagebox, simpledialog
 
 from docx import Document
 
+from actions_creation_orchestrator import ActionsCreationOrchestratorMixin
+import actions_creation_orchestrator
 from diary_service import DiaryService
 from medical_constants import DOCUMENT_ORDER
 from medical_docx_reader import extract_docx_text
@@ -18,6 +22,83 @@ from tools.generation_performance_profile import _make_fixture
 
 class _SettingsHarness(SettingsMixin):
     pass
+
+
+class _UnconfiguredGenerationHarness(ActionsCreationOrchestratorMixin):
+    def __init__(self) -> None:
+        self.root = object()
+        self.status = ""
+        self.prompt_calls = 0
+        self.logs: list[str] = []
+
+    def selected_medical_docs(self):
+        return []
+
+    def diaries_selected(self):
+        return True
+
+    def _staff_profile_is_configured(self):
+        return False
+
+    def _prompt_staff_profile(self, *, first_run=False):
+        self.prompt_calls += 1
+        return False
+
+    def _set_status(self, text):
+        self.status = str(text)
+
+    def _log(self, text):
+        self.logs.append(str(text))
+
+
+def _assert_unconfigured_generation_fails_closed() -> None:
+    app = _UnconfiguredGenerationHarness()
+    warnings: list[tuple[str, str]] = []
+    original_warning = actions_creation_orchestrator.messagebox.showwarning
+    try:
+        actions_creation_orchestrator.messagebox.showwarning = (
+            lambda title, message, **_kwargs: warnings.append((str(title), str(message)))
+        )
+        app.create_selected_outputs(print_after=False)
+    finally:
+        actions_creation_orchestrator.messagebox.showwarning = original_warning
+    assert app.prompt_calls == 1, app.prompt_calls
+    assert app.status == "Создание отменено: укажите сотрудников", app.status
+    assert app.logs == [], app.logs
+    assert warnings and warnings[-1][0] == "Сотрудники не настроены", warnings
+
+
+def _assert_fresh_staff_prompt_has_no_foreign_defaults(root: Path) -> None:
+    app = _SettingsHarness()
+    app.root = object()
+    app._settings_path = root / "fresh-settings.json"
+    app._settings = {}
+    captured_defaults: list[str] = []
+    answers = iter([
+        "Орлов Олег Олегович",
+        "Соколова Светлана Сергеевна",
+        "Кузнецова Кира Константиновна",
+    ])
+    original_askstring = simpledialog.askstring
+    original_info = messagebox.showinfo
+    original_warning = messagebox.showwarning
+    try:
+        def fake_askstring(_title, _prompt, *, initialvalue="", **_kwargs):
+            captured_defaults.append(str(initialvalue or ""))
+            return next(answers)
+
+        simpledialog.askstring = fake_askstring
+        messagebox.showinfo = lambda *_args, **_kwargs: None
+        messagebox.showwarning = lambda *_args, **_kwargs: None
+        assert app._prompt_staff_profile(first_run=True)
+    finally:
+        simpledialog.askstring = original_askstring
+        messagebox.showinfo = original_info
+        messagebox.showwarning = original_warning
+
+    assert captured_defaults == ["", "", ""], captured_defaults
+    assert app._staff_profile_is_configured()
+    assert app._effective_staff_profile()["doctor"] == "Орлов Олег Олегович"
 
 
 def _assert_settings(root: Path) -> None:
@@ -152,10 +233,12 @@ def main() -> None:
         root = Path(tmp)
         _assert_name_formatting()
         _assert_settings(root)
+        _assert_fresh_staff_prompt_has_no_foreign_defaults(root)
+        _assert_unconfigured_generation_fails_closed()
         _assert_staff_replacement_scope()
         _assert_medical_documents(root)
         _assert_diaries(root)
-    print("STAFF PROFILE REGRESSION OK: settings + 7 medical documents + production diary")
+    print("STAFF PROFILE REGRESSION OK: fail-closed onboarding + blank fresh defaults + settings + 7 medical documents + production diary")
 
 
 if __name__ == "__main__":

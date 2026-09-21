@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "5401f74649390c833df9368a6e4bacced3d1a743",
-  "reason": "User-journey hardening for patient isolation, desktop intake launch safety, and prevention of automatic printing when the selected generation set is incomplete.",
+  "reason": "User-journey hardening for patient isolation, desktop intake safety, incomplete-set print safety, and fail-closed staff identity confirmation before document generation.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -15,7 +15,7 @@
     "ci_gate_lock"
   ],
   "approved_blobs": {
-    "actions_creation_orchestrator.py": "85761b81bd2c8718bf256713e9236fcf795c8b67",
+    "actions_creation_orchestrator.py": "cad4a666f4d2a36b7e96c640dfec2e9219c33f16",
     "app_initialization.py": "4f76344c1b2725970f92384084e99296b7b3a3f1",
     "dnd_mixin.py": "95c0db13644da556a2761fab9c3f951cb54d9381",
     "files_mixin.py": "377234d9a11868d08715cc9a609d73a6aadbad06",
@@ -23,6 +23,9 @@
     "tests/desktop_intake_contract_check.py": "13b10384e787491ebf2ebcefc19238cb4c3d6062",
     "tests/diagnosis_override_regression.py": "b4eed4a8033dd4c2c3e142373c52fd5f34f1b867",
     "tests/intake_lifecycle_regression.py": "ca6f48442592e455f18d7aa7e8a66806cdcbec81",
-    "tools/document_mechanics_change_approval.json": "b64ed74f2ce4617dfc5bcd9e36e570bba8c107af"
+    "tools/document_mechanics_change_approval.json": "9d7d65fb8b36a1827627c09c5ea4d48e8a33b853",
+    "settings_mixin.py": "4e74ab2f38e53c2463d1cf1b75edbb84e99c9bc6",
+    "tools/staff_profile_regression.py": "17bdbfa050d868e3cb1e52ca00ce0ae9e8229bcd",
+    "smoke_combined_part04_medical_generation.py": "dbbd79b631ba82fcb72413d0553fc4ae9e6ab27e"
   }
 }

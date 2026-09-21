@@ -207,7 +207,14 @@ class SettingsMixin:
     def _prompt_staff_profile(self, *, first_run: bool = False) -> bool:
         from tkinter import messagebox, simpledialog
 
-        defaults = self._effective_staff_profile()
+        # Never prefill a fresh/unconfigured installation with somebody
+        # else's legacy names. Existing confirmed profiles remain convenient to
+        # edit, but a new user must consciously enter all three staff identities.
+        defaults = (
+            self._effective_staff_profile()
+            if self._staff_profile_is_configured()
+            else {key: "" for key in _STAFF_PROFILE_FIELDS}
+        )
         if first_run:
             messagebox.showinfo(
                 "Первый запуск — сотрудники",
