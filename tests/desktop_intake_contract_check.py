@@ -608,8 +608,9 @@ def _assert_stale_disabled_intake_self_heals() -> None:
         def _desktop_intake_preference(self):
             return self.preference
 
-        def _set_desktop_intake_preference(self, enabled: bool) -> None:
+        def _set_desktop_intake_preference(self, enabled: bool) -> bool:
             self.preference = bool(enabled)
+            return True
 
         def _staff_profile_is_configured(self) -> bool:
             return True
