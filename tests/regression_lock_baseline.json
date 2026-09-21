@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "d591d3d16107f09dfce92ba18caf13a4a07e38bd",
-  "baseline_note": "v1.4.23 source-load fix plus class-method binding regression guard fully validated on main d591d3d16107f09dfce92ba18caf13a4a07e38bd by Windows production CI run 35590133922, including regression locks, production audit, release gate, full patient replay and golden DOCX, GUI smoke, packaged desktop intake E2E, installer build, and installed/uninstalled smoke.",
+  "baseline_ref": "5401f74649390c833df9368a6e4bacced3d1a743",
+  "baseline_note": "v1.4.23 universal medical-source hardening plus canonical PR provenance recovery fully validated on main 5401f74649390c833df9368a6e4bacced3d1a743 by Windows production CI run 35595000373 (#715), including regression locks, document mechanics guard, production audit, release gate, full patient replay and golden DOCX, GUI smoke, packaged desktop intake E2E, installer build, and installed/uninstalled smoke.",
   "required_approval_evidence": [
     "ci_gate_lock"
   ],
