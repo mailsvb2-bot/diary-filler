@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "e70c5cd8909cfb8c31dbbf6900585f3ad8b83857",
-  "reason": "Printing runtime safety: restore the constructible PrintResult contract and add smoke coverage that executes the structured print result path; preserve the already-consumed document-mechanics approval deletion from the finalized baseline.",
+  "reason": "Printing safety hardening: restore the PrintResult runtime constructor, cover the structured print path, retry only already-saved files after printer failure without duplicate generation, and clear print retry state on patient switch.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -15,8 +15,11 @@
     "ci_gate_lock"
   ],
   "approved_blobs": {
+    "actions_creation_orchestrator.py": "6514d350b9be46eb13050a0f11bcf728ecf2d985",
+    "files_mixin.py": "be41b293479ecd08d42a2df060516f6e08d1cc78",
     "printer_models.py": "4d142106ac06f57f2641bd0c8af81e12e40b2f24",
     "smoke_combined_part01_setup_contracts.py": "e4dc3dc12b9674a6f6146c6b5141cb1987a62350",
-    "tools/document_mechanics_change_approval.json": "<deleted>"
+    "tests/diagnosis_override_regression.py": "83e112a3bd6617fc04f9206a4593565e8097cc77",
+    "tools/document_mechanics_change_approval.json": "363a4b12869adb52974825689ca67db9b50fbffd"
   }
 }
