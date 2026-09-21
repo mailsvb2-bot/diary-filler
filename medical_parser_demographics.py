@@ -108,7 +108,8 @@ class MedicalParserDemographicsMixin:
         return ""
 
     @staticmethod
-    def _extract_split_fio_label_value(text: str) -> str:\n        """Read FIO when a DOCX table flattens label and value into adjacent lines.
+    def _extract_split_fio_label_value(text: str) -> str:
+        """Read FIO when a DOCX table flattens label and value into adjacent lines.
 
         A common Word layout stores ``Ф.И.О.`` in the left cell and the actual
         name in the right cell. ``extract_docx_text`` intentionally preserves
