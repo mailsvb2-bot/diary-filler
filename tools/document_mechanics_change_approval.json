@@ -1,9 +1,8 @@
 {
   "schema_version": 1,
-  "base_sha": "e33d4dd38b5a95a7eafb1a6fcf85ea6dbd2df18f",
-  "reason": "Explicit user-journey safety fix: failed printing must retry already-saved files without regenerating duplicate medical documents, and the retry queue must be cleared on patient switch.",
+  "base_sha": "dbd6d7e1bb174a5d043b71dde90332e4bbd3461a",
+  "reason": "Explicit user-journey integrity fix: printer selection must not report persistent success when settings.json cannot be written.",
   "approved_blobs": {
-    "actions_creation_orchestrator.py": "c5c570d4883fcecabcbc148e84d938e92a5536c6",
-    "files_mixin.py": "be41b293479ecd08d42a2df060516f6e08d1cc78"
+    "files_mixin.py": "f0b4ec41ff2ae55e0d0423b6adbab5cf166dd1e1"
   }
 }
