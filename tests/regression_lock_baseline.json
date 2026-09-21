@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "f8741c1d607bfe9ccb2b411ee268c329bddd5f1a",
-  "baseline_note": "Main v1.4.21 release identity baseline fully validated at f8741c1d607bfe9ccb2b411ee268c329bddd5f1a by Windows production CI run 35574438376, including release gate, full patient replay and golden DOCX, packaged desktop intake E2E, installer build, and installed/uninstalled smoke.",
+  "baseline_ref": "2e4332e4a6ddfc45ffd2fa3f90b68afb7cf63065",
+  "baseline_note": "Main v1.4.22 standalone-FIO release fully validated at 2e4332e4a6ddfc45ffd2fa3f90b68afb7cf63065 by Windows production CI run 35580483224, including release gate, full patient replay and golden DOCX, packaged desktop intake E2E, installer build, and installed/uninstalled smoke.",
   "required_approval_evidence": [
     "ci_gate_lock"
   ],
