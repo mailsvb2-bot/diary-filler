@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "base_sha": "39a2a03852cc8d8a72a75190adb81ac59558400c",
+  "reason": "Release identity bump only: app_config.py changes the visible application version from v1.4.20-word-safety to v1.4.21-word-safety; no medical parsing, rendering, popup, or generation behavior changes.",
+  "approved_blobs": {
+    "app_config.py": "374debec74a430dde845b75f201dbe7cb39b6bfc"
+  }
+}
