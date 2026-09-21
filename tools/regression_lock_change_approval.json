@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "5401f74649390c833df9368a6e4bacced3d1a743",
-  "reason": "User-journey hardening for patient isolation, desktop intake safety, incomplete-set print safety, and fail-closed staff identity confirmation before document generation.",
+  "reason": "User-journey hardening plus persisted patient-folder naming preferences wired through the real desktop intake path, including discharge-aware naming without persisting patient data.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -19,13 +19,15 @@
     "app_initialization.py": "4f76344c1b2725970f92384084e99296b7b3a3f1",
     "dnd_mixin.py": "95c0db13644da556a2761fab9c3f951cb54d9381",
     "files_mixin.py": "377234d9a11868d08715cc9a609d73a6aadbad06",
-    "startup.py": "3e7867b609e30ee2e5e563af6c49215d7df86d73",
-    "tests/desktop_intake_contract_check.py": "13b10384e787491ebf2ebcefc19238cb4c3d6062",
+    "startup.py": "ca57121694855ad5990608ab28345280b65c35df",
+    "tests/desktop_intake_contract_check.py": "6cbd48a095458f845c30638dcc0fb743b8d3393b",
     "tests/diagnosis_override_regression.py": "b4eed4a8033dd4c2c3e142373c52fd5f34f1b867",
     "tests/intake_lifecycle_regression.py": "ca6f48442592e455f18d7aa7e8a66806cdcbec81",
     "tools/document_mechanics_change_approval.json": "9d7d65fb8b36a1827627c09c5ea4d48e8a33b853",
-    "settings_mixin.py": "4e74ab2f38e53c2463d1cf1b75edbb84e99c9bc6",
+    "settings_mixin.py": "ae8e750ea847ec2f2255726b9a37a56bd4eb91f1",
     "tools/staff_profile_regression.py": "17bdbfa050d868e3cb1e52ca00ce0ae9e8229bcd",
-    "smoke_combined_part04_medical_generation.py": "dbbd79b631ba82fcb72413d0553fc4ae9e6ab27e"
+    "smoke_combined_part04_medical_generation.py": "dbbd79b631ba82fcb72413d0553fc4ae9e6ab27e",
+    "window_mixin.py": "ab245941812dafb3eb7315342bb7e32a97d8e31d",
+    "main.py": "264c4ce83defe0ff0e68fccb8d86916df6973b91"
   }
 }
