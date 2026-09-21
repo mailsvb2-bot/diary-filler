@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "base_sha": "66a03b4e2a2a80f69ae928d46f92cf804cec8af5",
-  "reason": "Explicit universal-source round-trip hardening: recover an explicit sick-leave decision from rendered expert anamnesis so a discharge epicrisis can safely generate commission/RVK/VK outputs without losing the source fact.",
+  "base_sha": "39a2a03852cc8d8a72a75190adb81ac59558400c",
+  "reason": "Release identity bump only: app_config.py changes the visible application version from v1.4.20-word-safety to v1.4.21-word-safety; no medical parsing, rendering, popup, or generation behavior changes.",
   "approved_blobs": {
-    "medical_parser_core.py": "b9df9c652f54b3be151b66719595a04114ee7dc6"
+    "app_config.py": "374debec74a430dde845b75f201dbe7cb39b6bfc"
   }
 }

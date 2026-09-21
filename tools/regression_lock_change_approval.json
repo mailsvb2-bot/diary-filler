@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "0b3214c5b0a4c2e750bab08cc2db461558b88585",
-  "reason": "Lock the universal source-to-output matrix and repair explicit sick-leave round-trip from rendered expert anamnesis; the source fact is reused only when the rendered expert block explicitly states it.",
+  "baseline_ref": "39a2a03852cc8d8a72a75190adb81ac59558400c",
+  "reason": "Version-only release identity bump after fully green universal-source FIO fix. Runtime medical logic remains at validated main 39a2a038; only visible app/EXE/installer/release version identifiers move from 1.4.20 to 1.4.21.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -15,8 +15,16 @@
     "ci_gate_lock"
   ],
   "approved_blobs": {
-    "medical_parser_core.py": "b9df9c652f54b3be151b66719595a04114ee7dc6",
-    "smoke_combined_part04_medical_generation.py": "c2fb0b64416f5f30895054e88ecf15e035d685a0",
-    "tools/document_mechanics_change_approval.json": "52128df1ebf478224da1153c8b1d472913ace013"
+    ".github/workflows/release.yml": "5ea695574cb5d3a4cace02e3b6db02702d92d320",
+    ".github/workflows/windows-build.yml": "8ee5fa7ef6b7dd1645daba3aae9f35edce73c926",
+    "BUILD_WINDOWS_INSTALLER.bat": "7011e7ad3ed86d7750697bca5c3b9cd3f6efda44",
+    "app_config.py": "374debec74a430dde845b75f201dbe7cb39b6bfc",
+    "installer/MedicalDiaryAutofill.iss": "2aa36c05cb12440c9c1e6cf18819ec5e21ff1bbc",
+    "prod_audit.py": "da65e264e3abf48820db2bd370cb211008d772c6",
+    "pyproject.toml": "62db8fdb0d568f273dbae7d5587b33e83abc567e",
+    "release_check.py": "4bf292ed50b3523f4c72462ce27a3fdc9c72696e",
+    "tools/ci_gate_lock.py": "b46dd5f6c9adec561c30e6c77f86428782736f5e",
+    "version_info.txt": "06dc97563428f574edae3f677bc51b38d4359c88",
+    "tools/document_mechanics_change_approval.json": "c87cc077930cc21f019ca91bee6a35b07940c50b"
   }
 }
