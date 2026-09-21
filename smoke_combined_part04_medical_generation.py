@@ -194,6 +194,12 @@ for source_name, source_path in _source_target_cases:
         if target_kind == "commission":
             source_data.commission_date = manual_data.commission_date
             source_data.commission_number = manual_data.commission_number
+            if source_name == "discharge" and source_data.sick_leave == "нужен":
+                # The discharge form explicitly preserves the positive decision,
+                # but intentionally does not print the original opening date of
+                # the sick-leave certificate. That one genuinely missing fact
+                # must be supplied by the doctor instead of being guessed.
+                source_data.expert_sick_leave_from = manual_data.expert_sick_leave_from
         elif target_kind == "rvk":
             source_data.discharge_date = source_data.discharge_date or manual_data.discharge_date
             source_data.rvk_act_number = manual_data.rvk_act_number
