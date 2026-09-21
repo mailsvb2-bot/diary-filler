@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "0b3214c5b0a4c2e750bab08cc2db461558b88585",
-  "reason": "Lock the universal source-to-output matrix and repair explicit sick-leave round-trip from rendered expert anamnesis; the source fact is reused only when the rendered expert block explicitly states it.",
+  "reason": "Lock universal source-to-output behavior, explicit sick-leave round-trip, and the real bare-FIO header shape seen in exported primary documents; all recovery remains evidence-bound and does not infer absent patient facts.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -17,6 +17,8 @@
   "approved_blobs": {
     "medical_parser_core.py": "b9df9c652f54b3be151b66719595a04114ee7dc6",
     "smoke_combined_part04_medical_generation.py": "c2fb0b64416f5f30895054e88ecf15e035d685a0",
-    "tools/document_mechanics_change_approval.json": "52128df1ebf478224da1153c8b1d472913ace013"
+    "tools/document_mechanics_change_approval.json": "b7942d368a0f8aa496fca6ff1c7ad2a90096c758",
+    "medical_parser_demographics.py": "7214b76aaef194a54d28a312b15671fb0a9a0ae8",
+    "smoke_combined_part03_medical_parser_manual.py": "2d8c191ef2ccc923a7d9e5340c0957ffb0b0e83f"
   }
 }
