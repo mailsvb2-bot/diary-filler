@@ -20,13 +20,13 @@
     "BUILD_WINDOWS_INSTALLER.bat": "2189e96375d762d5954f84f7fb53e78dbf3fe192",
     "app_config.py": "7c29f067a0ffcf1ca5d6b69f03bbd408c02a40f7",
     "installer/MedicalDiaryAutofill.iss": "ebe412c0f0e03d2e6dee1a98b5323bfc41155693",
-    "medical_parser_demographics.py": "a63f9e7d88cbc7e6125197e429f8bfd09d10a851",
+    "medical_parser_demographics.py": "56db8cfe8d8362a196eb2649286f6f0733fe0228",
     "prod_audit.py": "fdd11701b45ab5f193d276f45fb9f4e3999b4905",
     "pyproject.toml": "da21fab14745d5b7c51d6b020f381b7ef559a4bd",
     "release_check.py": "826400676f20b723c03db17dd28124b528de7a0c",
     "smoke_combined_part03_medical_parser_manual.py": "a70c8f590210c24bec9ef392cd555f8947818907",
     "tools/ci_gate_lock.py": "fbb321ec3907a715482fee102a581eb1cc3a6f56",
     "version_info.txt": "28cd4943f7b3e92854a73228c36d43210f1076bc",
-    "tools/document_mechanics_change_approval.json": "42d8687d289af47261af8e7daa4c82ebd35f0d09"
+    "tools/document_mechanics_change_approval.json": "80d5c6951f8d600931bb2a96def749f39ddf1f14"
   }
 }
