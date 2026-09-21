@@ -25,6 +25,7 @@
     "tests/intake_lifecycle_regression.py": "ca6f48442592e455f18d7aa7e8a66806cdcbec81",
     "tools/document_mechanics_change_approval.json": "9d7d65fb8b36a1827627c09c5ea4d48e8a33b853",
     "settings_mixin.py": "4e74ab2f38e53c2463d1cf1b75edbb84e99c9bc6",
-    "tools/staff_profile_regression.py": "17bdbfa050d868e3cb1e52ca00ce0ae9e8229bcd"
+    "tools/staff_profile_regression.py": "17bdbfa050d868e3cb1e52ca00ce0ae9e8229bcd",
+    "smoke_combined_part04_medical_generation.py": "dbbd79b631ba82fcb72413d0553fc4ae9e6ab27e"
   }
 }
