@@ -1,14 +1,11 @@
 {
   "schema_version": 1,
-  "base_sha": "4097bbe641149d1f40197947055ead8826829568",
-  "reason": "Explicit universal-source identity hardening: ask only for FIO and birth facts missing from sparse medical sources, preserve explicit overrides across reparses, and enforce birth at the service generation boundary.",
+  "base_sha": "dfe9628904994730ef5bb7aa693654a00585fc8d",
+  "reason": "Explicit universal-source metadata reuse: recover commission, VK and RVK requisites that are visibly printed in a medical source, seed only empty UI fields, and preserve doctor edits without inferring absent values.",
   "approved_blobs": {
-    "actions_creation_orchestrator.py": "596ebfbfaf513b2dee3103c152cc5621d430f252",
-    "actions_medical_flow.py": "c3f6d303b245f6b4b839a6646926422d5100ae1e",
-    "actions_navigation.py": "8bb66efaa42d726c83933df8a17f87e286c9c5c1",
-    "app_initialization.py": "2ea5ce1c1410d92dc232923c9d243a995d3d66ad",
-    "dialog_expert.py": "434ea300c6a28ccf40cf287fd8645fa6507c1786",
-    "files_mixin.py": "de27cc62804104361bf46b77ae7bc468435b4e6d",
-    "medical_service.py": "7296ff293b5b855fca9f7f3654b350cfec4b722f"
+    "actions_medical_flow.py": "6c77c381a798dafe38366f3a12ed7672e85f1020",
+    "actions_navigation.py": "1b14a5d6c2719f60aa47bde21417732e292c09f3",
+    "medical_parser_blocks.py": "9d38137fa87ebd91e8eab9f4d2a0314cd931d7e5",
+    "medical_parser_core.py": "12a55ba1b3c7d22bafc78927b24bb4993e087162"
   }
 }
