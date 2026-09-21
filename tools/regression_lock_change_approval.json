@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "e70c5cd8909cfb8c31dbbf6900585f3ad8b83857",
-  "reason": "Settings persistence integrity: preserve prior printing hardening while making critical staff/patient-folder settings transactional and reporting printer persistence failure honestly.",
+  "reason": "Desktop intake transfer safety: preserve prior settings/printing hardening while making patient-folder source transfer transactional, cleaning orphan folders after failed moves, and accepting verified copies when only source cleanup is blocked.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -22,6 +22,8 @@
     "tests/diagnosis_override_regression.py": "83e112a3bd6617fc04f9206a4593565e8097cc77",
     "tools/document_mechanics_change_approval.json": "1aaf79d32c9c68eda29199b93a369f6bfea4290a",
     "settings_mixin.py": "cfab5d4ac2c671a087ddae2626b8596e1a1c7c9d",
-    "tools/staff_profile_regression.py": "2a882ab9d65cc01caf0e3216866779f93b0963bd"
+    "tools/staff_profile_regression.py": "2a882ab9d65cc01caf0e3216866779f93b0963bd",
+    "startup.py": "7cc293d1ba1961b8d1cb90c66448bfd8edb487c8",
+    "tests/desktop_intake_contract_check.py": "3ca57b7592f2a94f86f7971709b570e571a6d4f4"
   }
 }

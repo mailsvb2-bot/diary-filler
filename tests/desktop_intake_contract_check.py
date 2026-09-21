@@ -436,6 +436,74 @@ def _assert_top_level_only_and_safe_move() -> None:
         assert second.read_bytes() == b"changed-primary"
 
 
+def _assert_failed_transfer_does_not_leave_empty_patient_folder() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp) / "Выписанные пациенты"
+        root.mkdir()
+        source = root / "Первичный.docx"
+        source.write_bytes(b"locked-source")
+        patient_folder = root / "Тестов Т.Т. сентябрь 2026"
+
+        original_replace = startup.os.replace
+        original_move = startup.shutil.move
+        original_copy2 = startup.shutil.copy2
+        try:
+            startup.os.replace = lambda *_args, **_kwargs: (_ for _ in ()).throw(OSError("replace blocked"))  # type: ignore[assignment]
+            startup.shutil.move = lambda *_args, **_kwargs: (_ for _ in ()).throw(OSError("move blocked"))  # type: ignore[assignment]
+            startup.shutil.copy2 = lambda *_args, **_kwargs: (_ for _ in ()).throw(OSError("copy blocked"))  # type: ignore[assignment]
+            try:
+                startup.desktop_intake_prepare_patient_folder(
+                    source,
+                    intake_root=root,
+                    folder_name=patient_folder.name,
+                )
+                raise AssertionError("failed transfer must raise")
+            except OSError:
+                pass
+        finally:
+            startup.shutil.copy2 = original_copy2  # type: ignore[assignment]
+            startup.shutil.move = original_move  # type: ignore[assignment]
+            startup.os.replace = original_replace  # type: ignore[assignment]
+
+        assert source.is_file(), "source must remain available after failed transfer"
+        assert not patient_folder.exists(), "failed transfer left an orphan patient folder"
+
+
+def _assert_completed_copy_is_not_reported_as_failed_when_source_cleanup_is_blocked() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp) / "Выписанные пациенты"
+        root.mkdir()
+        source = root / "Первичный.docx"
+        source.write_bytes(b"verified-patient-source")
+
+        original_replace = startup.os.replace
+        original_move = startup.shutil.move
+        original_unlink = Path.unlink
+        try:
+            startup.os.replace = lambda *_args, **_kwargs: (_ for _ in ()).throw(OSError("replace blocked"))  # type: ignore[assignment]
+            startup.shutil.move = lambda *_args, **_kwargs: (_ for _ in ()).throw(OSError("move blocked"))  # type: ignore[assignment]
+
+            def guarded_unlink(path_obj, *args, **kwargs):
+                if Path(path_obj) == source:
+                    raise OSError("source still locked by Word")
+                return original_unlink(path_obj, *args, **kwargs)
+
+            Path.unlink = guarded_unlink  # type: ignore[assignment]
+            moved = startup.desktop_intake_prepare_patient_folder(
+                source,
+                intake_root=root,
+                folder_name="Тестов Т.Т. сентябрь 2026",
+            )
+        finally:
+            Path.unlink = original_unlink  # type: ignore[assignment]
+            startup.shutil.move = original_move  # type: ignore[assignment]
+            startup.os.replace = original_replace  # type: ignore[assignment]
+
+        assert moved.is_file(), moved
+        assert moved.read_bytes() == b"verified-patient-source"
+        assert source.is_file(), "locked original may remain; verified copy is still a successful intake"
+
+
 def _assert_agent_update_and_encoding_contract() -> None:
     payload = startup.desktop_intake_startup_vbs_payload(
         [r"C:\Программа\MedicalDiaryAutofill.exe", startup.DESKTOP_INTAKE_AGENT_ARGUMENT]
@@ -580,6 +648,8 @@ def main() -> None:
     _assert_primary_detection_contract()
     _assert_canonical_primary_parser_contract()
     _assert_top_level_only_and_safe_move()
+    _assert_failed_transfer_does_not_leave_empty_patient_folder()
+    _assert_completed_copy_is_not_reported_as_failed_when_source_cleanup_is_blocked()
     _assert_agent_update_and_encoding_contract()
     _assert_closed_gui_wake_is_classification_free()
     _assert_legacy_word_conversion_never_quits_user_word()
