@@ -24,7 +24,8 @@
     "settings_mixin.py": "988eec68abac613d607800950c9fed0a833c4f80",
     "tools/staff_profile_regression.py": "5150fd35f82743759c830c492be2dee640d8be14",
     "startup.py": "7cc293d1ba1961b8d1cb90c66448bfd8edb487c8",
-    "tests/desktop_intake_contract_check.py": "4951cb83be781db0afb7f960034b8e2396c11450",
-    "main.py": "36c3fbed4965323ae0748be16b3d2017612016d6"
+    "tests/desktop_intake_contract_check.py": "0f75ccdca6d28906bc5ee2633a8e0d587e69c780",
+    "main.py": "36c3fbed4965323ae0748be16b3d2017612016d6",
+    "tests/intake_lifecycle_regression.py": "3fce7e923721233f7ab9fb024dfd66d654f3cdd7"
   }
 }
