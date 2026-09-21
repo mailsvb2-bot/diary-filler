@@ -15,12 +15,16 @@
     "ci_gate_lock"
   ],
   "approved_blobs": {
+    ".github/workflows/release.yml": "5ea695574cb5d3a4cace02e3b6db02702d92d320",
+    ".github/workflows/windows-build.yml": "8ee5fa7ef6b7dd1645daba3aae9f35edce73c926",
+    "BUILD_WINDOWS_INSTALLER.bat": "7011e7ad3ed86d7750697bca5c3b9cd3f6efda44",
     "app_config.py": "374debec74a430dde845b75f201dbe7cb39b6bfc",
     "installer/MedicalDiaryAutofill.iss": "2aa36c05cb12440c9c1e6cf18819ec5e21ff1bbc",
+    "prod_audit.py": "da65e264e3abf48820db2bd370cb211008d772c6",
+    "pyproject.toml": "62db8fdb0d568f273dbae7d5587b33e83abc567e",
+    "release_check.py": "4bf292ed50b3523f4c72462ce27a3fdc9c72696e",
+    "tools/ci_gate_lock.py": "b46dd5f6c9adec561c30e6c77f86428782736f5e",
     "version_info.txt": "06dc97563428f574edae3f677bc51b38d4359c88",
-    "BUILD_WINDOWS_INSTALLER.bat": "7011e7ad3ed86d7750697bca5c3b9cd3f6efda44",
-    ".github/workflows/windows-build.yml": "8ee5fa7ef6b7dd1645daba3aae9f35edce73c926",
-    ".github/workflows/release.yml": "5ea695574cb5d3a4cace02e3b6db02702d92d320",
     "tools/document_mechanics_change_approval.json": "<deleted>"
   }
 }
