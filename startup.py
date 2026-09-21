@@ -163,6 +163,7 @@ _DESKTOP_BAD_FIO_WORDS = {
 class DesktopPatientFolderInfo:
     fio: str
     admission_date: str
+    discharge_date: str
     folder_name: str
 
 
@@ -585,11 +586,16 @@ def desktop_build_patient_folder_name(
     return _desktop_sanitize_folder_component(raw)
 
 
-def _desktop_patient_folder_info(primary_path: str | Path) -> DesktopPatientFolderInfo:
+def _desktop_patient_folder_info(
+    primary_path: str | Path,
+    *,
+    settings: Mapping[str, Any] | None = None,
+) -> DesktopPatientFolderInfo:
     """Read only naming fields; never feed values back into document generation."""
     path = Path(primary_path)
     fio = ""
     parsed_admission_date = ""
+    discharge_date = ""
     try:
         from medical_parser import MedicalTextParser
 
@@ -598,6 +604,7 @@ def _desktop_patient_folder_info(primary_path: str | Path) -> DesktopPatientFold
         if _desktop_looks_like_human_fio(candidate):
             fio = candidate
         parsed_admission_date = str(getattr(parsed, "admission_date", "") or "").strip()
+        discharge_date = str(getattr(parsed, "discharge_date", "") or "").strip()
     except Exception:
         pass
 
@@ -618,9 +625,16 @@ def _desktop_patient_folder_info(primary_path: str | Path) -> DesktopPatientFold
     folder_name = desktop_build_patient_folder_name(
         fio=fio,
         admission_date=admission_date,
+        discharge_date=discharge_date,
         fallback_stem=path.stem,
+        settings=settings,
     )
-    return DesktopPatientFolderInfo(fio=fio, admission_date=admission_date, folder_name=folder_name)
+    return DesktopPatientFolderInfo(
+        fio=fio,
+        admission_date=admission_date,
+        discharge_date=discharge_date,
+        folder_name=folder_name,
+    )
 
 
 def _desktop_sha256_file(path: str | Path) -> str:
@@ -691,6 +705,7 @@ def desktop_intake_prepare_patient_folder(
     *,
     intake_root: str | Path | None = None,
     folder_name: str | None = None,
+    folder_settings: Mapping[str, Any] | None = None,
 ) -> Path:
     """Move the primary into its episode folder; never edit the document itself."""
     source = Path(source_path)
@@ -701,7 +716,7 @@ def desktop_intake_prepare_patient_folder(
 
     root = Path(intake_root) if intake_root is not None else desktop_intake_ensure_root()
     root.mkdir(parents=True, exist_ok=True)
-    info = _desktop_patient_folder_info(source)
+    info = _desktop_patient_folder_info(source, settings=folder_settings)
     base_name = _desktop_sanitize_folder_component(folder_name or info.folder_name)
     source_digest = _desktop_sha256_file(source)
     patient_folder, existing_primary = _desktop_allocate_patient_folder(root, base_name, source_digest)
@@ -1353,7 +1368,17 @@ def _desktop_process_primary(app, source_path: str | Path) -> bool:
         )
         return False
     try:
-        moved_primary = desktop_intake_prepare_patient_folder(source)
+        folder_settings = None
+        settings_getter = getattr(app, "_patient_folder_naming_settings", None)
+        if callable(settings_getter):
+            try:
+                folder_settings = settings_getter()
+            except Exception:
+                folder_settings = None
+        moved_primary = desktop_intake_prepare_patient_folder(
+            source,
+            folder_settings=folder_settings,
+        )
         # This is the hard architecture boundary.  From here onward the exact
         # pre-existing diary-filler path owns parsing, popups and generation.
         app._apply_primary_document_path(str(moved_primary), prompt_for_referral=True)

@@ -165,7 +165,10 @@ def _self_check_settings_ok() -> tuple[bool, str]:
         return False, "settings.json повреждён"
     if not isinstance(payload, dict):
         return False, "settings.json имеет неверный формат"
-    unexpected = sorted(set(payload) - {"folders", "printer", "desktop_intake_enabled", "staff_profile"})
+    unexpected = sorted(
+        set(payload)
+        - {"folders", "printer", "desktop_intake_enabled", "staff_profile", "patient_folder_naming"}
+    )
     if unexpected:
         return False, "settings.json содержит неожиданные технические ключи"
     return True, "структура безопасна"

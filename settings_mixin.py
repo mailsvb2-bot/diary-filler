@@ -24,6 +24,7 @@ _STAFF_PROFILE_DEFAULTS = {
 }
 _STAFF_PROFILE_MAX_LENGTH = 160
 _DESKTOP_INTAKE_KEY = "desktop_intake_enabled"
+_PATIENT_FOLDER_NAMING_KEY = "patient_folder_naming"
 
 
 class SettingsMixin:
@@ -75,6 +76,11 @@ class SettingsMixin:
                         safe["printer"] = printer
                     if isinstance(data.get(_DESKTOP_INTAKE_KEY), bool):
                         safe[_DESKTOP_INTAKE_KEY] = bool(data[_DESKTOP_INTAKE_KEY])
+                    patient_folder_raw = data.get(_PATIENT_FOLDER_NAMING_KEY)
+                    if isinstance(patient_folder_raw, dict):
+                        safe[_PATIENT_FOLDER_NAMING_KEY] = self._normalize_patient_folder_naming_settings(
+                            patient_folder_raw
+                        )
                     staff_raw = data.get(_STAFF_PROFILE_KEY)
                     if isinstance(staff_raw, dict):
                         profile = {}
@@ -125,6 +131,11 @@ class SettingsMixin:
         intake_enabled = self._settings.get(_DESKTOP_INTAKE_KEY)
         if isinstance(intake_enabled, bool):
             payload[_DESKTOP_INTAKE_KEY] = intake_enabled
+        patient_folder_raw = self._settings.get(_PATIENT_FOLDER_NAMING_KEY)
+        if isinstance(patient_folder_raw, dict):
+            payload[_PATIENT_FOLDER_NAMING_KEY] = self._normalize_patient_folder_naming_settings(
+                patient_folder_raw
+            )
         staff_raw = self._settings.get(_STAFF_PROFILE_KEY)
         if isinstance(staff_raw, dict) and staff_raw.get("configured") is True:
             profile = {"configured": True}
@@ -196,6 +207,146 @@ class SettingsMixin:
     def _set_desktop_intake_preference(self, enabled: bool) -> None:
         self._settings[_DESKTOP_INTAKE_KEY] = bool(enabled)
         self._save_settings()
+
+    @staticmethod
+    def _normalize_patient_folder_naming_settings(value) -> dict:
+        from startup import _desktop_normalize_folder_settings
+
+        return _desktop_normalize_folder_settings(value if isinstance(value, dict) else None)
+
+    def _patient_folder_naming_settings(self) -> dict:
+        current = self._settings.get(_PATIENT_FOLDER_NAMING_KEY)
+        return self._normalize_patient_folder_naming_settings(current)
+
+    def _set_patient_folder_naming_settings(self, *, parts, date_format: str) -> None:
+        normalized = self._normalize_patient_folder_naming_settings(
+            {"parts": list(parts), "date_format": date_format}
+        )
+        self._settings[_PATIENT_FOLDER_NAMING_KEY] = normalized
+        self._save_settings()
+
+    def _prompt_patient_folder_naming(self) -> bool:
+        import tkinter as tk
+        from tkinter import messagebox
+        from startup import DESKTOP_FOLDER_NAMING_OPTIONS, desktop_build_patient_folder_name
+
+        current = self._patient_folder_naming_settings()
+        result = False
+        win = tk.Toplevel(self.root)
+        win.title("Папка пациента")
+        win.transient(self.root)
+        win.resizable(False, False)
+        win.grab_set()
+
+        body = tk.Frame(win, padx=18, pady=16)
+        body.pack(fill="both", expand=True)
+        tk.Label(
+            body,
+            text="Как называть папку пациента",
+            font=("Segoe UI", 11, "bold"),
+        ).grid(row=0, column=0, columnspan=2, sticky="w", pady=(0, 8))
+        tk.Label(
+            body,
+            text=(
+                "Отметьте части имени. Настройка сохранится и будет применяться "
+                "к следующим документам в папке «Выписанные пациенты»."
+            ),
+            justify="left",
+            wraplength=520,
+        ).grid(row=1, column=0, columnspan=2, sticky="w", pady=(0, 10))
+
+        selected = {
+            key: tk.BooleanVar(value=key in current["parts"])
+            for key in DESKTOP_FOLDER_NAMING_OPTIONS
+        }
+        row = 2
+        for key, label in DESKTOP_FOLDER_NAMING_OPTIONS.items():
+            tk.Checkbutton(
+                body,
+                text=label,
+                variable=selected[key],
+                anchor="w",
+                command=lambda: update_preview(),
+            ).grid(row=row, column=0, columnspan=2, sticky="w", pady=2)
+            row += 1
+
+        tk.Label(body, text="Формат даты:").grid(row=row, column=0, sticky="w", pady=(10, 2))
+        date_format_var = tk.StringVar(value=str(current["date_format"]))
+        date_box = tk.Frame(body)
+        date_box.grid(row=row, column=1, sticky="w", pady=(10, 2))
+        tk.Radiobutton(
+            date_box,
+            text="10.06.26",
+            value="short",
+            variable=date_format_var,
+            command=lambda: update_preview(),
+        ).pack(side="left")
+        tk.Radiobutton(
+            date_box,
+            text="10.06.2026",
+            value="full",
+            variable=date_format_var,
+            command=lambda: update_preview(),
+        ).pack(side="left", padx=(10, 0))
+        row += 1
+
+        preview_var = tk.StringVar(value="")
+        tk.Label(body, text="Пример:").grid(row=row, column=0, sticky="nw", pady=(10, 0))
+        tk.Label(
+            body,
+            textvariable=preview_var,
+            justify="left",
+            wraplength=420,
+            font=("Segoe UI", 9, "bold"),
+        ).grid(row=row, column=1, sticky="w", pady=(10, 0))
+        row += 1
+
+        def selected_parts() -> list[str]:
+            return [key for key, var in selected.items() if var.get()]
+
+        def update_preview() -> None:
+            parts = selected_parts()
+            if not parts:
+                preview_var.set("Выберите хотя бы один пункт")
+                return
+            preview_var.set(
+                desktop_build_patient_folder_name(
+                    fio="Иванов Иван Иванович",
+                    admission_date="10.06.2026",
+                    discharge_date="20.06.2026",
+                    settings={"parts": parts, "date_format": date_format_var.get()},
+                )
+            )
+
+        def save() -> None:
+            nonlocal result
+            parts = selected_parts()
+            if not parts:
+                messagebox.showwarning(
+                    "Папка пациента",
+                    "Выберите хотя бы один элемент имени папки.",
+                    parent=win,
+                )
+                return
+            self._set_patient_folder_naming_settings(
+                parts=parts,
+                date_format=date_format_var.get(),
+            )
+            result = True
+            win.destroy()
+
+        def cancel() -> None:
+            win.destroy()
+
+        buttons = tk.Frame(body)
+        buttons.grid(row=row, column=0, columnspan=2, sticky="e", pady=(16, 0))
+        tk.Button(buttons, text="Сохранить", command=save, padx=14, pady=5).pack(side="left")
+        tk.Button(buttons, text="Отмена", command=cancel, padx=14, pady=5).pack(side="left", padx=(8, 0))
+        win.protocol("WM_DELETE_WINDOW", cancel)
+        win.bind("<Escape>", lambda _event: cancel())
+        update_preview()
+        self.root.wait_window(win)
+        return result
 
     def _apply_staff_profile_to_patient_data(self, data):
         profile = self._effective_staff_profile()
