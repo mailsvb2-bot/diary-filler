@@ -10,8 +10,26 @@ assert not hasattr(_medical_documents_module, "MedicalApp"), "medical_documents.
 from diary_filler import fill_diary_batch, extract_statuses_from_docx, parse_full_date, parse_month_year, safe_filename_part
 from icd10_f import search_icd10_f
 from medical_docx_reader import _first_valid_full_date
+from printer_models import PrintResult
+import printer_jobs
 
 ROOT = Path(__file__).resolve().parent
+
+# --- Printing runtime contract ---
+# A real print path constructs PrintResult(printed_files, errors). Keep this
+# constructor executable even on CI hosts without an attached printer.
+_constructed_print_result = PrintResult([], ["synthetic"])
+assert _constructed_print_result.printed_files == []
+assert _constructed_print_result.errors == ["synthetic"]
+_original_is_windows = printer_jobs.is_windows
+try:
+    printer_jobs.is_windows = lambda: False
+    _non_windows_print_result = printer_jobs.print_files([ROOT / "missing-print-probe.docx"])
+finally:
+    printer_jobs.is_windows = _original_is_windows
+assert _non_windows_print_result.printed_files == []
+assert _non_windows_print_result.errors == ["Печать доступна только в Windows-сборке программы."]
+
 OUT = ROOT / "test_run_combined"
 if OUT.exists():
     shutil.rmtree(OUT)
