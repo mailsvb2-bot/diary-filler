@@ -25,6 +25,6 @@
     "release_check.py": "4bf292ed50b3523f4c72462ce27a3fdc9c72696e",
     "tools/ci_gate_lock.py": "b46dd5f6c9adec561c30e6c77f86428782736f5e",
     "version_info.txt": "06dc97563428f574edae3f677bc51b38d4359c88",
-    "tools/document_mechanics_change_approval.json": "<deleted>"
+    "tools/document_mechanics_change_approval.json": "c87cc077930cc21f019ca91bee6a35b07940c50b"
   }
 }
