@@ -1,9 +1,8 @@
 {
   "schema_version": 1,
-  "base_sha": "fd67418f522baf4bf5ced1ec213503203859c855",
-  "reason": "Explicit user-journey hardening: preserve the current patient on unreadable source selection, isolate same-path source replacement as a patient switch, reset patient-scoped output choices, and harden the primary parse cache against in-place replacement.",
+  "base_sha": "61d0f09e557d9e6104f7ad0bf302e0eceb013951",
+  "reason": "Explicit user-journey safety fix: an incomplete selected set may be saved as partial success, but must never be automatically sent to the printer before the doctor sees that the set is incomplete.",
   "approved_blobs": {
-    "app_initialization.py": "4f76344c1b2725970f92384084e99296b7b3a3f1",
-    "files_mixin.py": "377234d9a11868d08715cc9a609d73a6aadbad06"
+    "actions_creation_orchestrator.py": "94c9ac08aa2b871e72645b9b679a8d90a637bb2d"
   }
 }
