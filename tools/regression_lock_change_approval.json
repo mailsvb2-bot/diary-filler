@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "5401f74649390c833df9368a6e4bacced3d1a743",
+  "reason": "User-journey torture hardening for patient-session isolation, same-path source replacement, transactional source loading, drag-and-drop ambiguity, watcher launch deduplication/retry, visible intake feedback, and portable intake contract coverage.",
+  "required_evidence": [
+    "document_mechanics_guard",
+    "full_patient_replay",
+    "golden_docx",
+    "staff_profile_regression",
+    "gender_generation_matrix",
+    "desktop_intake_contract",
+    "intake_lifecycle_regression",
+    "packaged_desktop_intake_e2e",
+    "installer_uninstall_smoke",
+    "ci_gate_lock"
+  ],
+  "approved_blobs": {
+    "app_initialization.py": "4f76344c1b2725970f92384084e99296b7b3a3f1",
+    "dnd_mixin.py": "95c0db13644da556a2761fab9c3f951cb54d9381",
+    "files_mixin.py": "377234d9a11868d08715cc9a609d73a6aadbad06",
+    "startup.py": "c46819a657c844bb5dff0b62846de642d94f8488",
+    "tests/desktop_intake_contract_check.py": "13b10384e787491ebf2ebcefc19238cb4c3d6062",
+    "tests/diagnosis_override_regression.py": "90c6a8054b3ac39f2c365c22f3ee182b07e6857c",
+    "tests/intake_lifecycle_regression.py": "4250b592a24a8ec9cd82ef68a057f03908cdcc8b",
+    "tools/document_mechanics_change_approval.json": "399e8c815afe1a302cd69f81c15d4f432d9c86ec"
+  }
+}
