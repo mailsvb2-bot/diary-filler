@@ -544,10 +544,15 @@ class ActionsCreationOrchestratorMixin:
         if diary_result is not None:
             created_files.extend(list(diary_result.created_files))
 
-        # Any newly saved set supersedes an older print-retry queue. This keeps
-        # retry patient-scoped and prevents an old set from being printed later.
-        if created_files:
-            self._pending_print_retry_files = []
+        # A prior failed-print queue belongs to the current patient and must
+        # survive unrelated save-only generation. Never silently forget an
+        # unprinted document just because the doctor creates another one.
+        prior_pending_print = [
+            Path(path)
+            for path in getattr(self, "_pending_print_retry_files", [])
+            if Path(path).exists() and Path(path).is_file()
+        ]
+        self._set_pending_print_retry_files(prior_pending_print)
 
         print_result = None
         if print_after and errors:
@@ -562,10 +567,18 @@ class ActionsCreationOrchestratorMixin:
                 self.root.update_idletasks()
             except Exception:
                 pass
-            print_result = self._run_print_files_safely(created_files)
+            print_targets: List[Path] = []
+            seen_print_targets: set[str] = set()
+            for path in [*prior_pending_print, *created_files]:
+                key = str(path)
+                if key in seen_print_targets:
+                    continue
+                seen_print_targets.add(key)
+                print_targets.append(path)
+            print_result = self._run_print_files_safely(print_targets)
             if print_result.errors:
                 printed = {Path(path) for path in print_result.printed_files}
-                pending = [path for path in created_files if path not in printed]
+                pending = [path for path in print_targets if path not in printed]
                 self._set_pending_print_retry_files(pending)
                 self._clear_output_selections_for_print_retry(
                     selected_medical=selected_medical,
