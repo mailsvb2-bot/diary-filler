@@ -105,10 +105,10 @@ class ActionsMedicalFlowMixin:
         elif data.expert_sick_leave_needed == "нет":
             data.sick_leave = "не нужен"
 
-        data.admission_occurrence = (
-            normalize_admission_occurrence(self.admission_occurrence_var.get())
-            or data.admission_occurrence
-        )
+        source_admission_occurrence = data.admission_occurrence
+        data.admission_occurrence = normalize_admission_occurrence(self.admission_occurrence_var.get())
+        if not data.admission_occurrence:
+            data.admission_occurrence = source_admission_occurrence
         data.rvk_act_number = self.rvk_act_number_var.get().strip() or data.rvk_act_number
         data.rvk_military_commissariat = (
             self.rvk_military_commissariat_var.get().strip() or data.rvk_military_commissariat
