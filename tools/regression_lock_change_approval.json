@@ -16,7 +16,7 @@
   ],
   "approved_blobs": {
     "medical_parser_core.py": "b9df9c652f54b3be151b66719595a04114ee7dc6",
-    "smoke_combined_part04_medical_generation.py": "a06d2e00bb4c3f4af190ab282899d2fa648ccf9e",
+    "smoke_combined_part04_medical_generation.py": "25a1baf931906ea8113443ed123e83aea428249a",
     "tools/document_mechanics_change_approval.json": "4152952d4ee0149be66811280758d96ba9e88ef6"
   }
 }
