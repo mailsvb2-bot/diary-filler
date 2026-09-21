@@ -39,6 +39,14 @@ class MedicalParserDemographicsMixin:
             split_fio = self._extract_split_fio_label_value(text)
             if split_fio:
                 data.fio = split_fio
+        if not data.fio:
+            # A frequent EHR/Word export prints the patient name as a bare
+            # header line immediately before the birth field, without an
+            # explicit FIO label. Accept only that tightly-bound demographic
+            # header shape; never guess a name from arbitrary prose.
+            standalone_fio = self._extract_standalone_header_fio(text)
+            if standalone_fio:
+                data.fio = standalone_fio
 
         candidates: List[str] = []
         if data.fio:
@@ -68,8 +76,43 @@ class MedicalParserDemographicsMixin:
                 break
 
     @staticmethod
-    def _extract_split_fio_label_value(text: str) -> str:
-        """Read FIO when a DOCX table flattens label and value into adjacent lines.
+    def _extract_standalone_header_fio(text: str) -> str:
+        """Read a bare patient name only when the demographic header proves it.
+
+        Example: case-number line, then a standalone patient name, then
+        an explicit birth-date/age field. Initials are accepted too.
+        The tight adjacency requirement rejects doctor names from titles,
+        signatures and names mentioned later in anamnesis.
+        """
+        lines = [normalize_text(line) for line in (text or "").splitlines() if normalize_text(line)]
+        if not lines:
+            return ""
+
+        name_part = r"[А-ЯЁ][А-ЯЁа-яё]+(?:-[А-ЯЁ][А-ЯЁа-яё]+)?"
+        full_name_re = re.compile(rf"^{name_part}\\s+{name_part}\\s+{name_part}$")
+        initials_re = re.compile(rf"^{name_part}\\s+[А-ЯЁ]\\.?(?:\\s*)[А-ЯЁ]\\.?$")
+        birth_marker_re = re.compile(
+            r"(?i)^(?:дата\\s+рождения|год\\s+рождения|г\\.\\s*р\\.|возраст)\\b"
+        )
+        hard_stop_re = re.compile(
+            r"(?i)^(?:жалобы|анамнез|психический\\s+статус|соматическ|"
+            r"сомато-неврологическ|диагноз|лечение|план\\s+лечения|"
+            r"план\\s+обследования|эпидемиологическ)"
+        )
+
+        for index, line in enumerate(lines[:60]):
+            if hard_stop_re.search(line):
+                break
+            candidate = clean_value(line).strip(" ,;:")
+            if not (full_name_re.fullmatch(candidate) or initials_re.fullmatch(candidate)):
+                continue
+            following = lines[index + 1 : min(len(lines), index + 4)]
+            if any(birth_marker_re.search(item) for item in following):
+                return candidate
+        return ""
+
+    @staticmethod
+    def _extract_split_fio_label_value(text: str) -> str:        """Read FIO when a DOCX table flattens label and value into adjacent lines.
 
         A common Word layout stores ``Ф.И.О.`` in the left cell and the actual
         name in the right cell. ``extract_docx_text`` intentionally preserves
