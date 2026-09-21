@@ -10,6 +10,7 @@ from __future__ import annotations
 import copy
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from types import SimpleNamespace
 
 from docx import Document
 
@@ -18,6 +19,7 @@ import diary_text_parser
 import files_mixin
 import dnd_mixin
 import actions_creation_orchestrator
+import printer_support
 from actions_medical_flow import ActionsMedicalFlowMixin
 from actions_diary_flow import ActionsDiaryFlowMixin
 from actions_creation_orchestrator import ActionsCreationOrchestratorMixin
@@ -185,8 +187,9 @@ class _PartialSetHarness(ActionsCreationOrchestratorMixin):
     def __init__(self, output_dir: Path):
         self.output_dir = output_dir
         self.expert_sick_leave_needed_var = _Var("нет")
-        self.printer_var = _Var("")
+        self.printer_var = _Var("Test Printer")
         self.open_result_folder_var = _Var(False)
+        self.root = SimpleNamespace(update_idletasks=lambda: None)
         self.logs: list[str] = []
         self.status = ""
         self.reports: list[dict] = []
@@ -661,13 +664,17 @@ def _assert_diary_failure_keeps_medical_documents(root: Path) -> None:
     app = _PartialSetHarness(output)
     original_warning = actions_creation_orchestrator.messagebox.showwarning
     original_error = actions_creation_orchestrator.messagebox.showerror
+    original_print_files = printer_support.print_files
     warnings: list[tuple[str, str]] = []
     errors: list[tuple[str, str]] = []
+    print_calls: list[tuple[list[Path], str]] = []
     try:
         actions_creation_orchestrator.messagebox.showwarning = lambda title, message, **_kwargs: warnings.append((title, message))
         actions_creation_orchestrator.messagebox.showerror = lambda title, message, **_kwargs: errors.append((title, message))
-        app.create_selected_outputs(print_after=False)
+        printer_support.print_files = lambda paths, printer: print_calls.append((list(paths), printer))  # type: ignore[assignment]
+        app.create_selected_outputs(print_after=True)
     finally:
+        printer_support.print_files = original_print_files  # type: ignore[assignment]
         actions_creation_orchestrator.messagebox.showwarning = original_warning
         actions_creation_orchestrator.messagebox.showerror = original_error
 
@@ -676,6 +683,8 @@ def _assert_diary_failure_keeps_medical_documents(root: Path) -> None:
     assert not errors, errors
     assert warnings and warnings[-1][0] == "Комплект создан частично", warnings
     assert "Дневники" in warnings[-1][1] and "Тексты дневников не выбраны" in warnings[-1][1], warnings
+    assert "Автоматическая печать не запускалась" in warnings[-1][1], warnings
+    assert print_calls == [], print_calls
     assert app.reports and any("Дневники:" in item for item in (app.reports[-1].get("errors") or [])), app.reports
     assert app.status == "Готово частично: доступные документы сохранены", app.status
 
