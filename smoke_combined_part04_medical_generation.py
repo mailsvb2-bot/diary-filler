@@ -706,7 +706,16 @@ def _build_contract_app(*, primary_path: Path, output_dir: Path, selected: tuple
     app._diary_template_folder_contains_cache = {}
     app.data = app.service.parse_primary_document(primary_path)
     app._log_buffer = []
-    app._settings = {}
+    # This harness represents a user who already completed staff onboarding.
+    # Generation tests must not rely on the production fail-open legacy defaults.
+    app._settings = {
+        "staff_profile": {
+            "configured": True,
+            "doctor": "Балаганин С.В",
+            "department_head": "Можарова Е.А.",
+            "deputy_chief": "Зуйкова А.А.",
+        }
+    }
     app._last_preview_text = ""
     app._suspend_user_edit_tracking = False
     app._manual_output_dir = True
