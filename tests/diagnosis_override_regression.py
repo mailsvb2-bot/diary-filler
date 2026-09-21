@@ -189,7 +189,12 @@ class _PartialSetHarness(ActionsCreationOrchestratorMixin):
         self.expert_sick_leave_needed_var = _Var("нет")
         self.printer_var = _Var("Test Printer")
         self.open_result_folder_var = _Var(False)
+        self.output_vars = {
+            "primary": _Var(True),
+            "diaries": _Var(True),
+        }
         self.root = SimpleNamespace(update_idletasks=lambda: None)
+        self.redraw_count = 0
         self.logs: list[str] = []
         self.status = ""
         self.reports: list[dict] = []
@@ -256,6 +261,9 @@ class _PartialSetHarness(ActionsCreationOrchestratorMixin):
 
     def _set_status(self, text):
         self.status = text
+
+    def _redraw_selection_controls(self):
+        self.redraw_count += 1
 
 
 def _assert_ui_diagnosis_wins_snapshot() -> None:
@@ -685,6 +693,9 @@ def _assert_diary_failure_keeps_medical_documents(root: Path) -> None:
     assert "Дневники" in warnings[-1][1] and "Тексты дневников не выбраны" in warnings[-1][1], warnings
     assert "Автоматическая печать не запускалась" in warnings[-1][1], warnings
     assert print_calls == [], print_calls
+    assert app.output_vars["primary"].get() is False, app.output_vars["primary"].get()
+    assert app.output_vars["diaries"].get() is True, app.output_vars["diaries"].get()
+    assert app.redraw_count == 1, app.redraw_count
     assert app.reports and any("Дневники:" in item for item in (app.reports[-1].get("errors") or [])), app.reports
     assert app.status == "Готово частично: доступные документы сохранены", app.status
 
