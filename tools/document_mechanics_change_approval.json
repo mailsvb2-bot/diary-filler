@@ -1,8 +1,0 @@
-{
-  "schema_version": 1,
-  "base_sha": "907d315ce4abf005565ce5ed3959ed28d029fb79",
-  "reason": "Restore the diary dynamic-epicrisis contract: when sick leave is selected, a due dynamic epicrisis owns its calendar date instead of coexisting with an ordinary diary, and lock the Discharge + Diaries path.",
-  "approved_blobs": {
-    "diary_service.py": "0186163e931ed7fc98ad38278523141bd697895a"
-  }
-}
