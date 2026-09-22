@@ -14,7 +14,7 @@ import main
 
 
 def main_check() -> None:
-    fake_patient = "Сверхсекретный Пациент Иванов"
+    fake_patient = "Маркер Секретный Тестовый"
     with tempfile.TemporaryDirectory(prefix="medical-autofill-privacy-") as tmp:
         private_path = Path(tmp) / fake_patient / "Первичный осмотр.docx"
         raw = (
