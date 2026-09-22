@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "9492ae58dd7a514dd5b1a5dcae35ccf2d90f3bea",
-  "baseline_note": "1250-line clinical text stress baseline. PR #214 adds a DOCX -> parser -> PatientData -> all canonical medical forms -> reread regression with 1,250 unique anamnesis line IDs plus a final tail sentinel and narrative marker words. Exact Windows production CI #868 / run 35775191978 passed release gate, dedicated long clinical block integrity, full patient replay + golden DOCX, GUI, EXE, packaged desktop intake E2E, installer build and install/uninstall smoke.",
+  "baseline_ref": "e51677bf9961b3d84fd11b4cc5b029a87e19e199",
+  "baseline_note": "PR #216 restored the dynamic-epicrisis diary-date contract and locked the exact Discharge + Diaries sick-leave path. Exact candidate cea92029b00d43cc8a3f62568e9f7141b1944abe passed Windows CI #872 / run 35786673830 completely, including verbal diary source regression, release gate, full patient replay + golden DOCX, EXE, packaged desktop intake E2E, installer and install/uninstall smoke. This cleanup removes the temporary document-mechanics approval and retains only a narrowed regression approval for that deletion.",
   "required_approval_evidence": [
     "ci_gate_lock"
   ],
