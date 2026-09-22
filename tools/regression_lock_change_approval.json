@@ -30,6 +30,7 @@
     "window_mixin.py": "1681c265d5d7119061e0136a22707782f36fde77",
     "app_initialization.py": "826379f7a0c3a59f1310301ab80f367026652aa3",
     "dnd_mixin.py": "9bae68e210a2c50e057510c392486bdd84db4db1",
-    "diary_template_selection.py": "8906603af5b826868e88501c4f3644802671f23e"
+    "diary_template_selection.py": "8906603af5b826868e88501c4f3644802671f23e",
+    "tools/production_safety_gate.py": "d57456d3de3ffde58fc155de9fc0ba70ff80d094"
   }
 }
