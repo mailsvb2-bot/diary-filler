@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "e70c5cd8909cfb8c31dbbf6900585f3ad8b83857",
-  "reason": "Diary source-identity hardening: preserve existing patient-source/EPI protections and extend the same loaded-content identity boundary to diary-only runs when the current card came from a primary Word document, without breaking manual diary-only mode.",
+  "reason": "Diary-input file identity hardening: preserve patient-source/EPI and diary-only source protections while pinning UI-selected Texts/Dates Word revisions, resetting those identities between patients, and rejecting changed selected files before diary generation.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -15,12 +15,12 @@
     "ci_gate_lock"
   ],
   "approved_blobs": {
-    "actions_creation_orchestrator.py": "7808ad4d35e4004338abe289665c271738039af8",
-    "files_mixin.py": "0bd830d8b8964fe54fe5331503ad222790f5f0c8",
+    "actions_creation_orchestrator.py": "f79209958130ea67122aa6300251da6a872c1437",
+    "files_mixin.py": "33fd7abc88c51369d76f6cd9cddf4a0b21bdb49d",
     "printer_models.py": "4d142106ac06f57f2641bd0c8af81e12e40b2f24",
     "smoke_combined_part01_setup_contracts.py": "e4dc3dc12b9674a6f6146c6b5141cb1987a62350",
-    "tests/diagnosis_override_regression.py": "b62e05422e65d12ad032b7ac7112aefe31d4aa3c",
-    "tools/document_mechanics_change_approval.json": "1ae01b02715b1a87a6f3b9211d88123b2e036a96",
+    "tests/diagnosis_override_regression.py": "437df9d1bd7c613ab961df3847ed73212fb7636c",
+    "tools/document_mechanics_change_approval.json": "e58ce0833467a91d629d189004123ca8538e2fd0",
     "settings_mixin.py": "988eec68abac613d607800950c9fed0a833c4f80",
     "tools/staff_profile_regression.py": "5150fd35f82743759c830c492be2dee640d8be14",
     "startup.py": "7cc293d1ba1961b8d1cb90c66448bfd8edb487c8",
@@ -28,6 +28,8 @@
     "main.py": "36c3fbed4965323ae0748be16b3d2017612016d6",
     "tests/intake_lifecycle_regression.py": "3fce7e923721233f7ab9fb024dfd66d654f3cdd7",
     "window_mixin.py": "1681c265d5d7119061e0136a22707782f36fde77",
-    "app_initialization.py": "826379f7a0c3a59f1310301ab80f367026652aa3"
+    "app_initialization.py": "826379f7a0c3a59f1310301ab80f367026652aa3",
+    "dnd_mixin.py": "c5b16a10f5d329bd8307f250f0d5ea0c9d3b5493",
+    "diary_template_selection.py": "8906603af5b826868e88501c4f3644802671f23e"
   }
 }
