@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "e70c5cd8909cfb8c31dbbf6900585f3ad8b83857",
-  "reason": "Close-path integrity: preserve generation/rollback/onboarding/print/intake/settings hardening while warning before discarding an in-memory pending print retry queue.",
+  "reason": "Missing-source user-journey integrity: preserve prior close/generation/rollback/onboarding/print/intake/settings hardening while failing before any medical popup when the selected patient source disappeared.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -15,12 +15,12 @@
     "ci_gate_lock"
   ],
   "approved_blobs": {
-    "actions_creation_orchestrator.py": "77e180022b29164f9a8cd7ab1cfb90fc8a436837",
+    "actions_creation_orchestrator.py": "2141a0735846e4ef404ca38e512d01c944f7b4d7",
     "files_mixin.py": "f0b4ec41ff2ae55e0d0423b6adbab5cf166dd1e1",
     "printer_models.py": "4d142106ac06f57f2641bd0c8af81e12e40b2f24",
     "smoke_combined_part01_setup_contracts.py": "e4dc3dc12b9674a6f6146c6b5141cb1987a62350",
-    "tests/diagnosis_override_regression.py": "9a7eb5b4b345787be17f24343735dc68b21d6d34",
-    "tools/document_mechanics_change_approval.json": "5e6a0e8c0e4a4890f3a982eea8eedff2b6288028",
+    "tests/diagnosis_override_regression.py": "828474a8bfb3c804f0d13a88b0671f7663ff3318",
+    "tools/document_mechanics_change_approval.json": "fcc8e90bf9c2bd42410db104b41e578c81469c54",
     "settings_mixin.py": "988eec68abac613d607800950c9fed0a833c4f80",
     "tools/staff_profile_regression.py": "5150fd35f82743759c830c492be2dee640d8be14",
     "startup.py": "7cc293d1ba1961b8d1cb90c66448bfd8edb487c8",
