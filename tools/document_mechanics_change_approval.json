@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "base_sha": "8985e158803cd9500deb1d5b3b83639c15807f4a",
-  "reason": "Explicit user-journey safety fix: when a selected medical source has disappeared, generation must fail before staff checks or medical popups instead of asking the doctor to fill fields for a run that cannot proceed.",
+  "reason": "Explicit user-journey safety fix: medical generation must fail before staff checks or popups when the selected source disappeared or was replaced on disk after loading, preventing mixed-patient output.",
   "approved_blobs": {
-    "actions_creation_orchestrator.py": "2141a0735846e4ef404ca38e512d01c944f7b4d7"
+    "actions_creation_orchestrator.py": "80c76fddfd3351790f8417fe5ccdaa86de871fb5"
   }
 }
