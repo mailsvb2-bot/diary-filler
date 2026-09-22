@@ -376,19 +376,38 @@ class ActionsCreationOrchestratorMixin:
             # app always owns navigation_path_var.
             return True
         navigation = str(navigation_var.get() or "").strip()
-        if navigation and Path(navigation).is_file():
-            return True
-        try:
-            messagebox.showerror(
-                "Источник пациента недоступен",
-                "Выбранный медицинский документ пациента больше не найден.\n\n"
-                "Выберите исходный Word-документ заново. Данные и дополнительные "
-                "поля для нового комплекта пока не запрашивались.",
-            )
-        except Exception:
-            pass
-        self._set_status("Создание отменено: источник пациента недоступен")
-        return False
+        if not navigation or not Path(navigation).is_file():
+            try:
+                messagebox.showerror(
+                    "Источник пациента недоступен",
+                    "Выбранный медицинский документ пациента больше не найден.\n\n"
+                    "Выберите исходный Word-документ заново. Данные и дополнительные "
+                    "поля для нового комплекта пока не запрашивались.",
+                )
+            except Exception:
+                pass
+            self._set_status("Создание отменено: источник пациента недоступен")
+            return False
+
+        loaded_signature = getattr(self, "_loaded_primary_source_signature", None)
+        signature_getter = getattr(self, "_primary_document_source_signature", None)
+        if loaded_signature is not None and callable(signature_getter):
+            try:
+                current_signature = signature_getter(navigation)
+            except Exception:
+                current_signature = None
+            if current_signature != loaded_signature:
+                try:
+                    messagebox.showerror(
+                        "Источник пациента изменился",
+                        "Выбранный Word-документ был изменён или заменён после загрузки в программу.\n\n"
+                        "Чтобы не смешать данные разных пациентов, выберите документ заново и проверьте карточку перед созданием.",
+                    )
+                except Exception:
+                    pass
+                self._set_status("Создание отменено: источник пациента изменился")
+                return False
+        return True
 
     def _create_selected_outputs_impl(self, *, print_after: bool = False) -> None:
         selected_medical = self.selected_medical_docs()
