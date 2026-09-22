@@ -35,6 +35,7 @@
     "medical_parser_blocks.py": "30dd4e7be9b84acca58964c48e9f3b2bb2733ebe",
     "tools/docx_block_boundary_regression.py": "f07b5271cb1d9b7403d1ee312df9b9d28035de1a",
     "medical_parser_demographics.py": "b1f98c0d574fe51fece7cd55861185f87f79bd73",
-    "medical_docx_editor_epi.py": "3296469e1e470817389f074e4ac7bbae601d8f2a"
+    "medical_docx_editor_epi.py": "3296469e1e470817389f074e4ac7bbae601d8f2a",
+    "smoke_combined_part04_medical_generation.py": "416bc7dc1cfd70b40a423199403f631dff478ba6"
   }
 }
