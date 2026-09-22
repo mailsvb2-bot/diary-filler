@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "367e5e16e9b5fdfde1846d772c13ccfd5cf44f5d",
-  "baseline_note": "Mandatory long clinical text integrity gate baseline. PR #212 made the existing 100-220-line DOCX truncation regression an explicit Windows CI, release workflow, release_check and ci_gate_lock invariant. Exact candidate Windows production CI #862 / run 35771197019 passed the long clinical block integrity regression plus the full release, replay/golden DOCX, GUI, EXE, packaged intake, installer and install/uninstall pipeline.",
+  "baseline_ref": "9492ae58dd7a514dd5b1a5dcae35ccf2d90f3bea",
+  "baseline_note": "1250-line clinical text stress baseline. PR #214 adds a DOCX -> parser -> PatientData -> all canonical medical forms -> reread regression with 1,250 unique anamnesis line IDs plus a final tail sentinel and narrative marker words. Exact Windows production CI #868 / run 35775191978 passed release gate, dedicated long clinical block integrity, full patient replay + golden DOCX, GUI, EXE, packaged desktop intake E2E, installer build and install/uninstall smoke.",
   "required_approval_evidence": [
     "ci_gate_lock"
   ],
