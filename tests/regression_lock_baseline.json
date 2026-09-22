@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "db4df574a168a34749fad5e3e2ce4e34763662bb",
-  "baseline_note": "Pending-print patient-switch safety hardening merged canonically as main db4df574a168a34749fad5e3e2ce4e34763662bb after exact candidate Windows production CI #856 / run 35767762378 passed provenance, regression/document-mechanics guards, safety/privacy audits, release gate, full patient replay + golden DOCX, staff/gender/diagnosis/diary regressions, real Tk GUI, packaged EXE/TkDND, desktop-intake E2E, installer build and install/uninstall smoke.",
+  "baseline_ref": "b06f58aab66b7dc0f850464029a20ce847faf271",
+  "baseline_note": "Clean pending-print patient-switch safety baseline. Runtime hardening merged in PR #209 and temporary mechanics approval was consumed in PR #210. Exact cleanup candidate Windows production CI #858 / run 35768496528 passed provenance, regression/document-mechanics guards, safety/privacy audits, release gate, full patient replay + golden DOCX, staff/gender/diagnosis/diary regressions, real Tk GUI, packaged EXE/TkDND, desktop-intake E2E, installer build and install/uninstall smoke.",
   "required_approval_evidence": [
     "ci_gate_lock"
   ],
