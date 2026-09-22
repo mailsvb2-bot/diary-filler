@@ -139,7 +139,7 @@ p = sys.argv[1]
 d = Document()
 d.add_paragraph("12.05.2026 Первичный осмотр")
 d.add_paragraph("История болезни № INSTALLED-E2E-001")
-d.add_paragraph("Ф.И.О.: Установкин Тест Тестович")
+d.add_paragraph("Ф.И.О.: Маркер Установочный Тестовый")
 d.add_paragraph("Дата рождения: 01.01.1980")
 d.add_paragraph("Жалобы при поступлении: тестовая запись")
 d.add_paragraph("Анамнез жизни: без особенностей")
