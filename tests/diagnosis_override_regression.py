@@ -72,6 +72,32 @@ class _CloseSafetyHarness(WindowMixin):
         self._pending_print_retry_files = list(pending or [])
 
 
+class _MissingSourceEarlyFailHarness(ActionsCreationOrchestratorMixin):
+    def __init__(self, missing_path: Path):
+        self.navigation_path_var = _Var(str(missing_path))
+        self._pending_print_retry_files = []
+        self.status = ""
+        self.staff_checks = 0
+        self.popup_checks = 0
+
+    def selected_medical_docs(self):
+        return ["primary"]
+
+    def diaries_selected(self):
+        return False
+
+    def _ensure_staff_profile_for_generation(self):
+        self.staff_checks += 1
+        raise AssertionError("staff prompt must not run when source is already missing")
+
+    def _prompt_missing_patient_identity_if_needed(self):
+        self.popup_checks += 1
+        raise AssertionError("medical popups must not run when source is already missing")
+
+    def _set_status(self, text):
+        self.status = str(text)
+
+
 class _GenerationGateHarness(ActionsCreationOrchestratorMixin):
     def __init__(self):
         self.impl_calls = 0
@@ -442,6 +468,25 @@ def _assert_pending_print_close_safety(root: Path) -> None:
         assert len(prompts) == prompt_count, prompts
     finally:
         window_mixin.messagebox.askyesno = original_askyesno
+
+
+def _assert_missing_source_fails_before_any_medical_popup(root: Path) -> None:
+    app = _MissingSourceEarlyFailHarness(root / "already-moved-or-deleted.docx")
+    errors: list[tuple[str, str]] = []
+    original_error = actions_creation_orchestrator.messagebox.showerror
+    try:
+        actions_creation_orchestrator.messagebox.showerror = (
+            lambda title, message, **_kwargs: errors.append((str(title), str(message)))
+        )
+        app._create_selected_outputs_impl(print_after=False)
+    finally:
+        actions_creation_orchestrator.messagebox.showerror = original_error
+
+    assert app.staff_checks == 0, app.staff_checks
+    assert app.popup_checks == 0, app.popup_checks
+    assert app.status == "Создание отменено: источник пациента недоступен", app.status
+    assert errors and errors[-1][0] == "Источник пациента недоступен", errors
+    assert "Выберите исходный Word-документ заново" in errors[-1][1], errors[-1][1]
 
 
 def _assert_generation_action_gate_blocks_reentry_and_queued_double_click() -> None:
@@ -1030,6 +1075,7 @@ def main() -> None:
     with TemporaryDirectory(prefix="diagnosis-override-regression-") as temp_dir:
         root = Path(temp_dir)
         _assert_pending_print_close_safety(root)
+        _assert_missing_source_fails_before_any_medical_popup(root)
         _assert_same_path_replacement_is_patient_switch(root)
         _assert_invalid_new_source_preserves_open_patient(root)
         _assert_multi_primary_drop_fails_safe(root)
@@ -1046,7 +1092,7 @@ def main() -> None:
     _assert_diary_creation_path_offers_manual_fallback()
     print(
         "DIAGNOSIS OVERRIDE REGRESSION OK: UI diagnosis + verbal matching + "
-        "manual fallback + visible Word picker + pending-print close safety + generation double-click guard + partial-set survival + complete partial-print retry + print retry without regeneration + .doc/.docx source + same-path replacement isolation + transactional invalid-source handling + multi-primary DnD fail-safe + complete patient-session reset matrix"
+        "manual fallback + visible Word picker + missing-source early fail + pending-print close safety + generation double-click guard + partial-set survival + complete partial-print retry + print retry without regeneration + .doc/.docx source + same-path replacement isolation + transactional invalid-source handling + multi-primary DnD fail-safe + complete patient-session reset matrix"
     )
 
 
