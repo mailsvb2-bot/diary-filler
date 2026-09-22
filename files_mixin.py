@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import hashlib
 from typing import List
 from tkinter import filedialog, messagebox
 import threading
@@ -232,30 +233,39 @@ class FilesMixin:
             self.primary_selected_status_var.set(" ")
 
     @staticmethod
-    def _primary_document_source_signature(path: str | Path) -> tuple[str, int, int, int]:
-        """Identify one concrete filesystem revision of a patient source."""
+    def _primary_document_source_signature(path: str | Path) -> tuple[str, int, int, int, str]:
+        """Identify one concrete content revision of a patient source.
+
+        Size/timestamps are fast change signals, while SHA-256 closes the rare
+        same-size/same-timestamp replacement hole on synced/network filesystems.
+        """
         candidate = Path(path)
         try:
             stat = candidate.stat()
             resolved = str(candidate.resolve()).casefold()
+            digest = hashlib.sha256()
+            with candidate.open("rb") as stream:
+                for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                    digest.update(chunk)
             return (
                 resolved,
                 int(stat.st_size),
                 int(getattr(stat, "st_mtime_ns", int(stat.st_mtime * 1_000_000_000))),
                 int(getattr(stat, "st_ctime_ns", int(stat.st_ctime * 1_000_000_000))),
+                digest.hexdigest(),
             )
         except OSError:
             try:
                 resolved = str(candidate.resolve()).casefold()
             except Exception:
                 resolved = str(candidate).casefold()
-            return (resolved, -1, -1, -1)
+            return (resolved, -1, -1, -1, "")
 
     def _is_primary_document_switch(
         self,
         previous_primary: str,
         path: str,
-        candidate_signature: tuple[str, int, int, int],
+        candidate_signature: tuple[str, int, int, int, str],
     ) -> bool:
         """Treat a replaced same-name export as a new patient session."""
         previous_primary = str(previous_primary or "").strip()
