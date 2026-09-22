@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "b06f58aab66b7dc0f850464029a20ce847faf271",
-  "baseline_note": "Clean pending-print patient-switch safety baseline. Runtime hardening merged in PR #209 and temporary mechanics approval was consumed in PR #210. Exact cleanup candidate Windows production CI #858 / run 35768496528 passed provenance, regression/document-mechanics guards, safety/privacy audits, release gate, full patient replay + golden DOCX, staff/gender/diagnosis/diary regressions, real Tk GUI, packaged EXE/TkDND, desktop-intake E2E, installer build and install/uninstall smoke.",
+  "baseline_ref": "367e5e16e9b5fdfde1846d772c13ccfd5cf44f5d",
+  "baseline_note": "Mandatory long clinical text integrity gate baseline. PR #212 made the existing 100-220-line DOCX truncation regression an explicit Windows CI, release workflow, release_check and ci_gate_lock invariant. Exact candidate Windows production CI #862 / run 35771197019 passed the long clinical block integrity regression plus the full release, replay/golden DOCX, GUI, EXE, packaged intake, installer and install/uninstall pipeline.",
   "required_approval_evidence": [
     "ci_gate_lock"
   ],
