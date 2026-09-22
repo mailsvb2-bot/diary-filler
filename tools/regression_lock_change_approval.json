@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "e70c5cd8909cfb8c31dbbf6900585f3ad8b83857",
-  "reason": "Patient-source identity hardening: preserve prior close/generation/rollback/onboarding/print/intake/settings protections while binding loaded source identity and parse cache to SHA-256 and failing before prompts if the source disappeared or changed on disk.",
+  "reason": "Patient-source identity hardening: preserve prior close/generation/rollback/onboarding/print/intake/settings protections while binding primary source/cache and separately selected EPI to loaded content identity, and failing before prompts if either source disappeared or changed.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -15,12 +15,12 @@
     "ci_gate_lock"
   ],
   "approved_blobs": {
-    "actions_creation_orchestrator.py": "80c76fddfd3351790f8417fe5ccdaa86de871fb5",
-    "files_mixin.py": "9d73e817d7e67e182dd8bd790dc703d1947c8edc",
+    "actions_creation_orchestrator.py": "ca050d920564c273aec41b8296713b8480ad3509",
+    "files_mixin.py": "0bd830d8b8964fe54fe5331503ad222790f5f0c8",
     "printer_models.py": "4d142106ac06f57f2641bd0c8af81e12e40b2f24",
     "smoke_combined_part01_setup_contracts.py": "e4dc3dc12b9674a6f6146c6b5141cb1987a62350",
-    "tests/diagnosis_override_regression.py": "05f83be5a9b7751b6dd96ba31db1564ccabc9fef",
-    "tools/document_mechanics_change_approval.json": "520528b83750693826ed3021e8380311f0d8a4dd",
+    "tests/diagnosis_override_regression.py": "ac1cad1d96db572013c6262f43244661f4e10977",
+    "tools/document_mechanics_change_approval.json": "cc3c0f53936aacb8384c58827cbf029a50e9a9c0",
     "settings_mixin.py": "988eec68abac613d607800950c9fed0a833c4f80",
     "tools/staff_profile_regression.py": "5150fd35f82743759c830c492be2dee640d8be14",
     "startup.py": "7cc293d1ba1961b8d1cb90c66448bfd8edb487c8",
