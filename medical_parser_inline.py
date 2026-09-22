@@ -24,18 +24,20 @@ from medical_text_utils import (
 
 
 class MedicalParserInlineMixin:
-    @staticmethod
-    def _parsed_field_value_is_only_label(field_name: str, value: str) -> bool:
+    def _parsed_field_value_is_only_label(self, field_name: str, value: str) -> bool:
         """Safely clear accidental labels without deleting meaningful values.
 
-        Some template cells contain only labels, and those should not be copied
-        into generated documents. But broad label detection must not delete real
-        values like a position ``врач`` / ``врач-психиатр``.
+        Multi-line clinical blocks need an exact structural check.  The legacy
+        ``looks_like_label()`` helper is deliberately broad for short inline
+        fields and would erase an otherwise valid block merely because its first
+        sentence starts with words such as ``Жалобы`` or ``Анамнез``.
         """
         cleaned = clean_value(value)
         if not cleaned:
             return True
         norm = normalize_match(cleaned)
+        if field_name in getattr(self, "BLOCK_ALIASES", {}):
+            return self._block_value_is_only_label(cleaned)
         if field_name == "position":
             return norm in {"должность", "в должности"}
         if field_name == "work_org":
