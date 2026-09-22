@@ -136,6 +136,31 @@ class _DiaryInputRevisionHarness(ActionsCreationOrchestratorMixin, FilesMixin):
         self.status = str(text)
 
 
+class _DroppedEpiIdentityHarness(ActionsCreationOrchestratorMixin, DragDropMixin, FilesMixin):
+    def __init__(self):
+        self.root = None
+        self.epi_path_var = _Var("")
+        self.epi_present_var = _Var("")
+        self.output_dir_var = _Var("already-selected")
+        self.status = ""
+        self.logs: list[str] = []
+
+    def _classify_dropped_file(self, _path):
+        return "epi"
+
+    def _remember_dialog_directory(self, *_args, **_kwargs):
+        pass
+
+    def reparse_navigation(self, **_kwargs):
+        pass
+
+    def _log(self, text):
+        self.logs.append(str(text))
+
+    def _set_status(self, text):
+        self.status = str(text)
+
+
 class _ChangedEpiEarlyFailHarness(_MissingSourceEarlyFailHarness):
     def __init__(self, primary_path: Path, epi_path: Path):
         super().__init__(primary_path)
@@ -638,6 +663,32 @@ def _assert_changed_diary_input_files_fail_closed(root: Path) -> None:
         assert errors and "«Даты»" in errors[-1][1], errors
     finally:
         actions_creation_orchestrator.messagebox.showerror = original_error
+
+
+def _assert_dropped_epi_is_bound_to_drop_time_revision(root: Path) -> None:
+    epi = root / "dropped-epi.docx"
+    epi.write_bytes(b"epi-at-drop-time")
+    app = _DroppedEpiIdentityHarness()
+
+    app._handle_dropped_files([str(epi)])
+    expected = app._primary_document_source_signature(epi)
+    assert app.epi_path_var.get() == str(epi), app.epi_path_var.get()
+    assert app.epi_present_var.get() == "да", app.epi_present_var.get()
+    assert app._loaded_epi_source_signature == expected, app._loaded_epi_source_signature
+
+    epi.write_bytes(b"epi-replaced-after-drop")
+    errors: list[tuple[str, str]] = []
+    original_error = actions_creation_orchestrator.messagebox.showerror
+    try:
+        actions_creation_orchestrator.messagebox.showerror = (
+            lambda title, message, **_kwargs: errors.append((str(title), str(message)))
+        )
+        assert not app._ensure_epi_source_available_for_generation(["primary"])
+    finally:
+        actions_creation_orchestrator.messagebox.showerror = original_error
+
+    assert app.status == "Создание отменено: файл ЭПИ изменился", app.status
+    assert errors and errors[-1][0] == "Файл ЭПИ изменился", errors
 
 
 def _assert_changed_epi_fails_before_any_medical_popup(root: Path) -> None:
@@ -1285,6 +1336,7 @@ def main() -> None:
         _assert_changed_source_fails_before_any_medical_popup(root)
         _assert_changed_source_blocks_diary_only_but_manual_diary_mode_survives(root)
         _assert_changed_diary_input_files_fail_closed(root)
+        _assert_dropped_epi_is_bound_to_drop_time_revision(root)
         _assert_changed_epi_fails_before_any_medical_popup(root)
         _assert_primary_cache_rejects_same_metadata_wrong_digest(root)
         _assert_same_path_replacement_is_patient_switch(root)
@@ -1303,7 +1355,7 @@ def main() -> None:
     _assert_diary_creation_path_offers_manual_fallback()
     print(
         "DIAGNOSIS OVERRIDE REGRESSION OK: UI diagnosis + verbal matching + "
-        "manual fallback + visible Word picker + digest-bound source/cache + missing/changed primary/EPI/Texts/Dates early fail + pending-print close safety + generation double-click guard + partial-set survival + complete partial-print retry + print retry without regeneration + .doc/.docx source + same-path replacement isolation + transactional invalid-source handling + multi-primary DnD fail-safe + complete patient-session reset matrix"
+        "manual fallback + visible Word picker + digest-bound source/cache + missing/changed primary/EPI/Texts/Dates early fail + DnD EPI revision pin + pending-print close safety + generation double-click guard + partial-set survival + complete partial-print retry + print retry without regeneration + .doc/.docx source + same-path replacement isolation + transactional invalid-source handling + multi-primary DnD fail-safe + complete patient-session reset matrix"
     )
 
 
