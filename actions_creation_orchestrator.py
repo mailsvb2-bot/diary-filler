@@ -492,7 +492,21 @@ class ActionsCreationOrchestratorMixin:
                 current = snapshotter(getattr(self, paths_attr, []))
             except Exception:
                 current = {}
-            if current == expected:
+
+            def valid_snapshot(snapshot) -> bool:
+                if not isinstance(snapshot, dict) or not snapshot:
+                    return False
+                for signature in snapshot.values():
+                    if (
+                        not isinstance(signature, tuple)
+                        or len(signature) < 5
+                        or int(signature[1]) < 0
+                        or not str(signature[4] or "").strip()
+                    ):
+                        return False
+                return True
+
+            if current == expected and valid_snapshot(expected) and valid_snapshot(current):
                 continue
             try:
                 messagebox.showerror(
