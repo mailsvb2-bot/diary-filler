@@ -234,6 +234,9 @@ class DiaryTemplateSelectionMixin:
             self.diary_template_dir = str(found.parent)
             self.diary_files = [str(found)]
             self._diary_files_auto_selected = True
+            pin_sources = getattr(self, "_pin_diary_date_source_signatures", None)
+            if callable(pin_sources):
+                pin_sources()
             self._remember_numbered_diary_template_dir(found.parent)
             self._update_diary_template_label(success=True)
             if hasattr(self, "_redraw_selection_controls"):
@@ -270,6 +273,9 @@ class DiaryTemplateSelectionMixin:
                     self.diary_template_dir = str(folder_path)
                     self.diary_files = [str(found)]
                     self._diary_files_auto_selected = True
+                    pin_sources = getattr(self, "_pin_diary_date_source_signatures", None)
+                    if callable(pin_sources):
+                        pin_sources()
                     self._remember_numbered_diary_template_dir(folder)
                     self._update_diary_template_label(success=True)
                     if hasattr(self, "_redraw_selection_controls"):

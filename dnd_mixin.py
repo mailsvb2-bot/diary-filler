@@ -119,6 +119,9 @@ class DragDropMixin:
             self._apply_primary_document_path(primary_path, prompt_for_referral=True)
         if epi_path:
             self.epi_path_var.set(epi_path)
+            signature_getter = getattr(self, "_primary_document_source_signature", None)
+            if callable(signature_getter):
+                self._loaded_epi_source_signature = signature_getter(epi_path)
             if hasattr(self, "epi_present_var"):
                 self.epi_present_var.set("да")
             self._remember_dialog_directory(DIR_EPI, epi_path)
@@ -130,6 +133,9 @@ class DragDropMixin:
             if not self._auto_select_diary_text_by_diagnosis(ask_folder=False):
                 self.status_files = status_paths
                 self._diary_text_files_auto_selected = False
+                pin_sources = getattr(self, "_pin_diary_text_source_signatures", None)
+                if callable(pin_sources):
+                    pin_sources()
                 self._remember_dialog_directory(DIR_DIARY_TEXTS, status_paths[0])
                 self._update_diary_text_label(success=True)
                 self._redraw_selection_controls()
@@ -142,6 +148,9 @@ class DragDropMixin:
                 # ломаем прежний путь, но кнопка UI теперь выбирает именно папку.
                 self.diary_files = diary_paths
                 self._diary_files_auto_selected = False
+                pin_sources = getattr(self, "_pin_diary_date_source_signatures", None)
+                if callable(pin_sources):
+                    pin_sources()
                 self._remember_dialog_directory(DIR_DIARY_TEMPLATES, diary_paths[0])
                 self._update_diary_template_label(success=True)
                 self._redraw_selection_controls()

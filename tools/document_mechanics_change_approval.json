@@ -1,8 +1,10 @@
 {
   "schema_version": 1,
-  "base_sha": "13aa542c664c0b5329e79af039c6f8d31e68d18d",
-  "reason": "Explicit patient-integrity hardening: diary-only generation must honor the loaded primary Word content identity whenever the current patient card was sourced from that document, while manual diary-only mode without a primary source remains supported.",
+  "base_sha": "3eaaa5ddd08e33e6391e74b5f4e0a19bc7f69044",
+  "reason": "Explicit diary-input integrity hardening: UI-selected Texts and Dates Word files are pinned to content identities and generation rejects a removed, changed, or replaced selected revision before using it.",
   "approved_blobs": {
-    "actions_creation_orchestrator.py": "7808ad4d35e4004338abe289665c271738039af8"
+    "actions_creation_orchestrator.py": "25363e5f581d2cf02167f73b8d731f063136cdce",
+    "diary_template_selection.py": "8906603af5b826868e88501c4f3644802671f23e",
+    "files_mixin.py": "33fd7abc88c51369d76f6cd9cddf4a0b21bdb49d"
   }
 }

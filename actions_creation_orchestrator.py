@@ -469,6 +469,59 @@ class ActionsCreationOrchestratorMixin:
                 return False
         return True
 
+    def _ensure_diary_input_sources_available_for_generation(self, selected_diaries: bool) -> bool:
+        """Fail closed when a pinned diary Texts/Dates file changed after selection."""
+        if not selected_diaries:
+            return True
+        snapshotter = getattr(self, "_diary_source_signature_snapshot", None)
+        if not callable(snapshotter):
+            # Narrow compatibility harnesses may provide diary paths directly.
+            return True
+
+        checks = (
+            ("Тексты", "status_files", "_loaded_diary_text_source_signatures"),
+            ("Даты", "diary_files", "_loaded_diary_date_source_signatures"),
+        )
+        for label, paths_attr, signatures_attr in checks:
+            expected = getattr(self, signatures_attr, None)
+            if expected is None:
+                # Programmatic/legacy sources without a UI selection baseline
+                # retain their previous compatibility contract.
+                continue
+            try:
+                current = snapshotter(getattr(self, paths_attr, []))
+            except Exception:
+                current = {}
+
+            def valid_snapshot(snapshot) -> bool:
+                if not isinstance(snapshot, dict) or not snapshot:
+                    return False
+                for signature in snapshot.values():
+                    if (
+                        not isinstance(signature, tuple)
+                        or len(signature) < 5
+                        or int(signature[1]) < 0
+                        or not str(signature[4] or "").strip()
+                    ):
+                        return False
+                return True
+
+            if current == expected and valid_snapshot(expected) and valid_snapshot(current):
+                continue
+            try:
+                messagebox.showerror(
+                    "Источник дневников изменился",
+                    f"Выбранный источник «{label}» был удалён, изменён или заменён после выбора.\n\n"
+                    "Выберите его заново перед созданием дневников. "
+                    "Программа остановила создание до дополнительных вопросов, "
+                    "чтобы не использовать другую ревизию файла.",
+                )
+            except Exception:
+                pass
+            self._set_status(f"Создание отменено: источник «{label}» изменился")
+            return False
+        return True
+
     def _create_selected_outputs_impl(self, *, print_after: bool = False) -> None:
         selected_medical = self.selected_medical_docs()
         selected_diaries = self.diaries_selected()
@@ -487,6 +540,8 @@ class ActionsCreationOrchestratorMixin:
         ):
             return
         if not self._ensure_epi_source_available_for_generation(selected_medical):
+            return
+        if not self._ensure_diary_input_sources_available_for_generation(selected_diaries):
             return
         if not self._ensure_staff_profile_for_generation():
             self._set_status("Создание отменено: укажите сотрудников")
@@ -586,6 +641,20 @@ class ActionsCreationOrchestratorMixin:
             if not self._select_default_printer_sync():
                 messagebox.showwarning("Принтер не выбран", "Выберите принтер перед печатью или используйте кнопку сохранения без печати.")
                 return
+
+        # Re-check every source after all potentially long-running doctor
+        # popups. Synced/network files can change while fields are being filled;
+        # generation must still consume the exact revisions that built the card
+        # and were selected for EPI/Texts/Dates.
+        if not self._ensure_primary_source_available_for_generation(
+            selected_medical,
+            selected_diaries,
+        ):
+            return
+        if not self._ensure_epi_source_available_for_generation(selected_medical):
+            return
+        if not self._ensure_diary_input_sources_available_for_generation(selected_diaries):
+            return
 
         self._start_progress()
         created_medical: List[Path] = []

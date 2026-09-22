@@ -85,6 +85,8 @@ PATIENT_SESSION_SWITCH_ONLY_ATTR_DEFAULTS = (
     ("_diary_text_files_auto_selected", False),
     ("_diary_files_auto_selected", False),
     ("_loaded_epi_source_signature", None),
+    ("_loaded_diary_text_source_signatures", None),
+    ("_loaded_diary_date_source_signatures", None),
 )
 
 PATIENT_SESSION_SWITCH_ONLY_LIST_ATTRS = (
@@ -215,16 +217,19 @@ class FilesMixin:
         if getattr(self, "_diary_text_files_auto_selected", False):
             self.status_files = []
             self._diary_text_files_auto_selected = False
+            self._loaded_diary_text_source_signatures = None
             self._update_diary_text_label(success=bool(getattr(self, "diary_texts_dir", "")))
         if getattr(self, "_diary_files_auto_selected", False):
             self.diary_files = []
             self._diary_files_auto_selected = False
+            self._loaded_diary_date_source_signatures = None
             self._update_diary_template_label(success=bool(getattr(self, "diary_template_dir", "")))
         elif getattr(self, "diary_template_dir", ""):
             try:
                 if self._folder_contains_numbered_diary_templates(self.diary_template_dir):
                     self.diary_files = []
                     self._diary_files_auto_selected = True
+                    self._loaded_diary_date_source_signatures = None
                     self._update_diary_template_label(success=True)
             except Exception:
                 pass
@@ -261,6 +266,28 @@ class FilesMixin:
             except Exception:
                 resolved = str(candidate).casefold()
             return (resolved, -1, -1, -1, "")
+
+    def _diary_source_signature_snapshot(
+        self,
+        paths,
+    ) -> dict[str, tuple[str, int, int, int, str]]:
+        """Capture immutable content identities for explicitly selected diary inputs."""
+        snapshot: dict[str, tuple[str, int, int, int, str]] = {}
+        for raw_path in paths or []:
+            value = str(raw_path or "").strip()
+            if not value:
+                continue
+            signature = self._primary_document_source_signature(value)
+            snapshot[signature[0]] = signature
+        return snapshot
+
+    def _pin_diary_text_source_signatures(self) -> None:
+        snapshot = self._diary_source_signature_snapshot(getattr(self, "status_files", []))
+        self._loaded_diary_text_source_signatures = snapshot or None
+
+    def _pin_diary_date_source_signatures(self) -> None:
+        snapshot = self._diary_source_signature_snapshot(getattr(self, "diary_files", []))
+        self._loaded_diary_date_source_signatures = snapshot or None
 
     def _is_primary_document_switch(
         self,
@@ -477,6 +504,7 @@ class FilesMixin:
         # silently attached when no new match exists.
         if getattr(self, "_diary_text_files_auto_selected", False):
             self.status_files = []
+            self._loaded_diary_text_source_signatures = None
             self._update_diary_text_label(success=bool(getattr(self, "diary_texts_dir", "")))
             self._redraw_selection_controls()
         if not diagnosis:
@@ -489,6 +517,7 @@ class FilesMixin:
             self.diary_texts_dir = str(found.parent)
             self.status_files = [str(found)]
             self._diary_text_files_auto_selected = True
+            self._pin_diary_text_source_signatures()
             self._remember_dialog_directory(DIR_DIARY_TEXTS, str(found))
             self._update_diary_text_label(success=True)
             self._redraw_selection_controls()
@@ -508,6 +537,7 @@ class FilesMixin:
                 if found:
                     self.status_files = [str(found)]
                     self._diary_text_files_auto_selected = True
+                    self._pin_diary_text_source_signatures()
                     self._remember_dialog_directory(DIR_DIARY_TEXTS, str(found))
                     self._update_diary_text_label(success=True)
                     self._redraw_selection_controls()
@@ -515,6 +545,7 @@ class FilesMixin:
                     return True
                 self.status_files = []
                 self._diary_text_files_auto_selected = True
+                self._loaded_diary_text_source_signatures = None
                 self._update_diary_text_label(success=False)
                 self._redraw_selection_controls()
                 return self._offer_manual_diary_text_file(
@@ -557,6 +588,7 @@ class FilesMixin:
         self._remember_dialog_directory(DIR_DIARY_TEXTS, str(folder), selected_is_dir=True)
         self.status_files = []
         self._diary_text_files_auto_selected = True
+        self._loaded_diary_text_source_signatures = None
 
         diagnosis = self.diagnosis_var.get().strip() or getattr(getattr(self, "data", None), "diagnosis", "")
         if diagnosis and self._auto_select_diary_text_by_diagnosis(ask_folder=False):
@@ -609,6 +641,7 @@ class FilesMixin:
         self.diary_texts_dir = str(path.parent)
         self.status_files = [str(path)]
         self._diary_text_files_auto_selected = False
+        self._pin_diary_text_source_signatures()
         self._remember_dialog_directory(DIR_DIARY_TEXTS, str(path))
         self._update_diary_text_label(success=True)
         self._redraw_selection_controls()
@@ -640,6 +673,7 @@ class FilesMixin:
         self.diary_template_dir = str(root)
         self.diary_files = []
         self._diary_files_auto_selected = True
+        self._loaded_diary_date_source_signatures = None
         self._remember_numbered_diary_template_dir(root)
         self._update_diary_template_label(success=True)
         self._redraw_selection_controls()
