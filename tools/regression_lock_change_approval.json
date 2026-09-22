@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "70a059698e1a78f79c57bde599342e77eff525e3",
+  "reason": "Patient privacy scrub: remove patient-identifying name literals from production examples, tests, fixtures, golden inputs, and Windows smoke paths; keep physician/staff identities unchanged; add a fail-closed privacy source scan.",
+  "required_evidence": [
+    "document_mechanics_guard",
+    "full_patient_replay",
+    "golden_docx",
+    "staff_profile_regression",
+    "gender_generation_matrix",
+    "desktop_intake_contract",
+    "intake_lifecycle_regression",
+    "packaged_desktop_intake_e2e",
+    "installer_uninstall_smoke",
+    "ci_gate_lock"
+  ],
+  "approved_blobs": {
+    "medical_parser_demographics.py": "f66f9b2a98e99d9b6c720add54d54712a2f103e2",
+    "medical_parser_inline.py": "83d1b782730294ae6b09fd934b7a8daff1766527",
+    "prod_audit.py": "58822c39296d4c81663217b0f66b559f8cbf13e2",
+    "safety_integrity_check.py": "edaabce0ddc02f89a620e83e66e47519470b8134",
+    "settings_mixin.py": "25f3ff6eb66945395e6b2ae253f615bbb73131b5",
+    "smoke_combined_part01_setup_contracts.py": "ca233c36c904f612097af6e21c6c40954ba6ced9",
+    "smoke_combined_part02_ui_parser_regressions.py": "860768c6fcf8feabea720c065961708c540bc684",
+    "smoke_combined_part03_medical_parser_manual.py": "e1df0ba816bdb76e6f02dfea548fec83b227bb3b",
+    "smoke_combined_part04_medical_generation.py": "6b42ac0be3b90c2f0047e38e8edc284528dcc87f",
+    "smoke_combined_part05_diary_basic_templates.py": "dfc1563ef9c55ed8bdb03717607aa3df6e145192",
+    "smoke_combined_part06_diary_columns_settings.py": "89e1793f38d3feeb71a9262e89fc16ab1dfa3fb7",
+    "tests/desktop_intake_contract_check.py": "89b03465a409f8a83e0763a3d42adfd552bb53e2",
+    "tests/diagnosis_override_regression.py": "653549f2ec7f8c0a2d20152c65f2c4eb4776935a",
+    "tests/golden_docx_manifest.json": "02f21858e1da5cc2d1bd270d795d34811bf0471f",
+    "tests/verbal_diary_source_regression.py": "0271cd06ca2a881d07dced9a019e086ca4194dba",
+    "tools/document_mechanics_change_approval.json": "83de5042a4678c57884723af0f0cbc6f10f0cc9e",
+    "tools/full_patient_replay_check.py": "dd1ca3f6c3ea943f6a6bf89615c468c49efe2e8f",
+    "tools/gender_generation_regression_matrix.py": "4b71deb64d70a0847dd94fb4d9391e3a6df08a6d",
+    "tools/generation_performance_profile.py": "82bb6005d8a1e7498bcd7a8bfa35ca08f295bdc6",
+    "tools/golden_docx_regression.py": "e9f2dceac2dcea4c7a9feb042d3f34c40a106a1f",
+    "tools/privacy_diagnostics_check.py": "4c5701d7aa21bfd4821d1355404973a16b571d7a",
+    "tools/staff_profile_regression.py": "8a4291e7be727148df0d24952e9842b6f5e6faed",
+    "tools/windows_desktop_intake_e2e.ps1": "c0428614ed8c54b327523802cdd93f08baf2364c",
+    "tools/windows_installer_smoke.ps1": "e00014cd098322b896bd7b1d4a28a8fb1c9af20b"
+  }
+}

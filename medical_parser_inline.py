@@ -159,7 +159,7 @@ class MedicalParserInlineMixin:
                 continue
             if m.start() < best:
                 best = m.start()
-        # Частый формат без двоеточия: "Иванова И.И., 45 лет, г. Нижний Новгород".
+        # Частый формат без двоеточия: "Маркер Ж.Ж., 45 лет, г. Нижний Новгород".
         # Для ФИО возраст в той же строке тоже является границей.
         age = re.search(r"[,;]\s*\d{1,3}\s*(?:лет|года|год)\b", value, flags=re.IGNORECASE)
         if age and age.start() < best:

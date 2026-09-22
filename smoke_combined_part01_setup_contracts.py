@@ -39,7 +39,7 @@ nav = OUT / "Направление_тест.docx"
 nav_doc = Document()
 nav_doc.add_paragraph("10.06.2026 Первичный осмотр")
 nav_doc.add_paragraph("История болезни № 123")
-nav_doc.add_paragraph("Ф.И.О.: Иванова Ирина Ивановна")
+nav_doc.add_paragraph("Ф.И.О.: Маркер Женская Тестовая")
 nav_doc.add_paragraph("Год рождения: 1980")
 nav_doc.add_paragraph("Зарегистрирован: Н. Новгород, тестовый район")
 nav_doc.add_paragraph("На учёте у психиатров: не состоит")
@@ -75,7 +75,7 @@ assert _first_valid_full_date("1126 Первичный осмотр") == "01.01.
 title_date_doc = OUT / "Дата_заголовок_против_рождения.docx"
 td = Document()
 td.add_paragraph("12.01.2026 Первичный осмотр")
-td.add_paragraph("Ф.И.О.: Сидоров Иван Михайлович, Дата рождения: 04.01.2000")
+td.add_paragraph("Ф.И.О.: Маркер Мужской Контрольный, Дата рождения: 04.01.2000")
 td.add_paragraph("Диагноз: F41.2 Тестовый диагноз")
 td.add_paragraph("Жалобы: тест")
 td.add_paragraph("Психический статус: тест")
@@ -89,7 +89,7 @@ td = Document()
 table = td.add_table(rows=1, cols=2)
 table.cell(0, 0).text = "13.02.2026"
 table.cell(0, 1).text = "Первичный осмотр"
-td.add_paragraph("Ф.И.О.: Сидоров Иван Михайлович")
+td.add_paragraph("Ф.И.О.: Маркер Мужской Контрольный")
 td.add_paragraph("Дата рождения: 04.01.2000")
 td.add_paragraph("Диагноз: F41.2 Тестовый диагноз")
 td.add_paragraph("Жалобы: тест")
@@ -101,7 +101,7 @@ assert parsed_table_title_date.admission_date == "13.02.2026", parsed_table_titl
 compact_title_date_doc = OUT / "Дата_заголовок_без_точек.docx"
 td = Document()
 td.add_paragraph("1126 Первичный осмотр")
-td.add_paragraph("Ф.И.О.: Сидоров Иван Михайлович")
+td.add_paragraph("Ф.И.О.: Маркер Мужской Контрольный")
 td.add_paragraph("Дата рождения: 04.01.2000")
 td.add_paragraph("Диагноз: F41.2 Тестовый диагноз")
 td.add_paragraph("Жалобы: тест")

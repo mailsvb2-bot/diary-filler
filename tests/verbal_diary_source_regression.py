@@ -47,7 +47,7 @@ class _Result:
 class _DiaryFlowHarness(ActionsDiaryFlowMixin):
     def __init__(self, text_file: Path, output_dir: Path):
         self.navigation_path_var = _Var("")
-        self.patient_name_var = _Var("Тестов Тест Тестович")
+        self.patient_name_var = _Var("Маркер Мужской Тестовый")
         self.admission_date_var = _Var("18.05.2026")
         self.discharge_date_var = _Var("25.05.2026")
         self.diagnosis_var = _Var("F06.8 Органическое расстройство личности")
@@ -129,8 +129,8 @@ def _assert_selected_text_does_not_require_dates(root: Path) -> None:
     output.mkdir()
     app = _DiaryFlowHarness(text_file, output)
     snapshot = PatientData(
-        fio="Тестов Тест Тестович",
-        output_fio="Тестов Тест Тестович",
+        fio="Маркер Мужской Тестовый",
+        output_fio="Маркер Мужской Тестовый",
         birth="01.01.1980",
         admission_date="18.05.2026",
         discharge_date="25.05.2026",
@@ -180,7 +180,7 @@ def _assert_fallback_output_survives_temporary_date_source(root: Path) -> None:
         status_files=[text_file],
         diary_files=[],
         output_dir=None,
-        patient_name="Тестов Тест Тестович",
+        patient_name="Маркер Мужской Тестовый",
         admission_value="18.05.2026",
         discharge_value="25.05.2026",
     )
@@ -241,7 +241,7 @@ def _assert_dynamic_epicrisis_is_additive(root: Path) -> None:
         status_files=[text_file],
         diary_files=[],
         output_dir=without_dir,
-        patient_name="Тестов Тест Тестович",
+        patient_name="Маркер Мужской Тестовый",
         admission_value="01.09.2026",
         discharge_value="25.09.2026",
         doctor_name="Врач В.В.",
@@ -256,7 +256,7 @@ def _assert_dynamic_epicrisis_is_additive(root: Path) -> None:
         status_files=[text_file],
         diary_files=[],
         output_dir=with_dir,
-        patient_name="Тестов Тест Тестович",
+        patient_name="Маркер Мужской Тестовый",
         admission_value="01.09.2026",
         discharge_value="25.09.2026",
         doctor_name="Врач В.В.",

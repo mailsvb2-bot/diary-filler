@@ -1,6 +1,6 @@
 compact_data = service.parser.parse_text("""
 10.06.2026 Первичный осмотр
-Ф.И.О.: Петрова Анна Сергеевна, Возраст: 45 лет, Место жительства: Н. Новгород, Ленинский район
+Ф.И.О.: Маркер Женская Дополнительная, Возраст: 45 лет, Место жительства: Н. Новгород, Ленинский район
 Жалобы: тревога
 Анамнез жизни: тест
 Анамнез заболевания: тест
@@ -8,13 +8,13 @@ compact_data = service.parser.parse_text("""
 План лечения: тест
 Диагноз: F41.2 тест
 """)
-assert compact_data.fio == "Петрова Анна Сергеевна", compact_data.fio
+assert compact_data.fio == "Маркер Женская Дополнительная", compact_data.fio
 assert compact_data.birth == "45 лет", compact_data.birth
 assert compact_data.registered == "Н. Новгород, Ленинский район", compact_data.registered
 
 compact_data2 = service.parser.parse_text("""
 10.06.2026 Направление на госпитализацию
-ФИО: Сидоров Сергей Петрович, 1980 г.р., проживает: Нижний Новгород, ул. Тестовая, д. 1
+ФИО: Маркер Мужской Проверочный, 1980 г.р., проживает: Нижний Новгород, ул. Тестовая, д. 1
 Жалобы: тревога
 Анамнез жизни: тест
 Анамнез заболевания: тест
@@ -22,7 +22,7 @@ compact_data2 = service.parser.parse_text("""
 План лечения: тест
 Диагноз: F41.2 тест
 """)
-assert compact_data2.fio == "Сидоров Сергей Петрович", compact_data2.fio
+assert compact_data2.fio == "Маркер Мужской Проверочный", compact_data2.fio
 assert compact_data2.birth == "1980 г.р", compact_data2.birth
 assert compact_data2.registered == "Нижний Новгород, ул. Тестовая, д. 1", compact_data2.registered
 
@@ -32,7 +32,7 @@ split_doc = Document()
 split_doc.add_paragraph("28.05.2026 Первичный осмотр")
 split_table = split_doc.add_table(rows=2, cols=2)
 split_table.cell(0, 0).text = "Ф.И.О."
-split_table.cell(0, 1).text = "Тестов М.А."
+split_table.cell(0, 1).text = "Маркер М.М."
 split_table.cell(1, 0).text = "Год рождения"
 split_table.cell(1, 1).text = "1980"
 split_doc.add_paragraph("Жалобы: тревога")
@@ -40,7 +40,7 @@ split_doc.add_paragraph("Психический статус: контактен
 split_doc.add_paragraph("Диагноз: F41.2 Тестовый диагноз")
 split_doc.save(split_fio_doc)
 split_fio_data = service.parse_primary_document(split_fio_doc)
-assert split_fio_data.fio == "Тестов М.А.", split_fio_data.fio
+assert split_fio_data.fio == "Маркер М.М.", split_fio_data.fio
 assert "Ф.И.О." not in split_fio_data.fio, split_fio_data.fio
 
 # A generated «Осмотр врача приёмного покоя» is also a valid patient source.
@@ -50,7 +50,7 @@ admission_doctor_source = OUT / "Осмотр_врача_приёмного_по
 admission_doctor_doc = Document()
 admission_doctor_doc.add_paragraph("30.09.2025 10:00 Осмотр врача приёмного покоя.")
 admission_doctor_doc.add_paragraph(
-    "Тестова Анна Сергеевна, 24.07.1997, по адресу: Н. Новгород, ул. Тестовая, д. 1."
+    "Маркер Женская Тестовая, 24.07.1997, по адресу: Н. Новгород, ул. Тестовая, д. 1."
 )
 admission_doctor_doc.add_paragraph("Работает в организации: ООО Тест")
 admission_doctor_doc.add_paragraph("Должность: инженер")
@@ -64,7 +64,7 @@ assert admission_doctor_data.birth == "24.07.1997", admission_doctor_data.birth
 assert admission_doctor_data.input_document_kind == "осмотр врача приёмного покоя", admission_doctor_data.input_document_kind
 assert service.parser.parse_text(
     "30.09.2025 10:00 Осмотр врача приёмного покоя.\n"
-    "Тестова Анна Сергеевна, 24.07.1997, по адресу: Н. Новгород, ул. Тестовая, д. 1."
+    "Маркер Женская Тестовая, 24.07.1997, по адресу: Н. Новгород, ул. Тестовая, д. 1."
 ).admission_date == "30.09.2025"
 
 # Universal source regression: a discharge epicrisis is a first-class source.
@@ -72,7 +72,7 @@ assert service.parser.parse_text(
 # the header date remains the discharge date and never replaces admission.
 universal_discharge = service.parser.parse_text("""
 11.06.2026      Выписной эпикриз № К-900
-Петров Пётр Петрович, 04.01.1980, зарегистрирован по адресу: Нижний Новгород, ул. Тестовая, 1
+Маркер Мужской Дополнительный, 04.01.1980, зарегистрирован по адресу: Нижний Новгород, ул. Тестовая, 1
 Находился на лечении в ГБУЗ НО «НКЦПЗ» диспансер №2 с 10.06.2026 по 11.06.2026
 В 3 отделение КДП поступает повторно добровольно
 Жалобы при поступлении: тревога
@@ -124,32 +124,32 @@ assert _custom_rvk.rvk_military_commissariat == "г. Дзержинска", _cus
 _bare_header_fio = service.parser.parse_text(
     "16.03.2026 г. 09:00    Первичный осмотр с зав. отд. Можаровой Е.А.\n"
     "История болезни № 375\n"
-    "Волгин Дмитрий Александрович\n"
+    "Маркер Мужской Контрольный\n"
     "Дата рождения: 14.08.2006\n"
     "Регистрация по месту пребывания: РОССИЯ, НИЖЕГОРОДСКАЯ ОБЛ, Г НИЖНИЙ НОВГОРОД, "
     "АРКТИЧЕСКАЯ УЛ, д. 20, кв. 41\n"
     "Диагноз: F31.6 Биполярное аффективное расстройство"
 )
-assert _bare_header_fio.fio == "Волгин Дмитрий Александрович", _bare_header_fio.fio
+assert _bare_header_fio.fio == "Маркер Мужской Контрольный", _bare_header_fio.fio
 assert _bare_header_fio.birth == "14.08.2006", _bare_header_fio.birth
 
 _bare_header_initials = service.parser.parse_text(
     "История болезни № 91\n"
-    "Новичихин С. Е.\n"
+    "Маркер М. М.\n"
     "Дата рождения: 01.02.1980\n"
     "Диагноз: F20.0 Тестовый диагноз"
 )
-assert _bare_header_initials.fio == "Новичихин С. Е.", _bare_header_initials.fio
+assert _bare_header_initials.fio == "Маркер М. М.", _bare_header_initials.fio
 
 # If a standalone doctor name precedes the patient, bind the birth row to the
 # nearest plausible name instead of the first name in a broad look-ahead.
 _nearest_bare_header_fio = service.parser.parse_text(
     "Можарова Елена Александровна\n"
-    "Волгин Дмитрий Александрович\n"
+    "Маркер Мужской Контрольный\n"
     "Дата рождения: 14.08.2006\n"
     "Диагноз: F31.6 Тестовый диагноз"
 )
-assert _nearest_bare_header_fio.fio == "Волгин Дмитрий Александрович", _nearest_bare_header_fio.fio
+assert _nearest_bare_header_fio.fio == "Маркер Мужской Контрольный", _nearest_bare_header_fio.fio
 
 # A doctor name in the title must never become the patient name.
 _title_doctor_only = service.parser.parse_text(
@@ -163,7 +163,7 @@ assert _title_doctor_only.fio == "", _title_doctor_only.fio
 # the UI. Missing birth is no longer allowed to silently render an incomplete
 # medical document.
 _missing_birth = PatientData(
-    fio="Тестов Тест Тестович",
+    fio="Маркер Мужской Тестовый",
     admission_date="10.06.2026",
     case_number="123",
     diagnosis="F41.2 тест",
@@ -178,7 +178,7 @@ else:
 # Strong type signatures must win over clinical words embedded in the body.
 assert service.parser._detect_document_kind("20.06.2026 Совместный осмотр с зам глав врача № 7\nПервичный осмотр упомянут в анамнезе") == "совместный осмотр"
 assert service.parser._detect_document_kind("О СОСТОЯНИИ ЗДОРОВЬЯ ГРАЖДАНИНА № 5\nГоспитализируется по направлению военного комиссариата Ленинского района") == "акт для РВК"
-assert service.parser._detect_document_kind("Ф.И.О.: Тестов Т.Т.\nДиагноз: F20.0 тест", "Тестов ВК на МСЭ.docx") == "ВК на МСЭ"
+assert service.parser._detect_document_kind("Ф.И.О.: Маркер М.М.\nДиагноз: F20.0 тест", "Маркер ВК на МСЭ.docx") == "ВК на МСЭ"
 
 # Explicit VK treatment row is source evidence; prose is not.
 from medical_treatment_detection import line_has_treatment_marker
@@ -221,8 +221,8 @@ finally:
 # Real-world label variants from primary DOCX forms must remain explicit;
 # never infer FIO from the filename.
 for fio_label in ("Ф.И.О. пациента", "ФИО пациента", "Ф.И.О. больного", "Фамилия, имя, отчество"):
-    parsed_fio_variant = service.parser.parse_text(f"{fio_label}: Васин М.В.\nДиагноз: F21 Шизотипическое расстройство")
-    assert parsed_fio_variant.fio == "Васин М.В.", (fio_label, parsed_fio_variant.fio)
+    parsed_fio_variant = service.parser.parse_text(f"{fio_label}: Маркер М.М.\nДиагноз: F21 Шизотипическое расстройство")
+    assert parsed_fio_variant.fio == "Маркер М.М.", (fio_label, parsed_fio_variant.fio)
 
 # Word can concatenate the next narrative sentence directly to diagnosis.
 assert sanitize_diagnosis(
@@ -233,7 +233,7 @@ assert sanitize_diagnosis(
 referral_kind = service.parser.parse_text("""
 10.06.2026 Первичный осмотр
 Целесообразна госпитализация пациентки в 3 отделение КДП
-Ф.И.О.: Иванова Ирина Ивановна
+Ф.И.О.: Маркер Женская Тестовая
 Год рождения: 1980
 Жалобы: тест
 Психический статус: тест
@@ -245,7 +245,7 @@ assert referral_kind == "направление на госпитализаци�
 primary_style_column = service.parser.parse_text("""
 Первичный осмотр
 История болезни №: 777
-Ф.И.О.: Иванов Иван Иванович
+Ф.И.О.: Маркер Мужской Тестовый
 Год рождения: 1990
 Анамнез жизни:
 наследственность -  не отягощена
@@ -281,7 +281,7 @@ assert primary_style_column.diagnosis == "F41.2 тест", primary_style_column.
 
 primary_style_line = service.parser.parse_text("""
 Первичный осмотр
-ФИО: Иванов Иван Иванович
+ФИО: Маркер Мужской Тестовый
 возраст: 34 года
 наследственность -  не отягощена Родился в нижнем новгороде в полной семье. Родители развелись когда пациенту было 4 года. Братьев сестёр нет. Беременность и роды проходили без особенностей. ДДУ посещал.
 Анамнез заболевания: ухудшение состояния
@@ -359,7 +359,7 @@ manual_data.expert_sick_leave_number = ""
 # --- Treatment section detection contract ---
 without_treatment_marker = service.parser.parse_text("""
 Первичный осмотр
-Ф.И.О.: Иванов Иван Иванович
+Ф.И.О.: Маркер Мужской Тестовый
 Год рождения: 1990
 Жалобы: тест
 Психический статус: тест
@@ -371,7 +371,7 @@ assert without_treatment_marker.treatment_plan == "", without_treatment_marker.t
 
 with_treatment_marker = service.parser.parse_text("""
 Первичный осмотр
-Ф.И.О.: Иванов Иван Иванович
+Ф.И.О.: Маркер Мужской Тестовый
 Год рождения: 1990
 Жалобы: тест
 Психический статус: тест

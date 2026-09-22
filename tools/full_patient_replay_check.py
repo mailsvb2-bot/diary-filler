@@ -37,8 +37,8 @@ def _require(path: Path) -> Path:
 
 def verify_user_flow() -> None:
     created = OUT / "user_contract_selection_popup_docx" / "created"
-    primary = _require(created / "Петров Пётр Петрович Первичный осмотр.docx")
-    discharge = _require(created / "Петров Пётр Петрович Выписной эпикриз.docx")
+    primary = _require(created / "Маркер Мужской Дополнительный Первичный осмотр.docx")
+    discharge = _require(created / "Маркер Мужской Дополнительный Выписной эпикриз.docx")
     primary_text = _doc_text(primary)
     discharge_text = _doc_text(discharge)
     required_primary = (
@@ -62,7 +62,7 @@ def verify_user_flow() -> None:
         raise SystemExit("FULL PATIENT REPLAY FAILED: stale academic-leave recommendation leaked into discharge DOCX")
 
     commission = _require(
-        OUT / "user_contract_commission_popup_date" / "created" / "Петров Пётр Петрович Совместный осмотр.docx"
+        OUT / "user_contract_commission_popup_date" / "created" / "Маркер Мужской Дополнительный Совместный осмотр.docx"
     )
     commission_doc = Document(commission)
     if not commission_doc.paragraphs or not commission_doc.paragraphs[0].text.startswith("21.06.2026 г. 10:00"):

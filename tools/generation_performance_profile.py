@@ -41,7 +41,7 @@ def _make_fixture(root: Path):
     nav_doc = Document()
     nav_doc.add_paragraph("10.06.2026 Первичный осмотр")
     nav_doc.add_paragraph("История болезни № 123")
-    nav_doc.add_paragraph("Ф.И.О.: Иванова Ирина Ивановна")
+    nav_doc.add_paragraph("Ф.И.О.: Маркер Женская Тестовая")
     nav_doc.add_paragraph("Год рождения: 1980")
     nav_doc.add_paragraph("Зарегистрирован: Н. Новгород, тестовый район")
     nav_doc.add_paragraph("На учёте у психиатров: не состоит")

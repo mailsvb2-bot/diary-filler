@@ -25,20 +25,20 @@ from settings_mixin import SettingsMixin
 
 def _assert_naming_contract() -> None:
     name = startup.desktop_build_patient_folder_name(
-        fio="Иванов Иван Иванович",
+        fio="Маркер Мужской Тестовый",
         admission_date=date(2026, 5, 12),
         fallback_stem="Первичный осмотр",
     )
-    assert name == "Иванов И.И. май 2026", name
+    assert name == "Маркер М.Т. май 2026", name
 
     custom = startup.desktop_build_patient_folder_name(
-        fio="Петров Пётр Петрович",
+        fio="Маркер Мужской Дополнительный",
         admission_date="03.09.2026",
         discharge_date="19.09.2026",
         fallback_stem="patient",
         settings={"parts": ["full_fio", "admission_discharge_dates"], "date_format": "short"},
     )
-    assert custom == "Петров Пётр Петрович 03.09.26 — 19.09.26", custom
+    assert custom == "Маркер Мужской Дополнительный 03.09.26 — 19.09.26", custom
 
 
 def _assert_folder_naming_settings_persist_without_patient_data() -> None:
@@ -115,7 +115,7 @@ def _assert_primary_detection_contract() -> None:
     primary = """
     12.05.2026 Первичный осмотр
     История болезни № 123
-    Ф.И.О. Иванов Иван Иванович
+    Ф.И.О. Маркер Мужской Тестовый
     Жалобы при поступлении
     Психический статус
     Диагноз
@@ -123,13 +123,13 @@ def _assert_primary_detection_contract() -> None:
     """
     referral = """
     12.05.2026 Направление на госпитализацию
-    ФИО Иванов Иван Иванович
+    ФИО Маркер Мужской Тестовый
     Диагноз F20.0
     """
     discharge = """
     Выписной эпикриз
     История болезни № 123
-    Ф.И.О. Иванов Иван Иванович
+    Ф.И.О. Маркер Мужской Тестовый
     Диагноз F20.0
     Лечение
     """
@@ -150,7 +150,7 @@ def _assert_canonical_primary_parser_contract() -> None:
         canonical = root / "patient.docx"
         doc = Document()
         doc.add_paragraph("12.05.2026 Первичный осмотр")
-        doc.add_paragraph("Ф.И.О.: Иванов Иван Иванович")
+        doc.add_paragraph("Ф.И.О.: Маркер Мужской Тестовый")
         doc.add_paragraph("Дата рождения: 01.01.1980")
         doc.add_paragraph("В 3 отделение КДП поступает первично")
         doc.add_paragraph("Анамнез жизни: без особенностей")
@@ -164,7 +164,7 @@ def _assert_canonical_primary_parser_contract() -> None:
         macro = root / "patient.docm"
         shutil.copyfile(canonical, macro)
         macro_data = MedicalDocumentService().parse_primary_document(macro)
-        assert macro_data.fio == "Иванов Иван Иванович", macro_data.fio
+        assert macro_data.fio == "Маркер Мужской Тестовый", macro_data.fio
         assert startup.desktop_intake_is_primary_document(macro), "DOCM primary was rejected"
 
         # Real binary DOC conversion requires Microsoft Word and is therefore
@@ -182,7 +182,7 @@ def _assert_canonical_primary_parser_contract() -> None:
 
             medical_docx_blocks.convert_legacy_doc_to_docx = fake_converter
             legacy_data = MedicalDocumentService().parse_primary_document(legacy)
-            assert legacy_data.fio == canonical_data.fio == "Иванов Иван Иванович", legacy_data.fio
+            assert legacy_data.fio == canonical_data.fio == "Маркер Мужской Тестовый", legacy_data.fio
             assert legacy_data.admission_date == canonical_data.admission_date
             assert legacy_data.diagnosis == canonical_data.diagnosis
             assert legacy_data.input_document_kind == canonical_data.input_document_kind
@@ -201,7 +201,7 @@ def _assert_canonical_primary_parser_contract() -> None:
         discharge = root / "discharge.docx"
         doc = Document()
         doc.add_paragraph("15.05.2026 Выписной эпикриз № 123")
-        doc.add_paragraph("Ф.И.О.: Иванов Иван Иванович")
+        doc.add_paragraph("Ф.И.О.: Маркер Мужской Тестовый")
         doc.add_paragraph("Дата рождения: 01.01.1980")
         doc.add_paragraph("Находился на лечении в стационаре с 12.05.2026 по 15.05.2026")
         doc.add_paragraph("Диагноз: F20.0")
@@ -215,7 +215,7 @@ def _assert_canonical_primary_parser_contract() -> None:
         )
         assert discharge_info.admission_date == "12.05.2026", discharge_info
         assert discharge_info.discharge_date == "15.05.2026", discharge_info
-        assert discharge_info.folder_name == "Иванов Иван Иванович 15.05.2026", discharge_info.folder_name
+        assert discharge_info.folder_name == "Маркер Мужской Тестовый 15.05.2026", discharge_info.folder_name
 
         universal_sources = (
             ("Осмотр врача приёмного покоя.docx", "12.05.2026 Осмотр врача приёмного покоя."),
@@ -228,7 +228,7 @@ def _assert_canonical_primary_parser_contract() -> None:
             source = root / filename
             doc = Document()
             doc.add_paragraph(title)
-            doc.add_paragraph("Ф.И.О.: Иванов Иван Иванович")
+            doc.add_paragraph("Ф.И.О.: Маркер Мужской Тестовый")
             doc.add_paragraph("Дата рождения: 01.01.1980")
             doc.add_paragraph("Диагноз: F20.0")
             doc.add_paragraph("Лечение: терапия")
@@ -409,9 +409,9 @@ def _assert_top_level_only_and_safe_move() -> None:
         moved = startup.desktop_intake_prepare_patient_folder(
             top,
             intake_root=root,
-            folder_name="Иванов И.И. май 2026",
+            folder_name="Маркер М.М. май 2026",
         )
-        assert moved.parent.name == "Иванов И.И. май 2026"
+        assert moved.parent.name == "Маркер М.М. май 2026"
         assert moved.read_bytes() == b"same-primary"
         assert not top.exists()
 
@@ -420,7 +420,7 @@ def _assert_top_level_only_and_safe_move() -> None:
         reused = startup.desktop_intake_prepare_patient_folder(
             duplicate,
             intake_root=root,
-            folder_name="Иванов И.И. май 2026",
+            folder_name="Маркер М.М. май 2026",
         )
         assert reused == moved
         assert not duplicate.exists()
@@ -430,9 +430,9 @@ def _assert_top_level_only_and_safe_move() -> None:
         second = startup.desktop_intake_prepare_patient_folder(
             changed,
             intake_root=root,
-            folder_name="Иванов И.И. май 2026",
+            folder_name="Маркер М.М. май 2026",
         )
-        assert second.parent.name == "Иванов И.И. май 2026 (2)"
+        assert second.parent.name == "Маркер М.М. май 2026 (2)"
         assert second.read_bytes() == b"changed-primary"
 
 
@@ -442,7 +442,7 @@ def _assert_failed_transfer_does_not_leave_empty_patient_folder() -> None:
         root.mkdir()
         source = root / "Первичный.docx"
         source.write_bytes(b"locked-source")
-        patient_folder = root / "Тестов Т.Т. сентябрь 2026"
+        patient_folder = root / "Маркер М.М. сентябрь 2026"
 
         original_replace = startup.os.replace
         original_move = startup.shutil.move
@@ -492,7 +492,7 @@ def _assert_completed_copy_is_not_reported_as_failed_when_source_cleanup_is_bloc
             moved = startup.desktop_intake_prepare_patient_folder(
                 source,
                 intake_root=root,
-                folder_name="Тестов Т.Т. сентябрь 2026",
+                folder_name="Маркер М.М. сентябрь 2026",
             )
         finally:
             Path.unlink = original_unlink  # type: ignore[assignment]

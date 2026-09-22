@@ -30,7 +30,7 @@ ROOT = Path(__file__).resolve().parent
 def _test_missing_patient_facts() -> None:
     data = MedicalTextParser().parse_text(
         "12.01.2026 Первичный осмотр\n"
-        "Ф.И.О.: Иванов Иван Иванович\n"
+        "Ф.И.О.: Маркер Мужской Тестовый\n"
         "Дата рождения: 01.01.1980\n"
         "Диагноз: F41.2 тест\n"
         "Лечение: тестовое лечение"
@@ -41,7 +41,7 @@ def _test_missing_patient_facts() -> None:
     assert any("эпидемиологический анамнез" in warning for warning in data.warnings), data.warnings
     legacy_admission = MedicalTextParser().parse_text(
         "12.01.2026 Первичный осмотр\n"
-        "Ф.И.О.: Иванов Иван Иванович\n"
+        "Ф.И.О.: Маркер Мужской Тестовый\n"
         "В 3 отделение КДП поступает повторно добровольно\n"
         "Диагноз: F41.2 тест\n"
         "Лечение: тестовое лечение"
@@ -52,7 +52,7 @@ def _test_missing_patient_facts() -> None:
     # it explicitly. A generic admission line must still remain unknown.
     unspecified_admission = MedicalTextParser().parse_text(
         "12.01.2026 Первичный осмотр\n"
-        "Ф.И.О.: Иванов Иван Иванович\n"
+        "Ф.И.О.: Маркер Мужской Тестовый\n"
         "В 3 отделение КДП поступает добровольно\n"
         "Диагноз: F41.2 тест\n"
         "Лечение: тестовое лечение"
@@ -61,11 +61,11 @@ def _test_missing_patient_facts() -> None:
 
 
 def _test_conservative_gender() -> None:
-    assert detect_gender_from_patient_name("Иванов И.И.") == "male"
-    assert detect_gender_from_patient_name("Иванова И.И.") == "female"
-    assert detect_gender_from_patient_name("Шевченко Алексей Сергеевич") == "male"
-    assert detect_gender_from_patient_name("Шевченко Анна Сергеевна") == "female"
-    assert detect_gender_from_patient_name("Шевченко А.А.") is None
+    assert detect_gender_from_patient_name("Мужской М.М.") == "male"
+    assert detect_gender_from_patient_name("Женская Ж.Ж.") == "female"
+    assert detect_gender_from_patient_name("Маркер Мужской Проверочный") == "male"
+    assert detect_gender_from_patient_name("Маркер Женская Проверочная") == "female"
+    assert detect_gender_from_patient_name("Маркер А.А.") is None
 
 
 def _make_diary_template(path: Path, days: tuple[int, ...]) -> None:
@@ -157,8 +157,8 @@ def _test_text_diary_user_route(tmp: Path) -> None:
         status_files=[statuses],
         diary_files=[template],
         output_dir=tmp / "text-route-out",
-        patient_name="Иванова Анна Сергеевна",
-        gender_source_name="Иванова Анна Сергеевна",
+        patient_name="Маркер Женская Дополнительная",
+        gender_source_name="Маркер Женская Дополнительная",
         admission_value="01.01.2026",
         discharge_value="09.01.2026",
         force_final_diary=True,
@@ -222,7 +222,7 @@ def _test_holiday_default_is_safe(tmp: Path) -> None:
         status_files=[statuses],
         diary_files=[template],
         output_dir=tmp / "holiday-out",
-        patient_name="Иванов Иван Иванович",
+        patient_name="Маркер Мужской Тестовый",
         admission_value="01.01.2026",
         force_final_diary=False,
         open_result_folder=False,
@@ -240,7 +240,7 @@ def _test_run_formatting_preserved() -> None:
     bold.bold = True
     italic = paragraph.add_run(" находится в ГБУЗ НО ПБ №2")
     italic.italic = True
-    data = PatientData(fio="Иванова Ирина Ивановна")
+    data = PatientData(fio="Маркер Женская Тестовая")
     adapt_document_to_patient_gender(doc, data)
     normalize_facility_references_in_document(doc)
     assert paragraph.runs[1].text == "ВАЖНЫЙ" and paragraph.runs[1].bold is True
@@ -267,7 +267,7 @@ def _test_medical_transaction(tmp: Path) -> None:
     service.renderer = _FailSecondRenderer()
     data = PatientData(
         case_number="123",
-        fio="Иванов Иван Иванович",
+        fio="Маркер Мужской Тестовый",
         birth="01.01.1980",
         admission_date="10.06.2026",
         discharge_date="11.06.2026",
@@ -321,7 +321,7 @@ def _test_diary_transaction(tmp: Path) -> None:
                 status_files=[statuses],
                 diary_files=[first, second],
                 output_dir=out,
-                patient_name="Иванов Иван Иванович",
+                patient_name="Маркер Мужской Тестовый",
                 admission_value="15.04.2026",
                 force_final_diary=False,
                 open_result_folder=False,
@@ -346,7 +346,7 @@ def _test_daily_diary_coverage(tmp: Path) -> None:
         status_files=[statuses],
         diary_files=[template],
         output_dir=tmp / "daily-out",
-        patient_name="Иванов Иван Иванович",
+        patient_name="Маркер Мужской Тестовый",
         admission_value="01.01.2026",
         discharge_value="10.02.2026",
         force_final_diary=True,
@@ -374,7 +374,7 @@ def _test_daily_diary_coverage(tmp: Path) -> None:
         status_files=[statuses],
         diary_files=[template],
         output_dir=tmp / "clinical-text-out",
-        patient_name="Иванов Иван Иванович",
+        patient_name="Маркер Мужской Тестовый",
         admission_value="01.01.2026",
         discharge_value="10.02.2026",
         force_final_diary=True,
@@ -405,7 +405,7 @@ def _test_settings_privacy(tmp: Path) -> None:
     harness = _SettingsHarness()
     harness._settings_path = tmp / "settings.json"
     harness._settings = {}
-    patient_dir = tmp / "Иванов Иван Иванович 12345"
+    patient_dir = tmp / "Маркер Мужской Тестовый 12345"
     diary_dir = tmp / "Reusable diary texts"
     patient_dir.mkdir()
     diary_dir.mkdir()

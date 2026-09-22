@@ -16,13 +16,13 @@ ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "tests" / "golden_docx_manifest.json"
 
 GOLDEN_RELATIVE_PATHS = (
-    "medical_with_epi/Иванова Ирина Ивановна Акт для РВК.docx",
-    "medical_with_epi/Иванова Ирина Ивановна ВК больничный.docx",
-    "medical_with_epi/Иванова Ирина Ивановна ВК на МСЭ.docx",
-    "medical_with_epi/Иванова Ирина Ивановна Выписной эпикриз.docx",
-    "medical_with_epi/Иванова Ирина Ивановна Осмотр врача приёмного покоя.docx",
-    "medical_with_epi/Иванова Ирина Ивановна Первичный осмотр.docx",
-    "medical_with_epi/Иванова Ирина Ивановна Совместный осмотр.docx",
+    "medical_with_epi/Маркер Женская Тестовая Акт для РВК.docx",
+    "medical_with_epi/Маркер Женская Тестовая ВК больничный.docx",
+    "medical_with_epi/Маркер Женская Тестовая ВК на МСЭ.docx",
+    "medical_with_epi/Маркер Женская Тестовая Выписной эпикриз.docx",
+    "medical_with_epi/Маркер Женская Тестовая Осмотр врача приёмного покоя.docx",
+    "medical_with_epi/Маркер Женская Тестовая Первичный осмотр.docx",
+    "medical_with_epi/Маркер Женская Тестовая Совместный осмотр.docx",
     "snapshot_diary_output/Снимок Пациента дневники.docx",
 )
 

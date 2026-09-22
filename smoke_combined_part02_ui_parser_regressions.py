@@ -191,19 +191,19 @@ identity_logic._popup_birth_override = ""
 identity_logic._set_ui_var = lambda var, value: var.set(value)
 identity_calls = []
 identity_logic._prompt_fields = lambda title, rows, width=64: identity_calls.append((title, rows)) or [
-    "Тестов Тест Тестович",
+    "Маркер Мужской Дополнительный",
     "01011980",
 ]
 assert identity_logic._prompt_missing_patient_identity_if_needed() is True
 assert [label for label, _default in identity_calls[0][1]] == ["Ф.И.О. пациента", "Дата / год рождения"]
-assert identity_logic._popup_fio_override == "Тестов Тест Тестович"
+assert identity_logic._popup_fio_override == "Маркер Мужской Дополнительный"
 assert identity_logic._popup_birth_override == "01.01.1980"
-assert identity_logic.data.fio == "Тестов Тест Тестович"
+assert identity_logic.data.fio == "Маркер Мужской Дополнительный"
 assert identity_logic.data.birth == "01.01.1980"
-assert identity_logic.patient_name_var.get() == "Тестов Тест Тестович"
+assert identity_logic.patient_name_var.get() == "Маркер Мужской Дополнительный"
 
 birth_only_logic = _main_module.CombinedMedicalDiaryApp.__new__(_main_module.CombinedMedicalDiaryApp)
-birth_only_logic.data = PatientData(fio="Иванов Иван Иванович")
+birth_only_logic.data = PatientData(fio="Маркер Мужской Тестовый")
 birth_only_logic.navigation_path_var = _FakeVar("")
 birth_only_logic.patient_name_var = _FakeVar("Свое имя файла")
 birth_only_logic._manual_patient_name = True
@@ -866,7 +866,7 @@ assert _bound_source_classifier._primary_type_from_parsed_data(
     PatientData(input_document_kind="выписной эпикриз")
 ) == "discharge_summary"
 
-_long_name = "Очень длинное название первичного документа пациента Иванова Ирина Ивановна 10052026.docx"
+_long_name = "Очень длинное название первичного документа пациента Маркер Женская Тестовая 10052026.docx"
 assert "…" in FilesMixin._truncate_label_text(_long_name, max_chars=40)
 
 # --- Deep audit hardening regressions ---
@@ -914,8 +914,8 @@ assert parser_position_doctor.work_org == "ООО Ромашка", parser_positi
 assert parser_position_doctor.position == "врач-психиатр", parser_position_doctor.position
 
 # Имена файлов должны сохраняться с пробелами, без подчеркиваний между словами.
-assert _medical_documents_module.safe_filename("Сидоров Иван Михайлович") == "Сидоров Иван Михайлович"
-assert _medical_documents_module.safe_filename("Сидоров/Иван:Михайлович") == "Сидоров Иван Михайлович"
+assert _medical_documents_module.safe_filename("Маркер Мужской Контрольный") == "Маркер Мужской Контрольный"
+assert _medical_documents_module.safe_filename("Маркер/Мужской:Контрольный") == "Маркер Мужской Контрольный"
 assert _medical_documents_module.safe_filename("CON") == "CON_"
 assert _medical_documents_module.safe_filename("CON.txt") == "CON.txt_"
 assert safe_filename_part("LPT1.docx") == "LPT1.docx_"
@@ -946,19 +946,19 @@ assert diag_parse.diagnosis == "F20.0 Параноидная шизофрени�
 
 # --- Parser styles regression: demographics in columns and in one compact line ---
 parser_style_column = MedicalTextParser().parse_text("""
-ФИО: Иванов Иван Иванович
+ФИО: Маркер Мужской Тестовый
 возраст:34 года
 Проживает : Г. Нижний Новгород, улица Ленина 34-15
 Работает: ООО Завод
 """)
-assert parser_style_column.fio == "Иванов Иван Иванович", parser_style_column.fio
+assert parser_style_column.fio == "Маркер Мужской Тестовый", parser_style_column.fio
 assert parser_style_column.birth == "34 года", parser_style_column.birth
 assert parser_style_column.registered == "Г. Нижний Новгород, улица Ленина 34-15", parser_style_column.registered
 assert parser_style_column.work_org == "ООО Завод", parser_style_column.work_org
 
 parser_work_phrase = MedicalTextParser().parse_text("""
 10.06.2026 Первичный осмотр
-ФИО: Сидоров Иван Михайлович
+ФИО: Маркер Мужской Контрольный
 Работает в Рассвет, в должности Уборщик.
 Диагноз: F41.2 тест
 """)
@@ -967,7 +967,7 @@ assert parser_work_phrase.position == "Уборщик", parser_work_phrase.posit
 
 parser_work_label_combo = MedicalTextParser().parse_text("""
 10.06.2026 Первичный осмотр
-ФИО: Сидоров Иван Михайлович
+ФИО: Маркер Мужской Контрольный
 Место работы: ООО «Привет», должность: начальник
 Диагноз: F41.2 тест
 """)
@@ -975,15 +975,15 @@ assert parser_work_label_combo.work_org == "ООО «Привет»", parser_wor
 assert parser_work_label_combo.position == "начальник", parser_work_label_combo.position
 
 parser_style_line = MedicalTextParser().parse_text(
-    "Иванов Иван Иванович, 34 года, Г. Нижний Новгород, улица Ленина 34-15, ООО Завод"
+    "Маркер Мужской Тестовый, 34 года, Г. Нижний Новгород, улица Ленина 34-15, ООО Завод"
 )
-assert parser_style_line.fio == "Иванов Иван Иванович", parser_style_line.fio
+assert parser_style_line.fio == "Маркер Мужской Тестовый", parser_style_line.fio
 assert parser_style_line.birth == "34 года", parser_style_line.birth
 assert parser_style_line.registered == "Г. Нижний Новгород, улица Ленина 34-15", parser_style_line.registered
 assert parser_style_line.work_org == "ООО Завод", parser_style_line.work_org
 
 parser_two_digit_birth = MedicalTextParser().parse_text(
-    "Ф.И.О.: Иванов Иван Иванович, Дата рождения: 04.01.80, Место жительства: Н. Новгород, ул. Тестовая, 1"
+    "Ф.И.О.: Маркер Мужской Тестовый, Дата рождения: 04.01.80, Место жительства: Н. Новгород, ул. Тестовая, 1"
 )
 assert parser_two_digit_birth.birth == "04.01.80", parser_two_digit_birth.birth
 

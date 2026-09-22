@@ -207,7 +207,7 @@ class _ParseCacheService:
 
     def parse_primary_document(self, _path):
         self.calls += 1
-        return PatientData(fio="Свежий Пациент Тестович")
+        return PatientData(fio="Маркер Новый Тестовый")
 
 
 class _ParseCacheHarness(AppInitializationMixin):
@@ -421,15 +421,15 @@ class _PrintRetryHarness(ActionsCreationOrchestratorMixin):
 
     def _capture_generation_patient_data(self, **_kwargs):
         return PatientData(
-            fio="Печатнов Тест Тестович",
-            output_fio="Печатнов Тест Тестович",
+            fio="Маркер Мужской Печатный",
+            output_fio="Маркер Мужской Печатный",
             admission_date="01.09.2026",
             diagnosis="F42.2 Тест",
         )
 
     def _create_medical_documents_impl(self, _selected, *, output_dir_override, **_kwargs):
         self.generation_calls += 1
-        path = Path(output_dir_override) / "Печатнов Тест Тестович Первичный осмотр.docx"
+        path = Path(output_dir_override) / "Маркер Мужской Печатный Первичный осмотр.docx"
         path.write_bytes(b"single-generated-document")
         return [path]
 
@@ -511,8 +511,8 @@ class _PartialSetHarness(ActionsCreationOrchestratorMixin):
 
     def _capture_generation_patient_data(self, **_kwargs):
         return PatientData(
-            fio="Тестов Тест Тестович",
-            output_fio="Тестов Тест Тестович",
+            fio="Маркер Мужской Дополнительный",
+            output_fio="Маркер Мужской Дополнительный",
             admission_date="01.09.2026",
             discharge_date="05.09.2026",
             diagnosis="F42.2 Смешанные навязчивые мысли и действия",
@@ -600,7 +600,7 @@ def _assert_pending_print_close_safety(root: Path) -> None:
 def _assert_compact_address_never_consumes_clinical_residence_narrative() -> None:
     text = (
         "30.09.2025 10:00 Осмотр врача приёмного покоя.\n"
-        "Иванова Ирина Ивановна, 24.07.1997, по адресу: "
+        "Маркер Женская Тестовая, 24.07.1997, по адресу: "
         "Н. Новгород, Ленинский район, ул. Паскаля 1а.\n"
         "Работает в организации: Тестовая организация\n"
         "Должность: специалист\n"
@@ -870,9 +870,9 @@ def _assert_generation_action_gate_blocks_reentry_and_queued_double_click() -> N
 
 def _assert_ui_diagnosis_wins_snapshot() -> None:
     app = _SnapshotHarness()
-    app.data = PatientData(fio="Иванов Иван Иванович", diagnosis="F99.9 Старый диагноз из первичного")
+    app.data = PatientData(fio="Маркер Мужской Тестовый", diagnosis="F99.9 Старый диагноз из первичного")
     app.navigation_path_var = _Var("")
-    app.patient_name_var = _Var("Иванов Иван Иванович")
+    app.patient_name_var = _Var("Маркер Мужской Тестовый")
     app.admission_date_var = _Var("10.06.2026")
     app.discharge_date_var = _Var("11.06.2026")
     app.diagnosis_var = _Var("F20.0 Параноидная шизофрения")
@@ -1115,7 +1115,7 @@ def _assert_primary_cache_rejects_same_metadata_wrong_digest(root: Path) -> None
     stat = source.stat()
     key = str(source.resolve())
     app = _ParseCacheHarness()
-    stale = PatientData(fio="Старый Пациент Ошибочный")
+    stale = PatientData(fio="Маркер Старый Тестовый")
     app._primary_parse_cache[key] = (
         int(getattr(stat, "st_mtime_ns", int(stat.st_mtime * 1_000_000_000))),
         int(getattr(stat, "st_ctime_ns", int(stat.st_ctime * 1_000_000_000))),
@@ -1125,12 +1125,12 @@ def _assert_primary_cache_rejects_same_metadata_wrong_digest(root: Path) -> None
     )
 
     parsed = app._parse_primary_document(source)
-    assert parsed.fio == "Свежий Пациент Тестович", parsed.fio
+    assert parsed.fio == "Маркер Новый Тестовый", parsed.fio
     assert app.service.calls == 1, app.service.calls
 
     # Unchanged content now hits the freshly written digest-bound cache.
     parsed_again = app._parse_primary_document(source)
-    assert parsed_again.fio == "Свежий Пациент Тестович", parsed_again.fio
+    assert parsed_again.fio == "Маркер Новый Тестовый", parsed_again.fio
     assert app.service.calls == 1, app.service.calls
 
 
@@ -1391,7 +1391,7 @@ def _assert_failed_auto_match_offers_manual_word_file(root: Path) -> None:
 def _assert_diary_creation_path_offers_manual_fallback() -> None:
     app = _DiaryFallbackHarness()
     snapshot = PatientData(
-        fio="Тестов Тест Тестович",
+        fio="Маркер Мужской Дополнительный",
         admission_date="01.09.2026",
         discharge_date="05.09.2026",
         diagnosis="F42.2 Смешанные навязчивые мысли и действия",

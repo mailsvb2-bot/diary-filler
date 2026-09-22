@@ -141,7 +141,7 @@ def _verify_synthetic_contract(doc, must_change: list[tuple[int, str]], must_sta
 
 def _verify_synthetic_parity(root: Path) -> int:
     checked = 0
-    for gender, fio in (("female", "Иванова Ирина Ивановна"), ("male", "Петров Пётр Петрович")):
+    for gender, fio in (("female", "Маркер Женская Тестовая"), ("male", "Маркер Мужской Дополнительный")):
         optimized, must_change, must_stay = _build_synthetic_document(gender)
         reference, _, _ = _build_synthetic_document(gender)
         data = PatientData(fio=fio, output_fio=fio)
@@ -196,7 +196,7 @@ def _generate_with_adapter(service, nav: Path, data: PatientData, output_dir: Pa
 def _verify_full_generation_parity(root: Path) -> int:
     nav, service, baseline = _make_fixture(root)
     compared = 0
-    for gender, fio in (("female", "Иванова Ирина Ивановна"), ("male", "Петров Пётр Петрович")):
+    for gender, fio in (("female", "Маркер Женская Тестовая"), ("male", "Маркер Мужской Дополнительный")):
         data = copy.deepcopy(baseline)
         data.fio = fio
         data.output_fio = fio

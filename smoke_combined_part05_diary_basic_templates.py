@@ -33,7 +33,7 @@ result = fill_diary_batch(
     status_files=[source],
     diary_files=[table_file],
     output_dir=OUT / "diaries",
-    patient_name="Иванова И.И.",
+    patient_name="Маркер Женская Тестовая",
     admission_value="10.06.2026",
     discharge_value="12.06.2026",
     repeat_statuses=True,
@@ -110,8 +110,8 @@ result_filename_male = fill_diary_batch(
     status_files=[source],
     diary_files=[table_file],
     output_dir=OUT / "diaries_gender_source",
-    patient_name="Иванов Иван Иванович",
-    gender_source_name="Иванова Ирина Ивановна",
+    patient_name="Маркер Мужской Тестовый",
+    gender_source_name="Маркер Женская Тестовая",
     admission_value="10.06.2026",
     discharge_value="12.06.2026",
     repeat_statuses=True,
@@ -124,7 +124,7 @@ result_filename_male = fill_diary_batch(
 diary_text2 = "\n".join("\t".join(cell.text for cell in row.cells) for row in Document(result_filename_male.created_files[0]).tables[0].rows)
 assert "Пациентка была спокойна" in diary_text2
 assert "не предъявляла" in diary_text2
-assert result_filename_male.created_files[0].name.startswith("Иванов Иван Иванович")
+assert result_filename_male.created_files[0].name.startswith("Маркер Мужской Тестовый")
 
 # --- Production text diaries: clinical entries come from diagnosis template; discharge is universal ---
 from diary_service import DiaryService
@@ -148,8 +148,8 @@ contract_result = DiaryService().create_text_diaries(
     status_files=[contract_texts],
     diary_files=[contract_dates],
     output_dir=OUT / "diagnosis_template_contract",
-    patient_name="Иванова Анна Сергеевна",
-    gender_source_name="Иванова Анна Сергеевна",
+    patient_name="Маркер Женская Дополнительная",
+    gender_source_name="Маркер Женская Дополнительная",
     admission_value="10.06.2026",
     discharge_value="13.06.2026",
 )
@@ -201,7 +201,7 @@ for index, paragraph in enumerate(contract_output.paragraphs):
 title_date_doc = OUT / "title_date_primary.docx"
 title_doc = Document()
 title_doc.add_paragraph("12.01.2026 Первичный осмотр")
-title_doc.add_paragraph("Ф.И.О.: Сидоров Иван Михайлович, Дата рождения: 09.01.1980")
+title_doc.add_paragraph("Ф.И.О.: Маркер Мужской Контрольный, Дата рождения: 09.01.1980")
 title_doc.add_paragraph("Жалобы: тест")
 title_doc.add_paragraph("Психический статус: тест")
 title_doc.add_paragraph("Диагноз: F41.2 тест")
@@ -247,7 +247,7 @@ snapshot_app.force_final_diary_var = _Var(True)
 snapshot_app._diagnostic_reports_enabled = lambda: False
 snapshot_app._log = lambda _text: None
 snapshot_patient = PatientData(
-    fio="Иванова Ирина Ивановна",
+    fio="Маркер Женская Тестовая",
     output_fio="Снимок Пациента",
     admission_date="10.06.2026",
     discharge_date="17.06.2026",
@@ -310,7 +310,7 @@ auto_near_dir.mkdir(parents=True, exist_ok=True)
 auto_primary = auto_near_dir / "patient_referral.docx"
 auto_primary_doc = Document()
 auto_primary_doc.add_paragraph("15.04.2026 Направление на госпитализацию")
-auto_primary_doc.add_paragraph("Сидоров Иван Михайлович, 04.01.2000")
+auto_primary_doc.add_paragraph("Маркер Мужской Контрольный, 04.01.2000")
 auto_primary_doc.save(auto_primary)
 auto_templates = auto_near_dir / "шаблоны дневников"
 auto_templates.mkdir(parents=True, exist_ok=True)
