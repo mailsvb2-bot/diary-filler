@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "f5807b8b5e1636a2fa39bc0c556efcdc0bf52d3f",
-  "baseline_note": "v1.4.23 clinical long-block integrity hardening through PR #206 plus canonical main provenance recovery PR #207: preserves complaints/life/somatic/disease/mental text through parser cleanup and all seven medical renderers, including Word run fragmentation and section-like narrative starts. Fully validated on canonical main f5807b8b5e1636a2fa39bc0c556efcdc0bf52d3f by Windows production CI run 35764274714 (#851), including main provenance, regression locks, document mechanics guard, production audit, release gate, full patient replay and golden DOCX, staff/gender/diagnosis/diary regressions, real Tk GUI smoke, packaged desktop intake E2E, EXE and installer builds, and installed/uninstalled smoke.",
+  "baseline_ref": "db4df574a168a34749fad5e3e2ce4e34763662bb",
+  "baseline_note": "Pending-print patient-switch safety hardening merged canonically as main db4df574a168a34749fad5e3e2ce4e34763662bb after exact candidate Windows production CI #856 / run 35767762378 passed provenance, regression/document-mechanics guards, safety/privacy audits, release gate, full patient replay + golden DOCX, staff/gender/diagnosis/diary regressions, real Tk GUI, packaged EXE/TkDND, desktop-intake E2E, installer build and install/uninstall smoke.",
   "required_approval_evidence": [
     "ci_gate_lock"
   ],
