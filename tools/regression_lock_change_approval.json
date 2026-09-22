@@ -16,6 +16,7 @@
   ],
   "approved_blobs": {
     "files_mixin.py": "03b9fa0da3a72aa31178c48249ff005e78f3d989",
-    "tests/diagnosis_override_regression.py": "8252c7edd373137444202d73079a4ec745ae9c2d"
+    "tests/diagnosis_override_regression.py": "8252c7edd373137444202d73079a4ec745ae9c2d",
+    "tools/document_mechanics_change_approval.json": "275f1041b1b41348c377ddc044c4739c60d537a2"
   }
 }
