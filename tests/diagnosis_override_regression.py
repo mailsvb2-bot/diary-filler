@@ -613,13 +613,16 @@ def _assert_compact_address_never_consumes_clinical_residence_narrative() -> Non
         "КОНЕЦ_АНАМНЕЗА_НЕ_АДРЕС.\n"
         "Психический статус: Контакту доступна.\n"
         "Соматический статус: Без особенностей.\n"
-        "Диагноз: F20.0 Тестовый диагноз."
+        "План обследования: ОАК, ОАМ, ЭКГ, ФЛГ, ЭПИ, ЭЭГ.\n"
+        "На основании данных осмотра был выставлен диагноз: F20.0 Тестовый диагноз.\n"
+        "Эпидемиологический анамнез: контактов с инфекционными больными не было."
     )
     data = MedicalTextParser().parse_text(text)
     assert data.registered == "Н. Новгород, Ленинский район, ул. Паскаля 1а.", data.registered
     assert "проживает с сестрой" in data.disease_anamnesis.lower(), data.disease_anamnesis
     assert "КОНЕЦ_АНАМНЕЗА_НЕ_АДРЕС" in data.disease_anamnesis, data.disease_anamnesis
     assert "лечилась амбулаторно" not in data.registered.lower(), data.registered
+    assert data.examination_plan.endswith("ЭПИ, ЭЭГ."), data.examination_plan
 
 
 def _assert_missing_source_fails_before_any_medical_popup(root: Path) -> None:
