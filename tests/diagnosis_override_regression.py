@@ -38,6 +38,7 @@ from medical_constants import DOCUMENT_ORDER
 from medical_docx_reader import extract_docx_text
 from medical_models import PatientData
 from medical_parser import MedicalTextParser
+from medical_docx_editor_epi import remove_epi_mentions_from_document
 from tools.generation_performance_profile import _make_fixture
 
 
@@ -623,6 +624,16 @@ def _assert_compact_address_never_consumes_clinical_residence_narrative() -> Non
     assert "КОНЕЦ_АНАМНЕЗА_НЕ_АДРЕС" in data.disease_anamnesis, data.disease_anamnesis
     assert "лечилась амбулаторно" not in data.registered.lower(), data.registered
     assert data.examination_plan.endswith("ЭПИ, ЭЭГ."), data.examination_plan
+
+
+def _assert_epi_cleanup_preserves_examination_plan_item() -> None:
+    doc = Document()
+    plan = doc.add_paragraph("План обследования: ОАК, ОАМ, ФЛГ, ЭПИ, ЭЭГ.")
+    doc.add_paragraph("ЭПИ - служебный шаблонный блок")
+    remove_epi_mentions_from_document(doc)
+    lines = [paragraph.text for paragraph in doc.paragraphs]
+    assert plan.text == "План обследования: ОАК, ОАМ, ФЛГ, ЭПИ, ЭЭГ.", lines
+    assert all(not line.startswith("ЭПИ") for line in lines), lines
 
 
 def _assert_missing_source_fails_before_any_medical_popup(root: Path) -> None:
@@ -1544,6 +1555,7 @@ def main() -> None:
         root = Path(temp_dir)
         _assert_pending_print_close_safety(root)
         _assert_compact_address_never_consumes_clinical_residence_narrative()
+        _assert_epi_cleanup_preserves_examination_plan_item()
         _assert_missing_source_fails_before_any_medical_popup(root)
         _assert_output_path_file_fails_before_any_medical_popup(root)
         _assert_changed_source_fails_before_any_medical_popup(root)
