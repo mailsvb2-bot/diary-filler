@@ -33,6 +33,6 @@
     "diary_template_selection.py": "8906603af5b826868e88501c4f3644802671f23e",
     "tools/production_safety_gate.py": "d57456d3de3ffde58fc155de9fc0ba70ff80d094",
     "medical_parser_blocks.py": "b47082f8b5367dddb31064b4c7de6440cc3952a1",
-    "tools/docx_block_boundary_regression.py": "64143bdcafcd8e318cf05daa8672b105fbe2a037"
+    "tools/docx_block_boundary_regression.py": "f07b5271cb1d9b7403d1ee312df9b9d28035de1a"
   }
 }
