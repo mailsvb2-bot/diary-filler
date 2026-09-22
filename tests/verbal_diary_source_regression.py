@@ -7,6 +7,7 @@ source type from optional numeric «Даты» 01–31.
 from __future__ import annotations
 
 from datetime import date, datetime
+import copy
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -14,6 +15,9 @@ from docx import Document
 
 import diary_service
 from actions_diary_flow import ActionsDiaryFlowMixin
+from actions_medical_flow import ActionsMedicalFlowMixin
+from dialog_expert import DialogExpertMixin
+from medical_formatting import parse_date
 from diary_service import dynamic_epicrisis_base_date, dynamic_epicrisis_dates
 from diary_template_selection import DiaryTemplateSelectionMixin
 from diary_text_selection import (
@@ -84,6 +88,111 @@ class _DiaryFlowHarness(ActionsDiaryFlowMixin):
 
     def _log(self, _text):
         pass
+
+
+class _DischargeDiaryHarness(DialogExpertMixin, ActionsMedicalFlowMixin, ActionsDiaryFlowMixin):
+    """Minimal real-method harness for the Discharge + Diaries sick-leave path."""
+
+    def __init__(self, source: Path, text_file: Path, output_dir: Path):
+        self.navigation_path_var = _Var(str(source))
+        self.patient_name_var = _Var("Маркер Женская Тестовая")
+        self.admission_date_var = _Var("01.09.2026")
+        self.discharge_date_var = _Var("25.09.2026")
+        self.diagnosis_var = _Var("F41.2 Тестовый диагноз")
+        self.expert_sick_leave_needed_var = _Var("")
+        self.expert_sick_leave_from_var = _Var("")
+        self.expert_sick_leave_number_var = _Var("")
+        self.psych_account_status_var = _Var("")
+        self.psych_account_since_year_var = _Var("")
+        self.rvk_referral_present_var = _Var("")
+        self.rvk_referral_commissariat_var = _Var("")
+        self.rvk_military_commissariat_var = _Var("")
+        self.disability_needed_var = _Var("")
+        self.epi_present_var = _Var("")
+        self.epi_path_var = _Var("")
+        self.repeat_statuses_var = _Var(True)
+        self.force_final_diary_var = _Var(True)
+        self.status_files = [str(text_file)]
+        self.diary_files: list[str] = []
+        self.diary_texts_dir = str(text_file.parent)
+        self.diary_template_dir = ""
+        self._diary_text_files_auto_selected = False
+        self._diary_files_auto_selected = False
+        self._popup_discharge_date_override = ""
+        self._popup_diagnosis_override = ""
+        self.output_dir = output_dir
+        self.data = PatientData(
+            fio="Маркер Женская Тестовая",
+            output_fio="Маркер Женская Тестовая",
+            birth="01.01.1980",
+            admission_date="01.09.2026",
+            discharge_date="25.09.2026",
+            diagnosis="F41.2 Тестовый диагноз",
+            complaints="Жалоб не предъявляет",
+            treatment_plan="Терапия по листу назначений",
+            mental_status="Состояние стабильное",
+        )
+
+    def _prompt_fields(self, title, rows, width=46, linked_groups=None, choice_options=None):
+        if title == "Дополнительные данные":
+            answers = {
+                "На учёте у психиатров": "не состоит",
+                "Нужен ли больничный лист": "да",
+                "Есть ли ЭПИ": "нет",
+            }
+            return [answers[label] for label, _initial in rows]
+        if title == "Больничный лист":
+            return ["01.09.2026"]
+        raise AssertionError((title, rows))
+
+    def _normalize_date_for_ui(self, value: str) -> str:
+        parsed = parse_date(value)
+        return parsed.strftime("%d.%m.%Y") if parsed else value
+
+    def _update_expert_sick_leave_display(self) -> None:
+        pass
+
+    def _medical_override_data(self, _navigation: str) -> PatientData:
+        data = copy.deepcopy(self.data)
+        data.expert_sick_leave_needed = self._normalize_yes_no(
+            self.expert_sick_leave_needed_var.get()
+        )
+        data.expert_sick_leave_from = self._normalize_date_for_ui(
+            self.expert_sick_leave_from_var.get()
+        )
+        return data
+
+    def _sync_admission_date_from_title(self, force=True):
+        return "01.09.2026"
+
+    def _apply_staff_profile_to_patient_data(self, data: PatientData) -> None:
+        data.doctor = "Врач В.В."
+        data.head = "Заведующий З.З."
+
+    def _auto_select_diary_text_by_diagnosis(self, **_kwargs):
+        return True
+
+    def _offer_manual_diary_text_file(self, **_kwargs):
+        raise AssertionError("manual diary-text fallback must not open")
+
+    def _auto_select_numbered_diary_template(self, **_kwargs):
+        raise AssertionError("numeric Dates lookup must not run")
+
+    def _effective_staff_profile(self):
+        return {"doctor": "Врач В.В.", "department_head": "Заведующий З.З."}
+
+    def _diagnostic_reports_enabled(self):
+        return False
+
+    def _result_output_dir(self):
+        return self.output_dir
+
+    def _log(self, _text):
+        pass
+
+    @staticmethod
+    def _set_ui_var(var, value):
+        var.set(value)
 
 
 class _DateLookupHarness(DiaryTemplateSelectionMixin):
@@ -166,6 +275,40 @@ def _assert_selected_text_does_not_require_dates(root: Path) -> None:
     assert captured.get("complaints") == "Жалоб не предъявляет", captured
     assert captured.get("treatment") == "Терапия по листу назначений", captured
     assert captured.get("profile_status") == "Состояние стабильное", captured
+
+
+def _assert_discharge_plus_diaries_keeps_dynamic_epicrisis(root: Path) -> None:
+    case_dir = root / "discharge-plus-diaries"
+    case_dir.mkdir()
+    source = case_dir / "source.docx"
+    Document().save(str(source))
+    text_file = case_dir / "status.docx"
+    doc = Document()
+    doc.add_paragraph("Состояние спокойное. Контакт продуктивный.")
+    doc.save(str(text_file))
+    output = case_dir / "out"
+    output.mkdir()
+
+    app = _DischargeDiaryHarness(source, text_file, output)
+    assert app._prompt_shared_clinical_options_if_needed(["discharge"]) is True
+    assert app.expert_sick_leave_needed_var.get() == "да"
+    assert app.expert_sick_leave_from_var.get() == "01.09.2026"
+
+    snapshot = app._capture_generation_patient_data(require_primary=True)
+    assert snapshot.expert_sick_leave_needed == "да"
+    assert snapshot.expert_sick_leave_from == "01.09.2026"
+
+    result = app._create_diaries_impl(
+        output_dir_override=output,
+        log_created=False,
+        patient_data_snapshot=snapshot,
+    )
+    assert getattr(result, "dynamic_epicrisis_count", 0) == 2, result
+    paragraphs = [p.text for p in Document(str(result.created_files[0])).paragraphs]
+    assert [text for text in paragraphs if "Динамический эпикриз." in text] == [
+        "11.09.26 Динамический эпикриз.",
+        "21.09.26 Динамический эпикриз.",
+    ], paragraphs
 
 
 def _assert_fallback_output_survives_temporary_date_source(root: Path) -> None:
@@ -278,11 +421,12 @@ def _assert_dynamic_epicrisis_is_additive(root: Path) -> None:
     assert "Психический статус: Состояние стабильное." in paragraphs, paragraphs
     assert not any("Профильный статус:" in text for text in paragraphs), paragraphs
 
-    # The ordinary clinical sequence remains present; an epicrisis on 11.09 is
-    # inserted after that date's ordinary diary, never replacing it.
-    ordinary_11 = [i for i, text in enumerate(paragraphs) if text.startswith("11.09.26 ") and "Динамический эпикриз." not in text]
-    dynamic_11 = [i for i, text in enumerate(paragraphs) if text == "11.09.26 Динамический эпикриз."]
-    assert ordinary_11 and dynamic_11 and ordinary_11[0] < dynamic_11[0], paragraphs
+    # A dynamic epicrisis owns its calendar date: the ordinary diary/joint-round
+    # entry for that date must be absent, while the final discharge diary remains.
+    ordinary_11 = [text for text in paragraphs if text.startswith("11.09.26 ") and "Динамический эпикриз." not in text]
+    ordinary_21 = [text for text in paragraphs if text.startswith("21.09.26 ") and "Динамический эпикриз." not in text]
+    assert ordinary_11 == [], ordinary_11
+    assert ordinary_21 == [], ordinary_21
     assert any(text.startswith("25.09.26 ") for text in paragraphs), "final discharge diary disappeared"
 
 
@@ -291,13 +435,15 @@ def main() -> None:
         root = Path(temp_dir)
         _assert_words_only_matching(root)
         _assert_selected_text_does_not_require_dates(root)
+        _assert_discharge_plus_diaries_keeps_dynamic_epicrisis(root)
         _assert_fallback_output_survives_temporary_date_source(root)
         _assert_text_folder_never_enters_numeric_scanner(root)
         _assert_dynamic_epicrisis_calendar_contract()
         _assert_dynamic_epicrisis_is_additive(root)
     print(
-        "VERBAL DIARY SOURCE REGRESSION OK: words-only matching; Texts never scanned as numeric Dates; "
-        "fallback output persists; sick-leave dynamic epicrises are additive and calendar-locked"
+        "VERBAL DIARY SOURCE REGRESSION OK: words-only matching; Discharge + Diaries keeps sick-leave dynamics; "
+        "Texts never scanned as numeric Dates; fallback output persists; "
+        "dynamic epicrises replace ordinary same-date diaries and are calendar-locked"
     )
 
 

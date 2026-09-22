@@ -144,8 +144,44 @@ def _leading_date(text: str) -> date | None:
         return None
 
 
+def _remove_regular_diary_block_for_date(doc: Document, item_date: date) -> None:
+    """Remove the ordinary diary block on a dynamic-epicrisis date.
+
+    Historical diary behavior is mutually exclusive per date: when a dynamic
+    epicrisis is due, that calendar date contains the epicrisis instead of the
+    ordinary diary/joint-round block. A rendered ordinary entry is one dated
+    paragraph followed by its undated signature paragraphs, so remove the whole
+    span up to the first later dated entry.
+    """
+    paragraphs = list(doc.paragraphs)
+    start = next(
+        (
+            index
+            for index, paragraph in enumerate(paragraphs)
+            if _leading_date(paragraph.text) == item_date
+            and "Динамический эпикриз." not in paragraph.text
+        ),
+        None,
+    )
+    if start is None:
+        return
+
+    end = len(paragraphs)
+    for index in range(start + 1, len(paragraphs)):
+        paragraph_date = _leading_date(paragraphs[index].text)
+        if paragraph_date is not None and paragraph_date > item_date:
+            end = index
+            break
+
+    for paragraph in paragraphs[start:end]:
+        element = paragraph._element
+        parent = element.getparent()
+        if parent is not None:
+            parent.remove(element)
+
+
 def _insert_dynamic_block(doc: Document, item_date: date, lines: tuple[str, ...]) -> None:
-    """Insert after all regular blocks on the same date and before later dates."""
+    """Insert a dynamic epicrisis in chronological order."""
     anchor = None
     for paragraph in doc.paragraphs:
         paragraph_date = _leading_date(paragraph.text)
@@ -208,6 +244,7 @@ def apply_sick_leave_dynamic_epicrises(
     lines = tuple(build_dynamic_epicrisis_text(data).splitlines())
     doc = Document(str(target))
     for item_date in dates:
+        _remove_regular_diary_block_for_date(doc, item_date)
         _insert_dynamic_block(doc, item_date, lines)
 
     staged = target.with_name(f".{target.name}.dynamic-epicrisis.tmp.docx")
