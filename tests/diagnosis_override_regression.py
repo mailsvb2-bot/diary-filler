@@ -100,6 +100,15 @@ class _MissingSourceEarlyFailHarness(ActionsCreationOrchestratorMixin):
         self.status = str(text)
 
 
+class _OutputPathEarlyFailHarness(_MissingSourceEarlyFailHarness):
+    def __init__(self, source_path: Path, output_target: Path):
+        super().__init__(source_path)
+        self.output_target = output_target
+
+    def _result_output_dir(self):
+        return self.output_target
+
+
 class _ChangedSourceEarlyFailHarness(_MissingSourceEarlyFailHarness):
     def __init__(self, source_path: Path):
         super().__init__(source_path)
@@ -603,6 +612,30 @@ def _assert_missing_source_fails_before_any_medical_popup(root: Path) -> None:
     assert app.status == "Создание отменено: источник пациента недоступен", app.status
     assert errors and errors[-1][0] == "Источник пациента недоступен", errors
     assert "Выберите исходный Word-документ заново" in errors[-1][1], errors[-1][1]
+
+
+def _assert_output_path_file_fails_before_any_medical_popup(root: Path) -> None:
+    source = root / "valid-primary-for-output-preflight.docx"
+    source.write_bytes(b"primary-source")
+    output_target = root / "not-a-folder.docx"
+    output_target.write_bytes(b"already-a-file")
+
+    app = _OutputPathEarlyFailHarness(source, output_target)
+    errors: list[tuple[str, str]] = []
+    original_error = actions_creation_orchestrator.messagebox.showerror
+    try:
+        actions_creation_orchestrator.messagebox.showerror = (
+            lambda title, message, **_kwargs: errors.append((str(title), str(message)))
+        )
+        app._create_selected_outputs_impl(print_after=False)
+    finally:
+        actions_creation_orchestrator.messagebox.showerror = original_error
+
+    assert app.staff_checks == 0, app.staff_checks
+    assert app.popup_checks == 0, app.popup_checks
+    assert app.status == "Создание отменено: выберите папку результата", app.status
+    assert errors and errors[-1][0] == "Папка результата недоступна", errors
+    assert "указывает на файл" in errors[-1][1], errors[-1][1]
 
 
 def _assert_changed_source_fails_before_any_medical_popup(root: Path) -> None:
@@ -1481,6 +1514,7 @@ def main() -> None:
         root = Path(temp_dir)
         _assert_pending_print_close_safety(root)
         _assert_missing_source_fails_before_any_medical_popup(root)
+        _assert_output_path_file_fails_before_any_medical_popup(root)
         _assert_changed_source_fails_before_any_medical_popup(root)
         _assert_changed_source_blocks_diary_only_but_manual_diary_mode_survives(root)
         _assert_changed_diary_input_files_fail_closed(root)
@@ -1506,7 +1540,7 @@ def main() -> None:
     _assert_diary_creation_path_offers_manual_fallback()
     print(
         "DIAGNOSIS OVERRIDE REGRESSION OK: UI diagnosis + verbal matching + "
-        "manual fallback + visible Word picker + digest-bound source/cache + missing/changed primary/EPI/Texts/Dates early fail + DnD EPI revision pin + pending-print close safety + generation double-click guard + partial-set survival + complete partial-print retry + print retry without regeneration + .doc/.docx source + same-path replacement isolation + transactional invalid-source handling + atomic primary DnD + multi-primary/multi-EPI/multi-folder fail-safe + complete patient-session reset matrix"
+        "manual fallback + visible Word picker + digest-bound source/cache + missing/changed primary/EPI/Texts/Dates + invalid output-path early fail + DnD EPI revision pin + pending-print close safety + generation double-click guard + partial-set survival + complete partial-print retry + print retry without regeneration + .doc/.docx source + same-path replacement isolation + transactional invalid-source handling + atomic primary DnD + multi-primary/multi-EPI/multi-folder fail-safe + complete patient-session reset matrix"
     )
 
 
