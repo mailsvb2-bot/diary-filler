@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "e70c5cd8909cfb8c31dbbf6900585f3ad8b83857",
-  "baseline_note": "v1.4.23 user-journey hardening through PRs #178-#181, including patient-session isolation, intake launch safety, partial-generation print safety, fail-closed staff confirmation, and persisted patient-folder naming, fully validated on main e70c5cd8909cfb8c31dbbf6900585f3ad8b83857 by Windows production CI run 35622319726 (#734), including regression locks, production audit, release gate, full patient replay and golden DOCX, real Tk GUI smoke, packaged desktop intake E2E, installer build, and installed/uninstalled smoke.",
+  "baseline_ref": "202862d7882c6c4ebfba7cf979cae8c0c55c1e08",
+  "baseline_note": "v1.4.23 user-journey and real-document integrity hardening through PR #200, including patient-session/DnD isolation, print retry safety, fail-closed settings/staff handling, long clinical-text preservation, compact-address isolation, EPI/EEG plan integrity, and epidemiology boundaries, fully validated on main 202862d7882c6c4ebfba7cf979cae8c0c55c1e08 by Windows production CI run 35723705277 (#822), including regression locks, document mechanics guard, production audit, release gate, full patient replay and golden DOCX, real Tk GUI smoke, packaged desktop intake E2E, installer build, and installed/uninstalled smoke.",
   "required_approval_evidence": [
     "ci_gate_lock"
   ],
