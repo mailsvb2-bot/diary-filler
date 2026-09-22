@@ -628,9 +628,17 @@ class ActionsCreationOrchestratorMixin:
                 messagebox.showwarning("Принтер не выбран", "Выберите принтер перед печатью или используйте кнопку сохранения без печати.")
                 return
 
-        # Re-check after all potentially long-running doctor popups. A synced or
-        # network Texts/Dates file can change while the user is filling fields;
-        # generation must still consume the exact revision that was selected.
+        # Re-check every source after all potentially long-running doctor
+        # popups. Synced/network files can change while fields are being filled;
+        # generation must still consume the exact revisions that built the card
+        # and were selected for EPI/Texts/Dates.
+        if not self._ensure_primary_source_available_for_generation(
+            selected_medical,
+            selected_diaries,
+        ):
+            return
+        if not self._ensure_epi_source_available_for_generation(selected_medical):
+            return
         if not self._ensure_diary_input_sources_available_for_generation(selected_diaries):
             return
 
