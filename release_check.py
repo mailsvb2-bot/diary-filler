@@ -36,6 +36,7 @@ REQUIRED_FILES = [
     "prod_audit.py",
     "dnd_contract_check.py",
     "performance_check.py",
+    "tools/docx_block_boundary_regression.py",
     "safety_integrity_check.py",
     "gui_runtime_check.py",
     "verify_built_exe.py",
@@ -401,6 +402,9 @@ def main() -> None:
 
     _print_step("Safety integrity regressions")
     _run([sys.executable, "safety_integrity_check.py"], timeout=120)
+
+    _print_step("Long clinical block integrity")
+    _run([sys.executable, "tools/docx_block_boundary_regression.py"], timeout=180)
 
     _print_step("Smoke tests")
     # smoke_test.py is the canonical executable entrypoint and delegates to the
