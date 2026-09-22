@@ -448,6 +448,53 @@ def assert_agent_retries_failed_visible_launch() -> None:
         assert attempts == [candidate, candidate], attempts
 
 
+def assert_desktop_intake_propagates_rejected_primary() -> None:
+    """A safely moved source must not be reported as loaded when app parsing rejected it."""
+    with tempfile.TemporaryDirectory() as tmp:
+        source = Path(tmp) / "candidate.docx"
+        source.write_bytes(b"candidate")
+        apply_calls: list[Path] = []
+        logs: list[str] = []
+
+        class RootStub:
+            def deiconify(self):
+                raise AssertionError("rejected primary must not continue to activation")
+
+            def lift(self):
+                raise AssertionError("rejected primary must not continue to activation")
+
+            def focus_force(self):
+                raise AssertionError("rejected primary must not continue to activation")
+
+        class AppStub:
+            root = RootStub()
+
+            def _apply_primary_document_path(self, path, **_kwargs):
+                apply_calls.append(Path(path))
+                return False
+
+        original_quiet = startup.desktop_intake_file_is_quiet
+        original_classifier = startup.desktop_intake_is_primary_document
+        original_prepare = startup.desktop_intake_prepare_patient_folder
+        original_log = startup._desktop_agent_log
+        try:
+            startup.desktop_intake_file_is_quiet = lambda _path: True  # type: ignore[assignment]
+            startup.desktop_intake_is_primary_document = lambda _path: True  # type: ignore[assignment]
+            startup.desktop_intake_prepare_patient_folder = (  # type: ignore[assignment]
+                lambda path, **_kwargs: Path(path)
+            )
+            startup._desktop_agent_log = lambda message: logs.append(str(message))  # type: ignore[assignment]
+            assert startup._desktop_process_primary(AppStub(), source) is False
+        finally:
+            startup._desktop_agent_log = original_log  # type: ignore[assignment]
+            startup.desktop_intake_prepare_patient_folder = original_prepare  # type: ignore[assignment]
+            startup.desktop_intake_is_primary_document = original_classifier  # type: ignore[assignment]
+            startup.desktop_intake_file_is_quiet = original_quiet  # type: ignore[assignment]
+
+        assert apply_calls == [source], apply_calls
+        assert any("rejected by application parsing" in item for item in logs), logs
+
+
 def assert_unrecognized_word_arrival_gets_one_visible_explanation() -> None:
     """A wake-up that cannot be classified must not look like a silent no-op."""
     with tempfile.TemporaryDirectory() as tmp:
@@ -635,12 +682,13 @@ def main() -> None:
     assert_gui_launch_handoff_preserves_queued_arrivals()
     assert_agent_suppresses_duplicate_gui_launch_until_heartbeat()
     assert_agent_retries_failed_visible_launch()
+    assert_desktop_intake_propagates_rejected_primary()
     assert_unrecognized_word_arrival_gets_one_visible_explanation()
     assert_pyinstaller_children_are_independent_and_gui_is_visible()
     assert_install_marker_forces_folder_and_staff_onboarding()
     assert_legacy_disabled_preference_heals_and_preserves_user_folder()
     print(
-        "INTAKE LIFECYCLE REGRESSION OK: self-heal + Desktop rebind + event-driven intake + in-place watcher replacement + queued-arrival handoff + duplicate-launch suppression + failed-launch retry + visible unrecognized-file feedback + independent PyInstaller child runtime + mandatory install intake"
+        "INTAKE LIFECYCLE REGRESSION OK: self-heal + Desktop rebind + event-driven intake + in-place watcher replacement + queued-arrival handoff + duplicate-launch suppression + failed-launch retry + rejected-primary propagation + visible unrecognized-file feedback + independent PyInstaller child runtime + mandatory install intake"
     )
 
 
