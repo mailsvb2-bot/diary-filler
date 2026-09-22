@@ -217,9 +217,9 @@ class PatientData:
     commission_date: str = ""
     commission_number: str = ""
 
-    doctor: str = ""
-    head: str = ""
-    deputy_chief: str = ""
+    doctor: str = "Балаганин С.В"
+    head: str = "Можарова Е.А."
+    deputy_chief: str = "Зуйкова А.А."
 
     warnings: List[str] = field(default_factory=list)
 
