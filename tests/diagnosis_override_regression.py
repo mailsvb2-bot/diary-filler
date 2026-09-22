@@ -52,6 +52,21 @@ class _SnapshotHarness(ActionsMedicalFlowMixin):
         return data
 
 
+class _GenerationGateHarness(ActionsCreationOrchestratorMixin):
+    def __init__(self):
+        self.impl_calls = 0
+        self.status = ""
+
+    def _set_status(self, text):
+        self.status = str(text)
+
+    def _create_selected_outputs_impl(self, *, print_after: bool = False):
+        self.impl_calls += 1
+        if self.impl_calls == 1:
+            # Simulate a nested/re-entrant click while the first action is active.
+            self.create_selected_outputs(print_after=print_after)
+
+
 class _TextHarness(FilesMixin):
     def __init__(self, folder: Path):
         self.folder = folder
@@ -367,6 +382,24 @@ class _PartialSetHarness(ActionsCreationOrchestratorMixin):
 
     def _redraw_selection_controls(self):
         self.redraw_count += 1
+
+
+def _assert_generation_action_gate_blocks_reentry_and_queued_double_click() -> None:
+    app = _GenerationGateHarness()
+
+    app.create_selected_outputs(print_after=False)
+    assert app.impl_calls == 1, app.impl_calls
+    assert app.status == "Создание уже выполняется", app.status
+
+    # Represents the second ButtonRelease that Tk queued for a double click.
+    app.create_selected_outputs(print_after=False)
+    assert app.impl_calls == 1, app.impl_calls
+    assert app.status == "Предыдущее создание уже завершено", app.status
+
+    # A deliberate later action remains available.
+    app._generation_action_cooldown_until = 0.0
+    app.create_selected_outputs(print_after=True)
+    assert app.impl_calls == 2, app.impl_calls
 
 
 def _assert_ui_diagnosis_wins_snapshot() -> None:
@@ -930,6 +963,7 @@ def _assert_diary_source_buttons_route_to_expected_picker() -> None:
 
 
 def main() -> None:
+    _assert_generation_action_gate_blocks_reentry_and_queued_double_click()
     _assert_ui_diagnosis_wins_snapshot()
     _assert_full_patient_switch_reset_matrix()
     _assert_diary_source_buttons_route_to_expected_picker()
@@ -951,7 +985,7 @@ def main() -> None:
     _assert_diary_creation_path_offers_manual_fallback()
     print(
         "DIAGNOSIS OVERRIDE REGRESSION OK: UI diagnosis + verbal matching + "
-        "manual fallback + visible Word picker + partial-set survival + complete partial-print retry + print retry without regeneration + .doc/.docx source + same-path replacement isolation + transactional invalid-source handling + multi-primary DnD fail-safe + complete patient-session reset matrix"
+        "manual fallback + visible Word picker + generation double-click guard + partial-set survival + complete partial-print retry + print retry without regeneration + .doc/.docx source + same-path replacement isolation + transactional invalid-source handling + multi-primary DnD fail-safe + complete patient-session reset matrix"
     )
 
 

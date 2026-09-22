@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "base_sha": "7a12c54e7f1d3159323189384137434536a9f66f",
-  "reason": "Explicit generation safety fix: commit rollback must report residual visible files truthfully when Windows cannot delete one of the files already moved into the result folder.",
+  "base_sha": "f79b91c2b64eacbb218e79e854809e854f6885d6",
+  "reason": "Explicit generation safety fix: user-triggered creation must reject re-entrant calls and suppress the queued second release of a double click so one action cannot create duplicate document sets.",
   "approved_blobs": {
-    "actions_creation_orchestrator.py": "48e708eefe787bd3c6a3ce359d613a731a1f15cc"
+    "actions_creation_orchestrator.py": "77e180022b29164f9a8cd7ab1cfb90fc8a436837"
   }
 }

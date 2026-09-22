@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "e70c5cd8909cfb8c31dbbf6900585f3ad8b83857",
-  "reason": "Generation rollback integrity: preserve prior onboarding/print/intake/settings hardening while reporting any visible files that Windows could not remove after a failed set commit.",
+  "reason": "Generation click integrity: preserve prior rollback/onboarding/print/intake/settings hardening while blocking only identical queued double-click generation and keeping changed-state print/partial retries immediately usable.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -15,12 +15,12 @@
     "ci_gate_lock"
   ],
   "approved_blobs": {
-    "actions_creation_orchestrator.py": "48e708eefe787bd3c6a3ce359d613a731a1f15cc",
+    "actions_creation_orchestrator.py": "77e180022b29164f9a8cd7ab1cfb90fc8a436837",
     "files_mixin.py": "f0b4ec41ff2ae55e0d0423b6adbab5cf166dd1e1",
     "printer_models.py": "4d142106ac06f57f2641bd0c8af81e12e40b2f24",
     "smoke_combined_part01_setup_contracts.py": "e4dc3dc12b9674a6f6146c6b5141cb1987a62350",
-    "tests/diagnosis_override_regression.py": "9636fbd2d321ca8f97853a812fdb288cfe62d5e1",
-    "tools/document_mechanics_change_approval.json": "f2ca12b5204389b2bf837594f5c7b4582dccf7f9",
+    "tests/diagnosis_override_regression.py": "dfd4e78a2fb69d9e99cad40ff105376f8f46923a",
+    "tools/document_mechanics_change_approval.json": "5e6a0e8c0e4a4890f3a982eea8eedff2b6288028",
     "settings_mixin.py": "988eec68abac613d607800950c9fed0a833c4f80",
     "tools/staff_profile_regression.py": "5150fd35f82743759c830c492be2dee640d8be14",
     "startup.py": "7cc293d1ba1961b8d1cb90c66448bfd8edb487c8",
