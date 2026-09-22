@@ -260,6 +260,37 @@ class MedicalParserBlocksMixin:
                 return (m.start(), m.end())
         return None
 
+    _STRICT_CLINICAL_BOUNDARY_MARKERS = {
+        normalize_match(value)
+        for value in (
+            "Жалобы на момент осмотра",
+            "Жалобы при поступлении",
+            "Жалобы",
+            "Анамнез жизни",
+            "Анамнез заболевания",
+            "Психический статус при поступлении",
+            "Психический статус",
+            "Сомато-неврологический статус",
+            "Соматический статус",
+            "План обследования",
+            "План лечения",
+            "Назначенное лечение",
+            "Получает лечение",
+            "Диагноз",
+            "Эпидемиологический анамнез",
+            "Результаты обследований",
+            "Результаты исследований",
+            "За время лечения",
+            "Рекомендовано",
+            "Лечение",
+            "Экспертный анамнез",
+            "Прогноз восстановления трудоспособности",
+            "Клинический",
+            "Цель направления на ВК",
+            "Цель направления на ВК с обоснованием",
+        )
+    }
+
     def _find_next_marker_pos(self, text: str, start_pos: int, current_aliases: Sequence[str]) -> int:
         best = len(text)
         current_norm = {normalize_match(a) for a in current_aliases}
@@ -270,28 +301,76 @@ class MedicalParserBlocksMixin:
             for m in re.finditer(pattern, text[start_pos:], flags=re.IGNORECASE):
                 pos = start_pos + m.start()
                 end = start_pos + m.end()
-                if not self._is_valid_section_marker_occurrence(text, pos, end, marker):
+                if not self._is_valid_section_boundary_occurrence(text, pos, end, marker):
                     continue
                 if pos < best:
                     best = pos
                     break
         return best
 
+    @classmethod
+    def _is_valid_section_boundary_occurrence(
+        cls,
+        text: str,
+        start: int,
+        end: int,
+        marker: str,
+    ) -> bool:
+        """Return True only when a marker occurrence is safe as the *next* block boundary.
+
+        Clinical words frequently start ordinary narrative paragraphs inside a
+        long anamnesis: "Лечение ранее проводилось...", "Диагноз ранее...",
+        "Психический статус в динамике...". Treating every line-start occurrence
+        as a structural heading truncates everything after that sentence.
+
+        For clinical block names we therefore require explicit label syntax
+        (standalone heading or punctuation such as ":") before they may terminate
+        the current block. Metadata labels keep the historical permissive rule.
+        """
+        before = text[max(0, start - 3):start]
+        line_end = text.find("\n", end)
+        if line_end < 0:
+            line_end = len(text)
+        after_on_line = text[end:line_end]
+        after_probe = text[end:end + 32]
+        at_line_start = start == 0 or "\n" in before or not text[:start].strip()
+        has_label_separator = bool(re.match(r"\s*(?:[:№N#.-]|$)", after_probe))
+        marker_norm = normalize_match(marker)
+
+        # «На основании данных ... установлен диагноз» is itself a fixed
+        # structural sentence in our templates and remains a boundary.
+        if marker_norm.startswith("на основании"):
+            return True
+
+        if marker_norm in cls._STRICT_CLINICAL_BOUNDARY_MARKERS:
+            if not at_line_start:
+                return has_label_separator
+            if not after_on_line.strip():
+                return True
+            if has_label_separator:
+                return True
+            # Common compact source form: "Диагноз F20.0 ..." without a colon.
+            if marker_norm == "диагноз" and re.match(r"\s*[FФ]\s*\d", after_on_line, flags=re.IGNORECASE):
+                return True
+            return False
+
+        if at_line_start:
+            return True
+        # One-line metadata blocks may still be written as "ФИО: ... Диагноз: ...".
+        return has_label_separator
+
     @staticmethod
     def _is_valid_section_marker_occurrence(text: str, start: int, end: int, marker: str) -> bool:
+        """Permissive marker recognition used for locating the block's own start."""
         before = text[max(0, start - 3):start]
         after = text[end:end + 8]
         at_line_start = start == 0 or "\n" in before or not text[:start].strip()
         has_label_separator = bool(re.match(r"\s*(?:[:№N#.-]|$)", after))
         marker_norm = normalize_match(marker)
-        # «На основании данных ... установлен диагноз» часто идёт как полноценное
-        # предложение без двоеточия, поэтому разрешаем его как границу.
         if marker_norm.startswith("на основании"):
             return True
         if at_line_start:
             return True
-        # В одну строку разделы тоже могут идти как метки: "Лечение: ... Диагноз: ...".
-        # Требуем разделитель после метки, чтобы не резать обычные слова внутри фраз.
         return has_label_separator
 
     @staticmethod
