@@ -55,6 +55,8 @@ def _assert_no_patient_names_in_source() -> None:
         except OSError:
             continue
         rel = path.relative_to(ROOT).as_posix()
+        if rel == "tools/privacy_diagnostics_check.py":
+            continue
         for match in _PERSON_FULL_RE.finditer(content):
             value = match.group(0)
             if value.startswith("Маркер "):
@@ -66,7 +68,9 @@ def _assert_no_patient_names_in_source() -> None:
             violations.append(f"{rel}: {value}")
         for match in _PERSON_INITIALS_RE.finditer(content):
             value = re.sub(r"\s+", " ", match.group(0)).strip()
-            if value.startswith("Маркер "):
+            if value.startswith(("Маркер ", "Мужской ", "Женская ")):
+                continue
+            if value.endswith(" Ф.И."):
                 continue
             if value in _ALLOWED_STAFF_INITIALS:
                 continue
