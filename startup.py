@@ -1426,7 +1426,13 @@ def _desktop_process_primary(app, source_path: str | Path) -> bool:
         )
         # This is the hard architecture boundary.  From here onward the exact
         # pre-existing diary-filler path owns parsing, popups and generation.
-        app._apply_primary_document_path(str(moved_primary), prompt_for_referral=True)
+        applied = app._apply_primary_document_path(
+            str(moved_primary),
+            prompt_for_referral=True,
+        )
+        if applied is False:
+            _desktop_agent_log("GUI intake primary was moved safely but rejected by application parsing")
+            return False
         try:
             app.root.deiconify()
             app.root.lift()
