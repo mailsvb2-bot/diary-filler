@@ -626,6 +626,23 @@ def _assert_compact_address_never_consumes_clinical_residence_narrative() -> Non
     assert data.examination_plan.endswith("ЭПИ, ЭЭГ."), data.examination_plan
 
 
+def _assert_epidemiology_stops_before_post_section_admission_prose() -> None:
+    text = (
+        "Эпидемиологический анамнез: со слов пациентки, за пределы области не выезжала, "
+        "в контакте с инфекционными больными не была.\n"
+        "Венерические заболевания, туберкулёз, вирусные гепатиты отрицает.\n"
+        "Пациентка предъявляет жалобы на апатию и плохой сон.\n"
+        "Целесообразна госпитализация пациентки в профильное отделение.\n"
+        "В связи с психическим состоянием, направляется на лечение в стационар."
+    )
+    data = MedicalTextParser().parse_text(text)
+    assert "за пределы области не выезжала" in data.epidemiology, data.epidemiology
+    assert "Венерические заболевания" in data.epidemiology, data.epidemiology
+    assert "предъявляет жалобы" not in data.epidemiology.lower(), data.epidemiology
+    assert "целесообразна госпитализация" not in data.epidemiology.lower(), data.epidemiology
+    assert "направляется на лечение" not in data.epidemiology.lower(), data.epidemiology
+
+
 def _assert_epi_cleanup_preserves_examination_plan_item() -> None:
     doc = Document()
     plan = doc.add_paragraph("План обследования: ОАК, ОАМ, ФЛГ, ЭПИ, ЭЭГ.")
@@ -1555,6 +1572,7 @@ def main() -> None:
         root = Path(temp_dir)
         _assert_pending_print_close_safety(root)
         _assert_compact_address_never_consumes_clinical_residence_narrative()
+        _assert_epidemiology_stops_before_post_section_admission_prose()
         _assert_epi_cleanup_preserves_examination_plan_item()
         _assert_missing_source_fails_before_any_medical_popup(root)
         _assert_output_path_file_fails_before_any_medical_popup(root)
