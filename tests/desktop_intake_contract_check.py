@@ -29,7 +29,7 @@ def _assert_naming_contract() -> None:
         admission_date=date(2026, 5, 12),
         fallback_stem="Первичный осмотр",
     )
-    assert name == "Маркер М.М. май 2026", name
+    assert name == "Маркер М.Т. май 2026", name
 
     custom = startup.desktop_build_patient_folder_name(
         fio="Маркер Мужской Дополнительный",
