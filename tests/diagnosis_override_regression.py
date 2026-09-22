@@ -641,7 +641,28 @@ def _assert_changed_diary_input_files_fail_closed(root: Path) -> None:
     assert app._loaded_diary_text_source_signatures
     assert app._loaded_diary_date_source_signatures
 
+    # A stale auto-match path that disappeared before pinning must never become
+    # a valid stable baseline merely because the same missing sentinel repeats.
+    vanished = root / "vanished-before-pin.docx"
+    app.status_files = [str(vanished)]
+    app._pin_diary_text_source_signatures()
     errors: list[tuple[str, str]] = []
+    original_error = actions_creation_orchestrator.messagebox.showerror
+    try:
+        actions_creation_orchestrator.messagebox.showerror = (
+            lambda title, message, **_kwargs: errors.append((str(title), str(message)))
+        )
+        assert not app._ensure_diary_input_sources_available_for_generation(True)
+    finally:
+        actions_creation_orchestrator.messagebox.showerror = original_error
+    assert errors and "«Тексты»" in errors[-1][1], errors
+
+    app.status_files = [str(text_file)]
+    app.diary_files = [str(dates_file)]
+    app._pin_diary_text_source_signatures()
+    app._pin_diary_date_source_signatures()
+
+    errors = []
     original_error = actions_creation_orchestrator.messagebox.showerror
     try:
         actions_creation_orchestrator.messagebox.showerror = (
