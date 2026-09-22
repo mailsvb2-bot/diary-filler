@@ -321,7 +321,7 @@ def _assert_1250_line_clinical_block_survives_full_roundtrip() -> None:
         source = root / "stress-1250-lines.docx"
         doc = Document()
         doc.add_paragraph("10.06.2026 Первичный осмотр")
-        doc.add_paragraph("Ф.И.О.: Стресс Тест Тысячастроковый")
+        doc.add_paragraph("Ф.И.О.: Маркер Женская Тестовая")
         doc.add_paragraph("Дата рождения: 01.01.1980")
         doc.add_paragraph("Анамнез заболевания:")
 
