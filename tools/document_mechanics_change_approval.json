@@ -1,8 +1,9 @@
 {
   "schema_version": 1,
-  "base_sha": "33224a33b1e0a45a2600eff4cf623ee328c38bde",
-  "reason": "Explicit document-integrity fix: long clinical narrative paragraphs beginning with words such as Treatment/Diagnosis/Psychiatric status must not be misclassified as the next structural section and truncate the source block.",
+  "base_sha": "e4cb9a972a18d9f17d436cb07c6a153b1d5c20f2",
+  "reason": "Explicit document-integrity fix: compact patient addresses must not consume clinical residence narrative, and short EPI/EEG tokens inside examination-plan lists must not terminate the block.",
   "approved_blobs": {
-    "medical_parser_blocks.py": "b47082f8b5367dddb31064b4c7de6440cc3952a1"
+    "medical_parser_demographics.py": "b1f98c0d574fe51fece7cd55861185f87f79bd73",
+    "medical_parser_blocks.py": "30dd4e7be9b84acca58964c48e9f3b2bb2733ebe"
   }
 }
