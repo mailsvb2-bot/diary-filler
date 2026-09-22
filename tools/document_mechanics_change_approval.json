@@ -1,9 +1,10 @@
 {
   "schema_version": 1,
   "base_sha": "e4cb9a972a18d9f17d436cb07c6a153b1d5c20f2",
-  "reason": "Explicit document-integrity fix: compact patient addresses must not consume clinical residence narrative, and short EPI/EEG tokens inside examination-plan lists must not terminate the block.",
+  "reason": "Explicit document-integrity fix: compact patient addresses must not consume clinical residence narrative; EPI/EEG tokens inside examination plans must remain content; final EPI cleanup must remove only standalone service blocks.",
   "approved_blobs": {
     "medical_parser_demographics.py": "b1f98c0d574fe51fece7cd55861185f87f79bd73",
-    "medical_parser_blocks.py": "30dd4e7be9b84acca58964c48e9f3b2bb2733ebe"
+    "medical_parser_blocks.py": "30dd4e7be9b84acca58964c48e9f3b2bb2733ebe",
+    "medical_docx_editor_epi.py": "3296469e1e470817389f074e4ac7bbae601d8f2a"
   }
 }
