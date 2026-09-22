@@ -33,7 +33,7 @@
     "diary_template_selection.py": "8906603af5b826868e88501c4f3644802671f23e",
     "tools/production_safety_gate.py": "d57456d3de3ffde58fc155de9fc0ba70ff80d094",
     "medical_parser_blocks.py": "b196a8afe0baa477eecd1bb69a8d5a0f7ae6ee87",
-    "tools/docx_block_boundary_regression.py": "9c723ae69b657136bf0434cf53a386777f084271",
+    "tools/docx_block_boundary_regression.py": "dd0cd83f9158a83d8e7c1d0741f3f1a88cc9810a",
     "medical_parser_demographics.py": "b1f98c0d574fe51fece7cd55861185f87f79bd73",
     "medical_docx_editor_epi.py": "3296469e1e470817389f074e4ac7bbae601d8f2a",
     "smoke_combined_part04_medical_generation.py": "416bc7dc1cfd70b40a423199403f631dff478ba6"
