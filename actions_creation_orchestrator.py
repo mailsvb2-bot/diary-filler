@@ -366,6 +366,30 @@ class ActionsCreationOrchestratorMixin:
             self._generation_action_last_fingerprint = fingerprint
             self._generation_action_cooldown_until = time.monotonic() + 0.75
 
+    def _ensure_primary_source_available_for_generation(self, selected_medical: List[str]) -> bool:
+        """Fail before any medical popup if the selected source disappeared."""
+        if not selected_medical:
+            return True
+        navigation_var = getattr(self, "navigation_path_var", None)
+        if navigation_var is None or not hasattr(navigation_var, "get"):
+            # Compatibility for narrow test/embedding harnesses. The production
+            # app always owns navigation_path_var.
+            return True
+        navigation = str(navigation_var.get() or "").strip()
+        if navigation and Path(navigation).is_file():
+            return True
+        try:
+            messagebox.showerror(
+                "Источник пациента недоступен",
+                "Выбранный медицинский документ пациента больше не найден.\n\n"
+                "Выберите исходный Word-документ заново. Данные и дополнительные "
+                "поля для нового комплекта пока не запрашивались.",
+            )
+        except Exception:
+            pass
+        self._set_status("Создание отменено: источник пациента недоступен")
+        return False
+
     def _create_selected_outputs_impl(self, *, print_after: bool = False) -> None:
         selected_medical = self.selected_medical_docs()
         selected_diaries = self.diaries_selected()
@@ -377,6 +401,8 @@ class ActionsCreationOrchestratorMixin:
             return
         if not selected_medical and not selected_diaries:
             messagebox.showwarning("Ничего не выбрано", "Отметьте хотя бы один документ или «Дневники наблюдения».")
+            return
+        if not self._ensure_primary_source_available_for_generation(selected_medical):
             return
         if not self._ensure_staff_profile_for_generation():
             self._set_status("Создание отменено: укажите сотрудников")
