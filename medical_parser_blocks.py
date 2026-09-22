@@ -342,6 +342,19 @@ class MedicalParserBlocksMixin:
         if marker_norm.startswith("на основании"):
             return True
 
+        # Short investigation labels such as ЭПИ/ЭЭГ are also ordinary list
+        # items inside «План обследования»: «..., ФЛГ, ЭПИ, ЭЭГ.».  A terminal
+        # period or comma must not make them a new section.  Treat them as a
+        # boundary only when written as an actual label (standalone or with a
+        # colon/dash at line start; inline only with an explicit colon).
+        if marker_norm in {"эпи", "ээг"}:
+            explicit_colon = bool(re.match(r"\s*:", after_probe))
+            explicit_line_label = at_line_start and (
+                not after_on_line.strip()
+                or bool(re.match(r"\s*[:—-]", after_probe))
+            )
+            return explicit_colon or explicit_line_label
+
         if marker_norm in cls._STRICT_CLINICAL_BOUNDARY_MARKERS:
             if not at_line_start:
                 return has_label_separator
