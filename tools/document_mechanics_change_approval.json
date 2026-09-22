@@ -1,8 +1,9 @@
 {
   "schema_version": 1,
   "base_sha": "24afd837f785c59b6dbc9782c47fedfe412f511d",
-  "reason": "Explicit document-integrity fix: block parsing must reject only bare section labels, not legitimate long clinical prose whose first sentence begins with words such as Жалобы or Анамнез.",
+  "reason": "Explicit document-integrity fix: clinical blocks must reject only bare section labels both during extraction and during the final parsed-field cleanup, so legitimate prose beginning with section-like words is preserved.",
   "approved_blobs": {
-    "medical_parser_blocks.py": "d1c5e749e3814de3093e67e618c11c9ba2ec27f7"
+    "medical_parser_blocks.py": "d1c5e749e3814de3093e67e618c11c9ba2ec27f7",
+    "medical_parser_inline.py": "e6708e2df1a771a34b9809d05acee9ebfd49ea1d"
   }
 }
