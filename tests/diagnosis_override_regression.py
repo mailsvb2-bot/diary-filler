@@ -76,6 +76,28 @@ class _CloseSafetyHarness(WindowMixin):
         self._pending_print_retry_files = list(pending or [])
 
 
+class _PendingPrintPatientSwitchHarness(FilesMixin):
+    def __init__(self, current_path: Path, pending: list[Path]):
+        self.root = None
+        self.navigation_path_var = _Var(str(current_path))
+        self._loaded_primary_source_signature = ("old", 1, 2, 3, "a" * 64)
+        self._pending_print_retry_files = list(pending)
+        self.status = ""
+        self.reset_calls = 0
+
+    def _parse_primary_document(self, _path):
+        return PatientData(fio="Маркер Новый Тестовый")
+
+    def _primary_document_source_signature(self, path):
+        return (str(Path(path)), 4, 5, 6, "b" * 64)
+
+    def _set_status(self, text):
+        self.status = str(text)
+
+    def _reset_primary_document_runtime_state(self, **_kwargs):
+        self.reset_calls += 1
+
+
 class _MissingSourceEarlyFailHarness(ActionsCreationOrchestratorMixin):
     def __init__(self, missing_path: Path):
         self.navigation_path_var = _Var(str(missing_path))
@@ -1554,6 +1576,36 @@ def _assert_diary_failure_keeps_medical_documents(root: Path) -> None:
 
 
 
+def _assert_pending_print_retry_can_cancel_patient_switch(root: Path) -> None:
+    current = root / "current-patient.docx"
+    candidate = root / "next-patient.docx"
+    pending = root / "current-patient-unprinted.docx"
+    current.write_bytes(b"current")
+    candidate.write_bytes(b"candidate")
+    pending.write_bytes(b"saved-but-unprinted")
+
+    app = _PendingPrintPatientSwitchHarness(current, [pending])
+    prompts: list[tuple[str, str]] = []
+    original_askyesno = files_mixin.messagebox.askyesno
+    try:
+        files_mixin.messagebox.askyesno = (
+            lambda title, message, **_kwargs: (
+                prompts.append((str(title), str(message))),
+                False,
+            )[1]
+        )
+        assert app._apply_primary_document_path(str(candidate), prompt_for_referral=False) is False
+    finally:
+        files_mixin.messagebox.askyesno = original_askyesno
+
+    assert app.navigation_path_var.get() == str(current), app.navigation_path_var.get()
+    assert app._pending_print_retry_files == [pending], app._pending_print_retry_files
+    assert app.reset_calls == 0, app.reset_calls
+    assert app.status == "Смена пациента отменена: завершите повторную печать", app.status
+    assert prompts and prompts[-1][0] == "Печать предыдущего пациента не завершена", prompts
+    assert "очередь безопасного повтора печати будет сброшена" in prompts[-1][1], prompts[-1][1]
+
+
 def _assert_diary_source_buttons_route_to_expected_picker() -> None:
     source = (Path(__file__).resolve().parents[1] / "layout_sources.py").read_text(encoding="utf-8")
     start = source.index("    def _diary_compact_row")
@@ -1583,6 +1635,7 @@ def main() -> None:
         _assert_changed_epi_fails_before_any_medical_popup(root)
         _assert_primary_cache_rejects_same_metadata_wrong_digest(root)
         _assert_same_path_replacement_is_patient_switch(root)
+        _assert_pending_print_retry_can_cancel_patient_switch(root)
         _assert_invalid_new_source_preserves_open_patient(root)
         _assert_multi_primary_drop_fails_safe(root)
         _assert_failed_primary_aborts_entire_drop_batch(root)
