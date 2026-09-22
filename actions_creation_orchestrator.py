@@ -366,9 +366,18 @@ class ActionsCreationOrchestratorMixin:
             self._generation_action_last_fingerprint = fingerprint
             self._generation_action_cooldown_until = time.monotonic() + 0.75
 
-    def _ensure_primary_source_available_for_generation(self, selected_medical: List[str]) -> bool:
-        """Fail before any medical popup if the selected source disappeared."""
-        if not selected_medical:
+    def _ensure_primary_source_available_for_generation(
+        self,
+        selected_medical: List[str],
+        selected_diaries: bool = False,
+    ) -> bool:
+        """Bind every source-backed patient run to the Word revision that built the card."""
+        loaded_signature = getattr(self, "_loaded_primary_source_signature", None)
+        # Diary-only legacy/manual mode is valid without a primary source. But
+        # once the current patient card was loaded from a concrete Word revision,
+        # diaries must obey the same source identity boundary as medical outputs.
+        must_validate = bool(selected_medical) or (bool(selected_diaries) and loaded_signature is not None)
+        if not must_validate:
             return True
         navigation_var = getattr(self, "navigation_path_var", None)
         if navigation_var is None or not hasattr(navigation_var, "get"):
@@ -380,16 +389,15 @@ class ActionsCreationOrchestratorMixin:
             try:
                 messagebox.showerror(
                     "Источник пациента недоступен",
-                    "Выбранный медицинский документ пациента больше не найден.\n\n"
-                    "Выберите исходный Word-документ заново. Данные и дополнительные "
-                    "поля для нового комплекта пока не запрашивались.",
+                    "Word-документ, из которого загружена текущая карточка пациента, больше не найден.\n\n"
+                    "Выберите исходный Word-документ заново. Создание остановлено до любых "
+                    "дополнительных вопросов, чтобы не использовать устаревшие данные пациента.",
                 )
             except Exception:
                 pass
             self._set_status("Создание отменено: источник пациента недоступен")
             return False
 
-        loaded_signature = getattr(self, "_loaded_primary_source_signature", None)
         signature_getter = getattr(self, "_primary_document_source_signature", None)
         if loaded_signature is not None and callable(signature_getter):
             try:
@@ -473,7 +481,10 @@ class ActionsCreationOrchestratorMixin:
         if not selected_medical and not selected_diaries:
             messagebox.showwarning("Ничего не выбрано", "Отметьте хотя бы один документ или «Дневники наблюдения».")
             return
-        if not self._ensure_primary_source_available_for_generation(selected_medical):
+        if not self._ensure_primary_source_available_for_generation(
+            selected_medical,
+            selected_diaries,
+        ):
             return
         if not self._ensure_epi_source_available_for_generation(selected_medical):
             return
