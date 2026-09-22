@@ -98,6 +98,15 @@ class _MissingSourceEarlyFailHarness(ActionsCreationOrchestratorMixin):
         self.status = str(text)
 
 
+class _ChangedSourceEarlyFailHarness(_MissingSourceEarlyFailHarness):
+    def __init__(self, source_path: Path):
+        super().__init__(source_path)
+        self._loaded_primary_source_signature = ("loaded", 1, 2, 3)
+
+    def _primary_document_source_signature(self, _path):
+        return ("current", 4, 5, 6)
+
+
 class _GenerationGateHarness(ActionsCreationOrchestratorMixin):
     def __init__(self):
         self.impl_calls = 0
@@ -487,6 +496,27 @@ def _assert_missing_source_fails_before_any_medical_popup(root: Path) -> None:
     assert app.status == "Создание отменено: источник пациента недоступен", app.status
     assert errors and errors[-1][0] == "Источник пациента недоступен", errors
     assert "Выберите исходный Word-документ заново" in errors[-1][1], errors[-1][1]
+
+
+def _assert_changed_source_fails_before_any_medical_popup(root: Path) -> None:
+    source = root / "same-name-primary.docx"
+    source.write_bytes(b"patient-b-replaced-content")
+    app = _ChangedSourceEarlyFailHarness(source)
+    errors: list[tuple[str, str]] = []
+    original_error = actions_creation_orchestrator.messagebox.showerror
+    try:
+        actions_creation_orchestrator.messagebox.showerror = (
+            lambda title, message, **_kwargs: errors.append((str(title), str(message)))
+        )
+        app._create_selected_outputs_impl(print_after=False)
+    finally:
+        actions_creation_orchestrator.messagebox.showerror = original_error
+
+    assert app.staff_checks == 0, app.staff_checks
+    assert app.popup_checks == 0, app.popup_checks
+    assert app.status == "Создание отменено: источник пациента изменился", app.status
+    assert errors and errors[-1][0] == "Источник пациента изменился", errors
+    assert "Чтобы не смешать данные разных пациентов" in errors[-1][1], errors[-1][1]
 
 
 def _assert_generation_action_gate_blocks_reentry_and_queued_double_click() -> None:
@@ -1076,6 +1106,7 @@ def main() -> None:
         root = Path(temp_dir)
         _assert_pending_print_close_safety(root)
         _assert_missing_source_fails_before_any_medical_popup(root)
+        _assert_changed_source_fails_before_any_medical_popup(root)
         _assert_same_path_replacement_is_patient_switch(root)
         _assert_invalid_new_source_preserves_open_patient(root)
         _assert_multi_primary_drop_fails_safe(root)
@@ -1092,7 +1123,7 @@ def main() -> None:
     _assert_diary_creation_path_offers_manual_fallback()
     print(
         "DIAGNOSIS OVERRIDE REGRESSION OK: UI diagnosis + verbal matching + "
-        "manual fallback + visible Word picker + missing-source early fail + pending-print close safety + generation double-click guard + partial-set survival + complete partial-print retry + print retry without regeneration + .doc/.docx source + same-path replacement isolation + transactional invalid-source handling + multi-primary DnD fail-safe + complete patient-session reset matrix"
+        "manual fallback + visible Word picker + missing/changed-source early fail + pending-print close safety + generation double-click guard + partial-set survival + complete partial-print retry + print retry without regeneration + .doc/.docx source + same-path replacement isolation + transactional invalid-source handling + multi-primary DnD fail-safe + complete patient-session reset matrix"
     )
 
 
