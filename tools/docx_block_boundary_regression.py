@@ -314,6 +314,144 @@ def _assert_table_and_run_fragmented_source_roundtrip() -> None:
             assert long_lines[-1] in text, f"{path.name}: fragmented source tail truncated"
 
 
+def _assert_all_major_clinical_blocks_survive_long_roundtrip() -> None:
+    """Large complaints/life/somatic blocks must survive parse + all 7 renderers."""
+    with TemporaryDirectory(prefix="medical-autofill-all-major-long-blocks-") as temp_dir:
+        root = Path(temp_dir)
+        source = root / "all-major-clinical-blocks.docx"
+        doc = Document()
+        doc.add_paragraph("10.06.2026 Первичный осмотр")
+        doc.add_paragraph("Ф.И.О.: Маркер Женская Тестовая")
+        doc.add_paragraph("Дата рождения: 01.01.1980")
+
+        complaints = [
+            (
+                f"ЖАЛОБЫ_СТРОКА_{index:03d}: "
+                + "подробное описание жалоб сохранено без сокращения; " * 3
+            ).strip()
+            for index in range(1, 101)
+        ]
+        complaints[21] = (
+            "Диагноз соматического заболевания ранее обсуждался с терапевтом; "
+            "это часть жалоб, а не заголовок раздела."
+        )
+        complaints[57] = (
+            "Лечение боли ранее давало кратковременный эффект; "
+            "эта строка остаётся внутри жалоб."
+        )
+        complaints[-1] = "ЖАЛОБЫ_ФИНАЛ_НЕ_ОБРЕЗАТЬ"
+
+        life = [
+            (
+                f"ЖИЗНЬ_СТРОКА_{index:03d}: "
+                + "биографические сведения и социальный анамнез сохранены полностью; " * 3
+            ).strip()
+            for index in range(1, 111)
+        ]
+        life[29] = (
+            "Психический статус родственников подробно не оценивался; "
+            "это повествовательная строка анамнеза жизни."
+        )
+        life[72] = (
+            "Лечение в детстве проводилось по поводу соматического заболевания; "
+            "это не новый раздел лечения."
+        )
+        life[-1] = "АНАМНЕЗ_ЖИЗНИ_ФИНАЛ_НЕ_ОБРЕЗАТЬ"
+
+        disease = [
+            "Заболевание развивалось постепенно.",
+            "Сведения о динамике состояния сохранены.",
+        ]
+        mental = [
+            "Контактен, ориентирован, отвечает по существу.",
+            "Эмоциональные реакции адекватны ситуации.",
+        ]
+
+        somatic = [
+            (
+                f"СОМАТИКА_СТРОКА_{index:03d}: "
+                + "соматические данные описаны подробно и без сокращения; " * 3
+            ).strip()
+            for index in range(1, 121)
+        ]
+        somatic[33] = (
+            "Диагноз терапевта ранее уточнялся амбулаторно; "
+            "эта фраза является частью соматического статуса."
+        )
+        somatic[78] = (
+            "ЭЭГ ранее выполнялась без патологической активности; "
+            "эта строка не является служебным заголовком."
+        )
+        somatic[96] = (
+            "Лечение сопутствующей патологии продолжается; "
+            "это повествовательная строка соматического статуса."
+        )
+        somatic[-1] = "СОМАТИЧЕСКИЙ_ФИНАЛ_НЕ_ОБРЕЗАТЬ"
+
+        def add_block(title: str, lines: list[str]) -> None:
+            heading = doc.add_paragraph()
+            midpoint = max(1, len(title) // 2)
+            heading.add_run(title[:midpoint]).bold = True
+            heading.add_run(title[midpoint:] + ":")
+            for index, line in enumerate(lines):
+                paragraph = doc.add_paragraph()
+                split_at = max(1, len(line) // 2)
+                paragraph.add_run(line[:split_at]).bold = index % 4 == 0
+                paragraph.add_run(line[split_at:]).italic = index % 6 == 0
+
+        add_block("Жалобы", complaints)
+        add_block("Анамнез жизни", life)
+        add_block("Анамнез заболевания", disease)
+        add_block("Психический статус", mental)
+        add_block("Соматический статус", somatic)
+        add_block("План обследования", ["ОАК, ОАМ, ЭКГ, ФЛГ."])
+        add_block("План лечения", ["Терапия по назначению врача."])
+        add_block("Диагноз", ["F41.2 Тестовый диагноз"])
+        doc.save(source)
+
+        parsed = MedicalTextParser().parse_docx(source)
+        parser_checks = (
+            ("complaints", parsed.complaints, complaints),
+            ("life_anamnesis", parsed.life_anamnesis, life),
+            ("somatic_status", parsed.somatic_status, somatic),
+        )
+        for field_name, value, lines in parser_checks:
+            for required in (lines[0], lines[len(lines) // 2], lines[-1]):
+                assert required in value, (
+                    f"{field_name} was truncated before required text: {required}"
+                )
+
+        navigation, service, data = _make_fixture(root)
+        data.complaints = parsed.complaints
+        data.life_anamnesis = parsed.life_anamnesis
+        data.disease_anamnesis = parsed.disease_anamnesis
+        data.mental_status = parsed.mental_status
+        data.somatic_status = parsed.somatic_status
+
+        output = root / "all-major-clinical-blocks-output"
+        created, _ = service.create_documents(
+            navigation_path=navigation,
+            output_dir=output,
+            discharge_date=data.discharge_date,
+            selected_docs=DOCUMENT_ORDER,
+            override_data=data,
+        )
+        assert len(created) == len(DOCUMENT_ORDER), created
+
+        sentinels = (
+            complaints[0],
+            complaints[-1],
+            life[0],
+            life[-1],
+            somatic[0],
+            somatic[-1],
+        )
+        for path in created:
+            text = extract_docx_text(path)
+            for sentinel in sentinels:
+                assert sentinel in text, f"{path.name}: lost long-block sentinel {sentinel}"
+
+
 def _assert_all_medical_forms_keep_long_clinical_tails() -> None:
     with TemporaryDirectory(prefix="medical-autofill-all-forms-long-text-") as temp_dir:
         root = Path(temp_dir)
@@ -384,8 +522,9 @@ def verify() -> None:
     _assert_long_source_block_is_not_cut_by_narrative_marker_words()
     _assert_long_multiline_docx_roundtrip_preserves_full_tail()
     _assert_table_and_run_fragmented_source_roundtrip()
+    _assert_all_major_clinical_blocks_survive_long_roundtrip()
     _assert_all_medical_forms_keep_long_clinical_tails()
-    print("DOCX BLOCK BOUNDARY REGRESSION OK: structural aliases + table/run-fragmented long-text integrity across all medical forms")
+    print("DOCX BLOCK BOUNDARY REGRESSION OK: structural aliases + complaints/life/somatic + table/run-fragmented long-text integrity across all medical forms")
 
 
 if __name__ == "__main__":

@@ -55,9 +55,32 @@ class MedicalParserBlocksMixin:
                 if stop_positions:
                     raw = clean_value(raw[:min(stop_positions)])
             raw = self._remove_template_noise(raw)
-            if raw and not looks_like_label(raw):
+            if raw and not self._block_value_is_only_label(raw):
                 return raw
         return ""
+
+    def _block_value_is_only_label(self, value: str) -> bool:
+        """Reject only a bare section label, never clinical prose that starts like one.
+
+        The legacy looks_like_label() helper is intentionally broad for inline
+        cleanup and treats every value starting with words such as Жалобы or
+        Анамнез as a label. For a multi-line clinical block that is unsafe:
+        a legitimate first sentence like "Жалобы на тревогу..." made the whole
+        extracted block disappear. Block extraction needs an exact structural
+        comparison instead.
+        """
+        cleaned = clean_value(value)
+        if not cleaned:
+            return True
+        normalized = normalize_match(cleaned)
+        labels = {
+            normalize_match(marker)
+            for marker in getattr(self, "SECTION_MARKERS", ())
+            if normalize_match(marker)
+        }
+        for aliases in getattr(self, "BLOCK_ALIASES", {}).values():
+            labels.update(normalize_match(alias) for alias in aliases if normalize_match(alias))
+        return normalized in labels
 
     def _extract_after_phrase(self, text: str, phrase_pattern: str) -> str:
         m = re.search(phrase_pattern, text, flags=re.IGNORECASE)
