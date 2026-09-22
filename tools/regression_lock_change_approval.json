@@ -26,7 +26,7 @@
     "smoke_combined_part04_medical_generation.py": "6b42ac0be3b90c2f0047e38e8edc284528dcc87f",
     "smoke_combined_part05_diary_basic_templates.py": "dfc1563ef9c55ed8bdb03717607aa3df6e145192",
     "smoke_combined_part06_diary_columns_settings.py": "89e1793f38d3feeb71a9262e89fc16ab1dfa3fb7",
-    "tests/desktop_intake_contract_check.py": "0e4a492078dc226a77490e6e0e95d4796625513e",
+    "tests/desktop_intake_contract_check.py": "89b03465a409f8a83e0763a3d42adfd552bb53e2",
     "tests/diagnosis_override_regression.py": "653549f2ec7f8c0a2d20152c65f2c4eb4776935a",
     "tests/golden_docx_manifest.json": "02f21858e1da5cc2d1bd270d795d34811bf0471f",
     "tests/verbal_diary_source_regression.py": "0271cd06ca2a881d07dced9a019e086ca4194dba",
