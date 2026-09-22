@@ -15,6 +15,6 @@
     "ci_gate_lock"
   ],
   "approved_blobs": {
-    "tools/docx_block_boundary_regression.py": "6f380c6cef65e11e1ffd6f74b08df6d468246233"
+    "tools/docx_block_boundary_regression.py": "f48875747834ba10d0f95bc45d7c92473e2cb8cc"
   }
 }
