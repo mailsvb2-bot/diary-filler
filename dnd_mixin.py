@@ -130,6 +130,9 @@ class DragDropMixin:
             if not self._auto_select_diary_text_by_diagnosis(ask_folder=False):
                 self.status_files = status_paths
                 self._diary_text_files_auto_selected = False
+                pin_sources = getattr(self, "_pin_diary_text_source_signatures", None)
+                if callable(pin_sources):
+                    pin_sources()
                 self._remember_dialog_directory(DIR_DIARY_TEXTS, status_paths[0])
                 self._update_diary_text_label(success=True)
                 self._redraw_selection_controls()
@@ -142,6 +145,9 @@ class DragDropMixin:
                 # ломаем прежний путь, но кнопка UI теперь выбирает именно папку.
                 self.diary_files = diary_paths
                 self._diary_files_auto_selected = False
+                pin_sources = getattr(self, "_pin_diary_date_source_signatures", None)
+                if callable(pin_sources):
+                    pin_sources()
                 self._remember_dialog_directory(DIR_DIARY_TEMPLATES, diary_paths[0])
                 self._update_diary_template_label(success=True)
                 self._redraw_selection_controls()
