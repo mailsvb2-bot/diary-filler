@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "base_sha": "f79b91c2b64eacbb218e79e854809e854f6885d6",
-  "reason": "Explicit generation safety fix: user-triggered creation must reject re-entrant calls and suppress the queued second release of a double click so one action cannot create duplicate document sets.",
+  "base_sha": "8985e158803cd9500deb1d5b3b83639c15807f4a",
+  "reason": "Explicit user-journey safety fix: when a selected medical source has disappeared, generation must fail before staff checks or medical popups instead of asking the doctor to fill fields for a run that cannot proceed.",
   "approved_blobs": {
-    "actions_creation_orchestrator.py": "77e180022b29164f9a8cd7ab1cfb90fc8a436837"
+    "actions_creation_orchestrator.py": "2141a0735846e4ef404ca38e512d01c944f7b4d7"
   }
 }
