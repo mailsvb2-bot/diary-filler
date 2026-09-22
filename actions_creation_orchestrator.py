@@ -7,6 +7,7 @@ from tkinter import messagebox
 import os
 import subprocess
 import sys
+import time
 
 from app_config import *
 
@@ -321,6 +322,26 @@ class ActionsCreationOrchestratorMixin:
             return False
 
     def create_selected_outputs(self, *, print_after: bool = False) -> None:
+        """Serialize user-triggered generation and suppress queued double-clicks."""
+        now = time.monotonic()
+        if getattr(self, "_generation_action_in_progress", False):
+            self._set_status("Создание уже выполняется")
+            return
+        if now < float(getattr(self, "_generation_action_cooldown_until", 0.0) or 0.0):
+            self._set_status("Предыдущее создание уже завершено")
+            return
+
+        self._generation_action_in_progress = True
+        try:
+            self._create_selected_outputs_impl(print_after=print_after)
+        finally:
+            self._generation_action_in_progress = False
+            # A Tk Canvas double-click can queue the second ButtonRelease while
+            # the first synchronous generation is running. Suppress that queued
+            # click after the first call returns so it cannot create (...2).docx.
+            self._generation_action_cooldown_until = time.monotonic() + 0.75
+
+    def _create_selected_outputs_impl(self, *, print_after: bool = False) -> None:
         selected_medical = self.selected_medical_docs()
         selected_diaries = self.diaries_selected()
         if self._retry_pending_print_if_requested(
