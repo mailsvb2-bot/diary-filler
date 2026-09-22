@@ -36,6 +36,24 @@ class MedicalParserBlocksMixin:
             value_start += consumed
             value_end = self._find_next_marker_pos(text, value_start, aliases)
             raw = clean_value(text[value_start:value_end])
+            if any(normalize_match(alias) == "эпидемиологический анамнез" for alias in aliases):
+                # Admission-doctor exports often append operational text directly
+                # after epidemiology without a new formal heading. Keep those
+                # complaint/admission/referral phrases out of the epidemiology
+                # field, but do not make them global section markers that could
+                # truncate unrelated clinical blocks elsewhere.
+                stop_patterns = (
+                    r"(?im)^\s*пациент(?:ка)?\s+предъявляет\s+жалобы\b",
+                    r"(?im)^\s*целесообразна\s+госпитализация\b",
+                    r"(?im)^\s*в\s+связи\s+с\s+психическим\s+состоянием\s*,?\s*направляется\b",
+                )
+                stop_positions = []
+                for pattern in stop_patterns:
+                    match = re.search(pattern, raw)
+                    if match:
+                        stop_positions.append(match.start())
+                if stop_positions:
+                    raw = clean_value(raw[:min(stop_positions)])
             raw = self._remove_template_noise(raw)
             if raw and not looks_like_label(raw):
                 return raw
@@ -341,6 +359,19 @@ class MedicalParserBlocksMixin:
         # structural sentence in our templates and remains a boundary.
         if marker_norm.startswith("на основании"):
             return True
+
+        # Short investigation labels such as ЭПИ/ЭЭГ are also ordinary list
+        # items inside «План обследования»: «..., ФЛГ, ЭПИ, ЭЭГ.».  A terminal
+        # period or comma must not make them a new section.  Treat them as a
+        # boundary only when written as an actual label (standalone or with a
+        # colon/dash at line start; inline only with an explicit colon).
+        if marker_norm in {"эпи", "ээг"}:
+            explicit_colon = bool(re.match(r"\s*:", after_probe))
+            explicit_line_label = at_line_start and (
+                not after_on_line.strip()
+                or bool(re.match(r"\s*[:—-]", after_probe))
+            )
+            return explicit_colon or explicit_line_label
 
         if marker_norm in cls._STRICT_CLINICAL_BOUNDARY_MARKERS:
             if not at_line_start:

@@ -245,18 +245,31 @@ class MedicalParserDemographicsMixin:
             work_org = clean_value(work_org)
 
         labelled_address = re.search(
-            r"(?:место\s+жительства|адрес(?:\s+проживания|\s+регистрации|\s+места\s+жительства)?|проживает|зарегистрирован(?:а)?(?:\s+по\s+адресу)?)"
+            r"(?:"
+            r"место\s+жительства|"
+            r"(?:по\s+)?адрес(?:у|\s+проживания|\s+регистрации|\s+места\s+жительства)?|"
+            r"проживает|"
+            r"зарегистрирован(?:а)?(?:\s+по\s+адресу)?"
+            r")"
             r"\s*[:.-]?\s*(.+)$",
             compact,
             flags=re.IGNORECASE,
         )
         if labelled_address:
-            address = clean_value(labelled_address.group(1))
-            address = self._cut_at_next_inline_marker(address, self.FIELD_ALIASES["registered"])
-            address, inline_work = self._split_address_work_tail(address)
-            if inline_work and not work_org:
-                work_org = inline_work
-            address = clean_value(address)
+            candidate_address = clean_value(labelled_address.group(1))
+            candidate_address = self._cut_at_next_inline_marker(
+                candidate_address, self.FIELD_ALIASES["registered"]
+            )
+            candidate_address, inline_work = self._split_address_work_tail(candidate_address)
+            candidate_address = clean_value(candidate_address)
+            # A narrative sentence such as «В настоящее время проживает с
+            # сестрой. С 2018 года ...» is not a demographic address.  Bare
+            # «проживает» is accepted only when its tail is compact and actually
+            # address-shaped.
+            if self._looks_like_address_tail(candidate_address):
+                address = candidate_address
+                if inline_work and not work_org:
+                    work_org = inline_work
         elif birth_or_age:
             # Если адрес без подписи идёт после возраста: "..., 45 лет, Н. Новгород, ул. ..., ООО Завод".
             pos = compact.lower().find(birth_or_age.lower())
@@ -297,11 +310,31 @@ class MedicalParserDemographicsMixin:
 
     @staticmethod
     def _looks_like_address_tail(text: str) -> bool:
-        low = normalize_match(text)
+        raw = clean_value(text)
+        low = normalize_match(raw)
         if not low or looks_like_label(low):
             return False
-        address_hints = (
-            "г.", "город", "н.", "нижний", "новгород", "ул", "улица", "просп", "пр-т",
-            "пер.", "дом", "д.", "кв", "район", "область", "пос", "село", "деревня"
+        # Addresses are compact demographic values.  A long clinical paragraph
+        # must never pass merely because it contains substrings such as «ул» in
+        # «улице», «пос» in «после» or year abbreviations «г.».
+        if len(raw) > 500:
+            return False
+
+        strict_patterns = (
+            r"(?<![А-Яа-яA-Za-z0-9])г\.\s*[А-ЯЁA-Z]",
+            r"\bгород\s+[А-ЯЁA-Z]",
+            r"\bН(?:ижний)?\.?\s+Новгород\b",
+            r"(?<![А-Яа-яA-Za-z0-9])ул\.\s*[А-ЯЁA-Z0-9]",
+            r"\bулица\s+[А-ЯЁA-Z0-9]",
+            r"(?<![А-Яа-яA-Za-z0-9])д\.\s*\d",
+            r"\bдом\s*\d",
+            r"(?<![А-Яа-яA-Za-z0-9])кв\.\s*\d",
+            r"\bрайон\b",
+            r"\bобласть\b",
+            r"\bсело\s+[А-ЯЁA-Z]",
+            r"\bдеревня\s+[А-ЯЁA-Z]",
+            r"\bпроспект\s+[А-ЯЁA-Z0-9]",
+            r"(?<![А-Яа-яA-Za-z0-9])пр-т\s+[А-ЯЁA-Z0-9]",
+            r"\bпереулок\s+[А-ЯЁA-Z0-9]",
         )
-        return any(hint in low for hint in address_hints)
+        return any(re.search(pattern, raw) for pattern in strict_patterns)

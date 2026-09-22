@@ -637,7 +637,13 @@ for path in created_no_epi:
     text = extract_docx_text(path)
     assert "сюда подставлять" not in text.lower(), path
     assert "выбирается в ui" not in text.lower(), path
-    assert not __import__("re").search(r"(?<![A-Za-zА-ЯЁа-яё])ЭПИ(?![A-Za-zА-ЯЁа-яё])", text), path
+    # No standalone service EPI block may survive when no EPI file was
+    # supplied.  The abbreviation is still valid clinical content inside
+    # «План обследования: ..., ЭПИ, ЭЭГ.» and must not be globally erased.
+    assert not __import__("re").search(
+        r"(?im)^\s*ЭПИ(?:\s*(?:[:\-–—(]|$))",
+        text,
+    ), path
 
 
 # --- User contract: selection -> merged popup -> exact DOCX kit and content ---

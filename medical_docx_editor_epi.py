@@ -24,10 +24,22 @@ def remove_epi_from_text(text: str) -> str:
     return cleaned.strip()
 
 def remove_epi_mentions_from_document(doc: DocxDocument) -> None:
-    """Если ЭПИ-файл не выбран, удаляет все видимые упоминания ЭПИ из результата."""
+    """Удалить только самостоятельный служебный блок ЭПИ.
+
+    «ЭПИ» также является обычным пунктом плана обследования.  Глобальное
+    удаление слова портило строки вида «План обследования: ..., ЭПИ, ЭЭГ.».
+    При отсутствии отдельного ЭПИ-файла чистим только абзац, который сам
+    начинается с метки ЭПИ.
+    """
+    service_marker = re.compile(
+        r"^\s*ЭПИ(?:\s*(?:[:\-–—(]|$))",
+        re.IGNORECASE,
+    )
     for paragraph in list(iter_all_paragraphs(doc)):
-        text = paragraph.text
-        if not EPI_WORD_RE.search(text or ""):
+        text = paragraph.text or ""
+        if not EPI_WORD_RE.search(text):
+            continue
+        if not service_marker.search(text):
             continue
         cleaned = remove_epi_from_text(text)
         if cleaned.strip(" ,.;:-–—()"):

@@ -37,6 +37,8 @@ from window_mixin import WindowMixin
 from medical_constants import DOCUMENT_ORDER
 from medical_docx_reader import extract_docx_text
 from medical_models import PatientData
+from medical_parser import MedicalTextParser
+from medical_docx_editor_epi import remove_epi_mentions_from_document
 from tools.generation_performance_profile import _make_fixture
 
 
@@ -593,6 +595,62 @@ def _assert_pending_print_close_safety(root: Path) -> None:
         assert len(prompts) == prompt_count, prompts
     finally:
         window_mixin.messagebox.askyesno = original_askyesno
+
+
+def _assert_compact_address_never_consumes_clinical_residence_narrative() -> None:
+    text = (
+        "30.09.2025 10:00 Осмотр врача приёмного покоя.\n"
+        "Иванова Ирина Ивановна, 24.07.1997, по адресу: "
+        "Н. Новгород, Ленинский район, ул. Паскаля 1а.\n"
+        "Работает в организации: Тестовая организация\n"
+        "Должность: специалист\n"
+        "Жалобы на момент осмотра: тревога.\n"
+        "Анамнез жизни: Родилась в полной семье.\n"
+        "Анамнез заболевания: Считает себя больной несколько лет. "
+        "В 2018 году переехала в г. Нижний Новгород. "
+        "В настоящее время проживает с сестрой. "
+        "С 2018 года по 2023 год длительно лечилась амбулаторно. "
+        "Принимала терапию, состояние менялось постепенно. "
+        "КОНЕЦ_АНАМНЕЗА_НЕ_АДРЕС.\n"
+        "Психический статус: Контакту доступна.\n"
+        "Соматический статус: Без особенностей.\n"
+        "План обследования: ОАК, ОАМ, ЭКГ, ФЛГ, ЭПИ, ЭЭГ.\n"
+        "На основании данных осмотра был выставлен диагноз: F20.0 Тестовый диагноз.\n"
+        "Эпидемиологический анамнез: контактов с инфекционными больными не было."
+    )
+    data = MedicalTextParser().parse_text(text)
+    assert data.registered == "Н. Новгород, Ленинский район, ул. Паскаля 1а.", data.registered
+    assert "проживает с сестрой" in data.disease_anamnesis.lower(), data.disease_anamnesis
+    assert "КОНЕЦ_АНАМНЕЗА_НЕ_АДРЕС" in data.disease_anamnesis, data.disease_anamnesis
+    assert "лечилась амбулаторно" not in data.registered.lower(), data.registered
+    assert data.examination_plan.endswith("ЭПИ, ЭЭГ."), data.examination_plan
+
+
+def _assert_epidemiology_stops_before_post_section_admission_prose() -> None:
+    text = (
+        "Эпидемиологический анамнез: со слов пациентки, за пределы области не выезжала, "
+        "в контакте с инфекционными больными не была.\n"
+        "Венерические заболевания, туберкулёз, вирусные гепатиты отрицает.\n"
+        "Пациентка предъявляет жалобы на апатию и плохой сон.\n"
+        "Целесообразна госпитализация пациентки в профильное отделение.\n"
+        "В связи с психическим состоянием, направляется на лечение в стационар."
+    )
+    data = MedicalTextParser().parse_text(text)
+    assert "за пределы области не выезжала" in data.epidemiology, data.epidemiology
+    assert "Венерические заболевания" in data.epidemiology, data.epidemiology
+    assert "предъявляет жалобы" not in data.epidemiology.lower(), data.epidemiology
+    assert "целесообразна госпитализация" not in data.epidemiology.lower(), data.epidemiology
+    assert "направляется на лечение" not in data.epidemiology.lower(), data.epidemiology
+
+
+def _assert_epi_cleanup_preserves_examination_plan_item() -> None:
+    doc = Document()
+    plan = doc.add_paragraph("План обследования: ОАК, ОАМ, ФЛГ, ЭПИ, ЭЭГ.")
+    doc.add_paragraph("ЭПИ - служебный шаблонный блок")
+    remove_epi_mentions_from_document(doc)
+    lines = [paragraph.text for paragraph in doc.paragraphs]
+    assert plan.text == "План обследования: ОАК, ОАМ, ФЛГ, ЭПИ, ЭЭГ.", lines
+    assert all(not line.startswith("ЭПИ") for line in lines), lines
 
 
 def _assert_missing_source_fails_before_any_medical_popup(root: Path) -> None:
@@ -1513,6 +1571,9 @@ def main() -> None:
     with TemporaryDirectory(prefix="diagnosis-override-regression-") as temp_dir:
         root = Path(temp_dir)
         _assert_pending_print_close_safety(root)
+        _assert_compact_address_never_consumes_clinical_residence_narrative()
+        _assert_epidemiology_stops_before_post_section_admission_prose()
+        _assert_epi_cleanup_preserves_examination_plan_item()
         _assert_missing_source_fails_before_any_medical_popup(root)
         _assert_output_path_file_fails_before_any_medical_popup(root)
         _assert_changed_source_fails_before_any_medical_popup(root)
@@ -1540,7 +1601,7 @@ def main() -> None:
     _assert_diary_creation_path_offers_manual_fallback()
     print(
         "DIAGNOSIS OVERRIDE REGRESSION OK: UI diagnosis + verbal matching + "
-        "manual fallback + visible Word picker + digest-bound source/cache + missing/changed primary/EPI/Texts/Dates + invalid output-path early fail + DnD EPI revision pin + pending-print close safety + generation double-click guard + partial-set survival + complete partial-print retry + print retry without regeneration + .doc/.docx source + same-path replacement isolation + transactional invalid-source handling + atomic primary DnD + multi-primary/multi-EPI/multi-folder fail-safe + complete patient-session reset matrix"
+        "manual fallback + visible Word picker + compact address/anamnesis isolation + digest-bound source/cache + missing/changed primary/EPI/Texts/Dates + invalid output-path early fail + DnD EPI revision pin + pending-print close safety + generation double-click guard + partial-set survival + complete partial-print retry + print retry without regeneration + .doc/.docx source + same-path replacement isolation + transactional invalid-source handling + atomic primary DnD + multi-primary/multi-EPI/multi-folder fail-safe + complete patient-session reset matrix"
     )
 
 
