@@ -915,7 +915,7 @@ assert parser_position_doctor.position == "врач-психиатр", parser_po
 
 # Имена файлов должны сохраняться с пробелами, без подчеркиваний между словами.
 assert _medical_documents_module.safe_filename("Маркер Мужской Контрольный") == "Маркер Мужской Контрольный"
-assert _medical_documents_module.safe_filename("Сидоров/Иван:Михайлович") == "Маркер Мужской Контрольный"
+assert _medical_documents_module.safe_filename("Маркер/Мужской:Контрольный") == "Маркер Мужской Контрольный"
 assert _medical_documents_module.safe_filename("CON") == "CON_"
 assert _medical_documents_module.safe_filename("CON.txt") == "CON.txt_"
 assert safe_filename_part("LPT1.docx") == "LPT1.docx_"
