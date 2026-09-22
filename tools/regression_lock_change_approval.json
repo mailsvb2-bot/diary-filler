@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "9492ae58dd7a514dd5b1a5dcae35ccf2d90f3bea",
+  "reason": "Fix the verified diary dynamic-epicrisis regression and add an end-to-end Discharge + Diaries sick-leave path check without weakening any release guard.",
+  "required_evidence": [
+    "document_mechanics_guard",
+    "full_patient_replay",
+    "golden_docx",
+    "staff_profile_regression",
+    "gender_generation_matrix",
+    "desktop_intake_contract",
+    "intake_lifecycle_regression",
+    "packaged_desktop_intake_e2e",
+    "installer_uninstall_smoke",
+    "ci_gate_lock"
+  ],
+  "approved_blobs": {
+    "diary_service.py": "0186163e931ed7fc98ad38278523141bd697895a",
+    "tests/verbal_diary_source_regression.py": "dc0486b33036962d45ddb4906afccd305adedd2f",
+    "tools/document_mechanics_change_approval.json": "542de872f7919791cab95487c8c718883841217e"
+  }
+}
