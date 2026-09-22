@@ -366,6 +366,101 @@ class ActionsCreationOrchestratorMixin:
             self._generation_action_last_fingerprint = fingerprint
             self._generation_action_cooldown_until = time.monotonic() + 0.75
 
+    def _ensure_primary_source_available_for_generation(self, selected_medical: List[str]) -> bool:
+        """Fail before any medical popup if the selected source disappeared."""
+        if not selected_medical:
+            return True
+        navigation_var = getattr(self, "navigation_path_var", None)
+        if navigation_var is None or not hasattr(navigation_var, "get"):
+            # Compatibility for narrow test/embedding harnesses. The production
+            # app always owns navigation_path_var.
+            return True
+        navigation = str(navigation_var.get() or "").strip()
+        if not navigation or not Path(navigation).is_file():
+            try:
+                messagebox.showerror(
+                    "Источник пациента недоступен",
+                    "Выбранный медицинский документ пациента больше не найден.\n\n"
+                    "Выберите исходный Word-документ заново. Данные и дополнительные "
+                    "поля для нового комплекта пока не запрашивались.",
+                )
+            except Exception:
+                pass
+            self._set_status("Создание отменено: источник пациента недоступен")
+            return False
+
+        loaded_signature = getattr(self, "_loaded_primary_source_signature", None)
+        signature_getter = getattr(self, "_primary_document_source_signature", None)
+        if loaded_signature is not None and callable(signature_getter):
+            try:
+                current_signature = signature_getter(navigation)
+            except Exception:
+                current_signature = None
+            if current_signature != loaded_signature:
+                try:
+                    messagebox.showerror(
+                        "Источник пациента изменился",
+                        "Выбранный Word-документ был изменён или заменён после загрузки в программу.\n\n"
+                        "Чтобы не смешать данные разных пациентов, выберите документ заново и проверьте карточку перед созданием.",
+                    )
+                except Exception:
+                    pass
+                self._set_status("Создание отменено: источник пациента изменился")
+                return False
+        return True
+
+    def _ensure_epi_source_available_for_generation(self, selected_medical: List[str]) -> bool:
+        """Prevent a separately selected EPI from changing behind the patient card."""
+        if not selected_medical:
+            return True
+        path_var = getattr(self, "epi_path_var", None)
+        if path_var is None or not hasattr(path_var, "get"):
+            return True
+        epi_path = str(path_var.get() or "").strip()
+        if not epi_path:
+            return True
+
+        present_var = getattr(self, "epi_present_var", None)
+        present = str(present_var.get() if present_var is not None and hasattr(present_var, "get") else "да").strip().casefold()
+        if present in {"нет", "no", "false", "0"}:
+            return True
+
+        if not Path(epi_path).is_file():
+            try:
+                messagebox.showerror(
+                    "Файл ЭПИ недоступен",
+                    "Отдельно выбранный файл ЭПИ больше не найден.\n\n"
+                    "Выберите ЭПИ заново или отключите его перед созданием документов.",
+                )
+            except Exception:
+                pass
+            self._set_status("Создание отменено: файл ЭПИ недоступен")
+            return False
+
+        signature_getter = getattr(self, "_primary_document_source_signature", None)
+        loaded_signature = getattr(self, "_loaded_epi_source_signature", None)
+        if callable(signature_getter):
+            try:
+                current_signature = signature_getter(epi_path)
+            except Exception:
+                current_signature = None
+            if loaded_signature is None and current_signature is not None:
+                # Compatibility for a path supplied programmatically instead of
+                # through choose_epi(); establish a baseline for this session.
+                self._loaded_epi_source_signature = current_signature
+            elif current_signature != loaded_signature:
+                try:
+                    messagebox.showerror(
+                        "Файл ЭПИ изменился",
+                        "Отдельно выбранный ЭПИ был изменён или заменён после загрузки в программу.\n\n"
+                        "Чтобы не смешать данные разных пациентов, выберите файл ЭПИ заново перед созданием документов.",
+                    )
+                except Exception:
+                    pass
+                self._set_status("Создание отменено: файл ЭПИ изменился")
+                return False
+        return True
+
     def _create_selected_outputs_impl(self, *, print_after: bool = False) -> None:
         selected_medical = self.selected_medical_docs()
         selected_diaries = self.diaries_selected()
@@ -377,6 +472,10 @@ class ActionsCreationOrchestratorMixin:
             return
         if not selected_medical and not selected_diaries:
             messagebox.showwarning("Ничего не выбрано", "Отметьте хотя бы один документ или «Дневники наблюдения».")
+            return
+        if not self._ensure_primary_source_available_for_generation(selected_medical):
+            return
+        if not self._ensure_epi_source_available_for_generation(selected_medical):
             return
         if not self._ensure_staff_profile_for_generation():
             self._set_status("Создание отменено: укажите сотрудников")

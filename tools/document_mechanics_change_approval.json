@@ -1,8 +1,10 @@
 {
   "schema_version": 1,
-  "base_sha": "f79b91c2b64eacbb218e79e854809e854f6885d6",
-  "reason": "Explicit generation safety fix: user-triggered creation must reject re-entrant calls and suppress the queued second release of a double click so one action cannot create duplicate document sets.",
+  "base_sha": "8985e158803cd9500deb1d5b3b83639c15807f4a",
+  "reason": "Explicit patient-integrity hardening: generation must fail before prompts when the primary source or separately selected EPI disappeared or changed on disk, and primary source identity plus parse cache must be bound to SHA-256 so same-size/same-timestamp replacements cannot reuse another patient's data.",
   "approved_blobs": {
-    "actions_creation_orchestrator.py": "77e180022b29164f9a8cd7ab1cfb90fc8a436837"
+    "actions_creation_orchestrator.py": "ca050d920564c273aec41b8296713b8480ad3509",
+    "app_initialization.py": "826379f7a0c3a59f1310301ab80f367026652aa3",
+    "files_mixin.py": "0bd830d8b8964fe54fe5331503ad222790f5f0c8"
   }
 }
