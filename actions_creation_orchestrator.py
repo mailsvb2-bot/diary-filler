@@ -628,6 +628,12 @@ class ActionsCreationOrchestratorMixin:
                 messagebox.showwarning("Принтер не выбран", "Выберите принтер перед печатью или используйте кнопку сохранения без печати.")
                 return
 
+        # Re-check after all potentially long-running doctor popups. A synced or
+        # network Texts/Dates file can change while the user is filling fields;
+        # generation must still consume the exact revision that was selected.
+        if not self._ensure_diary_input_sources_available_for_generation(selected_diaries):
+            return
+
         self._start_progress()
         created_medical: List[Path] = []
         diary_result = None
