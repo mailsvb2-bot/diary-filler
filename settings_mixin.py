@@ -335,7 +335,7 @@ class SettingsMixin:
                 return
             preview_var.set(
                 desktop_build_patient_folder_name(
-                    fio="Иванов Иван Иванович",
+                    fio="Маркер Мужской Тестовый",
                     admission_date="10.06.2026",
                     discharge_date="20.06.2026",
                     settings={"parts": parts, "date_format": date_format_var.get()},
