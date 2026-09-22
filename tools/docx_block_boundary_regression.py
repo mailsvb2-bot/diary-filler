@@ -5,6 +5,7 @@ alias used to locate a block must also be a valid boundary marker.
 """
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import sys
