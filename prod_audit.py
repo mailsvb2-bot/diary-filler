@@ -543,11 +543,11 @@ def _assert_shared_gender_contract() -> None:
     if len(GENDER_WORD_PAIRS) < 190:
         _fail("canonical gender vocabulary unexpectedly lost known clinical pairs")
     for fio, expected in (
-        ("Иванов И.И.", "male"),
-        ("Иванова И.И.", "female"),
-        ("Шевченко Алексей Сергеевич", "male"),
-        ("Шевченко Анна Сергеевна", "female"),
-        ("Шевченко А.А.", None),
+        ("Мужской М.М.", "male"),
+        ("Женская Ж.Ж.", "female"),
+        ("Маркер Мужской Проверочный", "male"),
+        ("Маркер Женская Проверочная", "female"),
+        ("Маркер А.А.", None),
     ):
         if detect_gender_from_patient_name(fio) != expected:
             _fail(f"canonical gender detection is broken for {fio}")
@@ -1138,14 +1138,14 @@ def _assert_treatment_popup_contract() -> None:
     parser = MedicalDocumentService().parser
     no_marker = parser.parse_text("""
 Первичный осмотр
-Ф.И.О.: Иванов Иван Иванович
+Ф.И.О.: Маркер Мужской Тестовый
 Год рождения: 1990
 За время лечения состояние без динамики.
 Диагноз: F41.2 тест
 """)
     has_marker = parser.parse_text("""
 Первичный осмотр
-Ф.И.О.: Иванов Иван Иванович
+Ф.И.О.: Маркер Мужской Тестовый
 Год рождения: 1990
 Назначенное лечение терапия по схеме.
 Диагноз: F41.2 тест
