@@ -16,6 +16,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 APPROVAL_PATH = ROOT / "tools" / "document_mechanics_change_approval.json"
@@ -107,6 +108,12 @@ def _exact_approval(base: str, protected: list[str]) -> tuple[bool, str]:
     return True, str(approval.get("reason") or "explicit exact-blob approval")
 
 
+def _print_console_safe(message: str) -> None:
+    """Print diagnostics without depending on the Windows console code page."""
+    encoding = getattr(sys.stdout, "encoding", None) or "utf-8"
+    safe = message.encode(encoding, errors="backslashreplace").decode(encoding, errors="replace")
+    print(safe)
+
 def main() -> None:
     try:
         base = _base_ref()
@@ -127,7 +134,7 @@ def main() -> None:
                 + "\n".join(f"- {path}" for path in protected)
                 + "\nMove the change outside the existing document mechanics, or provide an exact-base/exact-blob approval for an explicit mechanics task."
             )
-        print(
+        _print_console_safe(
             "DOCUMENT MECHANICS GUARD OK: exact protected mechanics change approved; "
             f"base={base}; files={', '.join(protected)}; reason={reason}"
         )
