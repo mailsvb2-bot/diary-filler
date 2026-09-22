@@ -67,7 +67,7 @@ assert nav.read_bytes() == nav_bytes_before_generation, "primary source DOCX was
 assert epi.read_bytes() == epi_bytes_before_generation, "EPI source was modified during generation"
 for created_path in created:
     assert "_" not in created_path.name, created_path.name
-assert any(path.name == "Иванова Ирина Ивановна Выписной эпикриз.docx" for path in created), [p.name for p in created]
+assert any(path.name == "Маркер Женская Тестовая Выписной эпикриз.docx" for path in created), [p.name for p in created]
 combined_text = "\n".join(extract_docx_text(path) for path in created)
 assert "F99.9 Тестовый диагноз из UI" in combined_text
 discharge_path = next(path for path in created if "Выписной" in path.name)
@@ -254,7 +254,7 @@ assert universal_drop_probe._classify_dropped_file(str(epi)) == "epi"
 rich_epi = OUT / "ЭПИ Иванов.docx"
 rich_epi_doc = Document()
 rich_epi_doc.add_paragraph("ЭПИ")
-rich_epi_doc.add_paragraph("Ф.И.О.: Иванов Иван Иванович")
+rich_epi_doc.add_paragraph("Ф.И.О.: Маркер Мужской Тестовый")
 rich_epi_doc.add_paragraph("Дата рождения: 01.01.1980")
 rich_epi_doc.add_paragraph("Диагноз: F41.2 тест")
 rich_epi_doc.add_paragraph("Эпидемиологический анамнез без особенностей.")
@@ -685,7 +685,7 @@ class _ContractRoot:
 def _make_user_contract_primary(path: Path) -> None:
     doc = Document()
     doc.add_paragraph("10.06.2026 Первичный осмотр")
-    doc.add_paragraph("Ф.И.О.: Петров Пётр Петрович")
+    doc.add_paragraph("Ф.И.О.: Маркер Мужской Дополнительный")
     doc.add_paragraph("Год рождения: 1977")
     doc.add_paragraph("Зарегистрирован: Н. Новгород, ул. Проверочная, д. 1")
     doc.add_paragraph("Работает в организации: не работает")
@@ -871,12 +871,12 @@ try:
 
     contract_created = sorted((contract_dir / "created").glob("*.docx"))
     assert [path.name for path in contract_created] == [
-        "Петров Пётр Петрович Выписной эпикриз.docx",
-        "Петров Пётр Петрович Первичный осмотр.docx",
+        "Маркер Мужской Дополнительный Выписной эпикриз.docx",
+        "Маркер Мужской Дополнительный Первичный осмотр.docx",
     ], [path.name for path in contract_created]
     contract_text_by_name = {path.name: extract_docx_text(path) for path in contract_created}
-    contract_primary_text = contract_text_by_name["Петров Пётр Петрович Первичный осмотр.docx"]
-    contract_discharge_text = contract_text_by_name["Петров Пётр Петрович Выписной эпикриз.docx"]
+    contract_primary_text = contract_text_by_name["Маркер Мужской Дополнительный Первичный осмотр.docx"]
+    contract_discharge_text = contract_text_by_name["Маркер Мужской Дополнительный Выписной эпикриз.docx"]
     assert "История болезни № К-900" in contract_primary_text, contract_primary_text
     assert "План лечения: терапия из пользовательского popup" in contract_primary_text, contract_primary_text
     assert "Выписной эпикриз № К-900" in contract_discharge_text, contract_discharge_text
@@ -968,7 +968,7 @@ try:
         snapshot = kwargs.get("patient_data_snapshot")
         assert snapshot is not None
         rollback_snapshot_ids["diary"] = id(snapshot)
-        assert snapshot.output_fio == "Петров Пётр Петрович", snapshot
+        assert snapshot.output_fio == "Маркер Мужской Дополнительный", snapshot
         assert snapshot.discharge_date == "11.06.2026", snapshot
         assert snapshot.output_fio != rollback_app.patient_name_var.get()
         assert snapshot.discharge_date != rollback_app.discharge_date_var.get()
