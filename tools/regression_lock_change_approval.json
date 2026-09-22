@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "e70c5cd8909cfb8c31dbbf6900585f3ad8b83857",
-  "reason": "DnD source-folder ambiguity hardening: preserve atomic patient-batch and source-revision protections while rejecting multiple Dates or multiple Texts folders before applying any primary source.",
+  "reason": "Early output-path integrity: preserve DnD/source-revision hardening while rejecting a file-valued result path before staff checks or medical popups, without creating directories during preflight.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -15,12 +15,12 @@
     "ci_gate_lock"
   ],
   "approved_blobs": {
-    "actions_creation_orchestrator.py": "25363e5f581d2cf02167f73b8d731f063136cdce",
+    "actions_creation_orchestrator.py": "bf151647aeaa69774c4ed5e4da543124eac5ead6",
     "files_mixin.py": "d8e2a0f564479784defeb0e7c410528b15b50bb3",
     "printer_models.py": "4d142106ac06f57f2641bd0c8af81e12e40b2f24",
     "smoke_combined_part01_setup_contracts.py": "e4dc3dc12b9674a6f6146c6b5141cb1987a62350",
-    "tests/diagnosis_override_regression.py": "ffa1dc8698f91aace46ad499420e5bf6c02fb8d6",
-    "tools/document_mechanics_change_approval.json": "16061a2dfeea190bf82cbaa04f8607de163acce9",
+    "tests/diagnosis_override_regression.py": "09243285f686f8d5866621b026356cb214164a94",
+    "tools/document_mechanics_change_approval.json": "bb4758000209ae16c8645a078b6d03631c3fd687",
     "settings_mixin.py": "988eec68abac613d607800950c9fed0a833c4f80",
     "tools/staff_profile_regression.py": "5150fd35f82743759c830c492be2dee640d8be14",
     "startup.py": "5478be74293f396040f0f0bd35a1541fb440f4a2",

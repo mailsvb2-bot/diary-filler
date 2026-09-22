@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "base_sha": "ff54f992bb63799dc1628b667e0d1145cc0bb000",
-  "reason": "Explicit DnD patient-integrity hardening: primary application returns an explicit result so a failed new primary cannot partially attach EPI/Texts/Dates to the previously open patient.",
+  "base_sha": "b7fa9914193552163e1f960c9a85da387d3c435f",
+  "reason": "Explicit user-journey safety fix: reject an output target that is an existing file before staff checks or medical popups, without creating directories during preflight.",
   "approved_blobs": {
-    "files_mixin.py": "d8e2a0f564479784defeb0e7c410528b15b50bb3"
+    "actions_creation_orchestrator.py": "bf151647aeaa69774c4ed5e4da543124eac5ead6"
   }
 }
