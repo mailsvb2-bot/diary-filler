@@ -522,6 +522,41 @@ class ActionsCreationOrchestratorMixin:
             return False
         return True
 
+    def _ensure_result_output_path_ready_for_prompts(self) -> bool:
+        """Reject a known-bad output target before asking the doctor for more data.
+
+        This preflight is deliberately read-only: a missing directory remains valid
+        and is created later only when generation actually starts.
+        """
+        resolver = getattr(self, "_result_output_dir", None)
+        if not callable(resolver):
+            # Compatibility for narrow test/embedding harnesses. Production owns
+            # ActionsSelectionMixin and therefore always provides the resolver.
+            return True
+        try:
+            output_dir = Path(resolver()).expanduser()
+        except Exception:
+            # Let the existing generation boundary report unusual resolver errors.
+            return True
+        try:
+            is_existing_file = output_dir.exists() and not output_dir.is_dir()
+        except OSError:
+            return True
+        if not is_existing_file:
+            return True
+
+        try:
+            messagebox.showerror(
+                "Папка результата недоступна",
+                "Выбранный путь сохранения указывает на файл, а не на папку.\n\n"
+                "Выберите другую папку результата и повторите создание. "
+                "Дополнительные медицинские данные пока не запрашивались.",
+            )
+        except Exception:
+            pass
+        self._set_status("Создание отменено: выберите папку результата")
+        return False
+
     def _create_selected_outputs_impl(self, *, print_after: bool = False) -> None:
         selected_medical = self.selected_medical_docs()
         selected_diaries = self.diaries_selected()
@@ -542,6 +577,8 @@ class ActionsCreationOrchestratorMixin:
         if not self._ensure_epi_source_available_for_generation(selected_medical):
             return
         if not self._ensure_diary_input_sources_available_for_generation(selected_diaries):
+            return
+        if not self._ensure_result_output_path_ready_for_prompts():
             return
         if not self._ensure_staff_profile_for_generation():
             self._set_status("Создание отменено: укажите сотрудников")
