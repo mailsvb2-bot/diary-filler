@@ -314,6 +314,111 @@ def _assert_table_and_run_fragmented_source_roundtrip() -> None:
             assert long_lines[-1] in text, f"{path.name}: fragmented source tail truncated"
 
 
+def _assert_1250_line_clinical_block_survives_full_roundtrip() -> None:
+    """A very large clinical block must have no hidden line-count truncation."""
+    with TemporaryDirectory(prefix="medical-autofill-1250-line-stress-") as temp_dir:
+        root = Path(temp_dir)
+        source = root / "stress-1250-lines.docx"
+        doc = Document()
+        doc.add_paragraph("10.06.2026 Первичный осмотр")
+        doc.add_paragraph("Ф.И.О.: Стресс Тест Тысячастроковый")
+        doc.add_paragraph("Дата рождения: 01.01.1980")
+        doc.add_paragraph("Анамнез заболевания:")
+
+        stress_lines = [
+            (
+                f"СТРЕСС_АНАМНЕЗ_СТРОКА_{index:04d}: "
+                + "подробное клиническое описание должно сохраниться целиком без ограничения числа строк; " * 2
+            ).strip()
+            for index in range(1, 1251)
+        ]
+        stress_lines[249] = (
+            "СТРЕСС_АНАМНЕЗ_СТРОКА_0250: Лечение ранее проводилось амбулаторно; "
+            "это повествовательный текст, а не новый структурный раздел."
+        )
+        stress_lines[499] = (
+            "СТРЕСС_АНАМНЕЗ_СТРОКА_0500: Диагноз ранее уточнялся; "
+            "эта строка остаётся внутри длинного анамнеза."
+        )
+        stress_lines[749] = (
+            "СТРЕСС_АНАМНЕЗ_СТРОКА_0750: Психический статус в динамике улучшался; "
+            "это часть анамнеза, а не заголовок."
+        )
+        stress_lines[999] = (
+            "СТРЕСС_АНАМНЕЗ_СТРОКА_1000: ЭПИ и ЭЭГ ранее выполнялись; "
+            "эти слова внутри повествования не должны обрывать блок."
+        )
+        stress_tail = "СТРЕСС_АНАМНЕЗ_ФИНАЛ_1250_PLUS_НЕ_ОБРЕЗАТЬ"
+
+        for index, line in enumerate(stress_lines):
+            paragraph = doc.add_paragraph()
+            split_at = max(1, len(line) // 2)
+            paragraph.add_run(line[:split_at]).bold = index % 11 == 0
+            paragraph.add_run(line[split_at:]).italic = index % 13 == 0
+        doc.add_paragraph(stress_tail)
+        doc.add_paragraph("Психический статус:")
+        doc.add_paragraph("Контактен, ориентирован, отвечает по существу.")
+        doc.add_paragraph("Соматический статус:")
+        doc.add_paragraph("Без существенных особенностей.")
+        doc.add_paragraph("План обследования:")
+        doc.add_paragraph("ОАК, ОАМ, ЭКГ, ФЛГ.")
+        doc.add_paragraph("План лечения:")
+        doc.add_paragraph("Терапия по назначению врача.")
+        doc.add_paragraph("Диагноз:")
+        doc.add_paragraph("F41.2 Тестовый диагноз")
+        doc.save(source)
+
+        parsed = MedicalTextParser().parse_docx(source)
+        parsed_lines = [
+            line.strip()
+            for line in parsed.disease_anamnesis.splitlines()
+            if line.strip()
+        ]
+        assert len(parsed_lines) == 1251, (
+            f"1250+ line source changed line count: {len(parsed_lines)}"
+        )
+        for required in (
+            stress_lines[0],
+            stress_lines[249],
+            stress_lines[499],
+            stress_lines[749],
+            stress_lines[999],
+            stress_lines[-1],
+            stress_tail,
+        ):
+            assert required in parsed.disease_anamnesis, (
+                "1250+ line source was truncated before required text: " + required
+            )
+
+        navigation, service, data = _make_fixture(root)
+        data.disease_anamnesis = parsed.disease_anamnesis
+        data.mental_status = parsed.mental_status
+        data.somatic_status = parsed.somatic_status
+        output = root / "stress-1250-line-output"
+        created, _ = service.create_documents(
+            navigation_path=navigation,
+            output_dir=output,
+            discharge_date=data.discharge_date,
+            selected_docs=DOCUMENT_ORDER,
+            override_data=data,
+        )
+        assert len(created) == len(DOCUMENT_ORDER), created
+
+        expected_ids = {
+            f"СТРЕСС_АНАМНЕЗ_СТРОКА_{index:04d}"
+            for index in range(1, 1251)
+        }
+        for path in created:
+            text = extract_docx_text(path)
+            actual_ids = set(re.findall(r"СТРЕСС_АНАМНЕЗ_СТРОКА_\d{4}", text))
+            assert actual_ids == expected_ids, (
+                f"{path.name}: 1250-line clinical block lost IDs; "
+                f"missing={sorted(expected_ids - actual_ids)[:10]}, "
+                f"extra={sorted(actual_ids - expected_ids)[:10]}"
+            )
+            assert stress_tail in text, f"{path.name}: 1250+ line final tail was truncated"
+
+
 def _assert_all_major_clinical_blocks_survive_long_roundtrip() -> None:
     """Large complaints/life/somatic blocks must survive parse + all 7 renderers."""
     with TemporaryDirectory(prefix="medical-autofill-all-major-long-blocks-") as temp_dir:
@@ -522,9 +627,10 @@ def verify() -> None:
     _assert_long_source_block_is_not_cut_by_narrative_marker_words()
     _assert_long_multiline_docx_roundtrip_preserves_full_tail()
     _assert_table_and_run_fragmented_source_roundtrip()
+    _assert_1250_line_clinical_block_survives_full_roundtrip()
     _assert_all_major_clinical_blocks_survive_long_roundtrip()
     _assert_all_medical_forms_keep_long_clinical_tails()
-    print("DOCX BLOCK BOUNDARY REGRESSION OK: structural aliases + complaints/life/somatic + table/run-fragmented long-text integrity across all medical forms")
+    print("DOCX BLOCK BOUNDARY REGRESSION OK: structural aliases + 1250-line stress + complaints/life/somatic + table/run-fragmented long-text integrity across all medical forms")
 
 
 if __name__ == "__main__":
