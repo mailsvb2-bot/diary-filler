@@ -8,6 +8,7 @@ sources are part of the supported UI contract.
 from __future__ import annotations
 
 import copy
+import hashlib
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
@@ -22,6 +23,7 @@ import actions_creation_orchestrator
 import printer_support
 import window_mixin
 from actions_medical_flow import ActionsMedicalFlowMixin
+from app_initialization import AppInitializationMixin
 from actions_diary_flow import ActionsDiaryFlowMixin
 from actions_creation_orchestrator import ActionsCreationOrchestratorMixin
 from diary_text_selection import (
@@ -120,6 +122,21 @@ class _GenerationGateHarness(ActionsCreationOrchestratorMixin):
         if self.impl_calls == 1:
             # Simulate a nested/re-entrant click while the first action is active.
             self.create_selected_outputs(print_after=print_after)
+
+
+class _ParseCacheService:
+    def __init__(self):
+        self.calls = 0
+
+    def parse_primary_document(self, _path):
+        self.calls += 1
+        return PatientData(fio="Свежий Пациент Тестович")
+
+
+class _ParseCacheHarness(AppInitializationMixin):
+    def __init__(self):
+        self.service = _ParseCacheService()
+        self._primary_parse_cache = {}
 
 
 class _TextHarness(FilesMixin):
@@ -774,11 +791,38 @@ def _assert_full_patient_switch_reset_matrix() -> None:
     assert app.data == PatientData(), app.data
 
 
+def _assert_primary_cache_rejects_same_metadata_wrong_digest(root: Path) -> None:
+    source = root / "digest-cache.docx"
+    source.write_bytes(b"fresh-patient-bytes")
+    stat = source.stat()
+    key = str(source.resolve())
+    app = _ParseCacheHarness()
+    stale = PatientData(fio="Старый Пациент Ошибочный")
+    app._primary_parse_cache[key] = (
+        int(getattr(stat, "st_mtime_ns", int(stat.st_mtime * 1_000_000_000))),
+        int(getattr(stat, "st_ctime_ns", int(stat.st_ctime * 1_000_000_000))),
+        int(stat.st_size),
+        "0" * 64,
+        stale,
+    )
+
+    parsed = app._parse_primary_document(source)
+    assert parsed.fio == "Свежий Пациент Тестович", parsed.fio
+    assert app.service.calls == 1, app.service.calls
+
+    # Unchanged content now hits the freshly written digest-bound cache.
+    parsed_again = app._parse_primary_document(source)
+    assert parsed_again.fio == "Свежий Пациент Тестович", parsed_again.fio
+    assert app.service.calls == 1, app.service.calls
+
+
 def _assert_same_path_replacement_is_patient_switch(root: Path) -> None:
     source = root / "Первичный осмотр.docx"
     source.write_bytes(b"patient-a")
     app = _PatientSwitchHarness()
     first_signature = app._primary_document_source_signature(source)
+    assert len(first_signature) == 5, first_signature
+    assert first_signature[-1] == hashlib.sha256(b"patient-a").hexdigest(), first_signature
     app._loaded_primary_source_signature = first_signature
 
     source.write_bytes(b"patient-b-replacement")
@@ -1107,6 +1151,7 @@ def main() -> None:
         _assert_pending_print_close_safety(root)
         _assert_missing_source_fails_before_any_medical_popup(root)
         _assert_changed_source_fails_before_any_medical_popup(root)
+        _assert_primary_cache_rejects_same_metadata_wrong_digest(root)
         _assert_same_path_replacement_is_patient_switch(root)
         _assert_invalid_new_source_preserves_open_patient(root)
         _assert_multi_primary_drop_fails_safe(root)
@@ -1123,7 +1168,7 @@ def main() -> None:
     _assert_diary_creation_path_offers_manual_fallback()
     print(
         "DIAGNOSIS OVERRIDE REGRESSION OK: UI diagnosis + verbal matching + "
-        "manual fallback + visible Word picker + missing/changed-source early fail + pending-print close safety + generation double-click guard + partial-set survival + complete partial-print retry + print retry without regeneration + .doc/.docx source + same-path replacement isolation + transactional invalid-source handling + multi-primary DnD fail-safe + complete patient-session reset matrix"
+        "manual fallback + visible Word picker + digest-bound source/cache + missing/changed-source early fail + pending-print close safety + generation double-click guard + partial-set survival + complete partial-print retry + print retry without regeneration + .doc/.docx source + same-path replacement isolation + transactional invalid-source handling + multi-primary DnD fail-safe + complete patient-session reset matrix"
     )
 
 
