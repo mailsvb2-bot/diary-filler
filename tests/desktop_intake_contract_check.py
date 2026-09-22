@@ -29,7 +29,7 @@ def _assert_naming_contract() -> None:
         admission_date=date(2026, 5, 12),
         fallback_stem="Первичный осмотр",
     )
-    assert name == "Иванов И.И. май 2026", name
+    assert name == "Маркер М.М. май 2026", name
 
     custom = startup.desktop_build_patient_folder_name(
         fio="Маркер Мужской Дополнительный",
@@ -409,9 +409,9 @@ def _assert_top_level_only_and_safe_move() -> None:
         moved = startup.desktop_intake_prepare_patient_folder(
             top,
             intake_root=root,
-            folder_name="Иванов И.И. май 2026",
+            folder_name="Маркер М.М. май 2026",
         )
-        assert moved.parent.name == "Иванов И.И. май 2026"
+        assert moved.parent.name == "Маркер М.М. май 2026"
         assert moved.read_bytes() == b"same-primary"
         assert not top.exists()
 
@@ -420,7 +420,7 @@ def _assert_top_level_only_and_safe_move() -> None:
         reused = startup.desktop_intake_prepare_patient_folder(
             duplicate,
             intake_root=root,
-            folder_name="Иванов И.И. май 2026",
+            folder_name="Маркер М.М. май 2026",
         )
         assert reused == moved
         assert not duplicate.exists()
@@ -430,9 +430,9 @@ def _assert_top_level_only_and_safe_move() -> None:
         second = startup.desktop_intake_prepare_patient_folder(
             changed,
             intake_root=root,
-            folder_name="Иванов И.И. май 2026",
+            folder_name="Маркер М.М. май 2026",
         )
-        assert second.parent.name == "Иванов И.И. май 2026 (2)"
+        assert second.parent.name == "Маркер М.М. май 2026 (2)"
         assert second.read_bytes() == b"changed-primary"
 
 
@@ -442,7 +442,7 @@ def _assert_failed_transfer_does_not_leave_empty_patient_folder() -> None:
         root.mkdir()
         source = root / "Первичный.docx"
         source.write_bytes(b"locked-source")
-        patient_folder = root / "Тестов Т.Т. сентябрь 2026"
+        patient_folder = root / "Маркер М.М. сентябрь 2026"
 
         original_replace = startup.os.replace
         original_move = startup.shutil.move
@@ -492,7 +492,7 @@ def _assert_completed_copy_is_not_reported_as_failed_when_source_cleanup_is_bloc
             moved = startup.desktop_intake_prepare_patient_folder(
                 source,
                 intake_root=root,
-                folder_name="Тестов Т.Т. сентябрь 2026",
+                folder_name="Маркер М.М. сентябрь 2026",
             )
         finally:
             Path.unlink = original_unlink  # type: ignore[assignment]
