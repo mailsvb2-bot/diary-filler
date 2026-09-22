@@ -231,6 +231,89 @@ def _assert_long_multiline_docx_roundtrip_preserves_full_tail() -> None:
     assert "старый соматический статус" in lines, lines[-8:]
 
 
+def _assert_table_and_run_fragmented_source_roundtrip() -> None:
+    with TemporaryDirectory(prefix="medical-autofill-real-word-long-block-") as temp_dir:
+        root = Path(temp_dir)
+        source = root / "real-word-like-source.docx"
+        doc = Document()
+        table = doc.add_table(rows=1, cols=1)
+        cell = table.cell(0, 0)
+
+        heading = cell.paragraphs[0]
+        run = heading.add_run("Анамнез ")
+        run.bold = True
+        run = heading.add_run("заболевания")
+        run.italic = True
+        heading.add_run(":")
+
+        long_lines = [
+            (
+                f"РЕАЛЬНЫЙ_WORD_ФРАГМЕНТ_{index:03d}: "
+                + "подробное клиническое описание сохранено полностью; " * 3
+            ).strip()
+            for index in range(1, 221)
+        ]
+        long_lines[37] = "Лечение ранее проводилось амбулаторно; это часть анамнеза, а не новый раздел."
+        long_lines[81] = "Диагноз ранее менялся; строка обязана остаться внутри анамнеза."
+        long_lines[126] = "Психический статус в динамике улучшался; здесь это повествовательный текст."
+        long_lines[167] = "ЭПИ проводилось ранее; это не служебный блок ЭПИ."
+        long_lines[193] = "ЭЭГ ранее без эпилептиформной активности; это часть анамнеза."
+        long_lines[-1] = "РЕАЛЬНЫЙ_WORD_ФИНАЛ_НЕ_ОБРЕЗАТЬ"
+
+        for index, line in enumerate(long_lines):
+            paragraph = cell.add_paragraph()
+            midpoint = max(1, len(line) // 2)
+            left = paragraph.add_run(line[:midpoint])
+            right = paragraph.add_run(line[midpoint:])
+            if index % 3 == 0:
+                left.bold = True
+            if index % 5 == 0:
+                right.italic = True
+
+        mental_heading = cell.add_paragraph()
+        mental_heading.add_run("Психический ").bold = True
+        mental_heading.add_run("статус:")
+        cell.add_paragraph("Контактен, ориентирован, отвечает по существу.")
+        cell.add_paragraph("Соматический статус:")
+        cell.add_paragraph("Без существенных особенностей.")
+        doc.save(source)
+
+        parsed = MedicalTextParser().parse_docx(source)
+        for required in (
+            long_lines[0],
+            long_lines[37],
+            long_lines[81],
+            long_lines[126],
+            long_lines[167],
+            long_lines[193],
+            long_lines[-1],
+        ):
+            assert required in parsed.disease_anamnesis, (
+                "table/run-fragmented source was truncated before: " + required
+            )
+        assert "Контактен, ориентирован" in parsed.mental_status, parsed.mental_status
+
+        navigation, service, data = _make_fixture(root)
+        data.disease_anamnesis = parsed.disease_anamnesis
+        data.mental_status = parsed.mental_status
+        output = root / "real-word-like-output"
+        created, _ = service.create_documents(
+            navigation_path=navigation,
+            output_dir=output,
+            discharge_date=data.discharge_date,
+            selected_docs=DOCUMENT_ORDER,
+            override_data=data,
+        )
+        assert len(created) == len(DOCUMENT_ORDER), created
+        for path in created:
+            text = extract_docx_text(path)
+            assert long_lines[0] in text, f"{path.name}: fragmented source start missing"
+            assert long_lines[81] in text, f"{path.name}: diagnosis-like narrative disappeared"
+            assert long_lines[167] in text, f"{path.name}: EPI-like narrative disappeared"
+            assert long_lines[193] in text, f"{path.name}: EEG-like narrative disappeared"
+            assert long_lines[-1] in text, f"{path.name}: fragmented source tail truncated"
+
+
 def _assert_all_medical_forms_keep_long_clinical_tails() -> None:
     with TemporaryDirectory(prefix="medical-autofill-all-forms-long-text-") as temp_dir:
         root = Path(temp_dir)
@@ -300,8 +383,9 @@ def verify() -> None:
     _assert_alias_boundary_stops_destructive_span_deletion()
     _assert_long_source_block_is_not_cut_by_narrative_marker_words()
     _assert_long_multiline_docx_roundtrip_preserves_full_tail()
+    _assert_table_and_run_fragmented_source_roundtrip()
     _assert_all_medical_forms_keep_long_clinical_tails()
-    print("DOCX BLOCK BOUNDARY REGRESSION OK: structural aliases + long clinical text integrity across all medical forms")
+    print("DOCX BLOCK BOUNDARY REGRESSION OK: structural aliases + table/run-fragmented long-text integrity across all medical forms")
 
 
 if __name__ == "__main__":
