@@ -35,7 +35,7 @@
     "tools/gender_generation_regression_matrix.py": "4b71deb64d70a0847dd94fb4d9391e3a6df08a6d",
     "tools/generation_performance_profile.py": "82bb6005d8a1e7498bcd7a8bfa35ca08f295bdc6",
     "tools/golden_docx_regression.py": "e9f2dceac2dcea4c7a9feb042d3f34c40a106a1f",
-    "tools/privacy_diagnostics_check.py": "bbde196c3b467e64aecc5def2244c4c5a276b60c",
+    "tools/privacy_diagnostics_check.py": "4c5701d7aa21bfd4821d1355404973a16b571d7a",
     "tools/staff_profile_regression.py": "8a4291e7be727148df0d24952e9842b6f5e6faed",
     "tools/windows_desktop_intake_e2e.ps1": "c0428614ed8c54b327523802cdd93f08baf2364c",
     "tools/windows_installer_smoke.ps1": "e00014cd098322b896bd7b1d4a28a8fb1c9af20b"
