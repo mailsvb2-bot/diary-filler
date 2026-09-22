@@ -1,8 +1,9 @@
 {
   "schema_version": 1,
-  "base_sha": "acfada44c792ed8f67684030fc698a7c9f8a781a",
-  "reason": "Explicit document-integrity fix: short EPI/EEG markers must remove only real service-section headings and must preserve ordinary clinical narrative paragraphs that begin with EPI or EEG.",
+  "base_sha": "13599138d0c86ff7a7f5acd3b641164da2d76fe8",
+  "reason": "Patient-privacy scrub only: replace patient example identities in parser documentation/fixtures with non-personal technical markers; no parsing logic is changed.",
   "approved_blobs": {
-    "medical_docx_editor_utils.py": "70df8699e6b0c8e922f2f40583ea15fe7e92c3c2"
+    "medical_parser_demographics.py": "f66f9b2a98e99d9b6c720add54d54712a2f103e2",
+    "medical_parser_inline.py": "83d1b782730294ae6b09fd934b7a8daff1766527"
   }
 }
