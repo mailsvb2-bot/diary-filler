@@ -126,6 +126,16 @@ class _ManualDiaryWithoutPrimaryHarness(ActionsCreationOrchestratorMixin):
         self.status = str(text)
 
 
+class _DiaryInputRevisionHarness(ActionsCreationOrchestratorMixin, FilesMixin):
+    def __init__(self):
+        self.status_files: list[str] = []
+        self.diary_files: list[str] = []
+        self.status = ""
+
+    def _set_status(self, text):
+        self.status = str(text)
+
+
 class _ChangedEpiEarlyFailHarness(_MissingSourceEarlyFailHarness):
     def __init__(self, primary_path: Path, epi_path: Path):
         super().__init__(primary_path)
@@ -589,6 +599,47 @@ def _assert_changed_source_blocks_diary_only_but_manual_diary_mode_survives(root
     assert manual.status == "", manual.status
 
 
+def _assert_changed_diary_input_files_fail_closed(root: Path) -> None:
+    text_file = root / "selected-texts.docx"
+    dates_file = root / "selected-dates.docx"
+    text_file.write_bytes(b"texts-v1")
+    dates_file.write_bytes(b"dates-v1")
+
+    app = _DiaryInputRevisionHarness()
+    # Programmatic/legacy paths without a UI selection baseline stay compatible.
+    app.status_files = [str(text_file)]
+    app.diary_files = [str(dates_file)]
+    assert app._ensure_diary_input_sources_available_for_generation(True)
+
+    app._pin_diary_text_source_signatures()
+    app._pin_diary_date_source_signatures()
+    assert app._loaded_diary_text_source_signatures
+    assert app._loaded_diary_date_source_signatures
+
+    errors: list[tuple[str, str]] = []
+    original_error = actions_creation_orchestrator.messagebox.showerror
+    try:
+        actions_creation_orchestrator.messagebox.showerror = (
+            lambda title, message, **_kwargs: errors.append((str(title), str(message)))
+        )
+
+        text_file.write_bytes(b"texts-v2-replaced")
+        assert not app._ensure_diary_input_sources_available_for_generation(True)
+        assert app.status == "Создание отменено: источник «Тексты» изменился", app.status
+        assert errors and errors[-1][0] == "Источник дневников изменился", errors
+        assert "«Тексты»" in errors[-1][1], errors[-1][1]
+
+        app._pin_diary_text_source_signatures()
+        app._pin_diary_date_source_signatures()
+        errors.clear()
+        dates_file.write_bytes(b"dates-v2-replaced")
+        assert not app._ensure_diary_input_sources_available_for_generation(True)
+        assert app.status == "Создание отменено: источник «Даты» изменился", app.status
+        assert errors and "«Даты»" in errors[-1][1], errors
+    finally:
+        actions_creation_orchestrator.messagebox.showerror = original_error
+
+
 def _assert_changed_epi_fails_before_any_medical_popup(root: Path) -> None:
     primary = root / "stable-primary.docx"
     epi = root / "selected-epi.docx"
@@ -715,12 +766,14 @@ def _assert_auto_refresh_and_manual_pin(root: Path) -> None:
     )
     assert app.status_files == [str(new_file)], app.status_files
     assert app._diary_text_files_auto_selected is True
+    assert app._loaded_diary_text_source_signatures, app._loaded_diary_text_source_signatures
 
     assert not app._auto_select_diary_text_by_diagnosis(
         diagnosis_override="Кататоническое состояние редкого типа",
         ask_folder=False,
     )
     assert app.status_files == [], app.status_files
+    assert app._loaded_diary_text_source_signatures is None
 
     app.status_files = [str(manual_file)]
     app._diary_text_files_auto_selected = False
@@ -813,6 +866,8 @@ def _assert_full_patient_switch_reset_matrix() -> None:
         "_last_protocol_date",
         "_diary_text_files_auto_selected",
         "_diary_files_auto_selected",
+        "_loaded_diary_text_source_signatures",
+        "_loaded_diary_date_source_signatures",
     }
     required_switch_lists = {"status_files", "diary_files", "_pending_print_retry_files"}
 
@@ -960,6 +1015,7 @@ def _assert_manual_picker_accepts_doc(root: Path) -> None:
     assert app.status_files == [str(legacy)]
     assert app.diary_texts_dir == str(folder)
     assert app._diary_text_files_auto_selected is False
+    assert app._loaded_diary_text_source_signatures, app._loaded_diary_text_source_signatures
     filetypes_repr = repr(captured.get("filetypes"))
     for suffix in ("*.doc", "*.docx", "*.docm"):
         assert suffix in filetypes_repr, filetypes_repr
@@ -1228,6 +1284,7 @@ def main() -> None:
         _assert_missing_source_fails_before_any_medical_popup(root)
         _assert_changed_source_fails_before_any_medical_popup(root)
         _assert_changed_source_blocks_diary_only_but_manual_diary_mode_survives(root)
+        _assert_changed_diary_input_files_fail_closed(root)
         _assert_changed_epi_fails_before_any_medical_popup(root)
         _assert_primary_cache_rejects_same_metadata_wrong_digest(root)
         _assert_same_path_replacement_is_patient_switch(root)
@@ -1246,7 +1303,7 @@ def main() -> None:
     _assert_diary_creation_path_offers_manual_fallback()
     print(
         "DIAGNOSIS OVERRIDE REGRESSION OK: UI diagnosis + verbal matching + "
-        "manual fallback + visible Word picker + digest-bound source/cache + missing/changed primary/EPI early fail + pending-print close safety + generation double-click guard + partial-set survival + complete partial-print retry + print retry without regeneration + .doc/.docx source + same-path replacement isolation + transactional invalid-source handling + multi-primary DnD fail-safe + complete patient-session reset matrix"
+        "manual fallback + visible Word picker + digest-bound source/cache + missing/changed primary/EPI/Texts/Dates early fail + pending-print close safety + generation double-click guard + partial-set survival + complete partial-print retry + print retry without regeneration + .doc/.docx source + same-path replacement isolation + transactional invalid-source handling + multi-primary DnD fail-safe + complete patient-session reset matrix"
     )
 
 
