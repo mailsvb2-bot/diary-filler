@@ -103,10 +103,24 @@ class _MissingSourceEarlyFailHarness(ActionsCreationOrchestratorMixin):
 class _ChangedSourceEarlyFailHarness(_MissingSourceEarlyFailHarness):
     def __init__(self, source_path: Path):
         super().__init__(source_path)
-        self._loaded_primary_source_signature = ("loaded", 1, 2, 3)
+        self._loaded_primary_source_signature = ("loaded", 1, 2, 3, "a" * 64)
 
     def _primary_document_source_signature(self, _path):
-        return ("current", 4, 5, 6)
+        return ("current", 4, 5, 6, "b" * 64)
+
+
+class _ChangedEpiEarlyFailHarness(_MissingSourceEarlyFailHarness):
+    def __init__(self, primary_path: Path, epi_path: Path):
+        super().__init__(primary_path)
+        self.epi_path_var = _Var(str(epi_path))
+        self.epi_present_var = _Var("да")
+        self._loaded_primary_source_signature = ("primary", 1, 2, 3, "p" * 64)
+        self._loaded_epi_source_signature = ("epi", 1, 2, 3, "e" * 64)
+
+    def _primary_document_source_signature(self, path):
+        if Path(path) == Path(self.navigation_path_var.get()):
+            return self._loaded_primary_source_signature
+        return ("epi", 1, 2, 3, "x" * 64)
 
 
 class _GenerationGateHarness(ActionsCreationOrchestratorMixin):
@@ -534,6 +548,29 @@ def _assert_changed_source_fails_before_any_medical_popup(root: Path) -> None:
     assert app.status == "Создание отменено: источник пациента изменился", app.status
     assert errors and errors[-1][0] == "Источник пациента изменился", errors
     assert "Чтобы не смешать данные разных пациентов" in errors[-1][1], errors[-1][1]
+
+
+def _assert_changed_epi_fails_before_any_medical_popup(root: Path) -> None:
+    primary = root / "stable-primary.docx"
+    epi = root / "selected-epi.docx"
+    primary.write_bytes(b"stable-primary")
+    epi.write_bytes(b"replaced-epi")
+    app = _ChangedEpiEarlyFailHarness(primary, epi)
+    errors: list[tuple[str, str]] = []
+    original_error = actions_creation_orchestrator.messagebox.showerror
+    try:
+        actions_creation_orchestrator.messagebox.showerror = (
+            lambda title, message, **_kwargs: errors.append((str(title), str(message)))
+        )
+        app._create_selected_outputs_impl(print_after=False)
+    finally:
+        actions_creation_orchestrator.messagebox.showerror = original_error
+
+    assert app.staff_checks == 0, app.staff_checks
+    assert app.popup_checks == 0, app.popup_checks
+    assert app.status == "Создание отменено: файл ЭПИ изменился", app.status
+    assert errors and errors[-1][0] == "Файл ЭПИ изменился", errors
+    assert "не смешать данные разных пациентов" in errors[-1][1], errors[-1][1]
 
 
 def _assert_generation_action_gate_blocks_reentry_and_queued_double_click() -> None:
@@ -1151,6 +1188,7 @@ def main() -> None:
         _assert_pending_print_close_safety(root)
         _assert_missing_source_fails_before_any_medical_popup(root)
         _assert_changed_source_fails_before_any_medical_popup(root)
+        _assert_changed_epi_fails_before_any_medical_popup(root)
         _assert_primary_cache_rejects_same_metadata_wrong_digest(root)
         _assert_same_path_replacement_is_patient_switch(root)
         _assert_invalid_new_source_preserves_open_patient(root)
@@ -1168,7 +1206,7 @@ def main() -> None:
     _assert_diary_creation_path_offers_manual_fallback()
     print(
         "DIAGNOSIS OVERRIDE REGRESSION OK: UI diagnosis + verbal matching + "
-        "manual fallback + visible Word picker + digest-bound source/cache + missing/changed-source early fail + pending-print close safety + generation double-click guard + partial-set survival + complete partial-print retry + print retry without regeneration + .doc/.docx source + same-path replacement isolation + transactional invalid-source handling + multi-primary DnD fail-safe + complete patient-session reset matrix"
+        "manual fallback + visible Word picker + digest-bound source/cache + missing/changed primary/EPI early fail + pending-print close safety + generation double-click guard + partial-set survival + complete partial-print retry + print retry without regeneration + .doc/.docx source + same-path replacement isolation + transactional invalid-source handling + multi-primary DnD fail-safe + complete patient-session reset matrix"
     )
 
 
