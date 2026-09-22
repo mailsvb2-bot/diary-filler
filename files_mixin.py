@@ -84,6 +84,7 @@ PATIENT_SESSION_SWITCH_ONLY_ATTR_DEFAULTS = (
     ("_last_protocol_date", ""),
     ("_diary_text_files_auto_selected", False),
     ("_diary_files_auto_selected", False),
+    ("_loaded_epi_source_signature", None),
 )
 
 PATIENT_SESSION_SWITCH_ONLY_LIST_ATTRS = (
@@ -379,6 +380,7 @@ class FilesMixin:
         )
         if path:
             self.epi_path_var.set(path)
+            self._loaded_epi_source_signature = self._primary_document_source_signature(path)
             if hasattr(self, "epi_present_var"):
                 self.epi_present_var.set("да")
             self._remember_dialog_directory(DIR_EPI, path)
