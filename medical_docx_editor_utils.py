@@ -28,8 +28,15 @@ def paragraph_matches_marker(normalized_paragraph_text: str, marker: str) -> boo
     if text.startswith(marker):
         if len(text) == len(marker):
             return True
+        # Short investigation markers are ordinary clinical words too:
+        # "ЭПИ проводилось ранее..." / "ЭЭГ ранее..." are narrative content,
+        # not service-section headings. Match them only when the marker is
+        # structurally explicit (standalone, colon/dash, or parenthesized form).
+        if marker in {"эпи", "ээг"}:
+            tail = text[len(marker):]
+            return bool(re.match(r"^\s*(?:[:—–\-(]|$)", tail))
         # Важно: короткие маркеры вроде «ЭПИ» не должны срабатывать на «ЭПИКРИЗ».
-        # Разрешаем совпадение только если после маркера идёт разделитель.
+        # Для остальных маркеров сохраняем исторический контракт разделителя.
         next_char = text[len(marker)]
         return not (next_char.isalnum() or next_char == "_")
     if marker in {"зарегистрирован по адресу", "регистрация по адресу"} and f" {marker}" in text:
