@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "f5807b8b5e1636a2fa39bc0c556efcdc0bf52d3f",
+  "reason": "Protect patient switching when saved DOCX files are still queued for retry printing, and add exact regression coverage that cancellation preserves the current patient state and print retry queue.",
+  "required_evidence": [
+    "document_mechanics_guard",
+    "full_patient_replay",
+    "golden_docx",
+    "staff_profile_regression",
+    "gender_generation_matrix",
+    "desktop_intake_contract",
+    "intake_lifecycle_regression",
+    "packaged_desktop_intake_e2e",
+    "installer_uninstall_smoke",
+    "ci_gate_lock"
+  ],
+  "approved_blobs": {
+    "files_mixin.py": "03b9fa0da3a72aa31178c48249ff005e78f3d989",
+    "tests/diagnosis_override_regression.py": "8252c7edd373137444202d73079a4ec745ae9c2d"
+  }
+}
