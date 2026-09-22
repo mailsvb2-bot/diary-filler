@@ -1142,6 +1142,56 @@ def _assert_multi_epi_drop_fails_before_primary_apply(root: Path) -> None:
     assert app.status == "Выберите один файл ЭПИ", app.status
 
 
+def _assert_multi_diary_source_folder_drop_fails_before_primary_apply(root: Path) -> None:
+    primary = root / "primary-with-two-source-folders.docx"
+    primary.write_bytes(b"primary")
+
+    dates_a = root / "dates-a"
+    dates_b = root / "dates-b"
+    texts_a = root / "texts-a"
+    texts_b = root / "texts-b"
+    for folder in (dates_a, dates_b, texts_a, texts_b):
+        folder.mkdir()
+
+    cases = [
+        (
+            {
+                primary.name: "primary",
+                dates_a.name: "numbered_diary_template_dir",
+                dates_b.name: "numbered_diary_template_dir",
+            },
+            [str(primary), str(dates_a), str(dates_b)],
+            "Несколько папок «Даты»",
+            "Выберите одну папку «Даты»",
+        ),
+        (
+            {
+                primary.name: "primary",
+                texts_a.name: "diary_text_dir",
+                texts_b.name: "diary_text_dir",
+            },
+            [str(primary), str(texts_a), str(texts_b)],
+            "Несколько папок «Тексты»",
+            "Выберите одну папку «Тексты»",
+        ),
+    ]
+
+    original_warning = dnd_mixin.messagebox.showwarning
+    try:
+        for classifications, paths, expected_title, expected_status in cases:
+            app = _AtomicDropHarness(classifications, primary_result=True)
+            warnings: list[tuple[str, str]] = []
+            dnd_mixin.messagebox.showwarning = (
+                lambda title, message, **_kwargs: warnings.append((str(title), str(message)))
+            )
+            app._handle_dropped_files(paths)
+            assert app.applied == [], app.applied
+            assert warnings and warnings[-1][0] == expected_title, warnings
+            assert app.status == expected_status, app.status
+    finally:
+        dnd_mixin.messagebox.showwarning = original_warning
+
+
 def _assert_manual_picker_accepts_doc(root: Path) -> None:
     folder = root / "manual-picker"
     folder.mkdir()
@@ -1442,6 +1492,7 @@ def main() -> None:
         _assert_multi_primary_drop_fails_safe(root)
         _assert_failed_primary_aborts_entire_drop_batch(root)
         _assert_multi_epi_drop_fails_before_primary_apply(root)
+        _assert_multi_diary_source_folder_drop_fails_before_primary_apply(root)
         _assert_all_medical_documents_receive_new_diagnosis(root)
         _assert_verbal_matching_and_word_formats(root)
         _assert_auto_refresh_and_manual_pin(root)
@@ -1455,7 +1506,7 @@ def main() -> None:
     _assert_diary_creation_path_offers_manual_fallback()
     print(
         "DIAGNOSIS OVERRIDE REGRESSION OK: UI diagnosis + verbal matching + "
-        "manual fallback + visible Word picker + digest-bound source/cache + missing/changed primary/EPI/Texts/Dates early fail + DnD EPI revision pin + pending-print close safety + generation double-click guard + partial-set survival + complete partial-print retry + print retry without regeneration + .doc/.docx source + same-path replacement isolation + transactional invalid-source handling + atomic primary DnD + multi-primary/multi-EPI fail-safe + complete patient-session reset matrix"
+        "manual fallback + visible Word picker + digest-bound source/cache + missing/changed primary/EPI/Texts/Dates early fail + DnD EPI revision pin + pending-print close safety + generation double-click guard + partial-set survival + complete partial-print retry + print retry without regeneration + .doc/.docx source + same-path replacement isolation + transactional invalid-source handling + atomic primary DnD + multi-primary/multi-EPI/multi-folder fail-safe + complete patient-session reset matrix"
     )
 
 
