@@ -136,6 +136,36 @@ class FilesMixin:
             self._manual_output_dir = True
             self._remember_dialog_directory(DIR_OUTPUT, path, selected_is_dir=True)
 
+    def _confirm_pending_print_retry_for_patient_switch(self) -> bool:
+        """Protect the previous patient's saved-but-unprinted queue before switching."""
+        pending: list[Path] = []
+        for value in getattr(self, "_pending_print_retry_files", []):
+            try:
+                path = Path(value)
+                if path.exists() and path.is_file():
+                    pending.append(path)
+            except (OSError, TypeError, ValueError):
+                continue
+        if not pending:
+            return True
+        try:
+            return bool(
+                messagebox.askyesno(
+                    "Печать предыдущего пациента не завершена",
+                    f"{len(pending)} файл(ов) предыдущего пациента уже сохранены, "
+                    "но ещё ожидают повторной печати.\n\n"
+                    "Если перейти к новому пациенту, сами DOCX останутся на диске, "
+                    "но очередь безопасного повтора печати будет сброшена.\n\n"
+                    "Перейти к новому пациенту?",
+                    parent=getattr(self, "root", None),
+                    icon="warning",
+                )
+            )
+        except Exception:
+            # A native-dialog failure must not permanently block patient switching.
+            # The DOCX files are already saved; only the in-memory retry shortcut is lost.
+            return True
+
     def _confirm_manual_output_dir_for_patient_switch(self) -> bool:
         """Decide whether a manually pinned output folder follows the next patient."""
         if not self._manual_output_dir or not self.output_dir_var.get().strip():
@@ -349,6 +379,9 @@ class FilesMixin:
             previous_primary, path, candidate_signature
         )
         if switching_primary:
+            if not self._confirm_pending_print_retry_for_patient_switch():
+                self._set_status("Смена пациента отменена: завершите повторную печать")
+                return False
             self._confirm_manual_output_dir_for_patient_switch()
         self.navigation_path_var.set(path)
         self._remember_dialog_directory(DIR_PRIMARY_DOCUMENTS, path)

@@ -1,9 +1,8 @@
 {
   "schema_version": 1,
-  "base_sha": "24afd837f785c59b6dbc9782c47fedfe412f511d",
-  "reason": "Explicit document-integrity fix: clinical blocks must reject only bare section labels both during extraction and during the final parsed-field cleanup, so legitimate prose beginning with section-like words is preserved.",
+  "base_sha": "8b0c7fff81da4468c1fe0079d11c642a7320c7cf",
+  "reason": "Explicit patient-safety mechanics fix: before a new primary document clears patient-scoped runtime state, preserve the previous patient's saved-but-unprinted retry queue unless the user explicitly confirms switching.",
   "approved_blobs": {
-    "medical_parser_blocks.py": "d1c5e749e3814de3093e67e618c11c9ba2ec27f7",
-    "medical_parser_inline.py": "e6708e2df1a771a34b9809d05acee9ebfd49ea1d"
+    "files_mixin.py": "03b9fa0da3a72aa31178c48249ff005e78f3d989"
   }
 }
