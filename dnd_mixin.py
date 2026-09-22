@@ -130,6 +130,34 @@ class DragDropMixin:
             self._set_status("Выберите один файл ЭПИ")
             return
 
+        if len(numbered_template_dirs) > 1:
+            try:
+                messagebox.showwarning(
+                    "Несколько папок «Даты»",
+                    "Перетащено несколько папок с шаблонами дневников «Даты».\n\n"
+                    "Чтобы программа не выбрала набор случайно, перетащите одну папку «Даты» за раз.",
+                    parent=getattr(self, "root", None),
+                )
+            except Exception:
+                pass
+            self._log("\n⚠️ Drag-and-drop отменён: найдено несколько папок «Даты».\n")
+            self._set_status("Выберите одну папку «Даты»")
+            return
+
+        if len(diary_text_dirs) > 1:
+            try:
+                messagebox.showwarning(
+                    "Несколько папок «Тексты»",
+                    "Перетащено несколько папок с текстами дневников.\n\n"
+                    "Чтобы программа не выбрала набор случайно, перетащите одну папку «Тексты» за раз.",
+                    parent=getattr(self, "root", None),
+                )
+            except Exception:
+                pass
+            self._log("\n⚠️ Drag-and-drop отменён: найдено несколько папок «Тексты».\n")
+            self._set_status("Выберите одну папку «Тексты»")
+            return
+
         primary_path = primary_paths[0] if primary_paths else ""
         epi_path = epi_paths[0] if epi_paths else ""
         if primary_path:
