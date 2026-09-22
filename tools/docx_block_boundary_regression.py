@@ -254,6 +254,12 @@ def _assert_all_medical_forms_keep_long_clinical_tails() -> None:
 
         data.disease_anamnesis = "\n".join(disease_lines)
         data.mental_status = "\n".join(mental_lines)
+        data.registered = "Н. Новгород, Ленинский район, ул. Тестовая 10"
+        data.examination_plan = "ОАК, ОАМ, ЭКГ, ФЛГ, ЭПИ, ЭЭГ."
+        data.disease_anamnesis += (
+            "\nВ настоящее время проживает с сестрой. "
+            "Это клинический текст анамнеза и не является адресом регистрации."
+        )
 
         output = root / "all-medical-forms"
         created, _ = service.create_documents(
@@ -271,6 +277,18 @@ def _assert_all_medical_forms_keep_long_clinical_tails() -> None:
             assert disease_lines[35] in text, f"{path.name}: treatment-like narrative line missing"
             assert disease_lines[78] in text, f"{path.name}: diagnosis-like narrative line missing"
             assert disease_lines[-1] in text, f"{path.name}: disease anamnesis tail truncated"
+            assert "проживает с сестрой" in text.lower(), f"{path.name}: residence narrative disappeared"
+            assert "Н. Новгород, Ленинский район, ул. Тестовая 10" in text, (
+                f"{path.name}: registration address missing"
+            )
+            assert not re.search(
+                r"(?i)регистрац(?:ия|ии).*?проживает\s+с\s+сестрой",
+                text,
+            ), f"{path.name}: anamnesis leaked into registration header"
+            if "План обследования" in text:
+                assert "ЭПИ" in text and "ЭЭГ" in text, (
+                    f"{path.name}: examination-plan EPI/EEG item was removed"
+                )
             assert mental_lines[0] in text, f"{path.name}: mental status start missing"
             assert mental_lines[-1] in text, f"{path.name}: mental status tail truncated"
 
