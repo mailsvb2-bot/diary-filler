@@ -42,7 +42,8 @@ def assert_intake_boundary() -> None:
     startup = read("startup.py")
     required = (
         "nothing below generates or edits medical documents",
-        "app._apply_primary_document_path(str(moved_primary), prompt_for_referral=True)",
+        "applied = app._apply_primary_document_path(",
+        "if applied is False:",
         "The medical/diary generation engine stays",
         "def desktop_intake_scan_wake_candidates",
         "def _desktop_candidate_snapshot",
