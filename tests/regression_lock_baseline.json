@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "e51677bf9961b3d84fd11b4cc5b029a87e19e199",
-  "baseline_note": "Dynamic epicrisis diary-date contract baseline. PR #216 restores the rule that a due dynamic epicrisis replaces the ordinary diary on that calendar date and locks the female Discharge + Diaries + sick-leave path. Windows CI #872 run 35786673830 attempt 2 passed the exact diary regression, release gate, full replay/golden DOCX, EXE, packaged intake E2E, installer and install/uninstall smoke.",
+  "baseline_ref": "e05937492d1de12abef2eaace328f6282c54be60",
+  "baseline_note": "Dynamic epicrisis contract cleanup baseline. PR #216 restored the Discharge + Diaries sick-leave dynamic-epicrisis path and same-date replacement behavior; exact candidate cea92029b00d43cc8a3f62568e9f7141b1944abe passed Windows CI #872 / run 35786673830. PR #217 then removed the consumed document-mechanics approval; exact cleanup e815ce0531b92e2641c53071c1616e1dfa461138 passed Windows CI #874 / run 35788173011 and merged as e05937492d1de12abef2eaace328f6282c54be60. This is the clean tested tree before removing the final temporary regression approval.",
   "required_approval_evidence": [
     "ci_gate_lock"
   ],
