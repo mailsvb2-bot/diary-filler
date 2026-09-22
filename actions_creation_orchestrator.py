@@ -321,13 +321,36 @@ class ActionsCreationOrchestratorMixin:
         except Exception:
             return False
 
+    def _generation_action_fingerprint(self, *, print_after: bool) -> tuple:
+        """Describe the user-visible action state for post-completion debounce."""
+        try:
+            selected_medical = tuple(self.selected_medical_docs())
+        except Exception:
+            selected_medical = ()
+        try:
+            selected_diaries = bool(self.diaries_selected())
+        except Exception:
+            selected_diaries = False
+        pending = tuple(
+            str(Path(path))
+            for path in getattr(self, "_pending_print_retry_files", [])
+            if Path(path).exists()
+        )
+        return (bool(print_after), selected_medical, selected_diaries, pending)
+
     def create_selected_outputs(self, *, print_after: bool = False) -> None:
-        """Serialize user-triggered generation and suppress queued double-clicks."""
+        """Serialize generation and suppress only an identical queued double-click."""
         now = time.monotonic()
         if getattr(self, "_generation_action_in_progress", False):
             self._set_status("Создание уже выполняется")
             return
-        if now < float(getattr(self, "_generation_action_cooldown_until", 0.0) or 0.0):
+
+        fingerprint = self._generation_action_fingerprint(print_after=print_after)
+        cooldown_until = float(getattr(self, "_generation_action_cooldown_until", 0.0) or 0.0)
+        if (
+            now < cooldown_until
+            and fingerprint == getattr(self, "_generation_action_last_fingerprint", None)
+        ):
             self._set_status("Предыдущее создание уже завершено")
             return
 
@@ -337,8 +360,10 @@ class ActionsCreationOrchestratorMixin:
         finally:
             self._generation_action_in_progress = False
             # A Tk Canvas double-click can queue the second ButtonRelease while
-            # the first synchronous generation is running. Suppress that queued
-            # click after the first call returns so it cannot create (...2).docx.
+            # the first synchronous generation is running. Suppress it only if
+            # the visible action state did not change. Print/partial retry changes
+            # selections or the pending queue and must remain immediately usable.
+            self._generation_action_last_fingerprint = fingerprint
             self._generation_action_cooldown_until = time.monotonic() + 0.75
 
     def _create_selected_outputs_impl(self, *, print_after: bool = False) -> None:
