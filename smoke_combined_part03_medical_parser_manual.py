@@ -32,7 +32,7 @@ split_doc = Document()
 split_doc.add_paragraph("28.05.2026 Первичный осмотр")
 split_table = split_doc.add_table(rows=2, cols=2)
 split_table.cell(0, 0).text = "Ф.И.О."
-split_table.cell(0, 1).text = "Тестов М.А."
+split_table.cell(0, 1).text = "Маркер М.М."
 split_table.cell(1, 0).text = "Год рождения"
 split_table.cell(1, 1).text = "1980"
 split_doc.add_paragraph("Жалобы: тревога")
@@ -40,7 +40,7 @@ split_doc.add_paragraph("Психический статус: контактен
 split_doc.add_paragraph("Диагноз: F41.2 Тестовый диагноз")
 split_doc.save(split_fio_doc)
 split_fio_data = service.parse_primary_document(split_fio_doc)
-assert split_fio_data.fio == "Тестов М.А.", split_fio_data.fio
+assert split_fio_data.fio == "Маркер М.М.", split_fio_data.fio
 assert "Ф.И.О." not in split_fio_data.fio, split_fio_data.fio
 
 # A generated «Осмотр врача приёмного покоя» is also a valid patient source.
@@ -135,11 +135,11 @@ assert _bare_header_fio.birth == "14.08.2006", _bare_header_fio.birth
 
 _bare_header_initials = service.parser.parse_text(
     "История болезни № 91\n"
-    "Новичихин С. Е.\n"
+    "Маркер М. М.\n"
     "Дата рождения: 01.02.1980\n"
     "Диагноз: F20.0 Тестовый диагноз"
 )
-assert _bare_header_initials.fio == "Новичихин С. Е.", _bare_header_initials.fio
+assert _bare_header_initials.fio == "Маркер М. М.", _bare_header_initials.fio
 
 # If a standalone doctor name precedes the patient, bind the birth row to the
 # nearest plausible name instead of the first name in a broad look-ahead.
@@ -178,7 +178,7 @@ else:
 # Strong type signatures must win over clinical words embedded in the body.
 assert service.parser._detect_document_kind("20.06.2026 Совместный осмотр с зам глав врача № 7\nПервичный осмотр упомянут в анамнезе") == "совместный осмотр"
 assert service.parser._detect_document_kind("О СОСТОЯНИИ ЗДОРОВЬЯ ГРАЖДАНИНА № 5\nГоспитализируется по направлению военного комиссариата Ленинского района") == "акт для РВК"
-assert service.parser._detect_document_kind("Ф.И.О.: Тестов Т.Т.\nДиагноз: F20.0 тест", "Тестов ВК на МСЭ.docx") == "ВК на МСЭ"
+assert service.parser._detect_document_kind("Ф.И.О.: Маркер М.М.\nДиагноз: F20.0 тест", "Маркер ВК на МСЭ.docx") == "ВК на МСЭ"
 
 # Explicit VK treatment row is source evidence; prose is not.
 from medical_treatment_detection import line_has_treatment_marker
@@ -221,8 +221,8 @@ finally:
 # Real-world label variants from primary DOCX forms must remain explicit;
 # never infer FIO from the filename.
 for fio_label in ("Ф.И.О. пациента", "ФИО пациента", "Ф.И.О. больного", "Фамилия, имя, отчество"):
-    parsed_fio_variant = service.parser.parse_text(f"{fio_label}: Васин М.В.\nДиагноз: F21 Шизотипическое расстройство")
-    assert parsed_fio_variant.fio == "Васин М.В.", (fio_label, parsed_fio_variant.fio)
+    parsed_fio_variant = service.parser.parse_text(f"{fio_label}: Маркер М.М.\nДиагноз: F21 Шизотипическое расстройство")
+    assert parsed_fio_variant.fio == "Маркер М.М.", (fio_label, parsed_fio_variant.fio)
 
 # Word can concatenate the next narrative sentence directly to diagnosis.
 assert sanitize_diagnosis(
