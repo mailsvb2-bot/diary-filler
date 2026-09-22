@@ -21,7 +21,7 @@
     "safety_integrity_check.py": "edaabce0ddc02f89a620e83e66e47519470b8134",
     "settings_mixin.py": "25f3ff6eb66945395e6b2ae253f615bbb73131b5",
     "smoke_combined_part01_setup_contracts.py": "ca233c36c904f612097af6e21c6c40954ba6ced9",
-    "smoke_combined_part02_ui_parser_regressions.py": "318cb4f570f79cddb8fd8429aaaf5bc99c3a8e07",
+    "smoke_combined_part02_ui_parser_regressions.py": "860768c6fcf8feabea720c065961708c540bc684",
     "smoke_combined_part03_medical_parser_manual.py": "e1df0ba816bdb76e6f02dfea548fec83b227bb3b",
     "smoke_combined_part04_medical_generation.py": "6b42ac0be3b90c2f0047e38e8edc284528dcc87f",
     "smoke_combined_part05_diary_basic_templates.py": "4aee625ca4b6088c28846d9d4b1be6698a7fba33",
