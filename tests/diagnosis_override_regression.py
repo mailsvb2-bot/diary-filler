@@ -20,6 +20,7 @@ import files_mixin
 import dnd_mixin
 import actions_creation_orchestrator
 import printer_support
+import window_mixin
 from actions_medical_flow import ActionsMedicalFlowMixin
 from actions_diary_flow import ActionsDiaryFlowMixin
 from actions_creation_orchestrator import ActionsCreationOrchestratorMixin
@@ -30,6 +31,7 @@ from diary_text_selection import (
 )
 from files_mixin import FilesMixin
 from dnd_mixin import DragDropMixin
+from window_mixin import WindowMixin
 from medical_constants import DOCUMENT_ORDER
 from medical_docx_reader import extract_docx_text
 from medical_models import PatientData
@@ -50,6 +52,24 @@ class _Var:
 class _SnapshotHarness(ActionsMedicalFlowMixin):
     def _apply_staff_profile_to_patient_data(self, data):
         return data
+
+
+class _CloseRoot:
+    def __init__(self):
+        self.destroy_calls = 0
+        self.protocol_calls: list[tuple[str, object]] = []
+
+    def destroy(self):
+        self.destroy_calls += 1
+
+    def protocol(self, name, callback):
+        self.protocol_calls.append((str(name), callback))
+
+
+class _CloseSafetyHarness(WindowMixin):
+    def __init__(self, pending=None):
+        self.root = _CloseRoot()
+        self._pending_print_retry_files = list(pending or [])
 
 
 class _GenerationGateHarness(ActionsCreationOrchestratorMixin):
@@ -382,6 +402,46 @@ class _PartialSetHarness(ActionsCreationOrchestratorMixin):
 
     def _redraw_selection_controls(self):
         self.redraw_count += 1
+
+
+def _assert_pending_print_close_safety(root: Path) -> None:
+    pending = root / "pending-print.docx"
+    pending.write_bytes(b"saved-document")
+
+    answers = iter([False, True])
+    prompts: list[tuple[str, str]] = []
+    original_askyesno = window_mixin.messagebox.askyesno
+    try:
+        window_mixin.messagebox.askyesno = (
+            lambda title, message, **_kwargs: (
+                prompts.append((str(title), str(message))),
+                next(answers),
+            )[1]
+        )
+
+        app = _CloseSafetyHarness([pending])
+        app._install_close_handler()
+        assert len(app.root.protocol_calls) == 1, app.root.protocol_calls
+        name, callback = app.root.protocol_calls[0]
+        assert name == "WM_DELETE_WINDOW" and callable(callback), app.root.protocol_calls
+
+        # Custom close / Alt+F4 must both respect an unfinished print retry.
+        app._request_close()
+        assert app.root.destroy_calls == 0, app.root.destroy_calls
+        assert prompts and prompts[-1][0] == "Печать не завершена", prompts
+        assert "DOCX останутся на диске" in prompts[-1][1], prompts[-1][1]
+
+        callback()
+        assert app.root.destroy_calls == 1, app.root.destroy_calls
+
+        # Missing/stale paths are not a real pending queue and must not nag.
+        quiet = _CloseSafetyHarness([root / "already-removed.docx"])
+        prompt_count = len(prompts)
+        quiet._request_close()
+        assert quiet.root.destroy_calls == 1, quiet.root.destroy_calls
+        assert len(prompts) == prompt_count, prompts
+    finally:
+        window_mixin.messagebox.askyesno = original_askyesno
 
 
 def _assert_generation_action_gate_blocks_reentry_and_queued_double_click() -> None:
@@ -969,6 +1029,7 @@ def main() -> None:
     _assert_diary_source_buttons_route_to_expected_picker()
     with TemporaryDirectory(prefix="diagnosis-override-regression-") as temp_dir:
         root = Path(temp_dir)
+        _assert_pending_print_close_safety(root)
         _assert_same_path_replacement_is_patient_switch(root)
         _assert_invalid_new_source_preserves_open_patient(root)
         _assert_multi_primary_drop_fails_safe(root)
@@ -985,7 +1046,7 @@ def main() -> None:
     _assert_diary_creation_path_offers_manual_fallback()
     print(
         "DIAGNOSIS OVERRIDE REGRESSION OK: UI diagnosis + verbal matching + "
-        "manual fallback + visible Word picker + generation double-click guard + partial-set survival + complete partial-print retry + print retry without regeneration + .doc/.docx source + same-path replacement isolation + transactional invalid-source handling + multi-primary DnD fail-safe + complete patient-session reset matrix"
+        "manual fallback + visible Word picker + pending-print close safety + generation double-click guard + partial-set survival + complete partial-print retry + print retry without regeneration + .doc/.docx source + same-path replacement isolation + transactional invalid-source handling + multi-primary DnD fail-safe + complete patient-session reset matrix"
     )
 
 

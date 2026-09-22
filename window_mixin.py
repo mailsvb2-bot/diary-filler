@@ -1,14 +1,53 @@
 from __future__ import annotations
 
 import tkinter as tk
-from tkinter import ttk
+from pathlib import Path
+from tkinter import messagebox, ttk
 
 from app_config import *
 
 
 class WindowMixin:
+    def _pending_print_retry_count(self) -> int:
+        count = 0
+        for value in getattr(self, "_pending_print_retry_files", []):
+            try:
+                path = Path(value)
+                if path.exists() and path.is_file():
+                    count += 1
+            except (OSError, TypeError, ValueError):
+                continue
+        return count
+
+    def _request_close(self) -> None:
+        pending_count = self._pending_print_retry_count()
+        if pending_count:
+            try:
+                should_close = messagebox.askyesno(
+                    "Печать не завершена",
+                    f"{pending_count} файл(ов) уже сохранены, но ещё ожидают повторной печати.\n\n"
+                    "Если закрыть программу сейчас, сами DOCX останутся на диске, "
+                    "но очередь безопасного повтора печати будет сброшена.\n\n"
+                    "Закрыть программу?",
+                    parent=self.root,
+                    icon="warning",
+                )
+            except Exception:
+                # A broken native dialog must never trap the user in the app.
+                should_close = True
+            if not should_close:
+                return
+        self.root.destroy()
+
+    def _install_close_handler(self) -> None:
+        try:
+            self.root.protocol("WM_DELETE_WINDOW", self._request_close)
+        except Exception:
+            pass
+
     def _build_ui(self) -> None:
         self._setup_style()
+        self._install_close_handler()
 
         # Нижняя служебная строка убрана по пользовательскому требованию.
         # Скрытый label оставлен как безопасная цель для внутренних _set_status/_log,
@@ -298,7 +337,7 @@ class WindowMixin:
         staff_button.grid(row=0, column=1, padx=(0, self._px(8, 4)))
         self._window_control_button(controls, "−", self._minimize_window).grid(row=0, column=2)
         self._window_control_button(controls, "□", self._toggle_maximize).grid(row=0, column=3)
-        self._window_control_button(controls, "×", self.root.destroy, danger=True).grid(row=0, column=4)
+        self._window_control_button(controls, "×", self._request_close, danger=True).grid(row=0, column=4)
 
     def _header_icon_button(self, parent, text: str, command) -> tk.Button:
         return tk.Button(
