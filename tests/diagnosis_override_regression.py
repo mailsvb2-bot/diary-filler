@@ -109,6 +109,23 @@ class _ChangedSourceEarlyFailHarness(_MissingSourceEarlyFailHarness):
         return ("current", 4, 5, 6, "b" * 64)
 
 
+class _ChangedDiarySourceEarlyFailHarness(_ChangedSourceEarlyFailHarness):
+    def selected_medical_docs(self):
+        return []
+
+    def diaries_selected(self):
+        return True
+
+
+class _ManualDiaryWithoutPrimaryHarness(ActionsCreationOrchestratorMixin):
+    def __init__(self):
+        self.navigation_path_var = _Var("")
+        self.status = ""
+
+    def _set_status(self, text):
+        self.status = str(text)
+
+
 class _ChangedEpiEarlyFailHarness(_MissingSourceEarlyFailHarness):
     def __init__(self, primary_path: Path, epi_path: Path):
         super().__init__(primary_path)
@@ -548,6 +565,28 @@ def _assert_changed_source_fails_before_any_medical_popup(root: Path) -> None:
     assert app.status == "Создание отменено: источник пациента изменился", app.status
     assert errors and errors[-1][0] == "Источник пациента изменился", errors
     assert "Чтобы не смешать данные разных пациентов" in errors[-1][1], errors[-1][1]
+
+
+def _assert_changed_source_blocks_diary_only_but_manual_diary_mode_survives(root: Path) -> None:
+    source = root / "same-name-diary-source.docx"
+    source.write_bytes(b"patient-b-replaced-content")
+    app = _ChangedDiarySourceEarlyFailHarness(source)
+    errors: list[tuple[str, str]] = []
+    original_error = actions_creation_orchestrator.messagebox.showerror
+    try:
+        actions_creation_orchestrator.messagebox.showerror = (
+            lambda title, message, **_kwargs: errors.append((str(title), str(message)))
+        )
+        assert not app._ensure_primary_source_available_for_generation([], True)
+    finally:
+        actions_creation_orchestrator.messagebox.showerror = original_error
+
+    assert app.status == "Создание отменено: источник пациента изменился", app.status
+    assert errors and errors[-1][0] == "Источник пациента изменился", errors
+
+    manual = _ManualDiaryWithoutPrimaryHarness()
+    assert manual._ensure_primary_source_available_for_generation([], True)
+    assert manual.status == "", manual.status
 
 
 def _assert_changed_epi_fails_before_any_medical_popup(root: Path) -> None:
@@ -1188,6 +1227,7 @@ def main() -> None:
         _assert_pending_print_close_safety(root)
         _assert_missing_source_fails_before_any_medical_popup(root)
         _assert_changed_source_fails_before_any_medical_popup(root)
+        _assert_changed_source_blocks_diary_only_but_manual_diary_mode_survives(root)
         _assert_changed_epi_fails_before_any_medical_popup(root)
         _assert_primary_cache_rejects_same_metadata_wrong_digest(root)
         _assert_same_path_replacement_is_patient_switch(root)
