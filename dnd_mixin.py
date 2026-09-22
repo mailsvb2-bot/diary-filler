@@ -69,7 +69,7 @@ class DragDropMixin:
 
     def _handle_dropped_files(self, paths: list[str]) -> None:
         primary_paths: list[str] = []
-        epi_path = ""
+        epi_paths: list[str] = []
         status_paths: list[str] = []
         diary_paths: list[str] = []
         numbered_template_dirs: list[str] = []
@@ -84,7 +84,7 @@ class DragDropMixin:
             if kind == "primary":
                 primary_paths.append(path)
             elif kind == "epi":
-                epi_path = path
+                epi_paths.append(path)
             elif kind == "diary_template":
                 diary_paths.append(path)
             elif kind == "diary_status":
@@ -114,9 +114,32 @@ class DragDropMixin:
             self._set_status("Выберите один медицинский документ пациента")
             return
 
+        if len(epi_paths) > 1:
+            # EPI is one patient-scoped auxiliary source. Choosing one by drop
+            # order can silently bind another episode/patient to the current card.
+            try:
+                messagebox.showwarning(
+                    "Несколько файлов ЭПИ",
+                    "Перетащено несколько файлов ЭПИ.\n\n"
+                    "Чтобы не смешать данные, перетащите один файл ЭПИ за раз.",
+                    parent=getattr(self, "root", None),
+                )
+            except Exception:
+                pass
+            self._log("\n⚠️ Drag-and-drop отменён: найдено несколько файлов ЭПИ.\n")
+            self._set_status("Выберите один файл ЭПИ")
+            return
+
         primary_path = primary_paths[0] if primary_paths else ""
+        epi_path = epi_paths[0] if epi_paths else ""
         if primary_path:
-            self._apply_primary_document_path(primary_path, prompt_for_referral=True)
+            applied = self._apply_primary_document_path(primary_path, prompt_for_referral=True)
+            if applied is False:
+                # A batch is patient-atomic: if its primary could not be loaded,
+                # never attach EPI/Texts/Dates to whichever patient was open before.
+                self._log("\n⚠️ Drag-and-drop остановлен: основной документ пациента не применён.\n")
+                self._set_status("Основной документ не применён — остальные файлы не изменены")
+                return
         if epi_path:
             self.epi_path_var.set(epi_path)
             signature_getter = getattr(self, "_primary_document_source_signature", None)

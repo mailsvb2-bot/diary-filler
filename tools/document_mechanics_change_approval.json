@@ -1,10 +1,8 @@
 {
   "schema_version": 1,
-  "base_sha": "3eaaa5ddd08e33e6391e74b5f4e0a19bc7f69044",
-  "reason": "Explicit diary-input integrity hardening: UI-selected Texts and Dates Word files are pinned to content identities and generation rejects a removed, changed, or replaced selected revision before using it.",
+  "base_sha": "ff54f992bb63799dc1628b667e0d1145cc0bb000",
+  "reason": "Explicit DnD patient-integrity hardening: primary application returns an explicit result so a failed new primary cannot partially attach EPI/Texts/Dates to the previously open patient.",
   "approved_blobs": {
-    "actions_creation_orchestrator.py": "25363e5f581d2cf02167f73b8d731f063136cdce",
-    "diary_template_selection.py": "8906603af5b826868e88501c4f3644802671f23e",
-    "files_mixin.py": "33fd7abc88c51369d76f6cd9cddf4a0b21bdb49d"
+    "files_mixin.py": "d8e2a0f564479784defeb0e7c410528b15b50bb3"
   }
 }

@@ -309,6 +309,30 @@ class _DropBatchHarness(DragDropMixin):
 
     def _apply_primary_document_path(self, path, **_kwargs):
         self.applied.append(str(path))
+        return True
+
+    def _log(self, text):
+        self.logs.append(str(text))
+
+    def _set_status(self, text):
+        self.status = str(text)
+
+
+class _AtomicDropHarness(DragDropMixin):
+    def __init__(self, classifications: dict[str, str], *, primary_result: bool):
+        self.root = None
+        self.classifications = dict(classifications)
+        self.primary_result = bool(primary_result)
+        self.applied: list[str] = []
+        self.logs: list[str] = []
+        self.status = ""
+
+    def _classify_dropped_file(self, path):
+        return self.classifications.get(Path(path).name, "unknown")
+
+    def _apply_primary_document_path(self, path, **_kwargs):
+        self.applied.append(str(path))
+        return self.primary_result
 
     def _log(self, text):
         self.logs.append(str(text))
@@ -1041,7 +1065,7 @@ def _assert_invalid_new_source_preserves_open_patient(root: Path) -> None:
     broken = root / "broken.docx"
     broken.write_bytes(b"not-a-valid-docx")
     app = _InvalidPrimaryHarness(str(current))
-    app._apply_primary_document_path(str(broken), prompt_for_referral=True)
+    assert app._apply_primary_document_path(str(broken), prompt_for_referral=True) is False
     assert app.navigation_path_var.get() == str(current), app.navigation_path_var.get()
     assert app.reset_calls == 0, app.reset_calls
     assert app.errors == [("Не удалось прочитать медицинский документ", "ValueError")], app.errors
@@ -1063,6 +1087,59 @@ def _assert_multi_primary_drop_fails_safe(root: Path) -> None:
     assert app.applied == [], app.applied
     assert len(warnings) == 1 and "несколько медицинских документов" in warnings[0].lower(), warnings
     assert "Выберите один" in app.status, app.status
+
+
+def _assert_failed_primary_aborts_entire_drop_batch(root: Path) -> None:
+    primary = root / "new-patient.docx"
+    epi = root / "new-patient-epi.docx"
+    texts = root / "new-patient-texts.docx"
+    for path in (primary, epi, texts):
+        path.write_bytes(path.name.encode("utf-8"))
+
+    app = _AtomicDropHarness(
+        {
+            primary.name: "primary",
+            epi.name: "epi",
+            texts.name: "diary_status",
+        },
+        primary_result=False,
+    )
+    # If the implementation touches any auxiliary state after primary=False,
+    # this deliberately minimal harness raises instead of hiding partial apply.
+    app._handle_dropped_files([str(primary), str(epi), str(texts)])
+    assert app.applied == [str(primary)], app.applied
+    assert "остальные файлы не изменены" in app.status, app.status
+
+
+def _assert_multi_epi_drop_fails_before_primary_apply(root: Path) -> None:
+    primary = root / "primary-with-two-epi.docx"
+    epi_a = root / "epi-a.docx"
+    epi_b = root / "epi-b.docx"
+    for path in (primary, epi_a, epi_b):
+        path.write_bytes(path.name.encode("utf-8"))
+
+    app = _AtomicDropHarness(
+        {
+            primary.name: "primary",
+            epi_a.name: "epi",
+            epi_b.name: "epi",
+        },
+        primary_result=True,
+    )
+    warnings: list[tuple[str, str]] = []
+    original_warning = dnd_mixin.messagebox.showwarning
+    try:
+        dnd_mixin.messagebox.showwarning = (
+            lambda title, message, **_kwargs: warnings.append((str(title), str(message)))
+        )
+        app._handle_dropped_files([str(primary), str(epi_a), str(epi_b)])
+    finally:
+        dnd_mixin.messagebox.showwarning = original_warning
+
+    assert app.applied == [], app.applied
+    assert warnings and warnings[-1][0] == "Несколько файлов ЭПИ", warnings
+    assert "один файл ЭПИ" in warnings[-1][1], warnings
+    assert app.status == "Выберите один файл ЭПИ", app.status
 
 
 def _assert_manual_picker_accepts_doc(root: Path) -> None:
@@ -1363,6 +1440,8 @@ def main() -> None:
         _assert_same_path_replacement_is_patient_switch(root)
         _assert_invalid_new_source_preserves_open_patient(root)
         _assert_multi_primary_drop_fails_safe(root)
+        _assert_failed_primary_aborts_entire_drop_batch(root)
+        _assert_multi_epi_drop_fails_before_primary_apply(root)
         _assert_all_medical_documents_receive_new_diagnosis(root)
         _assert_verbal_matching_and_word_formats(root)
         _assert_auto_refresh_and_manual_pin(root)
@@ -1376,7 +1455,7 @@ def main() -> None:
     _assert_diary_creation_path_offers_manual_fallback()
     print(
         "DIAGNOSIS OVERRIDE REGRESSION OK: UI diagnosis + verbal matching + "
-        "manual fallback + visible Word picker + digest-bound source/cache + missing/changed primary/EPI/Texts/Dates early fail + DnD EPI revision pin + pending-print close safety + generation double-click guard + partial-set survival + complete partial-print retry + print retry without regeneration + .doc/.docx source + same-path replacement isolation + transactional invalid-source handling + multi-primary DnD fail-safe + complete patient-session reset matrix"
+        "manual fallback + visible Word picker + digest-bound source/cache + missing/changed primary/EPI/Texts/Dates early fail + DnD EPI revision pin + pending-print close safety + generation double-click guard + partial-set survival + complete partial-print retry + print retry without regeneration + .doc/.docx source + same-path replacement isolation + transactional invalid-source handling + atomic primary DnD + multi-primary/multi-EPI fail-safe + complete patient-session reset matrix"
     )
 
 

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "e70c5cd8909cfb8c31dbbf6900585f3ad8b83857",
-  "reason": "Source revision integrity: pin UI-selected Texts/Dates and dropped EPI at selection time, reset diary source identities between patients, and revalidate primary/EPI/Texts/Dates after long prompts immediately before generation.",
+  "reason": "DnD patient-batch atomicity: preserve source-revision protections while exposing primary application success, aborting auxiliary DnD state changes after a rejected primary, rejecting multi-EPI ambiguity, and propagating rejected desktop-intake primaries honestly.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -16,20 +16,21 @@
   ],
   "approved_blobs": {
     "actions_creation_orchestrator.py": "25363e5f581d2cf02167f73b8d731f063136cdce",
-    "files_mixin.py": "33fd7abc88c51369d76f6cd9cddf4a0b21bdb49d",
+    "files_mixin.py": "d8e2a0f564479784defeb0e7c410528b15b50bb3",
     "printer_models.py": "4d142106ac06f57f2641bd0c8af81e12e40b2f24",
     "smoke_combined_part01_setup_contracts.py": "e4dc3dc12b9674a6f6146c6b5141cb1987a62350",
-    "tests/diagnosis_override_regression.py": "b3978413ab6263a101995e64211714bb8e6b75e6",
-    "tools/document_mechanics_change_approval.json": "4f358ad665b242cac656ae61ba6155bf38373789",
+    "tests/diagnosis_override_regression.py": "655a009b152070de34c26b4739044c50cc60963d",
+    "tools/document_mechanics_change_approval.json": "16061a2dfeea190bf82cbaa04f8607de163acce9",
     "settings_mixin.py": "988eec68abac613d607800950c9fed0a833c4f80",
     "tools/staff_profile_regression.py": "5150fd35f82743759c830c492be2dee640d8be14",
-    "startup.py": "7cc293d1ba1961b8d1cb90c66448bfd8edb487c8",
+    "startup.py": "5478be74293f396040f0f0bd35a1541fb440f4a2",
     "tests/desktop_intake_contract_check.py": "0f75ccdca6d28906bc5ee2633a8e0d587e69c780",
     "main.py": "36c3fbed4965323ae0748be16b3d2017612016d6",
-    "tests/intake_lifecycle_regression.py": "3fce7e923721233f7ab9fb024dfd66d654f3cdd7",
+    "tests/intake_lifecycle_regression.py": "46d10cc2d520a5447138dc1b10de118781feefd3",
     "window_mixin.py": "1681c265d5d7119061e0136a22707782f36fde77",
     "app_initialization.py": "826379f7a0c3a59f1310301ab80f367026652aa3",
-    "dnd_mixin.py": "835194d48212a6c11effc39464a79368f3807121",
-    "diary_template_selection.py": "8906603af5b826868e88501c4f3644802671f23e"
+    "dnd_mixin.py": "9bae68e210a2c50e057510c392486bdd84db4db1",
+    "diary_template_selection.py": "8906603af5b826868e88501c4f3644802671f23e",
+    "tools/production_safety_gate.py": "d57456d3de3ffde58fc155de9fc0ba70ff80d094"
   }
 }

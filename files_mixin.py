@@ -329,10 +329,10 @@ class FilesMixin:
             return "primary_exam"
         return "medical_source"
 
-    def _apply_primary_document_path(self, path: str, *, prompt_for_referral: bool) -> None:
+    def _apply_primary_document_path(self, path: str, *, prompt_for_referral: bool) -> bool:
         path = str(path)
         if not path or not Path(path).exists():
-            return
+            return False
 
         # Transactional user path: prove that the candidate is readable before
         # changing navigation or clearing any state from the current patient.
@@ -342,7 +342,7 @@ class FilesMixin:
             parsed = self._parse_primary_document(path)
         except Exception as exc:
             self._show_error("Не удалось прочитать медицинский документ", exc)
-            return
+            return False
 
         previous_primary = self.navigation_path_var.get().strip()
         switching_primary = self._is_primary_document_switch(
@@ -388,6 +388,7 @@ class FilesMixin:
         # конкретный 01–31-шаблон по дате госпитализации.
         self._auto_select_diary_text_by_diagnosis(ask_folder=False)
         self._auto_select_numbered_diary_template(ask_folder=False)
+        return True
 
     def choose_navigation(self) -> None:
         path = filedialog.askopenfilename(
