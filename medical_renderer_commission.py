@@ -68,11 +68,11 @@ class MedicalRendererCommissionMixin:
             COMMISSION_MARKERS,
             allow_empty=True,
         )
-        editor.replace_block(["Жалобы при поступлении", "Жалобы"], "Жалобы при поступлении:", data.complaints, COMMISSION_MARKERS)
-        editor.replace_block(["Анамнез жизни"], "Анамнез жизни:", data.life_anamnesis, COMMISSION_MARKERS)
-        editor.replace_block(["Анамнез заболевания"], "Анамнез заболевания:", data.disease_anamnesis, COMMISSION_MARKERS)
-        editor.replace_block(["Психический статус при поступлении", "Психический статус"], "Психический статус при поступлении:", data.mental_status, COMMISSION_MARKERS)
-        editor.replace_block(["Соматический статус", "Сомато-неврологический статус"], "Соматический статус:", data.somatic_status, COMMISSION_MARKERS)
+        editor.replace_block(["Жалобы при поступлении", "Жалобы"], "Жалобы при поступлении:", data.complaints, COMMISSION_MARKERS, allow_empty=True)
+        editor.replace_block(["Анамнез жизни"], "Анамнез жизни:", data.life_anamnesis, COMMISSION_MARKERS, allow_empty=True)
+        editor.replace_block(["Анамнез заболевания"], "Анамнез заболевания:", data.disease_anamnesis, COMMISSION_MARKERS, allow_empty=True)
+        editor.replace_block(["Психический статус при поступлении", "Психический статус"], "Психический статус при поступлении:", data.mental_status, COMMISSION_MARKERS, allow_empty=True)
+        editor.replace_block(["Соматический статус", "Сомато-неврологический статус"], "Соматический статус:", data.somatic_status, COMMISSION_MARKERS, allow_empty=True)
 
         lab_lines = [
             (["ОАК"], f"ОАК ({dates['day1']}) - в норме"),
@@ -136,7 +136,7 @@ class MedicalRendererCommissionMixin:
         self._place_psych_account_after_registration(editor, data, ["регистрация по адресу"], fallback_markers=[data.fio])
         editor.replace_block(["Работает в организации"], "Работает в организации:", data.work_org, PRIMARY_MARKERS, allow_empty=True)
         editor.replace_block(["Должность"], "Должность:", data.position, PRIMARY_MARKERS, allow_empty=True)
-        editor.replace_block(["Больничный лист"], "Больничный лист:", data.sick_leave, PRIMARY_MARKERS, allow_empty=True)
+        editor.remove_all_matching_paragraphs(["Больничный лист"])
         editor.replace_block(["Оформление инвалидности"], "Оформление инвалидности:", data.disability, PRIMARY_MARKERS, allow_empty=True)
         editor.replace_block(["Направление от РВК"], "Направление от РВК:", data.rvk_referral, PRIMARY_MARKERS, allow_empty=True)
         editor.replace_block(
@@ -146,12 +146,12 @@ class MedicalRendererCommissionMixin:
             PRIMARY_MARKERS,
             allow_empty=True,
         )
-        editor.replace_block(["Жалобы на момент осмотра", "Жалобы"], "Жалобы на момент осмотра:", data.complaints, PRIMARY_MARKERS)
-        editor.replace_block(["Анамнез жизни"], "Анамнез жизни:", data.life_anamnesis, PRIMARY_MARKERS)
-        editor.replace_block(["Анамнез заболевания"], "Анамнез заболевания:", data.disease_anamnesis, PRIMARY_MARKERS)
-        editor.replace_block(["Психический статус"], "Психический статус:", data.mental_status, PRIMARY_MARKERS)
-        editor.replace_block(["Соматический статус"], "Соматический статус:", data.somatic_status, PRIMARY_MARKERS)
-        editor.replace_block(["План обследования"], "План обследования:", data.examination_plan, PRIMARY_MARKERS)
+        editor.replace_block(["Жалобы на момент осмотра", "Жалобы"], "Жалобы на момент осмотра:", data.complaints, PRIMARY_MARKERS, allow_empty=True)
+        editor.replace_block(["Анамнез жизни"], "Анамнез жизни:", data.life_anamnesis, PRIMARY_MARKERS, allow_empty=True)
+        editor.replace_block(["Анамнез заболевания"], "Анамнез заболевания:", data.disease_anamnesis, PRIMARY_MARKERS, allow_empty=True)
+        editor.replace_block(["Психический статус"], "Психический статус:", data.mental_status, PRIMARY_MARKERS, allow_empty=True)
+        editor.replace_block(["Соматический статус"], "Соматический статус:", data.somatic_status, PRIMARY_MARKERS, allow_empty=True)
+        editor.replace_block(["План обследования"], "План обследования:", data.examination_plan, PRIMARY_MARKERS, allow_empty=True)
         diagnosis = sanitize_diagnosis(data.diagnosis)
         diagnosis_sentence = ""
         if diagnosis:
