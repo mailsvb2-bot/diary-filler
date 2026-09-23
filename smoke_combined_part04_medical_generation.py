@@ -576,9 +576,9 @@ assert "Врач-психиатр" in discharge_lines[-1] and "Зав. отд." 
 # Historical staff mentions inside patient clinical prose must remain source-owned,
 # while actual template signatures/headings use the configured staff profile.
 _staff_prose_data = copy.deepcopy(manual_data)
-_staff_prose_data.doctor = "Иванов И.И."
-_staff_prose_data.head = "Петрова П.П."
-_staff_prose_data.deputy_chief = "Сидорова С.С."
+_staff_prose_data.doctor = "Зуйкова А.А."
+_staff_prose_data.head = "Балаганин С.В."
+_staff_prose_data.deputy_chief = "Можарова Е.А."
 _staff_history = (
     "Врач-психиатр Балаганин С.В. консультировал ранее амбулаторно; "
     "Зав. отделением Можарова Е.А. указана в старой выписке."
@@ -599,8 +599,8 @@ for _staff_path in _staff_created:
     assert _staff_history in _staff_text, (_staff_path.name, _staff_text)
     assert "ИСТОРИЧЕСКИЕ_ФАМИЛИИ_НЕ_ПЕРЕПИСЫВАТЬ" in _staff_text, _staff_text
 _primary_staff_text = extract_docx_text(next(p for p in _staff_created if "Первичный" in p.name))
-assert "Врач психиатр Иванов И.И." in _primary_staff_text, _primary_staff_text
-assert "Петрова П.П." in _primary_staff_text, _primary_staff_text
+assert "Врач психиатр Зуйкова А.А." in _primary_staff_text, _primary_staff_text
+assert "Балаганин С.В." in _primary_staff_text, _primary_staff_text
 
 # Patient prose that resembles a VK purpose instruction must survive unchanged.
 _vk_prose_data = copy.deepcopy(manual_data)
