@@ -236,6 +236,43 @@ try:
 except ValueError as exc:
     assert "Дата совместного" in str(exc) or "номер совместного" in str(exc), str(exc)
 
+# Episode chronology must fail closed: inpatient joint review and sick-leave
+# commission cannot be dated after a known discharge.
+late_commission = service.parse_primary_document(nav)
+late_commission.discharge_date = "11.06.2026"
+late_commission.admission_occurrence = "первично"
+late_commission.expert_sick_leave_needed = "нет"
+late_commission.sick_leave = "не нужен"
+late_commission.commission_date = "12.06.2026"
+late_commission.commission_number = "12"
+try:
+    service.create_documents(
+        navigation_path=nav,
+        output_dir=OUT / "late_commission_after_discharge",
+        selected_docs=["commission"],
+        override_data=late_commission,
+    )
+    raise AssertionError("commission after discharge must be rejected")
+except ValueError as exc:
+    assert "позже даты выписки" in str(exc), str(exc)
+
+late_sick_vk = service.parse_primary_document(nav)
+late_sick_vk.discharge_date = "11.06.2026"
+late_sick_vk.sick_leave_vk_date = "12.06.2026"
+late_sick_vk.sick_leave_vk_protocol_number = "12"
+late_sick_vk.sick_leave_vk_protocol_date = "12.06.2026"
+late_sick_vk.sick_leave_vk_commission_date = "12.06.2026"
+try:
+    service.create_documents(
+        navigation_path=nav,
+        output_dir=OUT / "late_sick_vk_after_discharge",
+        selected_docs=["sick_leave_vk"],
+        override_data=late_sick_vk,
+    )
+    raise AssertionError("sick-leave VK after discharge must be rejected")
+except ValueError as exc:
+    assert "позже даты выписки" in str(exc), str(exc)
+
 try:
     bad_vk_data = service.parse_primary_document(nav)
     bad_vk_data.vk_date = "99.99.2026"
