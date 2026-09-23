@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "e05937492d1de12abef2eaace328f6282c54be60",
-  "reason": "Change only dynamic epicrisis Word layout from forced paragraph-per-field output to one continuous clinical paragraph, with both Discharge + Diaries and additive diary regressions aligned to that exact layout.",
+  "baseline_ref": "1f092cae6d6f2a32244ff078f7fef1f73d371ba4",
+  "reason": "Remove the consumed document-mechanics approval after the fully verified inline dynamic epicrisis layout change.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -15,8 +15,6 @@
     "ci_gate_lock"
   ],
   "approved_blobs": {
-    "diary_service.py": "b8a28b0e6178387d7ceeac53287dc8c234414ef5",
-    "tests/verbal_diary_source_regression.py": "1172159479cd5434ee975781102ae34fcd5f1c6a",
-    "tools/document_mechanics_change_approval.json": "7b0e550685ccbd0e7c4e50fbe6d5be45ba074191"
+    "tools/document_mechanics_change_approval.json": "<deleted>"
   }
 }
