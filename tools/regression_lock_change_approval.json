@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "ad952289a1bcc5bc7c53d00843673f1139c32fb7",
+  "reason": "Deep document-correctness audit: preserve source clinical facts, remove sick-leave leakage from primary/admission-doctor forms, reject impossible inpatient chronology, clear stale template patient text, and eliminate contradictory/unresolved VK placeholders.",
+  "required_evidence": [
+    "document_mechanics_guard",
+    "full_patient_replay",
+    "golden_docx",
+    "staff_profile_regression",
+    "gender_generation_matrix",
+    "desktop_intake_contract",
+    "intake_lifecycle_regression",
+    "packaged_desktop_intake_e2e",
+    "installer_uninstall_smoke",
+    "ci_gate_lock"
+  ],
+  "approved_blobs": {
+    "dialog_expert.py": "65fdd91fbc9c0b59aca8a544bd8f70296eec3907",
+    "medical_gender.py": "36050151a236a451806acd29551833ba427dc2ff",
+    "medical_renderer.py": "8ead4da7b5b411c658ab94f920848e4f7987c852",
+    "medical_renderer_commission.py": "d0e42f2ea165ab5035c542966d823024dd4fa889",
+    "medical_renderer_primary.py": "5897460da10c69de4425180b42cbf8e6cb82971c",
+    "medical_renderer_special.py": "b50acefb48818d3f23b64a81178984c2e626c622",
+    "medical_service.py": "b68aec8976081bea1a24b196b81cac8da19df397",
+    "prod_audit.py": "3e1caddcbb4f8083bf50e46426fa68530e53d77e",
+    "smoke_combined_part02_ui_parser_regressions.py": "01798735afbee80334d401806c33e79ae2cf980a",
+    "smoke_combined_part03_medical_parser_manual.py": "8b16f02e18b4ffef248922b5eb7784595f524457",
+    "smoke_combined_part04_medical_generation.py": "41a8284819f580c07e52225aae1d023d3ca83c44",
+    "tools/document_mechanics_change_approval.json": "a19221ee0390cd1f010c95ba9aa2289e007be0b9"
+  }
+}
