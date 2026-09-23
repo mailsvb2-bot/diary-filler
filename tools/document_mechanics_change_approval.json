@@ -8,9 +8,9 @@
     "diary_service.py": "694b40a53ebef47e3eb9cb0012ecd8e6ba221923",
     "medical_gender.py": "36050151a236a451806acd29551833ba427dc2ff",
     "medical_renderer.py": "8ead4da7b5b411c658ab94f920848e4f7987c852",
-    "medical_renderer_commission.py": "ff0ec3d795002383ffdc77c69a35591eb43b85e5",
+    "medical_renderer_commission.py": "857f00626641eed75879d23565f74751254c85a0",
     "medical_renderer_labs.py": "04fc4428aeee4c006f7d843064d1486aa5d8757f",
-    "medical_renderer_primary.py": "578580e343e925a034fe7d265d750eb13c4b51d0",
+    "medical_renderer_primary.py": "ce59cd17eaebdae8e959ba4703bd9f3da09484c0",
     "medical_renderer_special.py": "7adbcdc2f353deecde5af601b27d5d7260867a24",
     "medical_service.py": "68af072a7fd6e3e5bab436d900f2352d1ecbe768"
   }
