@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "ad952289a1bcc5bc7c53d00843673f1139c32fb7",
+  "reason": "Deep final-DOCX correctness audit: remove fabricated medical facts, stale template clinical text, primary sick-leave leakage, and unresolved VK scaffolding.",
+  "required_evidence": [
+    "document_mechanics_guard",
+    "full_patient_replay",
+    "golden_docx",
+    "staff_profile_regression",
+    "gender_generation_matrix",
+    "desktop_intake_contract",
+    "intake_lifecycle_regression",
+    "packaged_desktop_intake_e2e",
+    "installer_uninstall_smoke",
+    "ci_gate_lock"
+  ],
+  "approved_blobs": {
+    "dialog_expert.py": "85387bad844d51ba73bf0533f6ba35025650648b",
+    "medical_renderer_commission.py": "b27c31a2d00a65de43529f6b3c0dcb80871ecfb1",
+    "medical_renderer_labs.py": "04fc4428aeee4c006f7d843064d1486aa5d8757f",
+    "medical_renderer_primary.py": "e88d8ad4fa589be72b023b3ff695e114a0ab3250",
+    "medical_renderer_special.py": "88a4dbaf88debd146da38605c1244e567aeed55b",
+    "medical_service.py": "e930b930ddb63ee19ca27456391d257a4bdc6e41",
+    "smoke_combined_part03_medical_parser_manual.py": "bc89d5403c2ada86fba3d74dfec95f59f9834b41",
+    "smoke_combined_part04_medical_generation.py": "282f773fb17dead3c80914c3c3f0ebb54d1e9069",
+    "smoke_combined_part06_diary_columns_settings.py": "4da480e3b9d398c0f0e89b890253eb94b33e6de4",
+    "tools/generation_performance_profile.py": "b71c508ddddba3706851aab71197cc4d155cfc71"
+  }
+}
