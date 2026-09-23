@@ -1,14 +1,17 @@
 {
   "schema_version": 1,
   "base_sha": "45a2c067e7327088acd72ae9b259867653eec3f6",
-  "reason": "Deep document-correctness audit: remove sick-leave facts from primary/admission-doctor forms, reject impossible episode chronology, preserve source clinical prose, clear stale clinical placeholders, and clean VK template contradictions/placeholders.",
+  "reason": "Deep medical-document correctness audit: preserve source evidence, reject impossible chronology, remove sick-leave leakage, clear stale template content, stop fabricated investigation/diary/dynamic-epicrisis facts, and clean VK placeholders without inventing a duration.",
   "approved_blobs": {
     "dialog_expert.py": "65fdd91fbc9c0b59aca8a544bd8f70296eec3907",
+    "diary_constants.py": "b3dd96211b28d6fcb6af9f16b9857418b9f47b59",
+    "diary_service.py": "694b40a53ebef47e3eb9cb0012ecd8e6ba221923",
     "medical_gender.py": "36050151a236a451806acd29551833ba427dc2ff",
     "medical_renderer.py": "8ead4da7b5b411c658ab94f920848e4f7987c852",
-    "medical_renderer_commission.py": "d0e42f2ea165ab5035c542966d823024dd4fa889",
+    "medical_renderer_commission.py": "b27c31a2d00a65de43529f6b3c0dcb80871ecfb1",
+    "medical_renderer_labs.py": "04fc4428aeee4c006f7d843064d1486aa5d8757f",
     "medical_renderer_primary.py": "5897460da10c69de4425180b42cbf8e6cb82971c",
-    "medical_renderer_special.py": "23cb51e2752cab0c37cd6b6e805871c5014d9f0a",
+    "medical_renderer_special.py": "ef020ae36bc6c8b86d93b16777b44c75c874e6ac",
     "medical_service.py": "b68aec8976081bea1a24b196b81cac8da19df397"
   }
 }
