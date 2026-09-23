@@ -173,6 +173,16 @@ class MedicalDocumentService:
             raise ValueError(f"{label} не может быть раньше даты госпитализации.")
 
     @staticmethod
+    def _ensure_date_not_after_discharge(discharge_date: str, value: str, label: str) -> None:
+        """Protect episode-bound dates from extending beyond discharge."""
+        if not discharge_date or not value:
+            return
+        discharge = parse_date(discharge_date)
+        parsed = parse_date(value)
+        if discharge and parsed and parsed.date() > discharge.date():
+            raise ValueError(f"{label} не может быть позже даты выписки.")
+
+    @staticmethod
     def _require_core_text(value: str, label: str) -> str:
         normalized = str(value or "").strip()
         if not normalized:
@@ -212,7 +222,7 @@ class MedicalDocumentService:
         if selected_set & treatment_docs:
             data.treatment_plan = self._require_text(data.treatment_plan, "лечение")
 
-        sick_leave_docs = {"primary", "admission_doctor_referral", "discharge", "commission"}
+        sick_leave_docs = {"discharge", "commission"}
         disability_docs = {"primary", "admission_doctor_referral"}
         if selected_set & sick_leave_docs:
             sick_decision = normalize_yes_no(data.expert_sick_leave_needed)
@@ -308,10 +318,17 @@ class MedicalDocumentService:
         if {"discharge", "rvk"} & selected_set:
             data.discharge_date = self._normalize_required_date(data.discharge_date, "Дата выписки")
             self._ensure_discharge_not_before_admission(data.admission_date, data.discharge_date)
+            if "discharge" in selected_set and data.expert_sick_leave_needed == "да":
+                self._ensure_date_not_after_discharge(
+                    data.discharge_date,
+                    data.expert_sick_leave_from,
+                    "Дата начала больничного",
+                )
 
         if "commission" in selected_set:
             data.commission_date = self._normalize_required_date(data.commission_date, "Дата совместного осмотра")
             self._ensure_date_not_before_admission(data.admission_date, data.commission_date, "Дата совместного осмотра")
+            self._ensure_date_not_after_discharge(data.discharge_date, data.commission_date, "Дата совместного осмотра")
             data.commission_number = self._require_text(data.commission_number, "номер совместного осмотра")
 
         if "vk_mse" in selected_set:
