@@ -336,6 +336,7 @@ for path in created:
 assert "Находится на лечении с 10.06.2026 (9 дней)" in combined_text
 assert "От 16.06.2026 г." in combined_text
 assert "ЭПИ тестовая информация" in combined_text
+assert "ЭПИ (12.06.2026)" not in commission_text, commission_text
 
 # No patient result may be fabricated from historical template examples.
 for fabricated in (
@@ -454,7 +455,7 @@ for path in psych_no_address_created:
 # The discharge outcome/recommendation block must be the final clinical block:
 # after it only the physicians' signatures remain.
 discharge_lines = [p.text.strip() for p in Document(discharge_path).paragraphs if p.text.strip()]
-assert discharge_lines[-3].startswith("За время лечения состояние улучшилось."), discharge_lines[-5:]
+assert not any(line.startswith("За время лечения состояние улучшилось.") for line in discharge_lines), discharge_lines[-5:]
 assert discharge_lines[-2].startswith("Рекомендовано:"), discharge_lines[-5:]
 assert "Врач-психиатр" in discharge_lines[-1] and "Зав. отд." in discharge_lines[-1], discharge_lines[-5:]
 
