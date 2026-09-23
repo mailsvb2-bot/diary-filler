@@ -325,6 +325,7 @@ class MedicalDocumentService:
         if "commission" in selected_set:
             data.commission_date = self._normalize_required_date(data.commission_date, "Дата совместного осмотра")
             self._ensure_date_not_before_admission(data.admission_date, data.commission_date, "Дата совместного осмотра")
+            self._ensure_date_not_after_discharge(data.discharge_date, data.commission_date, "Дата совместного осмотра")
             data.commission_number = self._require_text(data.commission_number, "номер совместного осмотра")
 
         if "vk_mse" in selected_set:
@@ -339,11 +340,14 @@ class MedicalDocumentService:
         if "sick_leave_vk" in selected_set:
             data.sick_leave_vk_date = self._normalize_required_date(data.sick_leave_vk_date, "Дата ВК больничного")
             self._ensure_date_not_before_admission(data.admission_date, data.sick_leave_vk_date, "Дата ВК больничного")
+            self._ensure_date_not_after_discharge(data.discharge_date, data.sick_leave_vk_date, "Дата ВК больничного")
             data.sick_leave_vk_protocol_number = self._require_text(data.sick_leave_vk_protocol_number, "номер протокола ВК больничного")
             data.sick_leave_vk_protocol_date = self._normalize_required_date(data.sick_leave_vk_protocol_date, "Дата протокола ВК больничного")
             self._ensure_date_not_before_admission(data.admission_date, data.sick_leave_vk_protocol_date, "Дата протокола ВК больничного")
+            self._ensure_date_not_after_discharge(data.discharge_date, data.sick_leave_vk_protocol_date, "Дата протокола ВК больничного")
             data.sick_leave_vk_commission_date = self._normalize_required_date(data.sick_leave_vk_commission_date, "Дата проведения комиссии ВК больничного")
             self._ensure_date_not_before_admission(data.admission_date, data.sick_leave_vk_commission_date, "Дата проведения комиссии ВК больничного")
+            self._ensure_date_not_after_discharge(data.discharge_date, data.sick_leave_vk_commission_date, "Дата проведения комиссии ВК больничного")
             data.sick_leave_vk_work_org = (data.sick_leave_vk_work_org or data.work_org).strip()
             data.sick_leave_vk_position = (data.sick_leave_vk_position or data.position).strip()
             data.sick_leave_vk_work_position = data.sick_leave_vk_work_position or ", ".join(
