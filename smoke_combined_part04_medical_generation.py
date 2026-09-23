@@ -77,6 +77,14 @@ commission_path = next(path for path in created if "Совместный" in pat
 admission_doctor_path = next(path for path in created if "приёмного покоя" in path.name)
 vk_mse_path = next(path for path in created if "ВК на МСЭ" in path.name)
 sick_leave_vk_path = next(path for path in created if "ВК больничный" in path.name)
+vk_mse_text = extract_docx_text(vk_mse_path)
+sick_leave_vk_text = extract_docx_text(sick_leave_vk_path)
+for vk_text in (vk_mse_text, sick_leave_vk_text):
+    assert "(первичный, повторный)" not in vk_text, vk_text
+    assert "Зав. отделением_________________" not in vk_text, vk_text
+    assert "Лечащий врач___________________" not in vk_text, vk_text
+assert "направление на МСЭ" not in sick_leave_vk_text, sick_leave_vk_text
+assert "продлить лечение по листу нетрудоспособности на 14 дней" in sick_leave_vk_text.lower(), sick_leave_vk_text
 discharge_text = extract_docx_text(discharge_path)
 rvk_text = extract_docx_text(rvk_path)
 primary_text = extract_docx_text(primary_path)
@@ -202,11 +210,13 @@ for source_name, source_path in _source_target_cases:
         if target_kind == "commission":
             source_data.commission_date = manual_data.commission_date
             source_data.commission_number = manual_data.commission_number
-            if source_name == "discharge" and source_data.sick_leave == "нужен":
-                # The discharge form explicitly preserves the positive decision,
-                # but intentionally does not print the original opening date of
-                # the sick-leave certificate. That one genuinely missing fact
-                # must be supplied by the doctor instead of being guessed.
+            # Primary/admission documents intentionally do not persist sick-leave
+            # facts. Commission still requires the explicit doctor decision, so
+            # supply it as target-specific metadata instead of recovering it from
+            # a document that must not contain it.
+            if not source_data.expert_sick_leave_needed:
+                source_data.expert_sick_leave_needed = manual_data.expert_sick_leave_needed
+            if source_data.expert_sick_leave_needed == "да" and not source_data.expert_sick_leave_from:
                 source_data.expert_sick_leave_from = manual_data.expert_sick_leave_from
         elif target_kind == "rvk":
             source_data.discharge_date = source_data.discharge_date or manual_data.discharge_date
@@ -270,11 +280,11 @@ assert admission_doctor_roundtrip.admission_date == manual_data.admission_date, 
 )
 assert admission_doctor_roundtrip.input_document_kind == "осмотр врача приёмного покоя"
 
-# Public service round-trip: a generated primary exam renders the sick-leave
-# decision as "нужен с <date>". Parsing that DOCX and regenerating it must
-# reconstruct the canonical decision/date rather than rejecting its own output.
+# Public service round-trip: primary exam intentionally contains no sick-leave
+# fact. Parsing and regenerating it must stay stable without forcing the doctor
+# to answer an unrelated sick-leave question.
 roundtrip_data = service.parse_primary_document(primary_path)
-assert roundtrip_data.sick_leave == "нужен с 15.06.2026", roundtrip_data.sick_leave
+assert roundtrip_data.sick_leave == "", roundtrip_data.sick_leave
 assert roundtrip_data.expert_sick_leave_needed == ""
 assert roundtrip_data.expert_sick_leave_from == ""
 assert roundtrip_data.admission_occurrence == manual_data.admission_occurrence, roundtrip_data.admission_occurrence
@@ -285,10 +295,10 @@ roundtrip_created, roundtrip_used = service.create_documents(
     override_data=roundtrip_data,
 )
 assert len(roundtrip_created) == 1
-assert roundtrip_used.expert_sick_leave_needed == "да"
-assert roundtrip_used.expert_sick_leave_from == "15.06.2026"
-assert roundtrip_used.sick_leave == "нужен с 15.06.2026"
-assert "Больничный лист: нужен с 15.06.2026" in extract_docx_text(roundtrip_created[0])
+assert roundtrip_used.expert_sick_leave_needed == ""
+assert roundtrip_used.expert_sick_leave_from == ""
+assert roundtrip_used.sick_leave == ""
+assert "Больничный лист:" not in extract_docx_text(roundtrip_created[0])
 
 assert "На основании данных" in discharge_text and "F99.9 Тестовый диагноз из UI" in discharge_text, discharge_text
 for occurrence_text in (primary_text, discharge_text, commission_text, admission_doctor_text, rvk_text):
@@ -318,7 +328,7 @@ assert "военного комиссариата Ленинского райо�
 assert "Направление от РВК: по направлению из РВК (Ленинского района)" in primary_text
 assert "Место работы, должность: ООО Тест, инженер" in combined_text
 assert "Экспертный анамнез: Работает в ООО Завод, в должности инженер. Больничный лист. Срок лечения с 10.06.2026 по 11.06.2026, 2 дня. К труду с 12.06.2026." in combined_text
-assert "Экспертный анамнез: Работает в ООО Завод, в должности инженер. Больничный лист нужен с 15.06.2026." in combined_text
+assert "Экспертный анамнез: Работает в ООО Завод, в должности инженер. Больничный лист нужен с 10.06.2026." in combined_text
 assert "К труду с 12.06.2026" in discharge_text
 for path in created:
     if any(key in path.name for key in ("Первичный", "Выписной", "Совместный")):
@@ -326,6 +336,45 @@ for path in created:
 assert "Находится на лечении с 10.06.2026 (9 дней)" in combined_text
 assert "От 16.06.2026 г." in combined_text
 assert "ЭПИ тестовая информация" in combined_text
+
+# No patient result may be fabricated from historical template examples.
+for fabricated in (
+    "ОАК - в норме",
+    "ОАМ - в норме",
+    "Глюкоза крови - 3,40",
+    "Глюкоза крови (",
+    "ритм синусовый, ЧСС 65",
+    "патологии не выявлено",
+):
+    assert fabricated not in combined_text, (fabricated, combined_text)
+
+# Missing optional clinical fields must clear historical template examples rather
+# than leaking another patient's/example text into a valid-looking DOCX.
+empty_clinical = copy.deepcopy(manual_data)
+empty_clinical.complaints = ""
+empty_clinical.life_anamnesis = ""
+empty_clinical.disease_anamnesis = ""
+empty_clinical.mental_status = ""
+empty_clinical.somatic_status = ""
+empty_clinical.examination_plan = ""
+empty_out, _ = service.create_documents(
+    navigation_path=nav,
+    output_dir=OUT / "empty_clinical_fail_closed",
+    discharge_date="11.06.2026",
+    epi_path=epi,
+    selected_docs=DOCUMENT_ORDER,
+    override_data=empty_clinical,
+)
+empty_text = "\n".join(extract_docx_text(path) for path in empty_out)
+for stale_template_text in (
+    "всё болит, ничего не помогает",
+    "Новые шаблоны учёл по структуре",
+    "Да, сделаю. Здесь важно",
+    "Нормального питания. Кожные покровы",
+    "Кожа и видимые слизистые чистые",
+    "Жалобы: не предъявляет",
+):
+    assert stale_template_text not in empty_text, (stale_template_text, empty_text)
 
 # Dates entered in the dedicated popups must reach the actual document headers.
 commission_doc = Document(commission_path)
