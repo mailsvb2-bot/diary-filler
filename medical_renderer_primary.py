@@ -115,8 +115,13 @@ class MedicalRendererPrimaryMixin:
         person_line = ", ".join(part for part in person_parts if part).strip(" ,")
         editor.replace_first_matching_paragraph(["г.р.,", "зарегистрирован по адресу", "регистрация по адресу"], person_line)
         self._place_psych_account_after_registration(editor, data, ["регистрация по адресу"], fallback_markers=[data.fio])
-        stay_verb = "Находилась" if patient_gender(data) == "female" else "Находился"
-        period = f"{stay_verb} на лечении в ГБУЗ НО «НКЦПЗ» диспансер №2 с {data.admission_date} по {data.discharge_date}".strip()
+        gender = patient_gender(data)
+        if gender == "female":
+            period = f"Находилась на лечении в ГБУЗ НО «НКЦПЗ» диспансер №2 с {data.admission_date} по {data.discharge_date}".strip()
+        elif gender == "male":
+            period = f"Находился на лечении в ГБУЗ НО «НКЦПЗ» диспансер №2 с {data.admission_date} по {data.discharge_date}".strip()
+        else:
+            period = f"Период лечения в ГБУЗ НО «НКЦПЗ» диспансер №2: с {data.admission_date} по {data.discharge_date}".strip()
         editor.replace_first_matching_paragraph(["Находился на лечении"], period)
         period_index = editor.find_paragraph_index(["Находился на лечении"])
         if period_index is not None:
