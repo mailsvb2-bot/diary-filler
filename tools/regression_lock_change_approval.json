@@ -15,8 +15,8 @@
     "ci_gate_lock"
   ],
   "approved_blobs": {
-    "medical_parser_blocks.py": "ca1e05a22d84ac5f259002a61d41fc8afcaef2d9",
+    "medical_parser_blocks.py": "22dc0ecf1769f9ed15cb45a5e338e414a0bbfa01",
     "tools/docx_block_boundary_regression.py": "d5cbdfce1926cc094de41ab71af02f0b171e2ede",
-    "tools/document_mechanics_change_approval.json": "8e7addd369789ed051c17009efcfe0a02db117b1"
+    "tools/document_mechanics_change_approval.json": "deb47bbcef1d3bf523814a6a125cd1e1cd9a3f0d"
   }
 }
