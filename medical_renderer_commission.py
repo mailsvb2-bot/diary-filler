@@ -80,14 +80,14 @@ class MedicalRendererCommissionMixin:
         else:
             editor.remove_all_matching_paragraphs(["ЭПИ"])
 
-        diagnosis_sentence = ""
         diagnosis = sanitize_diagnosis(data.diagnosis)
-        if diagnosis:
-            diagnosis_sentence = (
-                "На основании данных анамнеза жизни и заболевания, психического статуса "
-                f"установлен диагноз: {diagnosis}"
-            )
-        editor.replace_block(["На основании данных", "Диагноз"], "", diagnosis_sentence, COMMISSION_MARKERS)
+        editor.replace_block(
+            ["На основании данных", "Диагноз"],
+            "Диагноз:",
+            diagnosis,
+            COMMISSION_MARKERS,
+            allow_empty=True,
+        )
         editor.replace_block(["Лечение"], "Лечение:", data.treatment_plan, COMMISSION_MARKERS)
         editor.replace_block(["Эпидемиологический анамнез"], "Эпидемиологический анамнез:", data.epidemiology, COMMISSION_MARKERS, allow_empty=True)
         editor.remove_all_matching_paragraphs(["Целесообразна госпитализация"])
