@@ -731,6 +731,41 @@ _implicit_mse_created, implicit_mse_used = service.create_documents(
 )
 assert implicit_mse_used.disability_needed == "да", implicit_mse_used.disability_needed
 
+combined_sick_vk = service.parse_primary_document(nav)
+combined_sick_vk.discharge_date = "20.06.2026"
+combined_sick_vk.expert_sick_leave_needed = ""
+combined_sick_vk.sick_leave = ""
+combined_sick_vk.expert_sick_leave_from = "10.06.2026"
+combined_sick_vk.sick_leave_vk_date = "18.06.2026"
+combined_sick_vk.sick_leave_vk_protocol_number = "83-COMBINED"
+combined_sick_vk.sick_leave_vk_protocol_date = "18.06.2026"
+combined_sick_vk.sick_leave_vk_commission_date = "18.06.2026"
+_combined_sick_created, combined_sick_used = service.create_documents(
+    navigation_path=nav,
+    output_dir=OUT / "combined_discharge_sick_vk",
+    selected_docs=["discharge", "sick_leave_vk"],
+    override_data=combined_sick_vk,
+)
+assert len(_combined_sick_created) == 2
+assert combined_sick_used.expert_sick_leave_needed == "да"
+assert combined_sick_used.expert_sick_leave_from == "10.06.2026"
+
+combined_mse = service.parse_primary_document(nav)
+combined_mse.disability_needed = ""
+combined_mse.disability = ""
+combined_mse.vk_date = "12.06.2026"
+combined_mse.vk_protocol_number = "84-COMBINED"
+combined_mse.vk_protocol_date = "12.06.2026"
+_combined_mse_created, combined_mse_used = service.create_documents(
+    navigation_path=nav,
+    output_dir=OUT / "combined_primary_mse",
+    selected_docs=["primary", "vk_mse"],
+    override_data=combined_mse,
+)
+assert len(_combined_mse_created) == 2
+assert combined_mse_used.disability_needed == "да"
+assert combined_mse_used.disability == "нужно"
+
 bad_sick_vk_order_data = service.parse_primary_document(nav)
 bad_sick_vk_order_data.sick_leave_vk_date = "10.06.2026"
 bad_sick_vk_order_data.sick_leave_vk_protocol_number = "79"
