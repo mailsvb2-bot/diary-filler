@@ -794,6 +794,41 @@ def _assert_cross_field_order_and_isolation_survive_full_roundtrip() -> None:
                     f"{path.name}: {field_name} line order changed: {positions}"
                 )
 
+
+def _assert_template_cleanup_never_deletes_inserted_patient_marker_lines() -> None:
+    doc = Document()
+    doc.add_paragraph("Анамнез заболевания")
+    doc.add_paragraph("старый текст шаблона")
+    doc.add_paragraph("ЭПИ - шаблонный пример, удалить")
+    doc.add_paragraph("ЭКГ - шаблонный пример, удалить")
+    doc.add_paragraph("Психический статус")
+    doc.add_paragraph("старый статус")
+
+    editor = DocxBlockEditor(doc)
+    source_lines = (
+        "Начало заболевания постепенное.\n"
+        "ЭПИ - ранее проводилось по месту жительства; это часть анамнеза.\n"
+        "ЭКГ - ранее описывалась без особенностей; это часть анамнеза.\n"
+        "Рекомендовано: ранее врачом амбулаторно; это исторический факт."
+    )
+    assert editor.replace_block(
+        ["Анамнез заболевания"],
+        "Анамнез заболевания:",
+        source_lines,
+        PRIMARY_MARKERS,
+    )
+
+    editor.remove_all_matching_paragraphs(["ЭПИ", "ЭКГ", "Рекомендовано"])
+    editor.replace_all_matching_paragraphs(["Диагноз"], "Диагноз: НЕ ДОЛЖНО ПОЯВИТЬСЯ")
+
+    text = "\n".join(p.text for p in doc.paragraphs)
+    assert "ЭПИ - шаблонный пример" not in text, text
+    assert "ЭКГ - шаблонный пример" not in text, text
+    assert "ЭПИ - ранее проводилось по месту жительства" in text, text
+    assert "ЭКГ - ранее описывалась без особенностей" in text, text
+    assert "Рекомендовано: ранее врачом амбулаторно" in text, text
+
+
 def verify() -> None:
     _assert_alias_coverage()
     _assert_inserted_marker_like_patient_text_never_becomes_structure()
@@ -805,6 +840,7 @@ def verify() -> None:
     _assert_1250_line_clinical_block_survives_full_roundtrip()
     _assert_all_major_clinical_blocks_survive_long_roundtrip()
     _assert_all_medical_forms_keep_long_clinical_tails()
+    _assert_template_cleanup_never_deletes_inserted_patient_marker_lines()
     print("DOCX BLOCK BOUNDARY REGRESSION OK: structural aliases + cross-field order/isolation + 1250-line stress + complaints/life/somatic + table/run-fragmented long-text integrity across all medical forms")
 
 
