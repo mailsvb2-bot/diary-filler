@@ -36,7 +36,7 @@
     "smoke_combined_part02_ui_parser_regressions.py": "01798735afbee80334d401806c33e79ae2cf980a",
     "smoke_combined_part03_medical_parser_manual.py": "e1c619bae68b3421ccbdafd9b366178f9b2eed86",
     "smoke_combined_part04_medical_generation.py": "4a41c3ff5e796bb762627a90763540fb1e67024b",
-    "smoke_combined_part05_diary_basic_templates.py": "7407dcb5b2f7307f49569f119ae2811d8b92138b",
+    "smoke_combined_part05_diary_basic_templates.py": "b9874c10f32b5a1bdfec00107abb86b657d135db",
     "smoke_combined_part06_diary_columns_settings.py": "26a3351ff962fe9655dc0cab5951444076ece614",
     "tests/golden_docx_manifest.json": "ce01c9808be9652acceec987d7330c15e1ffb003",
     "tools/document_mechanics_change_approval.json": "92a0e964a9460c3121bb5655d9d5a5791dfa1d6d",
