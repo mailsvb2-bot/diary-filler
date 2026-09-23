@@ -284,7 +284,7 @@ except ValueError as exc:
     assert "военкомат" in str(exc), str(exc)
 
 compact_popup_data = service.parse_primary_document(nav)
-compact_popup_data.discharge_date = "11062026"
+compact_popup_data.discharge_date = "20062026"
 compact_popup_data.admission_occurrence = "повторно"
 compact_popup_data.expert_sick_leave_needed = "нет"
 compact_popup_data.sick_leave = "не нужен"
@@ -305,7 +305,7 @@ compact_created, compact_used = service.create_documents(
     selected_docs=["discharge", "commission", "vk_mse", "sick_leave_vk", "rvk"],
     override_data=compact_popup_data,
 )
-assert compact_used.discharge_date == "11.06.2026"
+assert compact_used.discharge_date == "20.06.2026"
 assert compact_used.admission_occurrence == "повторно"
 assert compact_used.commission_date == "18.06.2026"
 assert compact_used.vk_date == "19.06.2026"
