@@ -259,6 +259,18 @@ class MedicalDocumentService:
         data.fio = self._require_core_text(data.fio, "Ф.И.О.")
         data.birth = self._require_core_text(data.birth, "год/дата рождения")
         data.admission_date = self._normalize_required_date(data.admission_date, "Дата госпитализации")
+        admission_dt = parse_date(data.admission_date)
+        birth_dt = parse_date(data.birth)
+        birth_year_match = re.search(r"(?<!\d)((?:19|20)\d{2})(?!\d)", data.birth)
+        birth_year = (
+            birth_dt.year
+            if birth_dt is not None
+            else int(birth_year_match.group(1)) if birth_year_match else None
+        )
+        if birth_dt is not None and admission_dt is not None and admission_dt.date() < birth_dt.date():
+            raise ValueError("Дата госпитализации не может быть раньше даты рождения.")
+        if birth_dt is None and birth_year is not None and admission_dt is not None and admission_dt.year < birth_year:
+            raise ValueError("Дата госпитализации не может быть раньше года рождения.")
         data.case_number = self._require_text(data.case_number, "номер истории болезни")
         data.diagnosis = self._require_text(data.diagnosis, "диагноз")
 
@@ -372,6 +384,10 @@ class MedicalDocumentService:
             current_year = datetime.now().year
             if int(year) > current_year:
                 raise ValueError("Год постановки на учёт у психиатров не может быть в будущем.")
+            if birth_year is not None and int(year) < birth_year:
+                raise ValueError(
+                    "Год постановки на учёт у психиатров не может быть раньше года рождения."
+                )
             data.psych_account_since_year = year
         else:
             data.psych_account_since_year = ""
