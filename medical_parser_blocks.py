@@ -144,13 +144,21 @@ class MedicalParserBlocksMixin:
             return _first_valid_full_date(raw or "")
 
         # Самый сильный источник: период именно текущего пребывания/обследования.
-        period_re = re.compile(
-            rf"(?i)(?:находил(?:ся|ась)?|находится)\s+"
-            rf"[^\n]{{0,100}}?\b(?:лечени\w*|обследован\w*|стационар\w*)\b"
-            rf"[^\n]{{0,120}}?\bс\s+({date_token})\s+\bпо\s+({date_token})"
+        period_patterns = (
+            re.compile(
+                rf"(?i)(?:находил(?:ся|ась)?|находится)\s+"
+                rf"[^\n]{{0,100}}?\b(?:лечени\w*|обследован\w*|стационар\w*)\b"
+                rf"[^\n]{{0,120}}?\bс\s+({date_token})\s+\bпо\s+({date_token})"
+            ),
+            re.compile(
+                rf"(?i)период\s+(?:лечения|обследования)\b"
+                rf"[^\n]{{0,160}}?\bс\s+({date_token})\s+\bпо\s+({date_token})"
+            ),
         )
-        match = period_re.search(value)
-        if match:
+        for period_re in period_patterns:
+            match = period_re.search(value)
+            if not match:
+                continue
             admission = norm(match.group(1))
             end_date = norm(match.group(2))
             if admission:
