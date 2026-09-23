@@ -180,6 +180,35 @@ def _remove_regular_diary_block_for_date(doc: Document, item_date: date) -> None
             parent.remove(element)
 
 
+def _dynamic_epicrisis_rendered_paragraphs(
+    item_date: date,
+    lines: tuple[str, ...],
+) -> tuple[str, ...]:
+    """Render clinical epicrisis prose as one paragraph, like an ordinary diary.
+
+    build_dynamic_epicrisis_text keeps semantic fields on separate lines so
+    callers can still inspect them independently. Word output must not mirror
+    those semantic line breaks: the clinical body is continuous prose and Word
+    should wrap it naturally at the page margin. Signature lines remain
+    separate, matching ordinary diary rendering.
+    """
+    signature_prefixes = ("Лечащий врач ", "Зав.отделением ")
+    body_lines: list[str] = []
+    signature_lines: list[str] = []
+    for raw_line in lines:
+        line = " ".join(str(raw_line or "").split())
+        if not line:
+            continue
+        if line.startswith(signature_prefixes):
+            signature_lines.append(line)
+        else:
+            body_lines.append(line)
+
+    body = " ".join(body_lines).strip()
+    dated_body = f"{item_date:%d.%m.%y} {body}".strip()
+    return (dated_body, *signature_lines)
+
+
 def _insert_dynamic_block(doc: Document, item_date: date, lines: tuple[str, ...]) -> None:
     """Insert a dynamic epicrisis in chronological order."""
     anchor = None
@@ -189,7 +218,7 @@ def _insert_dynamic_block(doc: Document, item_date: date, lines: tuple[str, ...]
             anchor = paragraph
             break
 
-    rendered = (f"{item_date:%d.%m.%y} {lines[0]}".rstrip(), *lines[1:])
+    rendered = _dynamic_epicrisis_rendered_paragraphs(item_date, lines)
     if anchor is None:
         if doc.paragraphs:
             doc.add_paragraph("")
