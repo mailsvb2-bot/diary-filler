@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "base_sha": "d2b705c1bfd601deca7681520bf51097f22d569c",
+  "reason": "Fix clinical-section start detection so narrative phrases such as Diagnosis previously..., Treatment previously..., and Mental status in dynamics... cannot replace the actual target fields parsed from a primary document.",
+  "approved_blobs": {
+    "medical_parser_blocks.py": "ca1e05a22d84ac5f259002a61d41fc8afcaef2d9"
+  }
+}
