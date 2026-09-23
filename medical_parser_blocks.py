@@ -296,8 +296,21 @@ class MedicalParserBlocksMixin:
         и на отдельный заголовок «Лечение».
         """
         pattern = self._alias_pattern(alias)
+        alias_norm = normalize_match(alias)
         for m in re.finditer(pattern, text, flags=re.IGNORECASE):
-            if self._is_valid_section_marker_occurrence(text, m.start(), m.end(), alias):
+            # Clinical marker words are unsafe as both a following boundary and
+            # the block's own start. Otherwise a narrative line such as
+            # "Диагноз ранее..." or "Психический статус в динамике..." can be
+            # captured as the diagnosis/status itself.
+            if alias_norm in self._STRICT_CLINICAL_BOUNDARY_MARKERS:
+                valid = self._is_valid_section_boundary_occurrence(
+                    text, m.start(), m.end(), alias
+                )
+            else:
+                valid = self._is_valid_section_marker_occurrence(
+                    text, m.start(), m.end(), alias
+                )
+            if valid:
                 return (m.start(), m.end())
         return None
 
