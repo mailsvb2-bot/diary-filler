@@ -103,8 +103,6 @@ class MedicalRendererPrimaryMixin:
     def render_discharge(self, template_path: str | Path, output_path: str | Path, data: PatientData) -> None:
         doc = Document(str(template_path))
         editor = DocxBlockEditor(doc)
-        dates = data.lab_dates()
-
         header_date = data.discharge_date or data.admission_date or "Дата, время"
         header = f"{header_date}      Выписной эпикриз № {data.case_number}".rstrip()
         editor.replace_first_matching_paragraph(["Дата, время"], header)
@@ -156,7 +154,12 @@ class MedicalRendererPrimaryMixin:
                     f"Диагноз: {diagnosis}",
                 )
         editor.replace_block(["Сомато-неврологический статус", "Соматический статус"], "Сомато-неврологический статус:", data.somatic_status, DISCHARGE_MARKERS, allow_empty=True)
-        self._replace_lab_lines(editor, dates)
+        self._render_sourced_investigation_results(
+            editor,
+            data,
+            DISCHARGE_MARKERS,
+            before_markers=["ЭПИ", "Диагноз", "Лечение", "Зав. отд."],
+        )
         if data.epi_text:
             editor.replace_block(["ЭПИ"], "ЭПИ –", data.epi_text, DISCHARGE_MARKERS)
         else:
