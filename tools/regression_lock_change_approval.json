@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "ad952289a1bcc5bc7c53d00843673f1139c32fb7",
-  "reason": "Deep medical-document correctness audit: preserve source truth, remove sick-leave leakage from non-sick-leave forms, reject impossible chronology, clear stale template text, eliminate fabricated investigation and diary facts, remove invented dynamic-epicrisis defaults, and clean VK scaffolding without inventing duration.",
+  "reason": "Deep medical-document correctness audit: evidence-only output, no fabricated investigations/outcomes/recommendations/prognoses, fail-closed chronology and dynamic epicrisis semantics, preserved clinical prose, and neutral unknown-gender wording.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -22,18 +22,20 @@
     "medical_renderer.py": "8ead4da7b5b411c658ab94f920848e4f7987c852",
     "medical_renderer_commission.py": "ff0ec3d795002383ffdc77c69a35591eb43b85e5",
     "medical_renderer_labs.py": "04fc4428aeee4c006f7d843064d1486aa5d8757f",
-    "medical_renderer_primary.py": "bf01ee0485a77815b13bc1952e15a77021b7ee77",
-    "medical_renderer_special.py": "ef020ae36bc6c8b86d93b16777b44c75c874e6ac",
+    "medical_renderer_primary.py": "578580e343e925a034fe7d265d750eb13c4b51d0",
+    "medical_renderer_special.py": "7adbcdc2f353deecde5af601b27d5d7260867a24",
     "medical_service.py": "68af072a7fd6e3e5bab436d900f2352d1ecbe768",
-    "prod_audit.py": "94862cc2827b7b9d7fc9bf1f0d518315818f9df5",
+    "prod_audit.py": "a486ab59f261eb192e6736f60cac48701f93495e",
     "smoke_combined_part02_ui_parser_regressions.py": "01798735afbee80334d401806c33e79ae2cf980a",
     "smoke_combined_part03_medical_parser_manual.py": "8b16f02e18b4ffef248922b5eb7784595f524457",
-    "smoke_combined_part04_medical_generation.py": "6625a3a729ddf3259c7830768006e93558380360",
+    "smoke_combined_part04_medical_generation.py": "1a20e61f9d87d757ae26c47ccc582c11e5ba8020",
     "smoke_combined_part05_diary_basic_templates.py": "b5828ee8285b1268d1f9f5087b0a0fdb13850572",
     "smoke_combined_part06_diary_columns_settings.py": "36e3365b385fe25bf9a8fa8077dd4827747f258d",
     "tests/golden_docx_manifest.json": "ce01c9808be9652acceec987d7330c15e1ffb003",
-    "tools/document_mechanics_change_approval.json": "424ed85a1254db5c48376cab5f6282c1657fe10b",
+    "tools/document_mechanics_change_approval.json": "a757d452cc3ed087d88e376cd8c885fe8f4e4758",
     "tools/generation_performance_profile.py": "e89a69cadd0315771070d8f079e421dfb43e75cd",
-    "safety_integrity_check.py": "ebdee7173515947717d1b1ed4206b7f8fb18350e"
+    "safety_integrity_check.py": "ebdee7173515947717d1b1ed4206b7f8fb18350e",
+    "actions_diary_flow.py": "986922b0f35633c51cf9d5117b029445d98fc70e",
+    "medical_parser_blocks.py": "d705e7a3c2f7e557c55ca601639e51b18f280e01"
   }
 }
