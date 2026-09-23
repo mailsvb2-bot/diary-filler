@@ -637,6 +637,36 @@ try:
 except ValueError as exc:
     assert "раньше" in str(exc), str(exc)
 
+invalid_admission_data = service.parse_primary_document(nav)
+invalid_admission_data.admission_date = "99.99.2026"
+try:
+    service.create_documents(
+        navigation_path=nav,
+        output_dir=OUT / "invalid_admission_service_boundary",
+        selected_docs=["primary"],
+        override_data=invalid_admission_data,
+    )
+    raise AssertionError("invalid admission date must be rejected")
+except ValueError as exc:
+    assert "Дата госпитализации" in str(exc), str(exc)
+
+late_sick_vk_data = service.parse_primary_document(nav)
+late_sick_vk_data.discharge_date = "11.06.2026"
+late_sick_vk_data.sick_leave_vk_date = "12.06.2026"
+late_sick_vk_data.sick_leave_vk_protocol_number = "79-LATE"
+late_sick_vk_data.sick_leave_vk_protocol_date = "12.06.2026"
+late_sick_vk_data.sick_leave_vk_commission_date = "12.06.2026"
+try:
+    service.create_documents(
+        navigation_path=nav,
+        output_dir=OUT / "sick_vk_after_discharge_service_boundary",
+        selected_docs=["sick_leave_vk"],
+        override_data=late_sick_vk_data,
+    )
+    raise AssertionError("sick-leave VK after known discharge must be rejected")
+except ValueError as exc:
+    assert "позже даты выписки" in str(exc), str(exc)
+
 bad_sick_vk_order_data = service.parse_primary_document(nav)
 bad_sick_vk_order_data.sick_leave_vk_date = "10.06.2026"
 bad_sick_vk_order_data.sick_leave_vk_protocol_number = "79"
