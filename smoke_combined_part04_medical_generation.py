@@ -71,6 +71,26 @@ assert any(path.name == "Маркер Женская Тестовая Выпис
 combined_text = "\n".join(extract_docx_text(path) for path in created)
 assert "F99.9 Тестовый диагноз из UI" in combined_text
 assert "данных клинических исследований" not in combined_text, combined_text
+# Broad semantic canary: none of these patient-specific conclusions exist in
+# the fixture source. If they appear, they leaked from a bundled template or a
+# renderer default and must not be published as patient facts.
+for unsourced_template_claim in (
+    "состояние улучшилось",
+    "суицидальных мыслей",
+    "критика к состоянию",
+    "неблагоприятный",
+    "стойких нарушений психических функций",
+    "ритм синусовый",
+    "глюкоза крови - 3,40",
+    "патологии не выявлено",
+    "кал на яйца глист - не обнаружены",
+    "рекомендовано:",
+    "14 дней",
+):
+    assert unsourced_template_claim not in combined_text.lower(), (
+        unsourced_template_claim,
+        combined_text,
+    )
 # Investigation results must come from explicit patient evidence, never from
 # bundled template examples or admission-relative guessed dates.
 for fabricated in (
