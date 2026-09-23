@@ -24,15 +24,15 @@
     "medical_renderer_labs.py": "04fc4428aeee4c006f7d843064d1486aa5d8757f",
     "medical_renderer_primary.py": "bf01ee0485a77815b13bc1952e15a77021b7ee77",
     "medical_renderer_special.py": "ef020ae36bc6c8b86d93b16777b44c75c874e6ac",
-    "medical_service.py": "b68aec8976081bea1a24b196b81cac8da19df397",
+    "medical_service.py": "68af072a7fd6e3e5bab436d900f2352d1ecbe768",
     "prod_audit.py": "94862cc2827b7b9d7fc9bf1f0d518315818f9df5",
     "smoke_combined_part02_ui_parser_regressions.py": "01798735afbee80334d401806c33e79ae2cf980a",
     "smoke_combined_part03_medical_parser_manual.py": "8b16f02e18b4ffef248922b5eb7784595f524457",
     "smoke_combined_part04_medical_generation.py": "6625a3a729ddf3259c7830768006e93558380360",
     "smoke_combined_part05_diary_basic_templates.py": "b5828ee8285b1268d1f9f5087b0a0fdb13850572",
-    "smoke_combined_part06_diary_columns_settings.py": "4a7bb69a405a61318573c5623c7f16725f431abf",
+    "smoke_combined_part06_diary_columns_settings.py": "36e3365b385fe25bf9a8fa8077dd4827747f258d",
     "tests/golden_docx_manifest.json": "ce01c9808be9652acceec987d7330c15e1ffb003",
-    "tools/document_mechanics_change_approval.json": "6b939dfe8ec74aaaf99bf12329e0f91e59f66eab",
+    "tools/document_mechanics_change_approval.json": "424ed85a1254db5c48376cab5f6282c1657fe10b",
     "tools/generation_performance_profile.py": "e89a69cadd0315771070d8f079e421dfb43e75cd"
   }
 }
