@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "ad952289a1bcc5bc7c53d00843673f1139c32fb7",
-  "reason": "Deep medical-document correctness audit: evidence-only output, no fabricated investigations/outcomes/recommendations/prognoses, fail-closed chronology and dynamic epicrisis semantics, preserved clinical prose, and neutral unknown-gender wording.",
+  "reason": "Deep medical-document correctness audit: evidence-only rendering, source-owned clinical prose, non-destructive marker cleanup, fail-closed chronology/dynamic epicrises, neutral unknown-gender wording, and broad semantic canaries.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -32,10 +32,12 @@
     "smoke_combined_part05_diary_basic_templates.py": "9b42ebe4511862acff93743aa5bdcfefe42448fa",
     "smoke_combined_part06_diary_columns_settings.py": "36e3365b385fe25bf9a8fa8077dd4827747f258d",
     "tests/golden_docx_manifest.json": "ce01c9808be9652acceec987d7330c15e1ffb003",
-    "tools/document_mechanics_change_approval.json": "e8f824e22015abc061160978ab7d4ea075c8c0ad",
+    "tools/document_mechanics_change_approval.json": "7013bf627e4b2219b9bc8bbb13b384d0e577a699",
     "tools/generation_performance_profile.py": "e89a69cadd0315771070d8f079e421dfb43e75cd",
     "safety_integrity_check.py": "ebdee7173515947717d1b1ed4206b7f8fb18350e",
     "actions_diary_flow.py": "986922b0f35633c51cf9d5117b029445d98fc70e",
-    "medical_parser_blocks.py": "d705e7a3c2f7e557c55ca601639e51b18f280e01"
+    "medical_parser_blocks.py": "d705e7a3c2f7e557c55ca601639e51b18f280e01",
+    "medical_docx_editor_replace.py": "2cbba96230448d6e17ca06de71cf6fe9f2ebaea4",
+    "tools/docx_block_boundary_regression.py": "9cc1fe3aba4f5e2a52eeeaa763d67113fb6119b6"
   }
 }
