@@ -867,6 +867,38 @@ assert "Устаревшая организация" not in _nonworking_primary_
 assert "Устаревшая должность" not in _nonworking_primary_text, _nonworking_primary_text
 assert "Экспертный анамнез: Не работает." in _nonworking_primary_text, _nonworking_primary_text
 
+future_birth_data = service.parse_primary_document(nav)
+future_birth_data.birth = "01.01.2030"
+try:
+    service.create_documents(
+        navigation_path=nav,
+        output_dir=OUT / "admission_before_birth",
+        selected_docs=["primary"],
+        override_data=future_birth_data,
+    )
+    raise AssertionError("admission before birth must be rejected")
+except ValueError as exc:
+    assert "раньше даты рождения" in str(exc), str(exc)
+
+prebirth_psych_data = service.parse_primary_document(nav)
+prebirth_psych_data.birth = "01.01.1980"
+prebirth_psych_data.expert_work_status = "нет"
+prebirth_psych_data.disability_needed = "нет"
+prebirth_psych_data.rvk_referral_present = "нет"
+prebirth_psych_data.psych_account_status = "да"
+prebirth_psych_data.psych_account_since_year = "1970"
+prebirth_psych_data.psych_account = "состоит с 1970"
+try:
+    service.create_documents(
+        navigation_path=nav,
+        output_dir=OUT / "psych_account_before_birth",
+        selected_docs=["primary"],
+        override_data=prebirth_psych_data,
+    )
+    raise AssertionError("psychiatric account before birth must be rejected")
+except ValueError as exc:
+    assert "раньше года рождения" in str(exc), str(exc)
+
 bad_sick_vk_order_data = service.parse_primary_document(nav)
 bad_sick_vk_order_data.sick_leave_vk_date = "10.06.2026"
 bad_sick_vk_order_data.sick_leave_vk_protocol_number = "79"
