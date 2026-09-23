@@ -131,6 +131,15 @@ for unsourced_vk_claim in (
     assert unsourced_vk_claim not in sick_leave_vk_text.lower(), (unsourced_vk_claim, sick_leave_vk_text)
 assert "направление на МСЭ в связи" not in sick_leave_vk_text, sick_leave_vk_text
 assert "указать сроки в днях" not in vk_mse_text.lower(), vk_mse_text
+assert "Цель направления на ВК с обоснованием: направление на МСЭ." in vk_mse_text, vk_mse_text
+assert "Решение ВК: направить на МСЭ." in vk_mse_text, vk_mse_text
+for unsourced_mse_claim in (
+    "неблагоприятный",
+    "стойких нарушений психических функций",
+    "ограничения жизнедеятельности",
+    "14 дней",
+):
+    assert unsourced_mse_claim not in vk_mse_text.lower(), (unsourced_mse_claim, vk_mse_text)
 
 # Universal-source round-trip: a generated discharge epicrisis must be usable
 # as the next patient source for commission/RVK/VK generation. The parser must
