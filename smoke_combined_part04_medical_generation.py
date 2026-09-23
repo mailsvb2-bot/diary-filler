@@ -492,11 +492,12 @@ for path in psych_no_address_created:
     psych_lines = [line for line in lines if line.lower().startswith("на учёте у психиатров:")]
     assert psych_lines == ["На учёте у психиатров: состоит с 2018 года"], (path.name, psych_lines, lines[:12])
 
-# The discharge outcome/recommendation block must be the final clinical block:
-# after it only the physicians' signatures remain.
+# Discharge must not manufacture a positive outcome or universal medical advice.
+# With no explicit sourced outcome/recommendation fields, signatures follow the
+# last sourced clinical block directly.
 discharge_lines = [p.text.strip() for p in Document(discharge_path).paragraphs if p.text.strip()]
-assert discharge_lines[-3].startswith("За время лечения состояние улучшилось."), discharge_lines[-5:]
-assert discharge_lines[-2].startswith("Рекомендовано:"), discharge_lines[-5:]
+assert not any(line.startswith("За время лечения") for line in discharge_lines), discharge_lines[-8:]
+assert not any(line.startswith("Рекомендовано:") for line in discharge_lines), discharge_lines[-8:]
 assert "Врач-психиатр" in discharge_lines[-1] and "Зав. отд." in discharge_lines[-1], discharge_lines[-5:]
 
 # Admission-doctor footer is strict: after all clinical sections only the
