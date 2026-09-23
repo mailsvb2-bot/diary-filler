@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "base_sha": "45a2c067e7327088acd72ae9b259867653eec3f6",
+  "reason": "Explicit deep document-correctness task: remove fabricated patient facts, stale template clinical text, invalid sick-leave routing, unresolved VK scaffolding, and impossible inpatient chronology.",
+  "approved_blobs": {
+    "dialog_expert.py": "85387bad844d51ba73bf0533f6ba35025650648b",
+    "diary_constants.py": "b3dd96211b28d6fcb6af9f16b9857418b9f47b59",
+    "medical_renderer_commission.py": "b27c31a2d00a65de43529f6b3c0dcb80871ecfb1",
+    "medical_renderer_labs.py": "04fc4428aeee4c006f7d843064d1486aa5d8757f",
+    "medical_renderer_primary.py": "e88d8ad4fa589be72b023b3ff695e114a0ab3250",
+    "medical_renderer_special.py": "88a4dbaf88debd146da38605c1244e567aeed55b",
+    "medical_service.py": "df8848a6e67b34b781617356f563a5d9950f07b1"
+  }
+}
