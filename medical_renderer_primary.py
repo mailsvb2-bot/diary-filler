@@ -82,8 +82,8 @@ class MedicalRendererPrimaryMixin:
         diagnosis = sanitize_diagnosis(data.diagnosis)
         if diagnosis:
             diagnosis_sentence = (
-                "На основании данных анамнеза жизни и заболевания, психического статуса, "
-                f"данных клинических исследований установлен диагноз: {diagnosis}"
+                "На основании данных анамнеза жизни и заболевания, психического статуса "
+                f"установлен диагноз: {diagnosis}"
             )
         editor.replace_block(["На основании данных", "Диагноз"], "", diagnosis_sentence, PRIMARY_MARKERS)
         editor.replace_block(["Эпидемиологический анамнез"], "Эпидемиологический анамнез:", data.epidemiology, PRIMARY_MARKERS, allow_empty=True)
@@ -144,8 +144,8 @@ class MedicalRendererPrimaryMixin:
         diagnosis = sanitize_diagnosis(data.diagnosis)
         if diagnosis:
             diagnosis_sentence = (
-                "На основании данных анамнеза жизни и заболевания, психического статуса, "
-                f"данных клинических исследований установлен диагноз: {diagnosis}"
+                "На основании данных анамнеза жизни и заболевания, психического статуса "
+                f"установлен диагноз: {diagnosis}"
             )
             if not editor.replace_block(["На основании данных", "Диагноз"], "", diagnosis_sentence, DISCHARGE_MARKERS):
                 editor.insert_before_first_matching_paragraph(["Сомато-неврологический статус", "Соматический статус"], diagnosis_sentence)
