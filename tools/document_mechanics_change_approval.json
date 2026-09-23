@@ -8,7 +8,7 @@
     "medical_renderer.py": "8ead4da7b5b411c658ab94f920848e4f7987c852",
     "medical_renderer_commission.py": "d0e42f2ea165ab5035c542966d823024dd4fa889",
     "medical_renderer_primary.py": "5897460da10c69de4425180b42cbf8e6cb82971c",
-    "medical_renderer_special.py": "b50acefb48818d3f23b64a81178984c2e626c622",
+    "medical_renderer_special.py": "23cb51e2752cab0c37cd6b6e805871c5014d9f0a",
     "medical_service.py": "b68aec8976081bea1a24b196b81cac8da19df397"
   }
 }
