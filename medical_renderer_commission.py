@@ -76,7 +76,7 @@ class MedicalRendererCommissionMixin:
 
         self._remove_template_lab_lines(editor)
         if data.epi_text:
-            editor.replace_block(["ЭПИ"], f"ЭПИ ({dates['day2']}) -", data.epi_text, COMMISSION_MARKERS)
+            editor.replace_block(["ЭПИ"], "ЭПИ -", data.epi_text, COMMISSION_MARKERS)
         else:
             editor.remove_all_matching_paragraphs(["ЭПИ"])
 
