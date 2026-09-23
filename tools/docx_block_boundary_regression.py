@@ -182,6 +182,42 @@ def _assert_long_source_block_is_not_cut_by_narrative_marker_words() -> None:
     assert "Контактен, ориентирован" in data.mental_status, data.mental_status
 
 
+def _assert_narrative_marker_words_never_replace_target_fields() -> None:
+    source = """Анамнез заболевания:
+Начало заболевания постепенное.
+Лечение ранее проводилось амбулаторно и было малоэффективным.
+Диагноз ранее формулировался иначе.
+Психический статус в динамике менялся постепенно.
+ФИНАЛ_АНАМНЕЗА_НЕ_СМЕШИВАТЬ.
+Психический статус:
+Контактен, ориентирован, отвечает по существу.
+Соматический статус:
+Без существенных особенностей.
+Лечение:
+Галоперидол 5 мг вечером.
+Диагноз:
+F41.2 Смешанное тревожное и депрессивное расстройство
+"""
+    data = MedicalTextParser().parse_text(source)
+
+    for required in (
+        "Лечение ранее проводилось амбулаторно",
+        "Диагноз ранее формулировался иначе",
+        "Психический статус в динамике менялся постепенно",
+        "ФИНАЛ_АНАМНЕЗА_НЕ_СМЕШИВАТЬ",
+    ):
+        assert required in data.disease_anamnesis, data.disease_anamnesis
+
+    assert data.mental_status == "Контактен, ориентирован, отвечает по существу.", data.mental_status
+    assert data.treatment_plan == "Галоперидол 5 мг вечером.", data.treatment_plan
+    assert data.diagnosis.startswith("F41.2"), data.diagnosis
+    assert "Смешанное тревожное и депрессивное расстройство" in data.diagnosis, data.diagnosis
+
+    assert "в динамике менялся" not in data.mental_status, data.mental_status
+    assert "ранее проводилось" not in data.treatment_plan, data.treatment_plan
+    assert "ранее формулировался" not in data.diagnosis, data.diagnosis
+
+
 def _assert_long_multiline_docx_roundtrip_preserves_full_tail() -> None:
     doc = Document()
     doc.add_paragraph("Анамнез заболевания")
@@ -625,6 +661,7 @@ def verify() -> None:
     _assert_inserted_marker_like_patient_text_never_becomes_structure()
     _assert_alias_boundary_stops_destructive_span_deletion()
     _assert_long_source_block_is_not_cut_by_narrative_marker_words()
+    _assert_narrative_marker_words_never_replace_target_fields()
     _assert_long_multiline_docx_roundtrip_preserves_full_tail()
     _assert_table_and_run_fragmented_source_roundtrip()
     _assert_1250_line_clinical_block_survives_full_roundtrip()
