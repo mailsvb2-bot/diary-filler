@@ -76,9 +76,13 @@ class DocxEditorReplaceMixin:
         return count
 
     def replace_first_matching_regex(self, pattern: str, text: str) -> bool:
+        """Replace the first regex-matching template paragraph only."""
         rx = re.compile(pattern, flags=re.IGNORECASE)
         for paragraph in self.paragraphs:
-            if rx.search(normalize_text(paragraph.text)):
+            template_text = self.template_paragraph_text(paragraph)
+            if template_text is None:
+                continue
+            if rx.search(template_text):
                 set_paragraph_text(paragraph, text)
                 return True
         return False
