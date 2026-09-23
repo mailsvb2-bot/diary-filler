@@ -500,6 +500,31 @@ assert not any(line.startswith("За время лечения") for line in dis
 assert not any(line.startswith("Рекомендовано:") for line in discharge_lines), discharge_lines[-8:]
 assert "Врач-психиатр" in discharge_lines[-1] and "Зав. отд." in discharge_lines[-1], discharge_lines[-5:]
 
+# Unknown/ambiguous grammatical gender must never default to masculine.
+ambiguous_gender = copy.deepcopy(manual_data)
+ambiguous_gender.fio = "Ли Ану Ким"
+ambiguous_gender.output_fio = "Ли Ану Ким"
+ambiguous_gender.discharge_date = "11.06.2026"
+ambiguous_gender.rvk_act_number = "77-NEUTRAL"
+ambiguous_gender.rvk_military_commissariat = "Ленинский"
+ambiguous_created, _ = service.create_documents(
+    navigation_path=nav,
+    output_dir=OUT / "unknown_gender_neutral_wording",
+    selected_docs=["discharge", "rvk"],
+    override_data=ambiguous_gender,
+)
+ambiguous_discharge = next(path for path in ambiguous_created if "Выписной" in path.name)
+ambiguous_rvk = next(path for path in ambiguous_created if "РВК" in path.name)
+ambiguous_discharge_text = extract_docx_text(ambiguous_discharge)
+ambiguous_rvk_text = extract_docx_text(ambiguous_rvk)
+assert "Период лечения в ГБУЗ НО «НКЦПЗ» диспансер №2: с 10.06.2026 по 11.06.2026" in ambiguous_discharge_text
+assert "Период обследования в ГБУЗ НО «НКЦПЗ» диспансер №2: с 10.06.2026 по 11.06.2026" in ambiguous_rvk_text
+assert "Находился на лечении" not in ambiguous_discharge_text
+assert "Находился на обследовании" not in ambiguous_rvk_text
+ambiguous_roundtrip = service.parse_primary_document(ambiguous_discharge)
+assert ambiguous_roundtrip.admission_date == "10.06.2026", ambiguous_roundtrip.admission_date
+assert ambiguous_roundtrip.discharge_date == "11.06.2026", ambiguous_roundtrip.discharge_date
+
 # Admission-doctor footer is strict: after all clinical sections only the
 # required referral sentence and the doctor signature remain.
 admission_lines = [p.text.strip() for p in Document(admission_doctor_path).paragraphs if p.text.strip()]
