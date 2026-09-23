@@ -9,7 +9,6 @@ from medical_docx_editor import (
     DocxBlockEditor,
     clear_paragraph_highlight,
     iter_all_paragraphs,
-    remove_exact_paragraphs,
     set_paragraph_text,
 )
 from medical_expert import put_expert_anamnesis
@@ -55,10 +54,10 @@ class MedicalRendererSpecialMixin:
             return
 
     @staticmethod
-    def _finalize_vk_identity_lines(doc, data: PatientData) -> None:
+    def _finalize_vk_identity_lines(editor: DocxBlockEditor, data: PatientData) -> None:
         """Remove unresolved VK choices and fill upper signature placeholders."""
-        remove_exact_paragraphs(doc, ["(первичный, повторный)"])
-        for paragraph in iter_all_paragraphs(doc):
+        editor.remove_exact_template_paragraphs(["(первичный, повторный)"])
+        for paragraph in iter_all_paragraphs(editor.doc):
             text = paragraph.text or ""
             if "_" not in text:
                 continue
@@ -112,7 +111,7 @@ class MedicalRendererSpecialMixin:
         editor.replace_block(["Сомато-неврологический статус", "Соматический статус"], "Сомато-неврологический статус:", data.somatic_status, VK_MSE_MARKERS, allow_empty=True)
         editor.replace_block(["Получает лечение"], "Получает лечение:", data.treatment_plan, VK_MSE_MARKERS)
         self._clean_vk_purpose_instruction(doc)
-        self._finalize_vk_identity_lines(doc, data)
+        self._finalize_vk_identity_lines(editor, data)
         finalize_medical_document(doc, data)
         doc.save(str(output_path))
 
@@ -172,7 +171,7 @@ class MedicalRendererSpecialMixin:
             "Решение ВК: продлить лечение по листу нетрудоспособности.",
         ):
             doc.add_paragraph("Решение ВК: продлить лечение по листу нетрудоспособности.")
-        self._finalize_vk_identity_lines(doc, data)
+        self._finalize_vk_identity_lines(editor, data)
         finalize_medical_document(doc, data)
         doc.save(str(output_path))
 
@@ -228,7 +227,7 @@ class MedicalRendererSpecialMixin:
             editor.remove_all_matching_paragraphs(["ЭПИ"])
         # В шаблоне Акта РВК после блока ЭПИ/ЭЭГ есть служебная одиночная строка "ЭЭГ".
         # Она не относится к результату исследования и должна исчезать из итогового документа.
-        remove_exact_paragraphs(doc, ["ЭЭГ", "ЭПИ"])
+        editor.remove_exact_template_paragraphs(["ЭЭГ", "ЭПИ"])
         editor.replace_first_matching_paragraph(["Диагноз"], f"Диагноз: {sanitize_diagnosis(data.diagnosis)}")
         finalize_medical_document(doc, data)
         doc.save(str(output_path))
