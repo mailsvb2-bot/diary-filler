@@ -358,8 +358,19 @@ class MedicalParserBlocksMixin:
     def _find_next_marker_pos(self, text: str, start_pos: int, current_aliases: Sequence[str]) -> int:
         best = len(text)
         current_norm = {normalize_match(a) for a in current_aliases}
+        inside_investigation_results = bool(
+            current_norm & {
+                normalize_match("Результаты обследований"),
+                normalize_match("Результаты исследований"),
+            }
+        )
         for marker in self.SECTION_MARKERS:
-            if normalize_match(marker) in current_norm:
+            marker_norm = normalize_match(marker)
+            if marker_norm in current_norm:
+                continue
+            # EEG is an ordinary sourced result inside a results block. Treating
+            # it as a new section truncates everything after the EEG line.
+            if inside_investigation_results and marker_norm == normalize_match("ЭЭГ"):
                 continue
             pattern = self._alias_pattern(marker)
             for m in re.finditer(pattern, text[start_pos:], flags=re.IGNORECASE):
