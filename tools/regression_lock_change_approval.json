@@ -27,6 +27,7 @@
     "smoke_combined_part03_medical_parser_manual.py": "8b16f02e18b4ffef248922b5eb7784595f524457",
     "smoke_combined_part04_medical_generation.py": "b845eb6b128141a1754c656b0584592c40d6e7a8",
     "tools/document_mechanics_change_approval.json": "a19221ee0390cd1f010c95ba9aa2289e007be0b9",
-    "tools/generation_performance_profile.py": "e89a69cadd0315771070d8f079e421dfb43e75cd"
+    "tools/generation_performance_profile.py": "e89a69cadd0315771070d8f079e421dfb43e75cd",
+    "tests/golden_docx_manifest.json": "67d213631a1413fc19bb5e571143f67528037b61"
   }
 }
