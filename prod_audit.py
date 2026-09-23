@@ -684,6 +684,7 @@ def _assert_clinical_popup_and_document_order_contract() -> None:
     parser = _read("medical_parser.py")
     parser_blocks = _read("medical_parser_blocks.py")
     models = _read("medical_models.py")
+    editor_replace = _read("medical_docx_editor_replace.py")
 
     required_dialog = (
         "На учёте у психиатров",
@@ -782,6 +783,14 @@ def _assert_clinical_popup_and_document_order_contract() -> None:
         _fail("discharge renderer reintroduced a hard-coded patient recommendation")
     if 'remove_all_matching_paragraphs(["За время лечения", "Рекомендовано"])' not in primary:
         _fail("discharge renderer no longer clears unsourced template outcome/recommendations")
+    if "_move_discharge_outcome_before_signatures" in primary or "_move_discharge_outcome_before_signatures" in labs:
+        _fail("discharge post-processing may move patient recommendation prose out of anamnesis")
+    if 'template_text = editor.template_paragraph_text(paragraph)' not in commission:
+        _fail("admission-doctor referral finalizer no longer distinguishes template rows from patient prose")
+    if 'if template_text is None or "направляется" not in template_text:' not in commission:
+        _fail("admission-doctor referral finalizer can match patient narrative")
+    if 'def replace_first_matching_regex' not in editor_replace or 'template_text = self.template_paragraph_text(paragraph)' not in editor_replace:
+        _fail("regex document replacement can target inserted patient text")
 
 
 def _assert_diary_service_boundary() -> None:
