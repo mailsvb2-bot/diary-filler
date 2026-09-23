@@ -148,19 +148,6 @@ class MedicalRendererLabsMixin:
                 if not normalize_match(paragraph.text):
                     remove_paragraph(paragraph)
 
-    @staticmethod
-    def _move_discharge_outcome_before_signatures(doc) -> bool:
-        paragraphs = list(doc.paragraphs)
-        outcome = next((p for p in paragraphs if normalize_match(p.text).startswith("за время лечения")), None)
-        recommendation = next((p for p in paragraphs if normalize_match(p.text).startswith("рекомендовано")), None)
-        signature = next((p for p in paragraphs if "врач-психиатр" in normalize_match(p.text) or normalize_match(p.text).startswith("зав. отд")), None)
-        if signature is None or recommendation is None:
-            return False
-        if outcome is not None:
-            signature._p.addprevious(outcome._p)
-        signature._p.addprevious(recommendation._p)
-        return True
-
     _LAB_RESULT_MARKERS = (
         "ОАК", "ОАМ", "RW", "HCV", "HBsAg", "ВИЧ", "Биохимия крови",
         "Глюкоза крови", "Кал на яйца глист", "Флюорография", "ЭКГ", "ЭЭГ",
