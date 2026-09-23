@@ -205,6 +205,50 @@ class MedicalDocumentService:
             raise ValueError(f"Не заполнено обязательное поле: {label}.")
         return normalized
 
+    @staticmethod
+    def _normalize_commission_work_fields(
+        *,
+        explicit_org: str,
+        explicit_position: str,
+        fallback_org: str,
+        fallback_position: str,
+        work_status: str,
+        label: str,
+    ) -> tuple[str, str]:
+        """Return coherent VK work fields without reviving stale employment data."""
+        explicit_org = str(explicit_org or "").strip()
+        explicit_position = str(explicit_position or "").strip()
+        status = normalize_yes_no(work_status)
+
+        if status == "нет":
+            if explicit_position or (
+                explicit_org and normalize_yes_no(explicit_org) != "нет"
+            ):
+                raise ValueError(
+                    f"{label}: указан статус «не работает», но заполнены место работы/должность."
+                )
+            return "не работает", ""
+
+        org = explicit_org or str(fallback_org or "").strip()
+        position = explicit_position or str(fallback_position or "").strip()
+        org_decision = normalize_yes_no(org)
+        if org_decision == "нет":
+            if status == "да":
+                raise ValueError(
+                    f"{label}: статус «работает» противоречит значению «не работает»."
+                )
+            if position:
+                raise ValueError(
+                    f"{label}: при значении «не работает» должность должна быть пустой."
+                )
+            return "не работает", ""
+
+        if not org or not position:
+            raise ValueError(
+                f"{label}: укажите место работы и должность либо явно «не работает»."
+            )
+        return org, position
+
     def _validate_and_normalize_selected_data(self, data: PatientData, selected: Sequence[str]) -> None:
         selected_set = set(selected)
 
@@ -365,8 +409,14 @@ class MedicalDocumentService:
             data.vk_protocol_number = self._require_text(data.vk_protocol_number, "номер протокола ВК на МСЭ")
             data.vk_protocol_date = self._normalize_required_date(data.vk_protocol_date, "Дата протокола ВК на МСЭ")
             self._ensure_date_not_before_admission(data.admission_date, data.vk_protocol_date, "Дата протокола ВК на МСЭ")
-            data.vk_mse_work_org = (data.vk_mse_work_org or data.work_org).strip()
-            data.vk_mse_position = (data.vk_mse_position or data.position).strip()
+            data.vk_mse_work_org, data.vk_mse_position = self._normalize_commission_work_fields(
+                explicit_org=data.vk_mse_work_org,
+                explicit_position=data.vk_mse_position,
+                fallback_org=data.work_org,
+                fallback_position=data.position,
+                work_status=data.expert_work_status,
+                label="ВК на МСЭ",
+            )
 
         if "sick_leave_vk" in selected_set:
             data.sick_leave_vk_date = self._normalize_required_date(data.sick_leave_vk_date, "Дата ВК больничного")
@@ -382,9 +432,18 @@ class MedicalDocumentService:
                 (data.sick_leave_vk_commission_date, "Дата проведения комиссии ВК больничного"),
             ):
                 self._ensure_date_not_after_discharge(data.discharge_date, value, label)
-            data.sick_leave_vk_work_org = (data.sick_leave_vk_work_org or data.work_org).strip()
-            data.sick_leave_vk_position = (data.sick_leave_vk_position or data.position).strip()
-            data.sick_leave_vk_work_position = data.sick_leave_vk_work_position or ", ".join(
+            (
+                data.sick_leave_vk_work_org,
+                data.sick_leave_vk_position,
+            ) = self._normalize_commission_work_fields(
+                explicit_org=data.sick_leave_vk_work_org,
+                explicit_position=data.sick_leave_vk_position,
+                fallback_org=data.work_org,
+                fallback_position=data.position,
+                work_status=data.expert_work_status,
+                label="ВК больничный",
+            )
+            data.sick_leave_vk_work_position = ", ".join(
                 part for part in [data.sick_leave_vk_work_org, data.sick_leave_vk_position] if part
             )
 
