@@ -168,6 +168,24 @@ mark_skip_flags(
 )
 assert [_entry["skip_holiday"] for _entry in _calendar_entries] == [True, False, True, True]
 
+# A discharge/final row is clinically required even when the discharge date is
+# a public holiday; only non-final holiday diary rows are removed.
+_final_holiday_entries = [
+    {"day": 9, "month": 5, "year": 2026, "date": _calendar_date(2026, 5, 9)},
+    {"day": 11, "month": 5, "year": 2026, "date": _calendar_date(2026, 5, 11)},
+]
+for _entry in _final_holiday_entries:
+    _entry.update(after_discharge=False, skip_holiday=False, skip_after_discharge=False)
+mark_skip_flags(
+    _final_holiday_entries,
+    final_entry_index=1,
+    discharge_date=_calendar_date(2026, 5, 11),
+    remove_holiday_rows=True,
+)
+assert _final_holiday_entries[0]["skip_holiday"] is True
+assert _final_holiday_entries[1]["skip_holiday"] is False
+assert _final_holiday_entries[1]["skip_after_discharge"] is False
+
 # Ten days after 27.02.2026 is the transferred holiday 09.03.2026, so the
 # dynamic epicrisis moves to 10.03. It is forbidden when discharge is 10.03.
 assert dynamic_epicrisis_dates(
