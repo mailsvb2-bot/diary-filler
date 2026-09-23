@@ -139,13 +139,13 @@ class MedicalRendererCommissionMixin:
         editor.replace_block(["Соматический статус"], "Соматический статус:", data.somatic_status, PRIMARY_MARKERS, allow_empty=True)
         editor.replace_block(["План обследования"], "План обследования:", data.examination_plan, PRIMARY_MARKERS, allow_empty=True)
         diagnosis = sanitize_diagnosis(data.diagnosis)
-        diagnosis_sentence = ""
-        if diagnosis:
-            diagnosis_sentence = (
-                "На основании данных анамнеза жизни и заболевания, психического статуса "
-                f"был выставлен диагноз: {diagnosis}"
-            )
-        editor.replace_block(["На основании данных", "Диагноз"], "", diagnosis_sentence, PRIMARY_MARKERS)
+        editor.replace_block(
+            ["На основании данных", "Диагноз"],
+            "Диагноз:",
+            diagnosis,
+            PRIMARY_MARKERS,
+            allow_empty=True,
+        )
         editor.replace_block(["Эпидемиологический анамнез"], "Эпидемиологический анамнез:", data.epidemiology, PRIMARY_MARKERS, allow_empty=True)
         self._remove_trailing_clinical_leakage(doc, data)
         # Финальная фраза должна быть строго такой по пользовательскому требованию.
