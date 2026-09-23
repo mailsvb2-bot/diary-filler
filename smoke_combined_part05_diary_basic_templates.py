@@ -127,7 +127,19 @@ assert "не предъявляла" in diary_text2
 assert result_filename_male.created_files[0].name.startswith("Маркер Мужской Тестовый")
 
 # --- Production text diaries: clinical entries come from diagnosis template; discharge is universal ---
-from diary_service import DiaryService
+from diary_service import DiaryService, is_non_working_day
+# 2026 federal production-calendar regression. The old implementation
+# incorrectly treated every May 1-9 as a holiday.
+from datetime import date as _calendar_date
+assert is_non_working_day(_calendar_date(2026, 5, 1))
+assert not is_non_working_day(_calendar_date(2026, 5, 4))
+assert is_non_working_day(_calendar_date(2026, 5, 9))
+assert is_non_working_day(_calendar_date(2026, 5, 11))  # transfer from Sat May 9
+assert is_non_working_day(_calendar_date(2026, 3, 9))   # transfer from Sun Mar 8
+assert is_non_working_day(_calendar_date(2026, 1, 9))   # government transfer
+assert not is_non_working_day(_calendar_date(2026, 1, 12))
+assert is_non_working_day(_calendar_date(2026, 12, 31)) # government transfer
+
 contract_texts = OUT / "F20 Параноидная шизофрения.docx"
 contract_doc = Document()
 contract_doc.add_paragraph("TEMPLATE_STATUS_ONE пациент пришел спокойно.")
