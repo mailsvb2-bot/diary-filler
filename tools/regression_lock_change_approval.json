@@ -29,6 +29,6 @@
     "tools/document_mechanics_change_approval.json": "748f205133c2058f5f839d20d290f3fdd6234978",
     "tools/generation_performance_profile.py": "e89a69cadd0315771070d8f079e421dfb43e75cd",
     "tests/golden_docx_manifest.json": "6587e51416b1a08fd4b15b31f2ea8398f7cf5e5d",
-    "smoke_combined_part06_diary_columns_settings.py": "05557e9c13c52e60609c186cd2ad354fc1226b2f"
+    "smoke_combined_part06_diary_columns_settings.py": "4a7bb69a405a61318573c5623c7f16725f431abf"
   }
 }
