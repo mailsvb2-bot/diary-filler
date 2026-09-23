@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "1f092cae6d6f2a32244ff078f7fef1f73d371ba4",
-  "baseline_note": "PR #220 changed dynamic epicrisis Word rendering from forced paragraph-per-field output to one continuous clinical paragraph while preserving separate right-aligned signatures and the existing 10-day calendar contract. Exact candidate 15e6ee454b8392c2f22e4d51d269c065a09be87b passed Windows CI #881 / run 35819668840 completely, including the exact diary layout regression, release gate, full patient replay + golden DOCX, EXE, packaged desktop intake E2E, installer and install/uninstall smoke. This cleanup removes the temporary document-mechanics approval and retains only a narrowed regression approval for that deletion.",
+  "baseline_ref": "835dbde2c71406dfc6e4bae3540a524e4ea27c46",
+  "baseline_note": "Inline dynamic epicrisis layout cleanup baseline. PR #220 rendered the dated clinical body as one continuous Word paragraph while preserving separate signatures and the existing dynamic-epicrisis calendar contract; exact candidate 15e6ee454b8392c2f22e4d51d269c065a09be87b passed Windows CI #881 / run 35819668840. PR #221 removed the consumed document-mechanics approval; exact cleanup 5f8cc0c384c11dd6d96f0914bbe6307ed352f180 passed Windows CI #883 / run 35820193118 completely and merged as 835dbde2c71406dfc6e4bae3540a524e4ea27c46. This is the clean tested tree before removing the final temporary regression approval.",
   "required_approval_evidence": [
     "ci_gate_lock"
   ],
