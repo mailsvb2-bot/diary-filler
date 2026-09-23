@@ -78,7 +78,7 @@ class MedicalRendererSpecialMixin:
                 )
 
     def render_vk_mse(self, template_path: str | Path, output_path: str | Path, data: PatientData) -> None:
-        """ВК на МСЭ: верхнюю шапку и текст решения не трогаем, заполняем поля пациента."""
+        """ВК на МСЭ: заполняем факты пациента; прогнозы шаблона не публикуем."""
         doc = Document(str(template_path))
         editor = DocxBlockEditor(doc)
 
@@ -114,6 +114,24 @@ class MedicalRendererSpecialMixin:
             editor.remove_all_matching_paragraphs(["ЭПИ"])
         editor.replace_block(["Сомато-неврологический статус", "Соматический статус"], "Сомато-неврологический статус:", data.somatic_status, VK_MSE_MARKERS, allow_empty=True)
         editor.replace_block(["Получает лечение"], "Получает лечение:", data.treatment_plan, VK_MSE_MARKERS)
+        # The selected form itself proves only the routing decision to MSE.
+        # Historical prognoses/functional-severity claims in the bundled template
+        # are examples and must never become patient facts.
+        editor.remove_all_matching_paragraphs([
+            "Прогноз восстановления трудоспособности",
+            "клинический:",
+            "Клинический и трудовой прогноз",
+        ])
+        if not editor.replace_first_matching_paragraph(
+            ["Цель направления на ВК"],
+            "Цель направления на ВК с обоснованием: направление на МСЭ.",
+        ):
+            doc.add_paragraph("Цель направления на ВК с обоснованием: направление на МСЭ.")
+        if not editor.replace_first_matching_paragraph(
+            ["Решение ВК"],
+            "Решение ВК: направить на МСЭ.",
+        ):
+            doc.add_paragraph("Решение ВК: направить на МСЭ.")
         self._clean_vk_purpose_instruction(editor)
         self._finalize_vk_identity_lines(editor, data)
         finalize_medical_document(doc, data)
