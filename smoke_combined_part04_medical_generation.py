@@ -102,7 +102,13 @@ assert "(первичный, повторный)" not in sick_leave_vk_text, sic
 assert "________________" not in vk_mse_text, vk_mse_text
 assert "________________" not in sick_leave_vk_text, sick_leave_vk_text
 assert "Цель направления на ВК с обоснованием: продление лечения по листу нетрудоспособности." in sick_leave_vk_text, sick_leave_vk_text
-assert "14 дней" not in sick_leave_vk_text, sick_leave_vk_text
+assert "Решение ВК: продлить лечение по листу нетрудоспособности." in sick_leave_vk_text, sick_leave_vk_text
+for unsourced_vk_claim in (
+    "14 дней",
+    "неблагоприятный",
+    "стойких нарушений психических функций",
+):
+    assert unsourced_vk_claim not in sick_leave_vk_text.lower(), (unsourced_vk_claim, sick_leave_vk_text)
 assert "направление на МСЭ в связи" not in sick_leave_vk_text, sick_leave_vk_text
 assert "указать сроки в днях" not in vk_mse_text.lower(), vk_mse_text
 
