@@ -395,16 +395,14 @@ missing_sick_choice.admission_occurrence = "первично"
 missing_sick_choice.sick_leave = ""
 missing_sick_choice.expert_sick_leave_needed = ""
 missing_sick_choice.disability_needed = "нет"
-try:
-    service.create_documents(
-        navigation_path=nav,
-        output_dir=OUT / "missing_sick_leave_choice",
-        selected_docs=["primary"],
-        override_data=missing_sick_choice,
-    )
-    raise AssertionError("primary must require explicit sick-leave decision")
-except ValueError as exc:
-    assert "нужен ли больничный" in str(exc), str(exc)
+primary_without_sick, _ = service.create_documents(
+    navigation_path=nav,
+    output_dir=OUT / "missing_sick_leave_choice",
+    selected_docs=["primary"],
+    override_data=missing_sick_choice,
+)
+assert len(primary_without_sick) == 1
+assert "Больничный лист:" not in extract_docx_text(primary_without_sick[0])
 
 for sick_required_kind in ("discharge", "commission"):
     missing_standalone_sick = service.parse_primary_document(nav)
@@ -448,16 +446,14 @@ missing_sick_date.admission_occurrence = "первично"
 missing_sick_date.expert_sick_leave_needed = "да"
 missing_sick_date.expert_sick_leave_from = ""
 missing_sick_date.disability_needed = "нет"
-try:
-    service.create_documents(
-        navigation_path=nav,
-        output_dir=OUT / "missing_sick_leave_start",
-        selected_docs=["primary"],
-        override_data=missing_sick_date,
-    )
-    raise AssertionError("positive sick-leave choice must require start date")
-except ValueError as exc:
-    assert "Дата начала больничного" in str(exc), str(exc)
+primary_with_irrelevant_sick_state, _ = service.create_documents(
+    navigation_path=nav,
+    output_dir=OUT / "missing_sick_leave_start",
+    selected_docs=["primary"],
+    override_data=missing_sick_date,
+)
+assert len(primary_with_irrelevant_sick_state) == 1
+assert "Больничный лист:" not in extract_docx_text(primary_with_irrelevant_sick_state[0])
 
 missing_epi_text = service.parse_primary_document(nav)
 missing_epi_text.commission_date = "18.06.2026"
