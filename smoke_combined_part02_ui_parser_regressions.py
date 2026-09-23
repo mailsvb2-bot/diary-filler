@@ -592,13 +592,13 @@ def _revision_prompt(title, rows, width=46, linked_groups=None, choice_options=N
     return [values[label] for label, _ in rows]
 clinical_logic._prompt_fields = _revision_prompt
 assert clinical_logic._prompt_shared_clinical_options_if_needed(["primary"]) is True
-assert [initial for _label, initial in revision_rows] == ["состоит", "да", "да", "нет"], revision_rows
+assert [initial for _label, initial in revision_rows] == ["состоит", "да", "нет"], revision_rows
 assert clinical_logic.psych_account_status_var.get() == "нет"
 assert clinical_logic.psych_account_since_year_var.get() == ""
 assert clinical_logic.rvk_referral_present_var.get() == "нет"
 assert clinical_logic.rvk_referral_commissariat_var.get() == ""
-assert clinical_logic.expert_sick_leave_needed_var.get() == "нет"
-assert clinical_logic.expert_sick_leave_from_var.get() == ""
+assert clinical_logic.expert_sick_leave_needed_var.get() == "да"
+assert clinical_logic.expert_sick_leave_from_var.get() == "12.06.2026"
 assert clinical_logic.disability_needed_var.get() == "да"
 assert clinical_logic.data.disability == "нужно"
 
