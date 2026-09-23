@@ -656,6 +656,144 @@ def _assert_all_medical_forms_keep_long_clinical_tails() -> None:
             assert mental_lines[-1] in text, f"{path.name}: mental status tail truncated"
 
 
+
+def _assert_cross_field_order_and_isolation_survive_full_roundtrip() -> None:
+    """Clinical blocks must keep source order and must never absorb neighboring fields."""
+    with TemporaryDirectory(prefix="medical-autofill-cross-field-order-") as temp_dir:
+        root = Path(temp_dir)
+        source = root / "cross-field-order.docx"
+        doc = Document()
+        doc.add_paragraph("10.06.2026 Первичный осмотр")
+        doc.add_paragraph("Ф.И.О.: Маркер Женская Тестовая")
+        doc.add_paragraph("Дата рождения: 01.01.1980")
+
+        blocks = {
+            "complaints": (
+                "Жалобы",
+                [
+                    "ЖАЛОБЫ_ORDER_01 начало жалоб.",
+                    "Диагноз ранее обсуждался соматическим врачом; это часть жалоб.",
+                    "ЖАЛОБЫ_ORDER_03 конец жалоб.",
+                ],
+            ),
+            "life_anamnesis": (
+                "Анамнез жизни",
+                [
+                    "ЖИЗНЬ_ORDER_01 начало анамнеза жизни.",
+                    "Лечение в детстве проводилось амбулаторно; это часть анамнеза жизни.",
+                    "ЖИЗНЬ_ORDER_03 конец анамнеза жизни.",
+                ],
+            ),
+            "disease_anamnesis": (
+                "Анамнез заболевания",
+                [
+                    "БОЛЕЗНЬ_ORDER_01 начало анамнеза заболевания.",
+                    "Психический статус в динамике менялся постепенно; это часть анамнеза заболевания.",
+                    "БОЛЕЗНЬ_ORDER_03 конец анамнеза заболевания.",
+                ],
+            ),
+            "mental_status": (
+                "Психический статус",
+                [
+                    "ПСИХСТАТУС_ORDER_01 контактен и ориентирован.",
+                    "Лечение обсуждает спокойно; это описание психического статуса.",
+                    "ПСИХСТАТУС_ORDER_03 конец психического статуса.",
+                ],
+            ),
+            "somatic_status": (
+                "Соматический статус",
+                [
+                    "СОМАТИКА_ORDER_01 начало соматического статуса.",
+                    "Диагноз терапевта уточнялся ранее; это часть соматического статуса.",
+                    "СОМАТИКА_ORDER_03 конец соматического статуса.",
+                ],
+            ),
+        }
+
+        for _field_name, (heading, lines) in blocks.items():
+            doc.add_paragraph(f"{heading}:")
+            for line in lines:
+                doc.add_paragraph(line)
+
+        doc.add_paragraph("План обследования:")
+        doc.add_paragraph("ОАК, ОАМ, ЭКГ, ФЛГ.")
+        doc.add_paragraph("План лечения:")
+        doc.add_paragraph("Терапия по назначению врача.")
+        doc.add_paragraph("Диагноз:")
+        doc.add_paragraph("F41.2 Тестовый диагноз")
+        doc.save(source)
+
+        parsed = MedicalTextParser().parse_docx(source)
+        parsed_fields = {
+            "complaints": parsed.complaints,
+            "life_anamnesis": parsed.life_anamnesis,
+            "disease_anamnesis": parsed.disease_anamnesis,
+            "mental_status": parsed.mental_status,
+            "somatic_status": parsed.somatic_status,
+        }
+
+        all_lines = {
+            field_name: list(lines)
+            for field_name, (_heading, lines) in blocks.items()
+        }
+        for field_name, value in parsed_fields.items():
+            expected = all_lines[field_name]
+            cursor = -1
+            for line in expected:
+                assert value.count(line) == 1, (
+                    f"{field_name}: expected exactly one copy of {line!r}; got {value.count(line)}"
+                )
+                position = value.find(line)
+                assert position > cursor, (
+                    f"{field_name}: source order changed around {line!r}"
+                )
+                cursor = position
+
+            foreign = [
+                line
+                for other_name, other_lines in all_lines.items()
+                if other_name != field_name
+                for line in other_lines
+            ]
+            for line in foreign:
+                assert line not in value, (
+                    f"{field_name}: absorbed foreign clinical text {line!r}"
+                )
+
+        navigation, service, data = _make_fixture(root)
+        data.complaints = parsed.complaints
+        data.life_anamnesis = parsed.life_anamnesis
+        data.disease_anamnesis = parsed.disease_anamnesis
+        data.mental_status = parsed.mental_status
+        data.somatic_status = parsed.somatic_status
+
+        output = root / "cross-field-order-output"
+        created, _ = service.create_documents(
+            navigation_path=navigation,
+            output_dir=output,
+            discharge_date=data.discharge_date,
+            selected_docs=DOCUMENT_ORDER,
+            override_data=data,
+        )
+        assert len(created) == len(DOCUMENT_ORDER), created
+
+        for path in created:
+            text = extract_docx_text(path)
+            for field_name, expected in all_lines.items():
+                positions = []
+                for line in expected:
+                    assert text.count(line) == 1, (
+                        f"{path.name}: {field_name} line duplicated/lost: {line!r}; "
+                        f"count={text.count(line)}"
+                    )
+                    positions.append(text.find(line))
+                assert all(position >= 0 for position in positions), (
+                    f"{path.name}: {field_name} lost one or more ordered lines"
+                )
+                assert positions == sorted(positions), (
+                    f"{path.name}: {field_name} line order changed: {positions}"
+                )
+
 def verify() -> None:
     _assert_alias_coverage()
     _assert_inserted_marker_like_patient_text_never_becomes_structure()
@@ -667,7 +805,7 @@ def verify() -> None:
     _assert_1250_line_clinical_block_survives_full_roundtrip()
     _assert_all_major_clinical_blocks_survive_long_roundtrip()
     _assert_all_medical_forms_keep_long_clinical_tails()
-    print("DOCX BLOCK BOUNDARY REGRESSION OK: structural aliases + 1250-line stress + complaints/life/somatic + table/run-fragmented long-text integrity across all medical forms")
+    print("DOCX BLOCK BOUNDARY REGRESSION OK: structural aliases + cross-field order/isolation + 1250-line stress + complaints/life/somatic + table/run-fragmented long-text integrity across all medical forms")
 
 
 if __name__ == "__main__":
