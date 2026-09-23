@@ -75,14 +75,14 @@ class MedicalRendererPrimaryMixin:
         editor.replace_block(["План обследования"], "План обследования:", data.examination_plan, PRIMARY_MARKERS, allow_empty=True)
         editor.replace_block(["План лечения"], "План лечения:", data.treatment_plan, PRIMARY_MARKERS)
 
-        diagnosis_sentence = ""
         diagnosis = sanitize_diagnosis(data.diagnosis)
-        if diagnosis:
-            diagnosis_sentence = (
-                "На основании данных анамнеза жизни и заболевания, психического статуса "
-                f"установлен диагноз: {diagnosis}"
-            )
-        editor.replace_block(["На основании данных", "Диагноз"], "", diagnosis_sentence, PRIMARY_MARKERS)
+        editor.replace_block(
+            ["На основании данных", "Диагноз"],
+            "Диагноз:",
+            diagnosis,
+            PRIMARY_MARKERS,
+            allow_empty=True,
+        )
         editor.replace_block(["Эпидемиологический анамнез"], "Эпидемиологический анамнез:", data.epidemiology, PRIMARY_MARKERS, allow_empty=True)
         put_expert_anamnesis(
             editor,
@@ -145,12 +145,16 @@ class MedicalRendererPrimaryMixin:
         editor.replace_block(["Психический статус при поступлении", "Психический статус"], "Психический статус при поступлении:", data.mental_status, DISCHARGE_MARKERS, allow_empty=True)
         diagnosis = sanitize_diagnosis(data.diagnosis)
         if diagnosis:
-            diagnosis_sentence = (
-                "На основании данных анамнеза жизни и заболевания, психического статуса "
-                f"установлен диагноз: {diagnosis}"
-            )
-            if not editor.replace_block(["На основании данных", "Диагноз"], "", diagnosis_sentence, DISCHARGE_MARKERS):
-                editor.insert_before_first_matching_paragraph(["Сомато-неврологический статус", "Соматический статус"], diagnosis_sentence)
+            if not editor.replace_block(
+                ["На основании данных", "Диагноз"],
+                "Диагноз:",
+                diagnosis,
+                DISCHARGE_MARKERS,
+            ):
+                editor.insert_before_first_matching_paragraph(
+                    ["Сомато-неврологический статус", "Соматический статус"],
+                    f"Диагноз: {diagnosis}",
+                )
         editor.replace_block(["Сомато-неврологический статус", "Соматический статус"], "Сомато-неврологический статус:", data.somatic_status, DISCHARGE_MARKERS, allow_empty=True)
         self._replace_lab_lines(editor, dates)
         if data.epi_text:
