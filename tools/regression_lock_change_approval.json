@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "ad952289a1bcc5bc7c53d00843673f1139c32fb7",
-  "reason": "Deep final-DOCX correctness audit: remove fabricated medical facts, stale template clinical text, primary sick-leave leakage, and unresolved VK scaffolding.",
+  "reason": "Deep final-DOCX correctness audit: remove fabricated medical facts/dates/outcomes, stale template clinical text, primary sick-leave leakage, and unresolved VK scaffolding.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
