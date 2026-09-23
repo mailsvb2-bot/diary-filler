@@ -305,10 +305,29 @@ def _assert_discharge_plus_diaries_keeps_dynamic_epicrisis(root: Path) -> None:
     )
     assert getattr(result, "dynamic_epicrisis_count", 0) == 2, result
     paragraphs = [p.text for p in Document(str(result.created_files[0])).paragraphs]
-    assert [text for text in paragraphs if "Динамический эпикриз." in text] == [
-        "11.09.26 Динамический эпикриз.",
-        "21.09.26 Динамический эпикриз.",
-    ], paragraphs
+    dynamic_paragraphs = [text for text in paragraphs if "Динамический эпикриз." in text]
+    assert len(dynamic_paragraphs) == 2, dynamic_paragraphs
+    assert dynamic_paragraphs[0].startswith("11.09.26 Динамический эпикриз. ФИО:"), dynamic_paragraphs[0]
+    assert dynamic_paragraphs[1].startswith("21.09.26 Динамический эпикриз. ФИО:"), dynamic_paragraphs[1]
+    for text in dynamic_paragraphs:
+        assert "Дата рождения:" in text, text
+        assert "Лечится с:" in text, text
+        assert "Жалобы:" in text, text
+        assert "Принимает:" in text, text
+        assert "Психический статус:" in text, text
+        assert "Продолжение лечения по листу нетрудоспособности." in text, text
+    # Clinical fields must stay in the same Word paragraph instead of becoming
+    # a vertical stack of forced paragraphs. Signatures remain separate.
+    forbidden_standalone_prefixes = (
+        "ФИО:",
+        "Дата рождения:",
+        "Лечится с:",
+        "Жалобы:",
+        "Принимает:",
+        "Психический статус:",
+        "Продолжение лечения по листу нетрудоспособности.",
+    )
+    assert not any(text.startswith(forbidden_standalone_prefixes) for text in paragraphs), paragraphs
 
 
 def _assert_fallback_output_survives_temporary_date_source(root: Path) -> None:
