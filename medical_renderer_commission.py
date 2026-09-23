@@ -40,8 +40,6 @@ class MedicalRendererCommissionMixin:
         """Комиссионный: шапку/первую строку оставляем, заполняем клиническую часть ниже."""
         doc = Document(str(template_path))
         editor = DocxBlockEditor(doc)
-        dates = data.lab_dates()
-
         commission_date = format_date_with_russian_year_suffix(data.commission_date)
         header = (
             f"{commission_date} 10:00      "
@@ -74,7 +72,12 @@ class MedicalRendererCommissionMixin:
         editor.replace_block(["Психический статус при поступлении", "Психический статус"], "Психический статус при поступлении:", data.mental_status, COMMISSION_MARKERS, allow_empty=True)
         editor.replace_block(["Соматический статус", "Сомато-неврологический статус"], "Соматический статус:", data.somatic_status, COMMISSION_MARKERS, allow_empty=True)
 
-        self._remove_template_lab_lines(editor)
+        self._render_sourced_investigation_results(
+            editor,
+            data,
+            COMMISSION_MARKERS,
+            before_markers=["ЭПИ", "Диагноз", "Лечение", "Эпидемиологический анамнез"],
+        )
         if data.epi_text:
             editor.replace_block(["ЭПИ"], "ЭПИ -", data.epi_text, COMMISSION_MARKERS)
         else:
