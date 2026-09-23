@@ -70,6 +70,18 @@ for created_path in created:
 assert any(path.name == "Маркер Женская Тестовая Выписной эпикриз.docx" for path in created), [p.name for p in created]
 combined_text = "\n".join(extract_docx_text(path) for path in created)
 assert "F99.9 Тестовый диагноз из UI" in combined_text
+# Investigation results must come from explicit patient evidence, never from
+# bundled template examples or admission-relative guessed dates.
+for fabricated in (
+    "ОАК - в норме",
+    "ОАМ - в норме",
+    "Глюкоза крови - 3,40",
+    "Глюкоза крови (",
+    "ритм синусовый, ЧСС 65",
+    "патологии не выявлено",
+    "Кал на яйца глист - не обнаружены",
+):
+    assert fabricated not in combined_text, (fabricated, combined_text)
 discharge_path = next(path for path in created if "Выписной" in path.name)
 rvk_path = next(path for path in created if "РВК" in path.name)
 primary_path = next(path for path in created if "Первичный" in path.name)
@@ -88,7 +100,8 @@ assert "(первичный, повторный)" not in vk_mse_text, vk_mse_tex
 assert "(первичный, повторный)" not in sick_leave_vk_text, sick_leave_vk_text
 assert "________________" not in vk_mse_text, vk_mse_text
 assert "________________" not in sick_leave_vk_text, sick_leave_vk_text
-assert "Цель направления на ВК с обоснованием: продление лечения на 14 дней." in sick_leave_vk_text, sick_leave_vk_text
+assert "Цель направления на ВК с обоснованием: продление лечения по листу нетрудоспособности." in sick_leave_vk_text, sick_leave_vk_text
+assert "14 дней" not in sick_leave_vk_text, sick_leave_vk_text
 assert "направление на МСЭ в связи" not in sick_leave_vk_text, sick_leave_vk_text
 assert "указать сроки в днях" not in vk_mse_text.lower(), vk_mse_text
 
