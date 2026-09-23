@@ -123,8 +123,11 @@ class MedicalRendererCommissionMixin:
         if person_line.strip(" ,"):
             editor.replace_first_matching_paragraph(["Сидоров", "Ф.И.О.", "ФИО"], person_line)
         self._place_psych_account_after_registration(editor, data, ["регистрация по адресу"], fallback_markers=[data.fio])
-        editor.replace_block(["Работает в организации"], "Работает в организации:", data.work_org, PRIMARY_MARKERS, allow_empty=True)
-        editor.replace_block(["Должность"], "Должность:", data.position, PRIMARY_MARKERS, allow_empty=True)
+        if data.expert_work_status == "нет":
+            editor.remove_all_matching_paragraphs(["Работает в организации", "Должность"])
+        else:
+            editor.replace_block(["Работает в организации"], "Работает в организации:", data.work_org, PRIMARY_MARKERS, allow_empty=True)
+            editor.replace_block(["Должность"], "Должность:", data.position, PRIMARY_MARKERS, allow_empty=True)
         editor.remove_all_matching_paragraphs(["Больничный лист"])
         editor.replace_block(["Оформление инвалидности"], "Оформление инвалидности:", data.disability, PRIMARY_MARKERS, allow_empty=True)
         editor.replace_block(["Направление от РВК"], "Направление от РВК:", data.rvk_referral, PRIMARY_MARKERS, allow_empty=True)
