@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "ad952289a1bcc5bc7c53d00843673f1139c32fb7",
-  "reason": "Deep final-DOCX and diary correctness audit: remove fabricated medical facts/dates/outcomes, stale template clinical text, primary sick-leave leakage, unresolved VK scaffolding, and invented final-diary improvement.",
+  "reason": "Deep final-DOCX and diary correctness audit: remove fabricated medical facts/dates/outcomes, stale template text, primary sick-leave leakage, unresolved VK scaffolding, invented final-diary improvement, and impossible inpatient chronology.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -21,11 +21,11 @@
     "medical_renderer_labs.py": "04fc4428aeee4c006f7d843064d1486aa5d8757f",
     "medical_renderer_primary.py": "e88d8ad4fa589be72b023b3ff695e114a0ab3250",
     "medical_renderer_special.py": "88a4dbaf88debd146da38605c1244e567aeed55b",
-    "medical_service.py": "e930b930ddb63ee19ca27456391d257a4bdc6e41",
-    "smoke_combined_part03_medical_parser_manual.py": "bc89d5403c2ada86fba3d74dfec95f59f9834b41",
-    "smoke_combined_part04_medical_generation.py": "282f773fb17dead3c80914c3c3f0ebb54d1e9069",
+    "medical_service.py": "df8848a6e67b34b781617356f563a5d9950f07b1",
+    "smoke_combined_part03_medical_parser_manual.py": "58391160bb9953a6086e609aff4a057dd6b0b01a",
+    "smoke_combined_part04_medical_generation.py": "c71f0303935b46bb8f3ad5d0e146f9fcccaf9215",
     "smoke_combined_part05_diary_basic_templates.py": "b8fe9291d2af72f831a4c197e93b9e77d16fa604",
-    "smoke_combined_part06_diary_columns_settings.py": "4da480e3b9d398c0f0e89b890253eb94b33e6de4",
-    "tools/generation_performance_profile.py": "b71c508ddddba3706851aab71197cc4d155cfc71"
+    "smoke_combined_part06_diary_columns_settings.py": "f8aae164b5a972551be20a2782259b18e9f26fe8",
+    "tools/generation_performance_profile.py": "4be8f96a1bace7c078c5b297124ef0b1b4f2c52a"
   }
 }
