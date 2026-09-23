@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "ad952289a1bcc5bc7c53d00843673f1139c32fb7",
-  "reason": "Deep document correctness audit: source-owned clinical prose/investigation results, template-owned cleanup and regex replacement, no patient-paragraph movers, no fabricated labs/outcomes/recommendations/prognoses, fail-closed chronology/dynamic epicrises, semantic integrity canaries.",
+  "reason": "Deep document correctness audit: source-owned clinical prose and investigation results; template-owned cleanup; no fabricated clinical facts; coherent chronology/employment/commission semantics; one year-aware production calendar shared by ordinary diary holiday removal and dynamic epicrisis scheduling.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -17,8 +17,8 @@
   "approved_blobs": {
     "actions_diary_flow.py": "986922b0f35633c51cf9d5117b029445d98fc70e",
     "dialog_expert.py": "65fdd91fbc9c0b59aca8a544bd8f70296eec3907",
-    "diary_constants.py": "6f98aa9bf043641bf88f33649a93b5272cb42344",
-    "diary_service.py": "47028a0922eaa9909aede7be210c0d93ff80693e",
+    "diary_constants.py": "f9f0755c43a8f41aee762b0357e3a66fa118442f",
+    "diary_service.py": "c3017ae3572112b87920bdf76ce5409f892ecb44",
     "medical_docx_editor_replace.py": "9a7f5a11c628bc7eeac1125e0b451057ff9b8dd6",
     "medical_gender.py": "bfae762bf174cc11775e3f0695a4a91f44c7a784",
     "medical_markers.py": "f36aae8981323ddc9bc4c0c6b505052242baf4c4",
@@ -36,11 +36,15 @@
     "smoke_combined_part02_ui_parser_regressions.py": "01798735afbee80334d401806c33e79ae2cf980a",
     "smoke_combined_part03_medical_parser_manual.py": "e1c619bae68b3421ccbdafd9b366178f9b2eed86",
     "smoke_combined_part04_medical_generation.py": "4a41c3ff5e796bb762627a90763540fb1e67024b",
-    "smoke_combined_part05_diary_basic_templates.py": "3d646b588d5e149c7d405c263815b5502891b2f7",
+    "smoke_combined_part05_diary_basic_templates.py": "7407dcb5b2f7307f49569f119ae2811d8b92138b",
     "smoke_combined_part06_diary_columns_settings.py": "26a3351ff962fe9655dc0cab5951444076ece614",
     "tests/golden_docx_manifest.json": "ce01c9808be9652acceec987d7330c15e1ffb003",
-    "tools/document_mechanics_change_approval.json": "0e3e06e1f26bbf8468c0ac2901eeebf7fc3b459a",
+    "tools/document_mechanics_change_approval.json": "92a0e964a9460c3121bb5655d9d5a5791dfa1d6d",
     "tools/docx_block_boundary_regression.py": "95977a51422cab35e072a6fcc5f10fb2f89ce619",
-    "tools/generation_performance_profile.py": "e89a69cadd0315771070d8f079e421dfb43e75cd"
+    "tools/generation_performance_profile.py": "e89a69cadd0315771070d8f079e421dfb43e75cd",
+    "diary_calendar.py": "cd5400014909b82881b6301ef0f6c463aa7ecf82",
+    "diary_table_numbers.py": "f99cad80d4ad3a690cec04fbe6b233e5cae7a26b",
+    "diary_table_rows.py": "2a421f17a35a2a6fd85de12de5a03c760b842dc5",
+    "diary_writer_entries.py": "2f03c0bfc53422bbf8a7cb900305f6cde627ee28"
   }
 }
