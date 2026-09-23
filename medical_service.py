@@ -278,7 +278,7 @@ class MedicalDocumentService:
         if selected_set & treatment_docs:
             data.treatment_plan = self._require_text(data.treatment_plan, "лечение")
 
-        expert_work_docs = {"primary", "discharge", "commission"}
+        expert_work_docs = {"primary", "discharge", "commission", "admission_doctor_referral"}
         if selected_set & expert_work_docs:
             work_status = normalize_yes_no(data.expert_work_status)
             expert_org = (data.expert_work_org or data.work_org).strip()
