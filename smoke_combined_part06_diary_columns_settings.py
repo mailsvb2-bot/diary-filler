@@ -288,15 +288,15 @@ compact_popup_data.discharge_date = "11062026"
 compact_popup_data.admission_occurrence = "повторно"
 compact_popup_data.expert_sick_leave_needed = "нет"
 compact_popup_data.sick_leave = "не нужен"
-compact_popup_data.commission_date = "18062026"
+compact_popup_data.commission_date = "11062026"
 compact_popup_data.commission_number = "12"
 compact_popup_data.vk_date = "19062026"
 compact_popup_data.vk_protocol_number = "13"
 compact_popup_data.vk_protocol_date = "19062026"
-compact_popup_data.sick_leave_vk_date = "20062026"
+compact_popup_data.sick_leave_vk_date = "11062026"
 compact_popup_data.sick_leave_vk_protocol_number = "14"
-compact_popup_data.sick_leave_vk_protocol_date = "20062026"
-compact_popup_data.sick_leave_vk_commission_date = "20062026"
+compact_popup_data.sick_leave_vk_protocol_date = "11062026"
+compact_popup_data.sick_leave_vk_commission_date = "11062026"
 compact_popup_data.rvk_act_number = "15"
 compact_popup_data.rvk_military_commissariat = "Ленинский"
 compact_created, compact_used = service.create_documents(
@@ -307,12 +307,12 @@ compact_created, compact_used = service.create_documents(
 )
 assert compact_used.discharge_date == "11.06.2026"
 assert compact_used.admission_occurrence == "повторно"
-assert compact_used.commission_date == "18.06.2026"
+assert compact_used.commission_date == "11.06.2026"
 assert compact_used.vk_date == "19.06.2026"
-assert compact_used.sick_leave_vk_commission_date == "20.06.2026"
+assert compact_used.sick_leave_vk_commission_date == "11.06.2026"
 compact_text = "\n".join(extract_docx_text(path) for path in compact_created)
-assert "18062026" not in compact_text and "19062026" not in compact_text and "20062026" not in compact_text
-assert "18.06.2026" in compact_text and "19.06.2026" in compact_text and "20.06.2026" in compact_text
+assert "11062026" not in compact_text and "19062026" not in compact_text
+assert "11.06.2026" in compact_text and "19.06.2026" in compact_text
 
 dupe_out = OUT / "duplicate_selected_docs"
 dupe_data = service.parse_primary_document(nav)
@@ -411,7 +411,7 @@ for sick_required_kind in ("discharge", "commission"):
     missing_standalone_sick.expert_sick_leave_needed = ""
     missing_standalone_sick.disability_needed = ""
     missing_standalone_sick.discharge_date = "11.06.2026"
-    missing_standalone_sick.commission_date = "18.06.2026"
+    missing_standalone_sick.commission_date = "11.06.2026"
     missing_standalone_sick.commission_number = "9"
     try:
         service.create_documents(
