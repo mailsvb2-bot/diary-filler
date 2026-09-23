@@ -180,7 +180,13 @@ def _test_text_diary_user_route(tmp: Path) -> None:
     assert "03.01.26 Пациентка спокойна" in text, text
     assert "04.01.26 Совместный осмотр с зав. отделением" in text, text
     assert "08.01.26 Пациентка спокойна" in text, text
-    assert "09.01.26 Состояние улучшилось" in text, text
+    assert "09.01.26 На текущую дату оформлена выписка из стационара." in text, text
+    for fabricated_claim in (
+        "Состояние улучшилось",
+        "суицидальных мыслей",
+        "Критика к состоянию присутствует",
+    ):
+        assert fabricated_claim not in text, (fabricated_claim, text)
     for omitted in ("05.01.26", "06.01.26", "07.01.26"):
         assert omitted not in text, (omitted, text)
     assert "12.01.26" not in text, text
