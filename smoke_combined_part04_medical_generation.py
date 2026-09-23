@@ -698,6 +698,29 @@ for _epi_path in _epi_prose_created:
     assert "ЭПИ - ранее проводилось по месту жительства" in _epi_text, (_epi_path.name, _epi_text)
     assert "ФИНАЛ_ЭПИ_АНАМНЕЗА_СОХРАНИТЬ" in _epi_text, (_epi_path.name, _epi_text)
 
+# A source line beginning «Рекомендовано» belongs to the anamnesis and must
+# never be moved to the discharge footer/signatures by post-processing.
+_recommendation_prose_data = copy.deepcopy(manual_data)
+_recommendation_prose_data.disease_anamnesis = (
+    "Начало заболевания постепенное.\n"
+    "Рекомендовано: ранее амбулаторным врачом продолжить наблюдение; "
+    "это исторический факт внутри анамнеза.\n"
+    "ПОСЛЕ_РЕКОМЕНДАЦИИ_АНАМНЕЗ_ПРОДОЛЖАЕТСЯ."
+)
+_recommendation_created, _ = service.create_documents(
+    navigation_path=nav,
+    output_dir=OUT / "recommendation_patient_prose_position",
+    discharge_date="20.06.2026",
+    selected_docs=["discharge"],
+    override_data=_recommendation_prose_data,
+)
+_recommendation_doc = Document(_recommendation_created[0])
+_recommendation_lines = [p.text for p in _recommendation_doc.paragraphs if p.text.strip()]
+_rec_index = next(i for i, line in enumerate(_recommendation_lines) if line.startswith("Рекомендовано: ранее амбулаторным врачом"))
+_tail_index = next(i for i, line in enumerate(_recommendation_lines) if "ПОСЛЕ_РЕКОМЕНДАЦИИ_АНАМНЕЗ_ПРОДОЛЖАЕТСЯ" in line)
+_signature_index = next(i for i, line in enumerate(_recommendation_lines) if "Врач-психиатр" in line)
+assert _rec_index < _tail_index < _signature_index, _recommendation_lines
+
 # Marker-like patient prose inside another clinical block must survive cleanup.
 # A standalone line shaped like the legacy duplicate-complaints sentence is still
 # source evidence when it came from the patient's disease anamnesis.
