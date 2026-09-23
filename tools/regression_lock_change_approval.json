@@ -28,6 +28,7 @@
     "smoke_combined_part04_medical_generation.py": "b845eb6b128141a1754c656b0584592c40d6e7a8",
     "tools/document_mechanics_change_approval.json": "a19221ee0390cd1f010c95ba9aa2289e007be0b9",
     "tools/generation_performance_profile.py": "e89a69cadd0315771070d8f079e421dfb43e75cd",
-    "tests/golden_docx_manifest.json": "67d213631a1413fc19bb5e571143f67528037b61"
+    "tests/golden_docx_manifest.json": "67d213631a1413fc19bb5e571143f67528037b61",
+    "smoke_combined_part06_diary_columns_settings.py": "94750cfcf9fb7c30f13dbb655de80912c3d36b3d"
   }
 }
