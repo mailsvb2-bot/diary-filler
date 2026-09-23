@@ -333,7 +333,7 @@ assert "К труду с 12.06.2026" in discharge_text
 for path in created:
     if any(key in path.name for key in ("Первичный", "Выписной", "Совместный")):
         assert "Экспертный анамнез:" in extract_docx_text(path), path
-assert "Находится на лечении с 10.06.2026 (9 дней)" in combined_text
+assert "Находится на лечении с 10.06.2026 (2 дня)" in combined_text
 assert "От 16.06.2026 г." in combined_text
 assert "ЭПИ тестовая информация" in combined_text
 assert "ЭПИ (12.06.2026)" not in commission_text, commission_text
@@ -379,7 +379,7 @@ for stale_template_text in (
 
 # Dates entered in the dedicated popups must reach the actual document headers.
 commission_doc = Document(commission_path)
-assert commission_doc.paragraphs[0].text.startswith("18.06.2026 г. 10:00"), commission_doc.paragraphs[0].text
+assert commission_doc.paragraphs[0].text.startswith("11.06.2026 г. 10:00"), commission_doc.paragraphs[0].text
 
 
 # Registration + psychiatric account is a shared top-block contract for every
@@ -657,17 +657,17 @@ manual_no_epi.admission_occurrence = "первично"
 manual_no_epi.rvk_act_number = "88-Б"
 manual_no_epi.rvk_military_commissariat = "Советского района"
 manual_no_epi.rvk_work_position = "не работает"
-manual_no_epi.commission_date = "17.06.2026"
+manual_no_epi.commission_date = "11.06.2026"
 manual_no_epi.commission_number = "11"
 manual_no_epi.vk_date = "17.06.2026"
 manual_no_epi.vk_protocol_number = "43"
 manual_no_epi.vk_protocol_date = "17.06.2026"
 manual_no_epi.vk_mse_work_org = "не работает"
 manual_no_epi.vk_mse_position = ""
-manual_no_epi.sick_leave_vk_date = "19.06.2026"
+manual_no_epi.sick_leave_vk_date = "11.06.2026"
 manual_no_epi.sick_leave_vk_protocol_number = "56"
-manual_no_epi.sick_leave_vk_protocol_date = "19.06.2026"
-manual_no_epi.sick_leave_vk_commission_date = "19.06.2026"
+manual_no_epi.sick_leave_vk_protocol_date = "11.06.2026"
+manual_no_epi.sick_leave_vk_commission_date = "11.06.2026"
 manual_no_epi.sick_leave_vk_work_org = "не работает"
 manual_no_epi.sick_leave_vk_position = ""
 manual_no_epi.sick_leave_vk_work_position = ""
