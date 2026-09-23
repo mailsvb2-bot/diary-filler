@@ -682,6 +682,8 @@ def _assert_clinical_popup_and_document_order_contract() -> None:
     labs = _read("medical_renderer_labs.py")
     special = _read("medical_renderer_special.py")
     parser = _read("medical_parser.py")
+    parser_blocks = _read("medical_parser_blocks.py")
+    models = _read("medical_models.py")
 
     required_dialog = (
         "На учёте у психиатров",
@@ -731,6 +733,23 @@ def _assert_clinical_popup_and_document_order_contract() -> None:
 
     if '"Регистрация по адресу"' not in parser:
         _fail("parser cannot read the canonical registration wording")
+    if "investigation_results: str" not in models:
+        _fail("PatientData lost the source-owned investigation-results field")
+    if '"investigation_results": ("Результаты обследований", "Результаты исследований")' not in parser:
+        _fail("parser no longer preserves the explicit investigation-results block")
+    if "inside_investigation_results" not in parser_blocks or 'marker_norm == normalize_match("ЭЭГ")' not in parser_blocks:
+        _fail("EEG can truncate the sourced investigation-results block")
+    if "_render_sourced_investigation_results" not in labs:
+        _fail("source-owned investigation-results renderer is missing")
+    for filename, source in (
+        ("medical_renderer_primary.py", primary),
+        ("medical_renderer_commission.py", commission),
+        ("medical_renderer_special.py", special),
+    ):
+        if "_render_sourced_investigation_results(" not in source:
+            _fail(f"{filename} no longer carries sourced investigation results")
+        if "_replace_lab_lines(editor, dates)" in source:
+            _fail(f"{filename} reintroduced date-driven fabricated investigation results")
     for filename, source in (
         ("medical_renderer_primary.py", primary),
         ("medical_renderer_commission.py", commission),
