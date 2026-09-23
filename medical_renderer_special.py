@@ -36,9 +36,11 @@ from medical_text_utils import normalize_match
 
 class MedicalRendererSpecialMixin:
     @staticmethod
-    def _clean_vk_purpose_instruction(doc) -> None:
-        """Strip template filling instructions while preserving the selected purpose text."""
-        for paragraph in iter_all_paragraphs(doc):
+    def _clean_vk_purpose_instruction(editor: DocxBlockEditor) -> None:
+        """Strip filling instructions only from the template-owned VK purpose row."""
+        for paragraph in editor.paragraphs:
+            if editor.template_paragraph_text(paragraph) is None:
+                continue
             text = paragraph.text or ""
             if not normalize_match(text).startswith("цель направления на вк с обоснованием"):
                 continue
@@ -57,7 +59,9 @@ class MedicalRendererSpecialMixin:
     def _finalize_vk_identity_lines(editor: DocxBlockEditor, data: PatientData) -> None:
         """Remove unresolved VK choices and fill upper signature placeholders."""
         editor.remove_exact_template_paragraphs(["(первичный, повторный)"])
-        for paragraph in iter_all_paragraphs(editor.doc):
+        for paragraph in editor.paragraphs:
+            if editor.template_paragraph_text(paragraph) is None:
+                continue
             text = paragraph.text or ""
             if "_" not in text:
                 continue
@@ -110,7 +114,7 @@ class MedicalRendererSpecialMixin:
             editor.remove_all_matching_paragraphs(["ЭПИ"])
         editor.replace_block(["Сомато-неврологический статус", "Соматический статус"], "Сомато-неврологический статус:", data.somatic_status, VK_MSE_MARKERS, allow_empty=True)
         editor.replace_block(["Получает лечение"], "Получает лечение:", data.treatment_plan, VK_MSE_MARKERS)
-        self._clean_vk_purpose_instruction(doc)
+        self._clean_vk_purpose_instruction(editor)
         self._finalize_vk_identity_lines(editor, data)
         finalize_medical_document(doc, data)
         doc.save(str(output_path))
