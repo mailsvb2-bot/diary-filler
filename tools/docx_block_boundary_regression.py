@@ -19,7 +19,9 @@ from docx import Document
 from medical_constants import DOCUMENT_ORDER
 from medical_docx_blocks import extract_docx_text
 from medical_docx_editor import DocxBlockEditor
+from medical_docx_editor_utils import paragraph_matches_marker
 from medical_parser import MedicalTextParser
+from medical_paths import bundled_template_path
 from generation_performance_profile import _make_fixture
 from medical_markers import (
     COMMISSION_MARKERS,
@@ -889,6 +891,44 @@ def _assert_sourced_investigation_block_survives_input_docx_parse() -> None:
         assert parsed.treatment_plan == "Тестовая терапия после исследований", parsed.treatment_plan
 
 
+
+def _assert_bundled_template_structure_is_editor_reachable() -> None:
+    """Structural patient-field markers must not hide inside unsupported tables."""
+    marker_map = {
+        "primary": PRIMARY_MARKERS,
+        "discharge": DISCHARGE_MARKERS,
+        "commission": COMMISSION_MARKERS,
+        "admission_doctor_referral": PRIMARY_MARKERS,
+        "vk_mse": VK_MSE_MARKERS,
+        "sick_leave_vk": SICK_LEAVE_VK_MARKERS,
+        "rvk": RVK_MARKERS,
+    }
+    hidden = []
+    for kind, markers in marker_map.items():
+        doc = Document(str(bundled_template_path(kind)))
+        for table_index, table in enumerate(doc.tables):
+            for row_index, row in enumerate(table.rows):
+                for cell_index, cell in enumerate(row.cells):
+                    for paragraph in cell.paragraphs:
+                        normalized = normalize_match(paragraph.text)
+                        if not normalized:
+                            continue
+                        matched = [
+                            marker
+                            for marker in markers
+                            if paragraph_matches_marker(normalized, marker)
+                        ]
+                        if matched:
+                            hidden.append(
+                                (kind, table_index, row_index, cell_index, paragraph.text, matched)
+                            )
+    assert not hidden, (
+        "Bundled template contains structural markers in table cells that "
+        "DocxBlockEditor cannot safely own/replace: "
+        + repr(hidden)
+    )
+
+
 def verify() -> None:
     _assert_alias_coverage()
     _assert_inserted_marker_like_patient_text_never_becomes_structure()
@@ -902,6 +942,7 @@ def verify() -> None:
     _assert_all_medical_forms_keep_long_clinical_tails()
     _assert_template_cleanup_never_deletes_inserted_patient_marker_lines()
     _assert_sourced_investigation_block_survives_input_docx_parse()
+    _assert_bundled_template_structure_is_editor_reachable()
     _assert_regex_replacement_never_targets_inserted_patient_text()
     print("DOCX BLOCK BOUNDARY REGRESSION OK: structural aliases + cross-field order/isolation + 1250-line stress + complaints/life/somatic + table/run-fragmented long-text integrity across all medical forms")
 
