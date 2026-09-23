@@ -8,7 +8,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from medical_gender import adapt_patient_data_to_gender
 from medical_models import PatientData
 from medical_renderer_commission import MedicalRendererCommissionMixin
 from medical_renderer_labs import MedicalRendererLabsMixin
@@ -32,5 +31,7 @@ class MedicalDocumentRenderer(
             "sick_leave_vk": self.render_sick_leave_vk,
             "rvk": self.render_rvk,
         }
-        gender_adapted_data = adapt_patient_data_to_gender(data)
-        methods[kind](template_path, output_path, gender_adapted_data)
+        # Source clinical text is evidence and must remain byte-for-byte semantic
+        # content. Gender-specific wording belongs only to renderer-owned template
+        # phrases; never rewrite the parsed anamnesis/status globally.
+        methods[kind](template_path, output_path, data)
