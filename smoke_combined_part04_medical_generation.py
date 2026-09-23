@@ -521,6 +521,25 @@ assert not any(line.startswith("За время лечения") for line in dis
 assert not any(line.startswith("Рекомендовано:") for line in discharge_lines), discharge_lines[-8:]
 assert "Врач-психиатр" in discharge_lines[-1] and "Зав. отд." in discharge_lines[-1], discharge_lines[-5:]
 
+# Patient prose that resembles a VK purpose instruction must survive unchanged.
+_vk_prose_data = copy.deepcopy(manual_data)
+_vk_prose_data.disease_anamnesis = (
+    "Начало заболевания постепенное.\n"
+    "Цель направления на ВК с обоснованием: ранее обсуждалась амбулаторно; "
+    "это часть анамнеза, а не инструкция шаблона.\n"
+    "КОНЕЦ_VK_АНАМНЕЗА_СОХРАНИТЬ."
+)
+_vk_prose_created, _ = service.create_documents(
+    navigation_path=nav,
+    output_dir=OUT / "vk_instruction_like_patient_prose",
+    discharge_date="20.06.2026",
+    selected_docs=["vk_mse"],
+    override_data=_vk_prose_data,
+)
+_vk_prose_text = extract_docx_text(_vk_prose_created[0])
+assert "Цель направления на ВК с обоснованием: ранее обсуждалась амбулаторно" in _vk_prose_text, _vk_prose_text
+assert "КОНЕЦ_VK_АНАМНЕЗА_СОХРАНИТЬ" in _vk_prose_text, _vk_prose_text
+
 # Unknown/ambiguous grammatical gender must never default to masculine.
 ambiguous_gender = copy.deepcopy(manual_data)
 ambiguous_gender.fio = "Ли Ану Ким"
