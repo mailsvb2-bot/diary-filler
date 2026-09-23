@@ -168,11 +168,12 @@ def normalize_facility_references_in_document(doc: DocxDocument) -> None:
             replace_paragraph_regex_preserving_runs(paragraph, pattern, target)
 
 
-def normalize_staff_references_in_document(doc: DocxDocument, data: PatientData) -> None:
-    """Replace historical template staff names only in explicit staff-role fields.
+def normalize_staff_references_in_document(doc: DocxDocument, data: PatientData, editor=None) -> None:
+    """Replace historical staff names only in template-owned role/signature rows.
 
-    Never scan arbitrary patient/clinical text for surnames: a patient can legally
-    have the same surname/initials as one of the historical template employees.
+    Patient clinical prose may legitimately mention a historical doctor. Even a
+    paragraph that began as a clinical template marker must not be rewritten just
+    because its inserted value contains a staff-role phrase.
     """
     configured = {
         "doctor": format_staff_short_name(data.doctor),
@@ -212,9 +213,17 @@ def normalize_staff_references_in_document(doc: DocxDocument, data: PatientData)
         for role, legacy, replacement in replacements
         if replacement
     ]
+    role_prefix = re.compile(
+        rf"^(?:{doctor_role}|{head_role}|{deputy_role})\b",
+        re.IGNORECASE,
+    )
     for paragraph in list(iter_all_paragraphs(doc)):
         if not (paragraph.text or "").strip():
             continue
+        if editor is not None:
+            template_text = editor.template_paragraph_text(paragraph)
+            if template_text is None or not role_prefix.search(template_text):
+                continue
         for pattern, replacement in compiled:
             replace_paragraph_regex_preserving_runs(
                 paragraph,
@@ -225,10 +234,10 @@ def normalize_staff_references_in_document(doc: DocxDocument, data: PatientData)
             )
 
 
-def finalize_medical_document(doc: DocxDocument, data: PatientData) -> None:
+def finalize_medical_document(doc: DocxDocument, data: PatientData, *, editor=None) -> None:
     """Общие финальные правки перед сохранением любого медицинского документа."""
     normalize_facility_references_in_document(doc)
-    normalize_staff_references_in_document(doc, data)
+    normalize_staff_references_in_document(doc, data, editor=editor)
     # EPI/service cleanup is renderer-owned and template-aware. Never scan the
     # whole finalized document for marker-like patient prose.
     apply_readable_section_spacing(doc)
