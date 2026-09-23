@@ -866,6 +866,30 @@ _nonworking_primary_text = extract_docx_text(_nonworking_primary_created[0])
 assert "Устаревшая организация" not in _nonworking_primary_text, _nonworking_primary_text
 assert "Устаревшая должность" not in _nonworking_primary_text, _nonworking_primary_text
 assert "Экспертный анамнез: Не работает." in _nonworking_primary_text, _nonworking_primary_text
+assert "Работает в организации:" not in _nonworking_primary_text, _nonworking_primary_text
+assert "Должность:" not in _nonworking_primary_text, _nonworking_primary_text
+
+nonworking_admission = service.parse_primary_document(nav)
+nonworking_admission.expert_work_status = "нет"
+nonworking_admission.expert_work_org = ""
+nonworking_admission.expert_position = ""
+nonworking_admission.work_org = "Устаревшая организация"
+nonworking_admission.position = "Устаревшая должность"
+nonworking_admission.disability_needed = "нет"
+nonworking_admission.rvk_referral_present = "нет"
+_nonworking_admission_created, nonworking_admission_used = service.create_documents(
+    navigation_path=nav,
+    output_dir=OUT / "admission_doctor_nonworking_clears_stale_job",
+    selected_docs=["admission_doctor_referral"],
+    override_data=nonworking_admission,
+)
+assert nonworking_admission_used.work_org == ""
+assert nonworking_admission_used.position == ""
+_nonworking_admission_text = extract_docx_text(_nonworking_admission_created[0])
+assert "Устаревшая организация" not in _nonworking_admission_text, _nonworking_admission_text
+assert "Устаревшая должность" not in _nonworking_admission_text, _nonworking_admission_text
+assert "Работает в организации:" not in _nonworking_admission_text, _nonworking_admission_text
+assert "Должность:" not in _nonworking_admission_text, _nonworking_admission_text
 
 future_birth_data = service.parse_primary_document(nav)
 future_birth_data.birth = "01.01.2030"
