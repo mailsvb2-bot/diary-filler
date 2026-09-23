@@ -296,23 +296,25 @@ class MedicalParserBlocksMixin:
         и на отдельный заголовок «Лечение».
         """
         pattern = self._alias_pattern(alias)
-        alias_norm = normalize_match(alias)
+        fallback: Optional[Tuple[int, int]] = None
         for m in re.finditer(pattern, text, flags=re.IGNORECASE):
-            # Clinical marker words are unsafe as both a following boundary and
-            # the block's own start. Otherwise a narrative line such as
-            # "Диагноз ранее..." or "Психический статус в динамике..." can be
-            # captured as the diagnosis/status itself.
-            if alias_norm in self._STRICT_CLINICAL_BOUNDARY_MARKERS:
-                valid = self._is_valid_section_boundary_occurrence(
-                    text, m.start(), m.end(), alias
-                )
-            else:
-                valid = self._is_valid_section_marker_occurrence(
-                    text, m.start(), m.end(), alias
-                )
-            if valid:
-                return (m.start(), m.end())
-        return None
+            if not self._is_valid_section_marker_occurrence(
+                text, m.start(), m.end(), alias
+            ):
+                continue
+            span = (m.start(), m.end())
+            # Prefer an unambiguous structural occurrence (standalone heading,
+            # label punctuation, compact "Диагноз F..." form) over an earlier
+            # narrative sentence that merely starts with the same words. Keep
+            # the historical permissive occurrence only as a fallback so legacy
+            # table rows such as "Назначенное лечение терапия..." still parse.
+            if self._is_valid_section_boundary_occurrence(
+                text, m.start(), m.end(), alias
+            ):
+                return span
+            if fallback is None:
+                fallback = span
+        return fallback
 
     _STRICT_CLINICAL_BOUNDARY_MARKERS = {
         normalize_match(value)
