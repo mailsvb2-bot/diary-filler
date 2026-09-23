@@ -1019,7 +1019,7 @@ class DialogExpertMixin:
         return True
 
     def _selected_docs_need_expert_anamnesis(self, selected_medical: List[str]) -> bool:
-        return any(kind in selected_medical for kind in ("primary", "discharge", "commission"))
+        return any(kind in selected_medical for kind in ("discharge", "commission"))
 
     def _prompt_assigned_treatment_if_needed(self, *, force: bool = False) -> bool:
         """Запросить поля, зависящие от типа первичного документа.
