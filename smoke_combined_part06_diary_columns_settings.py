@@ -667,6 +667,70 @@ try:
 except ValueError as exc:
     assert "позже даты выписки" in str(exc), str(exc)
 
+contradictory_sick_vk = service.parse_primary_document(nav)
+contradictory_sick_vk.expert_sick_leave_needed = "нет"
+contradictory_sick_vk.sick_leave = "не нужен"
+contradictory_sick_vk.sick_leave_vk_date = "12.06.2026"
+contradictory_sick_vk.sick_leave_vk_protocol_number = "79-CONFLICT"
+contradictory_sick_vk.sick_leave_vk_protocol_date = "12.06.2026"
+contradictory_sick_vk.sick_leave_vk_commission_date = "12.06.2026"
+try:
+    service.create_documents(
+        navigation_path=nav,
+        output_dir=OUT / "contradictory_sick_vk",
+        selected_docs=["sick_leave_vk"],
+        override_data=contradictory_sick_vk,
+    )
+    raise AssertionError("sick-leave VK must reject explicit no-sick-leave decision")
+except ValueError as exc:
+    assert "больничный лист не нужен" in str(exc), str(exc)
+
+contradictory_mse = service.parse_primary_document(nav)
+contradictory_mse.disability_needed = "нет"
+contradictory_mse.disability = "не нужно"
+contradictory_mse.vk_date = "12.06.2026"
+contradictory_mse.vk_protocol_number = "80-CONFLICT"
+contradictory_mse.vk_protocol_date = "12.06.2026"
+try:
+    service.create_documents(
+        navigation_path=nav,
+        output_dir=OUT / "contradictory_vk_mse",
+        selected_docs=["vk_mse"],
+        override_data=contradictory_mse,
+    )
+    raise AssertionError("VK MSE must reject explicit no-disability decision")
+except ValueError as exc:
+    assert "оформление инвалидности не нужно" in str(exc), str(exc)
+
+implicit_sick_vk = service.parse_primary_document(nav)
+implicit_sick_vk.expert_sick_leave_needed = ""
+implicit_sick_vk.sick_leave = ""
+implicit_sick_vk.sick_leave_vk_date = "12.06.2026"
+implicit_sick_vk.sick_leave_vk_protocol_number = "81-IMPLICIT"
+implicit_sick_vk.sick_leave_vk_protocol_date = "12.06.2026"
+implicit_sick_vk.sick_leave_vk_commission_date = "12.06.2026"
+_implicit_created, implicit_used = service.create_documents(
+    navigation_path=nav,
+    output_dir=OUT / "implicit_sick_vk_positive",
+    selected_docs=["sick_leave_vk"],
+    override_data=implicit_sick_vk,
+)
+assert implicit_used.expert_sick_leave_needed == "да", implicit_used.expert_sick_leave_needed
+
+implicit_mse = service.parse_primary_document(nav)
+implicit_mse.disability_needed = ""
+implicit_mse.disability = ""
+implicit_mse.vk_date = "12.06.2026"
+implicit_mse.vk_protocol_number = "82-IMPLICIT"
+implicit_mse.vk_protocol_date = "12.06.2026"
+_implicit_mse_created, implicit_mse_used = service.create_documents(
+    navigation_path=nav,
+    output_dir=OUT / "implicit_mse_positive",
+    selected_docs=["vk_mse"],
+    override_data=implicit_mse,
+)
+assert implicit_mse_used.disability_needed == "да", implicit_mse_used.disability_needed
+
 bad_sick_vk_order_data = service.parse_primary_document(nav)
 bad_sick_vk_order_data.sick_leave_vk_date = "10.06.2026"
 bad_sick_vk_order_data.sick_leave_vk_protocol_number = "79"
