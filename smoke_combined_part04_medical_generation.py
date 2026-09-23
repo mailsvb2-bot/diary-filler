@@ -670,7 +670,7 @@ for path in created:
 
 # --- Medical documents without EPI: no ЭПИ mentions should remain ---
 manual_no_epi = service.parse_navigation(nav)
-manual_no_epi.discharge_date = "11.06.2026"
+manual_no_epi.discharge_date = "20.06.2026"
 manual_no_epi.diagnosis = "F88 Диагноз без дополнительного исследования"
 manual_no_epi.admission_occurrence = "первично"
 manual_no_epi.rvk_act_number = "88-Б"
@@ -697,7 +697,7 @@ manual_no_epi.epi_present = "нет"
 created_no_epi, _ = service.create_documents(
     navigation_path=nav,
     output_dir=OUT / "medical_without_epi",
-    discharge_date="11.06.2026",
+    discharge_date="20.06.2026",
     epi_path=None,
     selected_docs=DOCUMENT_ORDER,
     override_data=manual_no_epi,
