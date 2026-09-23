@@ -37,9 +37,6 @@ from medical_parser_sanitize import sanitize_diagnosis
 from medical_text_utils import normalize_match
 
 
-DISCHARGE_RECOMMENDATION_TEXT = "Рекомендовано: наблюдение у районного психиатра, приём препаратов"
-
-
 class MedicalRendererPrimaryMixin:
     def render_primary(self, template_path: str | Path, output_path: str | Path, data: PatientData) -> None:
         doc = Document(str(template_path))
@@ -158,17 +155,11 @@ class MedicalRendererPrimaryMixin:
         if data.treatment_plan:
             editor.replace_block(["Лечение"], "Лечение:", data.treatment_plan, DISCHARGE_MARKERS)
 
-        # The recommendation is owned by the discharge renderer.  Never allow a
-        # stale sentence bundled in an old template to leak into the final epicrisis.
-        recommendation_done = editor.replace_first_matching_paragraph(
-            ["Рекомендовано"], DISCHARGE_RECOMMENDATION_TEXT
-        )
-        if not recommendation_done:
-            recommendation_done = editor.insert_before_first_matching_paragraph(
-                ["Зав. отд.", "Врач-психиатр"], DISCHARGE_RECOMMENDATION_TEXT
-            )
-        if not recommendation_done:
-            doc.add_paragraph(DISCHARGE_RECOMMENDATION_TEXT)
+        # Historical bundled templates contain a fixed positive treatment
+        # outcome and generic medical recommendations. Neither is patient
+        # evidence. Until explicit discharge-outcome/recommendation fields are
+        # sourced from the doctor, remove those example blocks fail-closed.
+        editor.remove_all_matching_paragraphs(["За время лечения", "Рекомендовано"])
 
         signature = (
             f"  Зав. отд. {format_staff_short_name(data.head)}"
