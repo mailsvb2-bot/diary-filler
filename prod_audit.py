@@ -747,8 +747,10 @@ def _assert_clinical_popup_and_document_order_contract() -> None:
         _fail("joint-exam header may fall back to a wrong non-popup date")
     if "data.commission_date or data.admission_date" in commission:
         _fail("joint-exam date silently falls back to admission date")
-    if "_remove_trailing_clinical_leakage(doc, data)" not in primary or "_remove_trailing_clinical_leakage(doc, data)" not in commission:
-        _fail("clinical trailing-leak cleanup is missing from primary/joint/admission flow")
+    if "_remove_trailing_clinical_leakage(editor, data)" not in primary or "_remove_trailing_clinical_leakage(editor, data)" not in commission:
+        _fail("template-aware clinical trailing-leak cleanup is missing from primary/joint/admission flow")
+    if "_remove_trailing_clinical_leakage(doc, data)" in primary or "_remove_trailing_clinical_leakage(doc, data)" in commission:
+        _fail("clinical trailing-leak cleanup bypasses template ownership and may delete patient prose")
     if r"\bцелесообразна\s+госпитализация\b" not in labs:
         _fail("trailing cleanup lost the word-boundary guard for hospitalization recommendation")
     if "replace_paragraph_regex_preserving_runs" not in labs:
