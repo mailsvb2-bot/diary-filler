@@ -91,7 +91,7 @@ class MedicalRendererCommissionMixin:
         editor.replace_block(["Лечение"], "Лечение:", data.treatment_plan, COMMISSION_MARKERS)
         editor.replace_block(["Эпидемиологический анамнез"], "Эпидемиологический анамнез:", data.epidemiology, COMMISSION_MARKERS, allow_empty=True)
         editor.remove_all_matching_paragraphs(["Целесообразна госпитализация"])
-        self._remove_trailing_clinical_leakage(doc, data)
+        self._remove_trailing_clinical_leakage(editor, data)
         finalize_medical_document(doc, data)
         doc.save(str(output_path))
 
@@ -147,7 +147,7 @@ class MedicalRendererCommissionMixin:
             allow_empty=True,
         )
         editor.replace_block(["Эпидемиологический анамнез"], "Эпидемиологический анамнез:", data.epidemiology, PRIMARY_MARKERS, allow_empty=True)
-        self._remove_trailing_clinical_leakage(doc, data)
+        self._remove_trailing_clinical_leakage(editor, data)
         # Финальная фраза должна быть строго такой по пользовательскому требованию.
         target_referral_line = f"В связи с психическим состоянием, направляется на лечение в {TARGET_MEDICAL_FACILITY}"
         referral_done = False
