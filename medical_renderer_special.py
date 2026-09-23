@@ -192,8 +192,13 @@ class MedicalRendererSpecialMixin:
         # В Акте для РВК строка "Место работы" не нужна: удаляем её из результата,
         # чтобы туда не попадали данные из направления или старые значения UI.
         editor.remove_all_matching_paragraphs(["Место работы"])
-        stay_verb = "Находилась" if patient_gender(data) == "female" else "Находился"
-        period = f"{stay_verb} на обследовании в {TARGET_MEDICAL_FACILITY} с {data.admission_date} по {data.discharge_date}".strip()
+        gender = patient_gender(data)
+        if gender == "female":
+            period = f"Находилась на обследовании в {TARGET_MEDICAL_FACILITY} с {data.admission_date} по {data.discharge_date}".strip()
+        elif gender == "male":
+            period = f"Находился на обследовании в {TARGET_MEDICAL_FACILITY} с {data.admission_date} по {data.discharge_date}".strip()
+        else:
+            period = f"Период обследования в {TARGET_MEDICAL_FACILITY}: с {data.admission_date} по {data.discharge_date}".strip()
         editor.replace_first_matching_paragraph(["Находился на обследовании"], period)
         military_area = format_military_commissariat_area(data.rvk_military_commissariat)
         if military_area:
