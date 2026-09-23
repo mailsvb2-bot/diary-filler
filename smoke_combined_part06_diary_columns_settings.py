@@ -807,6 +807,66 @@ try:
 except ValueError as exc:
     assert "место работы и должность" in str(exc), str(exc)
 
+missing_expert_work = service.parse_primary_document(nav)
+missing_expert_work.expert_work_status = ""
+missing_expert_work.expert_work_org = ""
+missing_expert_work.expert_position = ""
+missing_expert_work.work_org = ""
+missing_expert_work.position = ""
+missing_expert_work.disability_needed = "нет"
+missing_expert_work.rvk_referral_present = "нет"
+try:
+    service.create_documents(
+        navigation_path=nav,
+        output_dir=OUT / "primary_missing_expert_work",
+        selected_docs=["primary"],
+        override_data=missing_expert_work,
+    )
+    raise AssertionError("primary expert anamnesis must require work status")
+except ValueError as exc:
+    assert "работает пациент или нет" in str(exc), str(exc)
+
+incomplete_expert_work = service.parse_primary_document(nav)
+incomplete_expert_work.expert_work_status = "да"
+incomplete_expert_work.expert_work_org = "Тестовая организация"
+incomplete_expert_work.expert_position = ""
+incomplete_expert_work.work_org = ""
+incomplete_expert_work.position = ""
+incomplete_expert_work.disability_needed = "нет"
+incomplete_expert_work.rvk_referral_present = "нет"
+try:
+    service.create_documents(
+        navigation_path=nav,
+        output_dir=OUT / "primary_incomplete_expert_work",
+        selected_docs=["primary"],
+        override_data=incomplete_expert_work,
+    )
+    raise AssertionError("working patient must require organization and position")
+except ValueError as exc:
+    assert "место работы и должность" in str(exc), str(exc)
+
+nonworking_primary = service.parse_primary_document(nav)
+nonworking_primary.expert_work_status = "нет"
+nonworking_primary.expert_work_org = ""
+nonworking_primary.expert_position = ""
+nonworking_primary.work_org = "Устаревшая организация"
+nonworking_primary.position = "Устаревшая должность"
+nonworking_primary.disability_needed = "нет"
+nonworking_primary.rvk_referral_present = "нет"
+_nonworking_primary_created, nonworking_primary_used = service.create_documents(
+    navigation_path=nav,
+    output_dir=OUT / "primary_nonworking_clears_stale_job",
+    selected_docs=["primary"],
+    override_data=nonworking_primary,
+)
+assert nonworking_primary_used.expert_work_status == "нет"
+assert nonworking_primary_used.work_org == ""
+assert nonworking_primary_used.position == ""
+_nonworking_primary_text = extract_docx_text(_nonworking_primary_created[0])
+assert "Устаревшая организация" not in _nonworking_primary_text, _nonworking_primary_text
+assert "Устаревшая должность" not in _nonworking_primary_text, _nonworking_primary_text
+assert "Экспертный анамнез: Не работает." in _nonworking_primary_text, _nonworking_primary_text
+
 bad_sick_vk_order_data = service.parse_primary_document(nav)
 bad_sick_vk_order_data.sick_leave_vk_date = "10.06.2026"
 bad_sick_vk_order_data.sick_leave_vk_protocol_number = "79"
