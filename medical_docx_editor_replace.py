@@ -63,6 +63,18 @@ class DocxEditorReplaceMixin:
                 count += 1
         return count
 
+    def remove_exact_template_paragraphs(self, values: Sequence[str]) -> int:
+        """Remove exact service rows only when they came from the template."""
+        normalized_values = {normalize_match(value) for value in values if normalize_match(value)}
+        count = 0
+        for paragraph in list(self.paragraphs):
+            if self.template_paragraph_text(paragraph) is None:
+                continue
+            if normalize_match(paragraph.text) in normalized_values:
+                remove_paragraph(paragraph)
+                count += 1
+        return count
+
     def replace_first_matching_regex(self, pattern: str, text: str) -> bool:
         rx = re.compile(pattern, flags=re.IGNORECASE)
         for paragraph in self.paragraphs:
