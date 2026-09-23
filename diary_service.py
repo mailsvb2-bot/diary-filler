@@ -14,30 +14,11 @@ from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 
 from diary_batch import _clinical_diary_offsets, create_text_diaries
+from diary_calendar import is_fixed_holiday, is_non_working_day
 from diary_dates import parse_full_date, parse_optional_discharge_date
 from diary_models import DiaryBatchResult
 
 
-# Federal non-working holidays from Article 112 of the Russian Labour Code.
-# Weekend transfers for non-January holidays are derived below. Transfers from
-# the January holiday block are government/year-specific and must be explicit.
-FIXED_HOLIDAYS: frozenset[tuple[int, int]] = frozenset(
-    {
-        *((1, day) for day in range(1, 9)),
-        (2, 23),
-        (3, 8),
-        (5, 1),
-        (5, 9),
-        (6, 12),
-        (11, 4),
-    }
-)
-JANUARY_HOLIDAYS: frozenset[tuple[int, int]] = frozenset((1, day) for day in range(1, 9))
-YEAR_SPECIFIC_NON_WORKING_DATES: dict[int, frozenset[tuple[int, int]]] = {
-    # Government Resolution No. 1466 of 24.09.2025:
-    # Jan 3 -> Jan 9 and Jan 4 -> Dec 31 for calendar year 2026.
-    2026: frozenset({(1, 9), (12, 31)}),
-}
 _LEADING_DATE_RE = re.compile(r"^\s*([0-3]?\d)[./-]([01]?\d)[./-](\d{2}|20\d{2})(?=\s|$)")
 
 
@@ -52,32 +33,6 @@ class DynamicEpicrisisInput:
     treatment_correction: str = ""
     treating_physician: str = ""
     department_head: str = ""
-
-
-def is_fixed_holiday(day: date) -> bool:
-    return (day.month, day.day) in FIXED_HOLIDAYS
-
-
-def _automatic_holiday_transfer_dates(year: int) -> frozenset[date]:
-    """Derive statutory next-working-day transfers outside the January block."""
-    result: set[date] = set()
-    for month, day_value in FIXED_HOLIDAYS - JANUARY_HOLIDAYS:
-        holiday = date(year, month, day_value)
-        if holiday.weekday() < 5:
-            continue
-        candidate = holiday + timedelta(days=1)
-        while candidate.weekday() >= 5 or is_fixed_holiday(candidate):
-            candidate += timedelta(days=1)
-        result.add(candidate)
-    return frozenset(result)
-
-
-def is_non_working_day(day: date) -> bool:
-    if day.weekday() >= 5 or is_fixed_holiday(day):
-        return True
-    if day in _automatic_holiday_transfer_dates(day.year):
-        return True
-    return (day.month, day.day) in YEAR_SPECIFIC_NON_WORKING_DATES.get(day.year, frozenset())
 
 
 def next_working_day(day: date, *, used=()) -> date:
