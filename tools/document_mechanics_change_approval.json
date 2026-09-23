@@ -1,22 +1,22 @@
 {
   "schema_version": 1,
   "base_sha": "45a2c067e7327088acd72ae9b259867653eec3f6",
-  "reason": "Deep document correctness: source-owned clinical prose and investigation results, template-owned cleanup only, no fabricated clinical/lab/prognosis/recommendation facts, validated chronology, and neutral unknown-gender wording.",
+  "reason": "Deep document correctness: source-owned clinical prose and investigation results, template-owned cleanup/replacement only, no paragraph movers over patient content, no fabricated clinical/lab/prognosis/recommendation facts, validated chronology, neutral unknown-gender wording.",
   "approved_blobs": {
     "actions_diary_flow.py": "986922b0f35633c51cf9d5117b029445d98fc70e",
     "dialog_expert.py": "65fdd91fbc9c0b59aca8a544bd8f70296eec3907",
     "diary_constants.py": "6f98aa9bf043641bf88f33649a93b5272cb42344",
     "diary_service.py": "694b40a53ebef47e3eb9cb0012ecd8e6ba221923",
-    "medical_docx_editor_replace.py": "fe3b4ce8e60f3a448e06ecaad3e6f1156eb15441",
+    "medical_docx_editor_replace.py": "9a7f5a11c628bc7eeac1125e0b451057ff9b8dd6",
     "medical_gender.py": "bfae762bf174cc11775e3f0695a4a91f44c7a784",
     "medical_markers.py": "f36aae8981323ddc9bc4c0c6b505052242baf4c4",
     "medical_models.py": "38a42064609a982331641337dea40b84b0d4a6c6",
     "medical_parser.py": "cc1b964965c90048380789946db98a08bbc6874b",
     "medical_parser_blocks.py": "75a1016f4a5ba19b3a99ace7e1fde1b03aa8975a",
     "medical_renderer.py": "8ead4da7b5b411c658ab94f920848e4f7987c852",
-    "medical_renderer_commission.py": "b2794c6a3b7c9cd4a28410961e9ce42c876efe8f",
-    "medical_renderer_labs.py": "55f6f6a2bf32f414062ac6756dc995e57dce3af5",
-    "medical_renderer_primary.py": "e24cb9e6af6dcfbaaeb5da072db7a1b118d2bba5",
+    "medical_renderer_commission.py": "6f3aa938ffc3d764a5c587df7ec3cb420c27e88d",
+    "medical_renderer_labs.py": "51f25950f3a849d7328b712cab7b7be6bb523914",
+    "medical_renderer_primary.py": "e3697d1e462e111e144f78894a72b6bb44bf4d42",
     "medical_renderer_special.py": "66caa8568c6aaa6de609397be2b70f402de7e997",
     "medical_service.py": "68af072a7fd6e3e5bab436d900f2352d1ecbe768"
   }
