@@ -103,6 +103,49 @@ for fabricated in (
     "Кал на яйца глист - не обнаружены",
 ):
     assert fabricated not in combined_text, (fabricated, combined_text)
+
+# Real investigation results are source evidence: preserve every line exactly
+# and never turn EEG inside the block into a new section boundary.
+_sourced_results_lines = (
+    "ОАК (12.06.2026): Hb 128 г/л; лейкоциты 6,1.",
+    "ЭКГ (12.06.2026): синусовый ритм, ЧСС 72.",
+    "ЭЭГ: без эпилептиформной активности.",
+    "КОНЕЦ_РЕАЛЬНЫХ_РЕЗУЛЬТАТОВ_НЕ_ОБРЕЗАТЬ.",
+)
+_sourced_results_data = copy.deepcopy(manual_data)
+_sourced_results_data.investigation_results = "\n".join(_sourced_results_lines)
+_sourced_results_created, _ = service.create_documents(
+    navigation_path=nav,
+    output_dir=OUT / "sourced_investigation_results",
+    discharge_date="20.06.2026",
+    selected_docs=["discharge", "commission", "rvk"],
+    override_data=_sourced_results_data,
+)
+assert len(_sourced_results_created) == 3, _sourced_results_created
+for _results_path in _sourced_results_created:
+    _results_text = extract_docx_text(_results_path)
+    _positions = []
+    for _line in _sourced_results_lines:
+        assert _results_text.count(_line) == 1, (_results_path.name, _line, _results_text)
+        _positions.append(_results_text.find(_line))
+    assert _positions == sorted(_positions), (_results_path.name, _positions)
+    for _fabricated in (
+        "ОАК - в норме",
+        "Глюкоза крови - 3,40",
+        "патологии не выявлено",
+    ):
+        assert _fabricated not in _results_text, (_results_path.name, _fabricated, _results_text)
+
+_sourced_discharge = next(p for p in _sourced_results_created if "Выписной" in p.name)
+_sourced_roundtrip = service.parse_primary_document(_sourced_discharge)
+for _line in _sourced_results_lines:
+    assert _line in _sourced_roundtrip.investigation_results, (
+        _line,
+        _sourced_roundtrip.investigation_results,
+    )
+assert _sourced_roundtrip.investigation_results.find("ЭЭГ:") < _sourced_roundtrip.investigation_results.find(
+    "КОНЕЦ_РЕАЛЬНЫХ_РЕЗУЛЬТАТОВ_НЕ_ОБРЕЗАТЬ."
+), _sourced_roundtrip.investigation_results
 discharge_path = next(path for path in created if "Выписной" in path.name)
 rvk_path = next(path for path in created if "РВК" in path.name)
 primary_path = next(path for path in created if "Первичный" in path.name)
