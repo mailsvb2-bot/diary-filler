@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "835dbde2c71406dfc6e4bae3540a524e4ea27c46",
-  "reason": "Prevent narrative clinical phrases inside anamnesis from being misclassified as the actual diagnosis, treatment, mental-status, or other clinical target sections; add an exact field-isolation regression.",
+  "baseline_ref": "4057207bb7b748bb38776dc9188863d2930fea44",
+  "reason": "Remove the consumed document-mechanics approval after the fully verified clinical field-isolation parser fix.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -15,8 +15,6 @@
     "ci_gate_lock"
   ],
   "approved_blobs": {
-    "medical_parser_blocks.py": "22dc0ecf1769f9ed15cb45a5e338e414a0bbfa01",
-    "tools/docx_block_boundary_regression.py": "d5cbdfce1926cc094de41ab71af02f0b171e2ede",
-    "tools/document_mechanics_change_approval.json": "deb47bbcef1d3bf523814a6a125cd1e1cd9a3f0d"
+    "tools/document_mechanics_change_approval.json": "<deleted>"
   }
 }
