@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "4057207bb7b748bb38776dc9188863d2930fea44",
-  "baseline_note": "Clinical field isolation baseline. PR #223 fixed a confirmed primary-document parser regression where narrative lines such as «Диагноз ранее...» and «Психический статус в динамике...» could replace the real target fields. Exact candidate 31fe0d88819dd9afaab18a736f06daa5210cb60b passed Windows CI #890 / run 35856525451 completely, including production/release gates, full patient replay + golden DOCX, long clinical block integrity, GUI, EXE, packaged desktop intake E2E, installer and install/uninstall smoke. It merged to main as 4057207bb7b748bb38776dc9188863d2930fea44; this cleanup removes the consumed document-mechanics approval.",
+  "baseline_ref": "c2570552dfc1a285b98fa6a08b483e1cf0f37471",
+  "baseline_note": "Clinical field isolation cleanup baseline. PR #223 fixed the confirmed primary-document cross-field mixing regression and passed Windows CI #890 / run 35856525451 completely before merging as 4057207bb7b748bb38776dc9188863d2930fea44. PR #224 advanced the baseline and removed the consumed document-mechanics approval; exact cleanup 6c75738b868477c4ff4a495901887fb364054194 passed Windows CI #892 / run 35857289467 completely and merged as c2570552dfc1a285b98fa6a08b483e1cf0f37471. This is the clean tested tree before removing the final temporary regression approval.",
   "required_approval_evidence": [
     "ci_gate_lock"
   ],
