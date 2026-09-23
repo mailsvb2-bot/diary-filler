@@ -151,26 +151,31 @@ class MedicalRendererLabsMixin:
         outcome = next((p for p in paragraphs if normalize_match(p.text).startswith("за время лечения")), None)
         recommendation = next((p for p in paragraphs if normalize_match(p.text).startswith("рекомендовано")), None)
         signature = next((p for p in paragraphs if "врач-психиатр" in normalize_match(p.text) or normalize_match(p.text).startswith("зав. отд")), None)
-        if signature is None or outcome is None or recommendation is None:
+        if signature is None or recommendation is None:
             return False
-        signature._p.addprevious(outcome._p)
+        if outcome is not None:
+            signature._p.addprevious(outcome._p)
         signature._p.addprevious(recommendation._p)
         return True
 
-    @staticmethod
-    def _replace_lab_lines(editor: DocxBlockEditor, dates: Dict[str, str]) -> None:
-        replacements = [
-            (["ОАК"], f"ОАК - в норме - {dates['day1']}"),
-            (["ОАМ"], f"ОАМ - в норме - {dates['day1']}"),
-            (["RW"], f"RW - в норме - {dates['day1']}"),
-            (["HCV"], f"HCV - в норме - {dates['day1']}"),
-            (["HBsAg"], f"HBsAg - в норме - {dates['day1']}"),
-            (["ВИЧ"], f"ВИЧ - в норме - {dates['day2']}"),
-            (["Биохимия крови"], f"Биохимия крови - в норме - {dates['day1']}"),
-            (["Глюкоза крови"], f"Глюкоза крови - 3,40 ммоль/л - {dates['day1']}"),
-            (["Кал на яйца глист"], f"Кал на яйца глист - не обнаружены - {dates['day1']}"),
-            (["Флюорография"], f"Флюорография - патологии не выявлено - {dates['flg']}"),
-            (["ЭКГ"], f"ЭКГ - ритм синусовый, ЧСС 65 ударов в минуту, рисунок ЭКГ в пределах нормы, ЭОС нормальная - {dates['day1']}"),
-        ]
-        for markers, text in replacements:
-            editor.replace_first_matching_paragraph(markers, text)
+    _LAB_RESULT_MARKERS = (
+        "ОАК", "ОАМ", "RW", "HCV", "HBsAg", "ВИЧ", "Биохимия крови",
+        "Глюкоза крови", "Кал на яйца глист", "Флюорография", "ЭКГ", "ЭЭГ",
+    )
+
+    @classmethod
+    def _remove_template_lab_lines(cls, editor: DocxBlockEditor) -> None:
+        """Never fabricate examination results from bundled template examples.
+
+        Historical templates contain example values ("в норме", glucose 3.40,
+        fixed ECG/EEG phrases and old dates). Until an explicit structured
+        investigation source is wired into PatientData, publishing those rows
+        would turn template examples into patient facts.
+        """
+        editor.remove_all_matching_paragraphs(cls._LAB_RESULT_MARKERS)
+
+    @classmethod
+    def _replace_lab_lines(cls, editor: DocxBlockEditor, dates: Dict[str, str]) -> None:
+        # Compatibility entry point used by discharge/RVK renderers. Dates alone
+        # are not evidence of a laboratory or instrumental result.
+        cls._remove_template_lab_lines(editor)
