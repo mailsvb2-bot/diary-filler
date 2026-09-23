@@ -33,6 +33,7 @@
     "smoke_combined_part06_diary_columns_settings.py": "36e3365b385fe25bf9a8fa8077dd4827747f258d",
     "tests/golden_docx_manifest.json": "ce01c9808be9652acceec987d7330c15e1ffb003",
     "tools/document_mechanics_change_approval.json": "424ed85a1254db5c48376cab5f6282c1657fe10b",
-    "tools/generation_performance_profile.py": "e89a69cadd0315771070d8f079e421dfb43e75cd"
+    "tools/generation_performance_profile.py": "e89a69cadd0315771070d8f079e421dfb43e75cd",
+    "safety_integrity_check.py": "ebdee7173515947717d1b1ed4206b7f8fb18350e"
   }
 }
