@@ -1,8 +1,0 @@
-{
-  "schema_version": 1,
-  "base_sha": "50a0f6c75f78def6e992fb75374bdf8fd2955a42",
-  "reason": "Render the dynamic epicrisis clinical body as one continuous Word paragraph like an ordinary diary while keeping doctor and department-head signatures separate.",
-  "approved_blobs": {
-    "diary_service.py": "b8a28b0e6178387d7ceeac53287dc8c234414ef5"
-  }
-}
