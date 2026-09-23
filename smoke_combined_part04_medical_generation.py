@@ -335,7 +335,8 @@ assert len(roundtrip_created) == 1
 roundtrip_primary_text = extract_docx_text(roundtrip_created[0])
 assert "Больничный лист" not in roundtrip_primary_text, roundtrip_primary_text
 
-assert "На основании данных" in discharge_text and "F99.9 Тестовый диагноз из UI" in discharge_text, discharge_text
+assert "Диагноз: F99.9 Тестовый диагноз из UI" in discharge_text, discharge_text
+assert "На основании данных анамнеза" not in combined_text, combined_text
 for occurrence_text in (primary_text, discharge_text, commission_text, admission_doctor_text, rvk_text):
     assert "В 3 отделение КДП поступает повторно добровольно" in occurrence_text, occurrence_text
 assert "На учёте у психиатров: не состоит" in admission_doctor_text, admission_doctor_text
