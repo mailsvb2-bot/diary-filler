@@ -757,8 +757,10 @@ def _assert_clinical_popup_and_document_order_contract() -> None:
         _fail("psychiatric-account placement lacks a fallback when registration is empty")
     if "_TRAILING_COMPLAINT_RE" not in labs or "_complaints_equivalent" not in labs or "SequenceMatcher" not in labs:
         _fail("legacy trailing complaint cleanup no longer handles prose/morphology variants")
-    if "_move_discharge_outcome_before_signatures(doc)" not in primary:
-        _fail("discharge outcome/recommendations are no longer forced before signatures")
+    if "DISCHARGE_RECOMMENDATION_TEXT" in primary:
+        _fail("discharge renderer reintroduced a hard-coded patient recommendation")
+    if 'remove_all_matching_paragraphs(["За время лечения", "Рекомендовано"])' not in primary:
+        _fail("discharge renderer no longer clears unsourced template outcome/recommendations")
 
 
 def _assert_diary_service_boundary() -> None:
@@ -783,6 +785,19 @@ def _assert_diary_service_boundary() -> None:
     for forbidden in ("fill_diary_batch", "text_output"):
         if forbidden in actions:
             _fail(f"GUI diary flow still selects legacy architecture through: {forbidden}")
+    # Admission-time clinical fields are not evidence for a later dated dynamic
+    # epicrisis. The production GUI must fail closed until a date-specific
+    # observation source is wired.
+    for forbidden in (
+        "complaints = patient_data_snapshot.complaints",
+        "treatment = patient_data_snapshot.treatment_plan",
+        "profile_status = patient_data_snapshot.mental_status",
+        'getattr(live_data, "complaints"',
+        'getattr(live_data, "treatment_plan"',
+        'getattr(live_data, "mental_status"',
+    ):
+        if forbidden in actions:
+            _fail("dynamic epicrisis relabels admission snapshot as later clinical state: " + forbidden)
     if "class DiaryService" not in service or "def create_text_diaries" not in service:
         _fail("Production DiaryService contract is missing")
     if "text_output" in service or "from diary_batch import fill_diary_batch" in service:
