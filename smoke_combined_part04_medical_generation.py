@@ -646,6 +646,31 @@ ambiguous_roundtrip = service.parse_primary_document(ambiguous_discharge)
 assert ambiguous_roundtrip.admission_date == "10.06.2026", ambiguous_roundtrip.admission_date
 assert ambiguous_roundtrip.discharge_date == "11.06.2026", ambiguous_roundtrip.discharge_date
 
+# A source anamnesis sentence containing «направляется» is patient evidence,
+# not the template footer, and must survive the admission-doctor finalizer.
+_referral_prose_data = copy.deepcopy(manual_data)
+_referral_source_line = (
+    "После предыдущей консультации направляется на лечение в дневной стационар "
+    "по месту жительства; это историческая часть анамнеза."
+)
+_referral_prose_data.disease_anamnesis = (
+    "Начало заболевания постепенное.\n"
+    + _referral_source_line
+    + "\nКОНЕЦ_АНАМНЕЗА_ПОСЛЕ_НАПРАВЛЯЕТСЯ."
+)
+_referral_created, _ = service.create_documents(
+    navigation_path=nav,
+    output_dir=OUT / "admission_referral_patient_prose",
+    selected_docs=["admission_doctor_referral"],
+    override_data=_referral_prose_data,
+)
+_referral_text = extract_docx_text(_referral_created[0])
+assert _referral_source_line in _referral_text, _referral_text
+assert "КОНЕЦ_АНАМНЕЗА_ПОСЛЕ_НАПРАВЛЯЕТСЯ." in _referral_text, _referral_text
+assert _referral_text.count(
+    "В связи с психическим состоянием, направляется на лечение в ГБУЗ НО «НКЦПЗ» диспансер №2"
+) == 1, _referral_text
+
 # Admission-doctor footer is strict: after all clinical sections only the
 # required referral sentence and the doctor signature remain.
 admission_lines = [p.text.strip() for p in Document(admission_doctor_path).paragraphs if p.text.strip()]
