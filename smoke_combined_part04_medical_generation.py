@@ -90,6 +90,7 @@ assert "________________" not in vk_mse_text, vk_mse_text
 assert "________________" not in sick_leave_vk_text, sick_leave_vk_text
 assert "Цель направления на ВК с обоснованием: продление лечения на 14 дней." in sick_leave_vk_text, sick_leave_vk_text
 assert "направление на МСЭ в связи" not in sick_leave_vk_text, sick_leave_vk_text
+assert "указать сроки в днях" not in vk_mse_text.lower(), vk_mse_text
 
 # Universal-source round-trip: a generated discharge epicrisis must be usable
 # as the next patient source for commission/RVK/VK generation. The parser must
