@@ -552,6 +552,27 @@ admission_lines = [p.text.strip() for p in Document(admission_doctor_path).parag
 assert admission_lines[-2] == "В связи с психическим состоянием, направляется на лечение в ГБУЗ НО «НКЦПЗ» диспансер №2", admission_lines[-5:]
 assert admission_lines[-1].startswith("Врач психиатр"), admission_lines[-5:]
 
+# A patient anamnesis line beginning with the service marker «ЭПИ» must survive
+# final document post-processing when no separate EPI source is selected.
+_epi_prose_data = copy.deepcopy(manual_data)
+_epi_prose_data.epi_text = ""
+_epi_prose_data.disease_anamnesis = (
+    "Начало заболевания постепенное.\n"
+    "ЭПИ - ранее проводилось по месту жительства; результат описан в анамнезе.\n"
+    "ФИНАЛ_ЭПИ_АНАМНЕЗА_СОХРАНИТЬ."
+)
+_epi_prose_created, _ = service.create_documents(
+    navigation_path=nav,
+    output_dir=OUT / "epi_marker_patient_prose_preserved",
+    discharge_date="11.06.2026",
+    selected_docs=["primary", "discharge", "commission", "vk_mse", "sick_leave_vk", "rvk"],
+    override_data=_epi_prose_data,
+)
+for _epi_path in _epi_prose_created:
+    _epi_text = extract_docx_text(_epi_path)
+    assert "ЭПИ - ранее проводилось по месту жительства" in _epi_text, (_epi_path.name, _epi_text)
+    assert "ФИНАЛ_ЭПИ_АНАМНЕЗА_СОХРАНИТЬ" in _epi_text, (_epi_path.name, _epi_text)
+
 # Marker-like patient prose inside another clinical block must survive cleanup.
 # A standalone line shaped like the legacy duplicate-complaints sentence is still
 # source evidence when it came from the patient's disease anamnesis.
