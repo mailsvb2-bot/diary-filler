@@ -844,6 +844,51 @@ def _assert_regex_replacement_never_targets_inserted_patient_text() -> None:
     assert patient.text == "2026", patient.text
 
 
+
+def _assert_sourced_investigation_block_survives_input_docx_parse() -> None:
+    """Real sourced studies stay together and stop cleanly at the next section."""
+    with TemporaryDirectory(prefix="medical-autofill-investigation-source-") as temp_dir:
+        root = Path(temp_dir)
+        source = root / "investigation-source.docx"
+        doc = Document()
+        doc.add_paragraph("12.06.2026 Первичный осмотр")
+        doc.add_paragraph("История болезни № ИССЛ-001")
+        doc.add_paragraph("Ф.И.О.: Маркер Исследований Тестовый")
+        doc.add_paragraph("Год рождения: 01.01.1980")
+        doc.add_paragraph("Результаты обследований:")
+        expected = [
+            "ОАК (13.06.2026): Hb 128 г/л; лейкоциты 6,1.",
+            "ЭКГ (13.06.2026): синусовый ритм, ЧСС 72.",
+            "ЭЭГ: без эпилептиформной активности.",
+            "КОНЕЦ_ИССЛЕДОВАНИЙ_НЕ_ОБРЕЗАТЬ.",
+        ]
+        for line in expected:
+            p = doc.add_paragraph()
+            mid = max(1, len(line) // 2)
+            p.add_run(line[:mid]).bold = True
+            p.add_run(line[mid:]).italic = True
+        doc.add_paragraph("Диагноз:")
+        doc.add_paragraph("F99.9 Тестовый диагноз после исследований")
+        doc.add_paragraph("План лечения:")
+        doc.add_paragraph("Тестовая терапия после исследований")
+        doc.save(source)
+
+        parsed = MedicalTextParser().parse_docx(source)
+        assert parsed.investigation_results, parsed
+        positions = []
+        for line in expected:
+            assert parsed.investigation_results.count(line) == 1, (
+                line,
+                parsed.investigation_results,
+            )
+            positions.append(parsed.investigation_results.find(line))
+        assert positions == sorted(positions), positions
+        assert "F99.9 Тестовый диагноз после исследований" not in parsed.investigation_results
+        assert "Тестовая терапия после исследований" not in parsed.investigation_results
+        assert parsed.diagnosis == "F99.9 Тестовый диагноз после исследований", parsed.diagnosis
+        assert parsed.treatment_plan == "Тестовая терапия после исследований", parsed.treatment_plan
+
+
 def verify() -> None:
     _assert_alias_coverage()
     _assert_inserted_marker_like_patient_text_never_becomes_structure()
@@ -856,6 +901,7 @@ def verify() -> None:
     _assert_all_major_clinical_blocks_survive_long_roundtrip()
     _assert_all_medical_forms_keep_long_clinical_tails()
     _assert_template_cleanup_never_deletes_inserted_patient_marker_lines()
+    _assert_sourced_investigation_block_survives_input_docx_parse()
     _assert_regex_replacement_never_targets_inserted_patient_text()
     print("DOCX BLOCK BOUNDARY REGRESSION OK: structural aliases + cross-field order/isolation + 1250-line stress + complaints/life/somatic + table/run-fragmented long-text integrity across all medical forms")
 
