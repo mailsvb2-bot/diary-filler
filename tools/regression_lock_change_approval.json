@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "ad952289a1bcc5bc7c53d00843673f1139c32fb7",
-  "reason": "Deep medical-document correctness audit: evidence-only rendering, source-owned clinical prose, non-destructive marker cleanup, fail-closed chronology/dynamic epicrises, neutral unknown-gender wording, and broad semantic canaries.",
+  "reason": "Deep medical-document correctness audit: evidence-only rendering, source-owned clinical prose, template-owned cleanup only, no global EPI deletion, fail-closed chronology/dynamic epicrises, neutral unknown-gender wording, and semantic canaries against fabricated patient facts.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -18,7 +18,7 @@
     "dialog_expert.py": "65fdd91fbc9c0b59aca8a544bd8f70296eec3907",
     "diary_constants.py": "6f98aa9bf043641bf88f33649a93b5272cb42344",
     "diary_service.py": "694b40a53ebef47e3eb9cb0012ecd8e6ba221923",
-    "medical_gender.py": "107416008ad2d659dc9f0852728c13ff98257bea",
+    "medical_gender.py": "dcf34d5ba7c86b414cc7169d639f257cde19a6dc",
     "medical_renderer.py": "8ead4da7b5b411c658ab94f920848e4f7987c852",
     "medical_renderer_commission.py": "59c994972d4be34d647f590de106b61bc53b9e12",
     "medical_renderer_labs.py": "aab3093a9d8a51ddfce798a873b88d4456220808",
@@ -28,16 +28,16 @@
     "prod_audit.py": "a486ab59f261eb192e6736f60cac48701f93495e",
     "smoke_combined_part02_ui_parser_regressions.py": "01798735afbee80334d401806c33e79ae2cf980a",
     "smoke_combined_part03_medical_parser_manual.py": "01eadbdbdc48bd28eff3f4fddc5a4c9a6e8373de",
-    "smoke_combined_part04_medical_generation.py": "3ccf1b2b08d6c09877b5a5e2c3f2f99769fddda3",
+    "smoke_combined_part04_medical_generation.py": "9b347f6f98210d96b44a0c18c0dd673ee579c433",
     "smoke_combined_part05_diary_basic_templates.py": "9b42ebe4511862acff93743aa5bdcfefe42448fa",
     "smoke_combined_part06_diary_columns_settings.py": "36e3365b385fe25bf9a8fa8077dd4827747f258d",
     "tests/golden_docx_manifest.json": "ce01c9808be9652acceec987d7330c15e1ffb003",
-    "tools/document_mechanics_change_approval.json": "142a98b3b9334668dc3e2e50cec456cea1237749",
+    "tools/document_mechanics_change_approval.json": "5a38e7260168b5e4700ece03372ad145742356ea",
     "tools/generation_performance_profile.py": "e89a69cadd0315771070d8f079e421dfb43e75cd",
     "safety_integrity_check.py": "ebdee7173515947717d1b1ed4206b7f8fb18350e",
     "actions_diary_flow.py": "986922b0f35633c51cf9d5117b029445d98fc70e",
     "medical_parser_blocks.py": "d705e7a3c2f7e557c55ca601639e51b18f280e01",
     "medical_docx_editor_replace.py": "fe3b4ce8e60f3a448e06ecaad3e6f1156eb15441",
-    "tools/docx_block_boundary_regression.py": "9cc1fe3aba4f5e2a52eeeaa763d67113fb6119b6"
+    "tools/docx_block_boundary_regression.py": "bbbfea806b77066846abfc592aebedd0d24c5ed0"
   }
 }
