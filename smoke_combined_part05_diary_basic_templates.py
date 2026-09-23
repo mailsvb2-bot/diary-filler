@@ -170,11 +170,23 @@ assert "TEMPLATE_STATUS_TWO пациентка оставалась спокой
 # final text remains diagnosis-independent but is rendered as a joint exam.
 assert "13.06.26 Совместный осмотр с зав. отделением" in contract_joined, contract_joined
 joint_index = contract_lines.index("13.06.26 Совместный осмотр с зав. отделением")
-assert contract_lines[joint_index + 1].startswith("Состояние улучшилось."), contract_lines
+assert contract_lines[joint_index + 1] == "На текущую дату оформлена выписка из стационара. Даны рекомендации.", contract_lines
+assert "Состояние улучшилось." not in contract_joined, contract_joined
+assert "суицидальных мыслей" not in contract_joined, contract_joined
+assert "Критика к состоянию присутствует." not in contract_joined, contract_joined
 assert contract_lines[joint_index + 2] == "Лечащий врач Балаганин С.В.", contract_lines
 assert contract_lines[joint_index + 3] == "Зав.отделением Можарова Е.А.", contract_lines
 assert contract_joined.count("Лечащий врач Балаганин С.В.") == 3, contract_joined
 assert contract_joined.count("Зав.отделением Можарова Е.А.") == 1, contract_joined
+
+# Dynamic epicrisis must not invent missing clinical facts.
+from diary_service import DynamicEpicrisisInput, build_dynamic_epicrisis_text
+empty_dynamic = build_dynamic_epicrisis_text(DynamicEpicrisisInput())
+assert "без существенной динамики" not in empty_dynamic, empty_dynamic
+assert "согласно листу назначений" not in empty_dynamic, empty_dynamic
+assert "Лекарства принимает согласно назначениям" not in empty_dynamic, empty_dynamic
+assert "Жалобы:" not in empty_dynamic, empty_dynamic
+assert "Психический статус:" not in empty_dynamic, empty_dynamic
 assert "TEMPLATE_STATUS_THREE" not in contract_joined, contract_joined
 assert contract_result.final_rows_filled == 1
 for section in contract_output.sections:
