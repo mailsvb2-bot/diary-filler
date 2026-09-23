@@ -102,9 +102,12 @@ class MedicalRendererLabsMixin:
         return SequenceMatcher(None, left, right).ratio() >= 0.92
 
     @classmethod
-    def _remove_trailing_clinical_leakage(cls, doc, data: PatientData) -> None:
+    def _remove_trailing_clinical_leakage(cls, editor: DocxBlockEditor, data: PatientData) -> None:
+        """Clean legacy template leakage without touching inserted patient prose."""
         complaint_core = cls._complaint_core(data.complaints)
-        for paragraph in list(iter_all_paragraphs(doc)):
+        for paragraph in list(iter_all_paragraphs(editor.doc)):
+            if editor.template_paragraph_text(paragraph) is None:
+                continue
             text = normalize_match(paragraph.text)
             if not text:
                 continue
