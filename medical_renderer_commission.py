@@ -154,11 +154,13 @@ class MedicalRendererCommissionMixin:
         # Финальная фраза должна быть строго такой по пользовательскому требованию.
         target_referral_line = f"В связи с психическим состоянием, направляется на лечение в {TARGET_MEDICAL_FACILITY}"
         referral_done = False
-        for paragraph in list(iter_all_paragraphs(doc)):
-            if "направляется" in normalize_match(paragraph.text):
-                set_paragraph_text(paragraph, target_referral_line)
-                referral_done = True
-                break
+        for paragraph in editor.paragraphs:
+            template_text = editor.template_paragraph_text(paragraph)
+            if template_text is None or "направляется" not in template_text:
+                continue
+            set_paragraph_text(paragraph, target_referral_line)
+            referral_done = True
+            break
         if not referral_done:
             referral_done = editor.insert_before_first_matching_paragraph(
                 ["Врач психиатр", "Врач-психиатр"],
