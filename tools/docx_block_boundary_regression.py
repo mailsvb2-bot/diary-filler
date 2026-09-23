@@ -833,6 +833,17 @@ def _assert_template_cleanup_never_deletes_inserted_patient_marker_lines() -> No
     assert "Рекомендовано: ранее врачом амбулаторно" in text, text
 
 
+
+def _assert_regex_replacement_never_targets_inserted_patient_text() -> None:
+    doc = Document()
+    doc.add_paragraph("Шаблонный заголовок")
+    editor = DocxBlockEditor(doc)
+    patient = doc.add_paragraph("2026")
+    assert editor.template_paragraph_text(patient) is None
+    assert editor.replace_first_matching_regex(r"^\d{4}$", "ПЕРЕПИСАНО") is False
+    assert patient.text == "2026", patient.text
+
+
 def verify() -> None:
     _assert_alias_coverage()
     _assert_inserted_marker_like_patient_text_never_becomes_structure()
@@ -845,6 +856,7 @@ def verify() -> None:
     _assert_all_major_clinical_blocks_survive_long_roundtrip()
     _assert_all_medical_forms_keep_long_clinical_tails()
     _assert_template_cleanup_never_deletes_inserted_patient_marker_lines()
+    _assert_regex_replacement_never_targets_inserted_patient_text()
     print("DOCX BLOCK BOUNDARY REGRESSION OK: structural aliases + cross-field order/isolation + 1250-line stress + complaints/life/somatic + table/run-fragmented long-text integrity across all medical forms")
 
 
