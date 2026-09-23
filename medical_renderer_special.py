@@ -18,6 +18,7 @@ from medical_formatting import (
     format_date_with_russian_year_suffix,
     format_military_commissariat_area,
     format_registration_text,
+    format_staff_short_name,
     treatment_period_text,
 )
 from medical_gender import finalize_medical_document
@@ -35,6 +36,29 @@ from medical_text_utils import normalize_match
 
 
 class MedicalRendererSpecialMixin:
+    @staticmethod
+    def _clean_vk_template_scaffolding(doc, data: PatientData, *, sick_leave: bool) -> None:
+        """Remove or fill legacy VK placeholders before saving the final DOCX."""
+        remove_exact_paragraphs(doc, ["(первичный, повторный)"])
+        doctor = format_staff_short_name(data.doctor)
+        head = format_staff_short_name(data.head)
+        for paragraph in list(iter_all_paragraphs(doc)):
+            normalized = normalize_match(paragraph.text)
+            if normalized.startswith("зав. отделением") and "_" in paragraph.text:
+                set_paragraph_text(paragraph, f"Зав. отделением {head}".rstrip())
+            elif normalized.startswith("лечащий врач") and "_" in paragraph.text:
+                set_paragraph_text(paragraph, f"Лечащий врач {doctor}".rstrip())
+            elif sick_leave and normalized.startswith("цель направления на вк"):
+                set_paragraph_text(
+                    paragraph,
+                    "Цель направления на ВК с обоснованием: продление лечения по листу нетрудоспособности на 14 дней.",
+                )
+            elif sick_leave and normalized.startswith("решение вк"):
+                set_paragraph_text(
+                    paragraph,
+                    "Решение ВК: продлить лечение по листу нетрудоспособности на 14 дней.",
+                )
+
     def render_vk_mse(self, template_path: str | Path, output_path: str | Path, data: PatientData) -> None:
         """ВК на МСЭ: верхнюю шапку и текст решения не трогаем, заполняем поля пациента."""
         doc = Document(str(template_path))
@@ -62,16 +86,17 @@ class MedicalRendererSpecialMixin:
         editor.replace_all_matching_paragraphs(["Место работы"], f"Место работы: {vk_work_line}")
         editor.replace_all_matching_paragraphs(["Диагноз"], f"Диагноз: {sanitize_diagnosis(data.diagnosis)}")
 
-        editor.replace_block(["Жалобы"], "Жалобы:", data.complaints, VK_MSE_MARKERS)
-        editor.replace_block(["Анамнез жизни"], "Анамнез жизни:", data.life_anamnesis, VK_MSE_MARKERS)
-        editor.replace_block(["Анамнез заболевания"], "Анамнез заболевания:", data.disease_anamnesis, VK_MSE_MARKERS)
-        editor.replace_block(["Психический статус при поступлении", "Психический статус"], "Психический статус при поступлении:", data.mental_status, VK_MSE_MARKERS)
+        editor.replace_block(["Жалобы"], "Жалобы:", data.complaints, VK_MSE_MARKERS, allow_empty=True)
+        editor.replace_block(["Анамнез жизни"], "Анамнез жизни:", data.life_anamnesis, VK_MSE_MARKERS, allow_empty=True)
+        editor.replace_block(["Анамнез заболевания"], "Анамнез заболевания:", data.disease_anamnesis, VK_MSE_MARKERS, allow_empty=True)
+        editor.replace_block(["Психический статус при поступлении", "Психический статус"], "Психический статус при поступлении:", data.mental_status, VK_MSE_MARKERS, allow_empty=True)
         if data.epi_text:
             editor.replace_block(["ЭПИ"], "ЭПИ -", data.epi_text, VK_MSE_MARKERS)
         else:
             editor.remove_all_matching_paragraphs(["ЭПИ"])
-        editor.replace_block(["Сомато-неврологический статус", "Соматический статус"], "Сомато-неврологический статус:", data.somatic_status, VK_MSE_MARKERS)
+        editor.replace_block(["Сомато-неврологический статус", "Соматический статус"], "Сомато-неврологический статус:", data.somatic_status, VK_MSE_MARKERS, allow_empty=True)
         editor.replace_block(["Получает лечение"], "Получает лечение:", data.treatment_plan, VK_MSE_MARKERS)
+        self._clean_vk_template_scaffolding(doc, data, sick_leave=False)
         finalize_medical_document(doc, data)
         doc.save(str(output_path))
 
@@ -104,16 +129,17 @@ class MedicalRendererSpecialMixin:
         editor.replace_all_matching_paragraphs(["Находится на лечении"], treatment_line)
         editor.replace_all_matching_paragraphs(["Диагноз"], f"Диагноз: {sanitize_diagnosis(data.diagnosis)}")
 
-        editor.replace_block(["Жалобы"], "Жалобы:", data.complaints, SICK_LEAVE_VK_MARKERS)
-        editor.replace_block(["Анамнез жизни"], "Анамнез жизни:", data.life_anamnesis, SICK_LEAVE_VK_MARKERS)
-        editor.replace_block(["Анамнез заболевания"], "Анамнез заболевания:", data.disease_anamnesis, SICK_LEAVE_VK_MARKERS)
-        editor.replace_block(["Психический статус при поступлении", "Психический статус"], "Психический статус при поступлении:", data.mental_status, SICK_LEAVE_VK_MARKERS)
+        editor.replace_block(["Жалобы"], "Жалобы:", data.complaints, SICK_LEAVE_VK_MARKERS, allow_empty=True)
+        editor.replace_block(["Анамнез жизни"], "Анамнез жизни:", data.life_anamnesis, SICK_LEAVE_VK_MARKERS, allow_empty=True)
+        editor.replace_block(["Анамнез заболевания"], "Анамнез заболевания:", data.disease_anamnesis, SICK_LEAVE_VK_MARKERS, allow_empty=True)
+        editor.replace_block(["Психический статус при поступлении", "Психический статус"], "Психический статус при поступлении:", data.mental_status, SICK_LEAVE_VK_MARKERS, allow_empty=True)
         if data.epi_text:
             editor.replace_block(["ЭПИ"], "ЭПИ -", data.epi_text, SICK_LEAVE_VK_MARKERS)
         else:
             editor.remove_all_matching_paragraphs(["ЭПИ"])
-        editor.replace_block(["Сомато-неврологический статус", "Соматический статус"], "Сомато-неврологический статус:", data.somatic_status, SICK_LEAVE_VK_MARKERS)
+        editor.replace_block(["Сомато-неврологический статус", "Соматический статус"], "Сомато-неврологический статус:", data.somatic_status, SICK_LEAVE_VK_MARKERS, allow_empty=True)
         editor.replace_block(["Получает лечение"], "Получает лечение:", data.treatment_plan, SICK_LEAVE_VK_MARKERS)
+        self._clean_vk_template_scaffolding(doc, data, sick_leave=True)
         finalize_medical_document(doc, data)
         doc.save(str(output_path))
 
@@ -152,10 +178,10 @@ class MedicalRendererSpecialMixin:
             admission_line = f"{admission_label} {clean_admission_detail(data.admission)}".strip()
             editor.insert_before_first_matching_paragraph(["Жалобы"], admission_line)
         editor.replace_block(["Жалобы"], "Жалобы:", data.complaints, RVK_MARKERS, allow_empty=True)
-        editor.replace_block(["Анамнез жизни"], "Анамнез жизни:", data.life_anamnesis, RVK_MARKERS)
-        editor.replace_block(["Анамнез заболевания"], "Анамнез заболевания:", data.disease_anamnesis, RVK_MARKERS)
-        editor.replace_block(["Психический статус"], "Психический статус:", data.mental_status, RVK_MARKERS)
-        editor.replace_block(["Сомато-неврологический статус", "Соматический статус"], "Сомато-неврологический статус:", data.somatic_status, RVK_MARKERS)
+        editor.replace_block(["Анамнез жизни"], "Анамнез жизни:", data.life_anamnesis, RVK_MARKERS, allow_empty=True)
+        editor.replace_block(["Анамнез заболевания"], "Анамнез заболевания:", data.disease_anamnesis, RVK_MARKERS, allow_empty=True)
+        editor.replace_block(["Психический статус"], "Психический статус:", data.mental_status, RVK_MARKERS, allow_empty=True)
+        editor.replace_block(["Сомато-неврологический статус", "Соматический статус"], "Сомато-неврологический статус:", data.somatic_status, RVK_MARKERS, allow_empty=True)
         self._replace_lab_lines(editor, dates)
         if data.epi_text:
             editor.replace_block(["ЭПИ"], "ЭПИ -", data.epi_text, RVK_MARKERS)
