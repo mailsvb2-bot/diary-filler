@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "c2570552dfc1a285b98fa6a08b483e1cf0f37471",
-  "baseline_note": "Clinical field isolation cleanup baseline. PR #223 fixed the confirmed primary-document cross-field mixing regression and passed Windows CI #890 / run 35856525451 completely before merging as 4057207bb7b748bb38776dc9188863d2930fea44. PR #224 advanced the baseline and removed the consumed document-mechanics approval; exact cleanup 6c75738b868477c4ff4a495901887fb364054194 passed Windows CI #892 / run 35857289467 completely and merged as c2570552dfc1a285b98fa6a08b483e1cf0f37471. This is the clean tested tree before removing the final temporary regression approval.",
+  "baseline_ref": "ad952289a1bcc5bc7c53d00843673f1139c32fb7",
+  "baseline_note": "Cross-field order/isolation regression baseline. PR #226 exact head 3de946ecc74daca971b42b154c051d7ce7913706 passed Windows CI #896 / run 35866539199 completely, including release gate, full patient replay + golden DOCX, long clinical block integrity, packaged EXE intake E2E, installer build and install/uninstall smoke, then merged as ad952289a1bcc5bc7c53d00843673f1139c32fb7. The regression proves clinical tagged lines remain single-copy, ordered, and isolated between neighboring fields across parse and every canonical medical form.",
   "required_approval_evidence": [
     "ci_gate_lock"
   ],
