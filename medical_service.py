@@ -266,6 +266,35 @@ class MedicalDocumentService:
         if selected_set & treatment_docs:
             data.treatment_plan = self._require_text(data.treatment_plan, "лечение")
 
+        expert_work_docs = {"primary", "discharge", "commission"}
+        if selected_set & expert_work_docs:
+            work_status = normalize_yes_no(data.expert_work_status)
+            expert_org = (data.expert_work_org or data.work_org).strip()
+            expert_position = (data.expert_position or data.position).strip()
+            if not work_status:
+                joined = f"{expert_org} {expert_position}".lower().replace("ё", "е")
+                if "не работает" in joined:
+                    work_status = "нет"
+                elif expert_org or expert_position:
+                    work_status = "да"
+            if not work_status:
+                raise ValueError("Укажите, работает пациент или нет.")
+            data.expert_work_status = work_status
+            if work_status == "да":
+                if not expert_org or not expert_position:
+                    raise ValueError(
+                        "Для работающего пациента укажите место работы и должность."
+                    )
+                data.expert_work_org = expert_org
+                data.expert_position = expert_position
+                data.work_org = expert_org
+                data.position = expert_position
+            else:
+                data.expert_work_org = ""
+                data.expert_position = ""
+                data.work_org = ""
+                data.position = ""
+
         sick_leave_docs = {"discharge", "commission"}
         disability_docs = {"primary", "admission_doctor_referral"}
 
