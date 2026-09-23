@@ -380,3 +380,25 @@ with_treatment_marker = service.parser.parse_text("""
 """)
 assert with_treatment_marker.has_treatment_section is True, with_treatment_marker.has_treatment_section
 assert with_treatment_marker.treatment_plan == "терапия по схеме.", with_treatment_marker.treatment_plan
+
+
+# Global facility normalization must never truncate an arbitrary narrative
+# paragraph merely because it begins with «Направляется на лечение».
+from medical_gender import normalize_facility_references_in_document
+
+_facility_doc = Document()
+_facility_text = (
+    "Направляется на лечение в дневной стационар после консультации; "
+    "дальнейшая тактика определяется лечащим врачом."
+)
+_facility_doc.add_paragraph(_facility_text)
+normalize_facility_references_in_document(_facility_doc)
+assert _facility_doc.paragraphs[0].text == _facility_text, _facility_doc.paragraphs[0].text
+
+_facility_legacy = Document()
+_facility_legacy.add_paragraph(
+    "Ранее лечилась в ГБУЗ НО ПБ №2, затем наблюдалась амбулаторно."
+)
+normalize_facility_references_in_document(_facility_legacy)
+assert "ГБУЗ НО «НКЦПЗ» диспансер №2" in _facility_legacy.paragraphs[0].text
+assert "затем наблюдалась амбулаторно" in _facility_legacy.paragraphs[0].text
