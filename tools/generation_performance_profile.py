@@ -90,12 +90,12 @@ def _make_fixture(root: Path):
     data.expert_work_org = "ООО Завод"
     data.expert_position = "инженер"
     data.expert_sick_leave_needed = "да"
-    data.expert_sick_leave_from = "15.06.2026"
+    data.expert_sick_leave_from = "10.06.2026"
     data.disability_needed = "нет"
     data.disability = "не нужно"
     data.work_org = data.expert_work_org
     data.position = data.expert_position
-    data.sick_leave = "нужен с 15.06.2026"
+    data.sick_leave = "нужен с 10.06.2026"
     data.epi_present = "нет"
     data.epi_text = ""
     return nav, service, data
