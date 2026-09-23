@@ -134,7 +134,7 @@ class MedicalRendererSpecialMixin:
             doc.add_paragraph("Решение ВК: направить на МСЭ.")
         self._clean_vk_purpose_instruction(editor)
         self._finalize_vk_identity_lines(editor, data)
-        finalize_medical_document(doc, data)
+        finalize_medical_document(doc, data, editor=editor)
         doc.save(str(output_path))
 
     def render_sick_leave_vk(self, template_path: str | Path, output_path: str | Path, data: PatientData) -> None:
@@ -194,7 +194,7 @@ class MedicalRendererSpecialMixin:
         ):
             doc.add_paragraph("Решение ВК: продлить лечение по листу нетрудоспособности.")
         self._finalize_vk_identity_lines(editor, data)
-        finalize_medical_document(doc, data)
+        finalize_medical_document(doc, data, editor=editor)
         doc.save(str(output_path))
 
     def render_rvk(self, template_path: str | Path, output_path: str | Path, data: PatientData) -> None:
@@ -251,5 +251,5 @@ class MedicalRendererSpecialMixin:
         # Она не относится к результату исследования и должна исчезать из итогового документа.
         editor.remove_exact_template_paragraphs(["ЭЭГ", "ЭПИ"])
         editor.replace_first_matching_paragraph(["Диагноз"], f"Диагноз: {sanitize_diagnosis(data.diagnosis)}")
-        finalize_medical_document(doc, data)
+        finalize_medical_document(doc, data, editor=editor)
         doc.save(str(output_path))
