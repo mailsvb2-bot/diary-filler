@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "e05937492d1de12abef2eaace328f6282c54be60",
-  "baseline_note": "Dynamic epicrisis contract cleanup baseline. PR #216 restored the Discharge + Diaries sick-leave dynamic-epicrisis path and same-date replacement behavior; exact candidate cea92029b00d43cc8a3f62568e9f7141b1944abe passed Windows CI #872 / run 35786673830. PR #217 then removed the consumed document-mechanics approval; exact cleanup e815ce0531b92e2641c53071c1616e1dfa461138 passed Windows CI #874 / run 35788173011 and merged as e05937492d1de12abef2eaace328f6282c54be60. This is the clean tested tree before removing the final temporary regression approval.",
+  "baseline_ref": "1f092cae6d6f2a32244ff078f7fef1f73d371ba4",
+  "baseline_note": "PR #220 changed dynamic epicrisis Word rendering from forced paragraph-per-field output to one continuous clinical paragraph while preserving separate right-aligned signatures and the existing 10-day calendar contract. Exact candidate 15e6ee454b8392c2f22e4d51d269c065a09be87b passed Windows CI #881 / run 35819668840 completely, including the exact diary layout regression, release gate, full patient replay + golden DOCX, EXE, packaged desktop intake E2E, installer and install/uninstall smoke. This cleanup removes the temporary document-mechanics approval and retains only a narrowed regression approval for that deletion.",
   "required_approval_evidence": [
     "ci_gate_lock"
   ],
