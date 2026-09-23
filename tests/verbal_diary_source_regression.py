@@ -432,13 +432,13 @@ def _assert_dynamic_epicrisis_is_additive(root: Path) -> None:
     )
     paragraphs = [p.text for p in Document(str(with_result.created_files[0])).paragraphs]
     epicrisis_heads = [text for text in paragraphs if "Динамический эпикриз." in text]
-    assert epicrisis_heads == [
-        "11.09.26 Динамический эпикриз.",
-        "21.09.26 Динамический эпикриз.",
-    ], epicrisis_heads
+    assert len(epicrisis_heads) == 2, epicrisis_heads
+    assert epicrisis_heads[0].startswith("11.09.26 Динамический эпикриз. ФИО:"), epicrisis_heads[0]
+    assert epicrisis_heads[1].startswith("21.09.26 Динамический эпикриз. ФИО:"), epicrisis_heads[1]
     assert getattr(with_result, "dynamic_epicrisis_count", 0) == 2
-    assert "Психический статус: Состояние стабильное." in paragraphs, paragraphs
+    assert all("Психический статус: Состояние стабильное." in text for text in epicrisis_heads), epicrisis_heads
     assert not any("Профильный статус:" in text for text in paragraphs), paragraphs
+    assert not any(text.startswith("Психический статус:") for text in paragraphs), paragraphs
 
     # A dynamic epicrisis owns its calendar date: the ordinary diary/joint-round
     # entry for that date must be absent, while the final discharge diary remains.
