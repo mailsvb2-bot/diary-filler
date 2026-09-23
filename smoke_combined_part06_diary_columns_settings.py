@@ -395,16 +395,14 @@ missing_sick_choice.admission_occurrence = "первично"
 missing_sick_choice.sick_leave = ""
 missing_sick_choice.expert_sick_leave_needed = ""
 missing_sick_choice.disability_needed = "нет"
-try:
-    service.create_documents(
-        navigation_path=nav,
-        output_dir=OUT / "missing_sick_leave_choice",
-        selected_docs=["primary"],
-        override_data=missing_sick_choice,
-    )
-    raise AssertionError("primary must require explicit sick-leave decision")
-except ValueError as exc:
-    assert "нужен ли больничный" in str(exc), str(exc)
+primary_without_sick_choice, _ = service.create_documents(
+    navigation_path=nav,
+    output_dir=OUT / "primary_without_sick_leave_choice",
+    selected_docs=["primary"],
+    override_data=missing_sick_choice,
+)
+assert len(primary_without_sick_choice) == 1
+assert "Больничный лист" not in extract_docx_text(primary_without_sick_choice[0])
 
 for sick_required_kind in ("discharge", "commission"):
     missing_standalone_sick = service.parse_primary_document(nav)
