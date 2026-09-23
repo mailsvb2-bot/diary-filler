@@ -14,10 +14,10 @@
     "medical_parser.py": "cc1b964965c90048380789946db98a08bbc6874b",
     "medical_parser_blocks.py": "75a1016f4a5ba19b3a99ace7e1fde1b03aa8975a",
     "medical_renderer.py": "8ead4da7b5b411c658ab94f920848e4f7987c852",
-    "medical_renderer_commission.py": "6f3aa938ffc3d764a5c587df7ec3cb420c27e88d",
+    "medical_renderer_commission.py": "f4eb5dca4b252c5d4dddce02e16f914e1a3ec976",
     "medical_renderer_labs.py": "51f25950f3a849d7328b712cab7b7be6bb523914",
-    "medical_renderer_primary.py": "e3697d1e462e111e144f78894a72b6bb44bf4d42",
+    "medical_renderer_primary.py": "6cd8c30352e282fd9bcdbcb05e38074edcee411e",
     "medical_renderer_special.py": "66caa8568c6aaa6de609397be2b70f402de7e997",
-    "medical_service.py": "e2eb6713a2cbacde86e500c79873eb904460dc60"
+    "medical_service.py": "19105374a78f3fb05c3ca04047532c84b992d988"
   }
 }
