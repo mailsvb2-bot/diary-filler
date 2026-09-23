@@ -173,6 +173,16 @@ class MedicalDocumentService:
             raise ValueError(f"{label} не может быть раньше даты госпитализации.")
 
     @staticmethod
+    def _ensure_date_not_after_discharge(discharge_date: str, value: str, label: str) -> None:
+        """Reject sick-leave dates that are outside a known hospitalization episode."""
+        if not discharge_date or not value:
+            return
+        discharge = parse_date(discharge_date)
+        parsed = parse_date(value)
+        if discharge and parsed and parsed.date() > discharge.date():
+            raise ValueError(f"{label} не может быть позже даты выписки.")
+
+    @staticmethod
     def _require_core_text(value: str, label: str) -> str:
         normalized = str(value or "").strip()
         if not normalized:
@@ -212,7 +222,7 @@ class MedicalDocumentService:
         if selected_set & treatment_docs:
             data.treatment_plan = self._require_text(data.treatment_plan, "лечение")
 
-        sick_leave_docs = {"primary", "admission_doctor_referral", "discharge", "commission"}
+        sick_leave_docs = {"discharge", "commission"}
         disability_docs = {"primary", "admission_doctor_referral"}
         if selected_set & sick_leave_docs:
             sick_decision = normalize_yes_no(data.expert_sick_leave_needed)
@@ -230,6 +240,9 @@ class MedicalDocumentService:
                 )
                 self._ensure_date_not_before_admission(
                     data.admission_date, data.expert_sick_leave_from, "Дата начала больничного"
+                )
+                self._ensure_date_not_after_discharge(
+                    data.discharge_date, data.expert_sick_leave_from, "Дата начала больничного"
                 )
                 data.sick_leave = f"нужен с {data.expert_sick_leave_from}"
             else:
