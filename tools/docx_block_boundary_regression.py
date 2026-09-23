@@ -801,6 +801,7 @@ def _assert_template_cleanup_never_deletes_inserted_patient_marker_lines() -> No
     doc.add_paragraph("старый текст шаблона")
     doc.add_paragraph("ЭПИ - шаблонный пример, удалить")
     doc.add_paragraph("ЭКГ - шаблонный пример, удалить")
+    doc.add_paragraph("ЭЭГ")
     doc.add_paragraph("Психический статус")
     doc.add_paragraph("старый статус")
 
@@ -809,6 +810,7 @@ def _assert_template_cleanup_never_deletes_inserted_patient_marker_lines() -> No
         "Начало заболевания постепенное.\n"
         "ЭПИ - ранее проводилось по месту жительства; это часть анамнеза.\n"
         "ЭКГ - ранее описывалась без особенностей; это часть анамнеза.\n"
+        "ЭЭГ\n"
         "Рекомендовано: ранее врачом амбулаторно; это исторический факт."
     )
     assert editor.replace_block(
@@ -819,6 +821,7 @@ def _assert_template_cleanup_never_deletes_inserted_patient_marker_lines() -> No
     )
 
     editor.remove_all_matching_paragraphs(["ЭПИ", "ЭКГ", "Рекомендовано"])
+    editor.remove_exact_template_paragraphs(["ЭЭГ", "ЭПИ"])
     editor.replace_all_matching_paragraphs(["Диагноз"], "Диагноз: НЕ ДОЛЖНО ПОЯВИТЬСЯ")
 
     text = "\n".join(p.text for p in doc.paragraphs)
@@ -826,6 +829,7 @@ def _assert_template_cleanup_never_deletes_inserted_patient_marker_lines() -> No
     assert "ЭКГ - шаблонный пример" not in text, text
     assert "ЭПИ - ранее проводилось по месту жительства" in text, text
     assert "ЭКГ - ранее описывалась без особенностей" in text, text
+    assert "\nЭЭГ\n" in "\n" + text + "\n", text
     assert "Рекомендовано: ранее врачом амбулаторно" in text, text
 
 
