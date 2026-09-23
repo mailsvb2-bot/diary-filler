@@ -127,7 +127,9 @@ assert "не предъявляла" in diary_text2
 assert result_filename_male.created_files[0].name.startswith("Маркер Мужской Тестовый")
 
 # --- Production text diaries: clinical entries come from diagnosis template; discharge is universal ---
-from diary_service import DiaryService, is_non_working_day
+from diary_service import DiaryService, dynamic_epicrisis_dates, is_non_working_day
+from diary_table_numbers import is_holiday_skip_date, should_remove_holiday
+from diary_writer_entries import mark_skip_flags
 # 2026 federal production-calendar regression. The old implementation
 # incorrectly treated every May 1-9 as a holiday.
 from datetime import date as _calendar_date
@@ -139,6 +141,50 @@ assert is_non_working_day(_calendar_date(2026, 3, 9))   # transfer from Sun Mar 
 assert is_non_working_day(_calendar_date(2026, 1, 9))   # government transfer
 assert not is_non_working_day(_calendar_date(2026, 1, 12))
 assert is_non_working_day(_calendar_date(2026, 12, 31)) # government transfer
+
+# Ordinary diary holiday removal uses the same calendar but does not remove
+# generic weekends. It must be year-aware so transferred holidays are correct.
+assert is_holiday_skip_date(1, 5, 2026)
+assert not is_holiday_skip_date(4, 5, 2026)
+assert is_holiday_skip_date(11, 5, 2026)
+assert is_holiday_skip_date(9, 1, 2026)
+assert not is_holiday_skip_date(12, 1, 2026)
+assert should_remove_holiday(_calendar_date(2026, 5, 11))
+assert not should_remove_holiday(_calendar_date(2026, 5, 4))
+
+_calendar_entries = [
+    {"day": 1, "month": 5, "year": 2026, "date": _calendar_date(2026, 5, 1)},
+    {"day": 4, "month": 5, "year": 2026, "date": _calendar_date(2026, 5, 4)},
+    {"day": 9, "month": 5, "year": 2026, "date": _calendar_date(2026, 5, 9)},
+    {"day": 11, "month": 5, "year": 2026, "date": _calendar_date(2026, 5, 11)},
+]
+for _entry in _calendar_entries:
+    _entry.update(after_discharge=False, skip_holiday=False, skip_after_discharge=False)
+mark_skip_flags(
+    _calendar_entries,
+    final_entry_index=None,
+    discharge_date=None,
+    remove_holiday_rows=True,
+)
+assert [_entry["skip_holiday"] for _entry in _calendar_entries] == [True, False, True, True]
+
+# Ten days after 27.02.2026 is the transferred holiday 09.03.2026, so the
+# dynamic epicrisis moves to 10.03. It is forbidden when discharge is 10.03.
+assert dynamic_epicrisis_dates(
+    _calendar_date(2026, 2, 27),
+    discharge_date=_calendar_date(2026, 3, 10),
+    limit=1,
+) == ()
+assert dynamic_epicrisis_dates(
+    _calendar_date(2026, 2, 27),
+    discharge_date=_calendar_date(2026, 3, 11),
+    limit=1,
+) == (_calendar_date(2026, 3, 10),)
+assert dynamic_epicrisis_dates(
+    _calendar_date(2026, 4, 24),
+    discharge_date=_calendar_date(2026, 5, 5),
+    limit=1,
+) == (_calendar_date(2026, 5, 4),)
 
 contract_texts = OUT / "F20 Параноидная шизофрения.docx"
 contract_doc = Document()
