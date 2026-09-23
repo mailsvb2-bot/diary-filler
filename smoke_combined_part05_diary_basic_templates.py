@@ -220,6 +220,28 @@ for hospital_day in (1, 2, 3, 7):
     row.cells[0].text = str(hospital_day)
     row.cells[3].text = "Лечащий врач Балаганин С.В.\nЗав.отделением Можарова Е.А."
 contract_dates_doc.save(contract_dates)
+
+# Dynamic sick-leave epicrises require a real sick-leave start date before any
+# output is committed; admission date is not a silent substitute.
+for _bad_sick_from in ("", "99.99.2026"):
+    _bad_dynamic_out = OUT / ("dynamic_bad_sick_" + ("empty" if not _bad_sick_from else "invalid"))
+    try:
+        DiaryService().create_text_diaries(
+            status_files=[contract_texts],
+            diary_files=[contract_dates],
+            output_dir=_bad_dynamic_out,
+            patient_name="Маркер Женская Дополнительная",
+            gender_source_name="Маркер Женская Дополнительная",
+            admission_value="10.06.2026",
+            discharge_value="30.06.2026",
+            sick_leave_dynamic_epicrisis=True,
+            sick_leave_from=_bad_sick_from,
+        )
+        raise AssertionError("dynamic epicrisis must require a valid sick-leave start date")
+    except ValueError as exc:
+        assert "Дата начала больничного" in str(exc) or "дату начала больничного" in str(exc), str(exc)
+    assert not list(_bad_dynamic_out.glob("*.docx")) if _bad_dynamic_out.exists() else True
+
 contract_result = DiaryService().create_text_diaries(
     status_files=[contract_texts],
     diary_files=[contract_dates],
