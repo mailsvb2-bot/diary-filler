@@ -157,6 +157,11 @@ class MedicalRendererPrimaryMixin:
         if data.treatment_plan:
             editor.replace_block(["Лечение"], "Лечение:", data.treatment_plan, DISCHARGE_MARKERS)
 
+        # A historical template contains a fully formed positive treatment outcome
+        # ("состояние улучшилось... появилась критика"). It is not present in
+        # PatientData and therefore is not a verified fact for this patient.
+        editor.remove_all_matching_paragraphs(["За время лечения"])
+
         # The recommendation is owned by the discharge renderer.  Never allow a
         # stale sentence bundled in an old template to leak into the final epicrisis.
         recommendation_done = editor.replace_first_matching_paragraph(
