@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "835dbde2c71406dfc6e4bae3540a524e4ea27c46",
-  "baseline_note": "Inline dynamic epicrisis layout cleanup baseline. PR #220 rendered the dated clinical body as one continuous Word paragraph while preserving separate signatures and the existing dynamic-epicrisis calendar contract; exact candidate 15e6ee454b8392c2f22e4d51d269c065a09be87b passed Windows CI #881 / run 35819668840. PR #221 removed the consumed document-mechanics approval; exact cleanup 5f8cc0c384c11dd6d96f0914bbe6307ed352f180 passed Windows CI #883 / run 35820193118 completely and merged as 835dbde2c71406dfc6e4bae3540a524e4ea27c46. This is the clean tested tree before removing the final temporary regression approval.",
+  "baseline_ref": "4057207bb7b748bb38776dc9188863d2930fea44",
+  "baseline_note": "Clinical field isolation baseline. PR #223 fixed a confirmed primary-document parser regression where narrative lines such as «Диагноз ранее...» and «Психический статус в динамике...» could replace the real target fields. Exact candidate 31fe0d88819dd9afaab18a736f06daa5210cb60b passed Windows CI #890 / run 35856525451 completely, including production/release gates, full patient replay + golden DOCX, long clinical block integrity, GUI, EXE, packaged desktop intake E2E, installer and install/uninstall smoke. It merged to main as 4057207bb7b748bb38776dc9188863d2930fea44; this cleanup removes the consumed document-mechanics approval.",
   "required_approval_evidence": [
     "ci_gate_lock"
   ],
