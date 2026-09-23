@@ -552,6 +552,30 @@ admission_lines = [p.text.strip() for p in Document(admission_doctor_path).parag
 assert admission_lines[-2] == "В связи с психическим состоянием, направляется на лечение в ГБУЗ НО «НКЦПЗ» диспансер №2", admission_lines[-5:]
 assert admission_lines[-1].startswith("Врач психиатр"), admission_lines[-5:]
 
+# Marker-like patient prose inside another clinical block must survive cleanup.
+# A standalone line shaped like the legacy duplicate-complaints sentence is still
+# source evidence when it came from the patient's disease anamnesis.
+_patient_prose_data = copy.deepcopy(manual_data)
+_patient_prose_data.disease_anamnesis = (
+    "Начало заболевания постепенное.\n"
+    "Пациентка предъявляет жалобы на эпизоды тревоги в анамнезе.\n"
+    "Дальнейшее течение описано без сокращения."
+)
+_patient_prose_created, _ = service.create_documents(
+    navigation_path=nav,
+    output_dir=OUT / "patient_marker_like_prose_preserved",
+    discharge_date="11.06.2026",
+    selected_docs=["primary", "commission", "admission_doctor_referral"],
+    override_data=_patient_prose_data,
+)
+for _patient_prose_path in _patient_prose_created:
+    _patient_prose_text = extract_docx_text(_patient_prose_path)
+    assert "Пациентка предъявляет жалобы на эпизоды тревоги в анамнезе." in _patient_prose_text, (
+        _patient_prose_path.name,
+        _patient_prose_text,
+    )
+    assert "Дальнейшее течение описано без сокращения." in _patient_prose_text, _patient_prose_text
+
 # A complaints sentence belongs only to the complaints block. It must never be
 # duplicated as an unexplained trailing sentence at the end of Joint Examination.
 complaint_data = copy.deepcopy(manual_data)
