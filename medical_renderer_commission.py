@@ -74,23 +74,9 @@ class MedicalRendererCommissionMixin:
         editor.replace_block(["Психический статус при поступлении", "Психический статус"], "Психический статус при поступлении:", data.mental_status, COMMISSION_MARKERS, allow_empty=True)
         editor.replace_block(["Соматический статус", "Сомато-неврологический статус"], "Соматический статус:", data.somatic_status, COMMISSION_MARKERS, allow_empty=True)
 
-        lab_lines = [
-            (["ОАК"], f"ОАК ({dates['day1']}) - в норме"),
-            (["ОАМ"], f"ОАМ ({dates['day1']}) - в норме"),
-            (["RW"], f"RW (от {dates['day1']}) - в норме"),
-            (["HCV"], f"HCV (от {dates['day1']}) - в норме"),
-            (["HBsAg"], f"HBsAg (от {dates['day1']}) - в норме"),
-            (["ВИЧ"], f"ВИЧ (от {dates['day2']}) - в норме"),
-            (["Биохимия крови"], f"Биохимия крови ({dates['day1']}) - в норме"),
-            (["Глюкоза крови"], f"Глюкоза крови ({dates['day1']}) – 3,40 ммоль/л"),
-            (["Кал на яйца глист"], f"Кал на яйца глист ({dates['day1']}) - не обнаружены."),
-            (["Флюорография"], f"Флюорография ({dates['flg']}) - патологии не выявлено."),
-            (["ЭКГ"], f"ЭКГ ({dates['day1']}) – ритм синусовый, ЭОС нормальная."),
-        ]
-        for markers, text in lab_lines:
-            editor.replace_first_matching_paragraph(markers, text)
+        self._remove_template_lab_lines(editor)
         if data.epi_text:
-            editor.replace_block(["ЭПИ"], f"ЭПИ ({dates['day2']}) -", data.epi_text, COMMISSION_MARKERS)
+            editor.replace_block(["ЭПИ"], "ЭПИ -", data.epi_text, COMMISSION_MARKERS)
         else:
             editor.remove_all_matching_paragraphs(["ЭПИ"])
 
