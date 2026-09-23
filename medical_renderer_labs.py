@@ -151,9 +151,10 @@ class MedicalRendererLabsMixin:
         outcome = next((p for p in paragraphs if normalize_match(p.text).startswith("за время лечения")), None)
         recommendation = next((p for p in paragraphs if normalize_match(p.text).startswith("рекомендовано")), None)
         signature = next((p for p in paragraphs if "врач-психиатр" in normalize_match(p.text) or normalize_match(p.text).startswith("зав. отд")), None)
-        if signature is None or outcome is None or recommendation is None:
+        if signature is None or recommendation is None:
             return False
-        signature._p.addprevious(outcome._p)
+        if outcome is not None:
+            signature._p.addprevious(outcome._p)
         signature._p.addprevious(recommendation._p)
         return True
 
