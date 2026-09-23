@@ -56,7 +56,7 @@ epi_bytes_before_generation = epi.read_bytes()
 created, data = service.create_documents(
     navigation_path=nav,
     output_dir=OUT / "medical_with_epi",
-    discharge_date="11.06.2026",
+    discharge_date="20.06.2026",
     epi_path=epi,
     selected_docs=DOCUMENT_ORDER,
     override_data=manual_data,
@@ -82,6 +82,14 @@ rvk_text = extract_docx_text(rvk_path)
 primary_text = extract_docx_text(primary_path)
 commission_text = extract_docx_text(commission_path)
 admission_doctor_text = extract_docx_text(admission_doctor_path)
+vk_mse_text = extract_docx_text(vk_mse_path)
+sick_leave_vk_text = extract_docx_text(sick_leave_vk_path)
+assert "(первичный, повторный)" not in vk_mse_text, vk_mse_text
+assert "(первичный, повторный)" not in sick_leave_vk_text, sick_leave_vk_text
+assert "________________" not in vk_mse_text, vk_mse_text
+assert "________________" not in sick_leave_vk_text, sick_leave_vk_text
+assert "Цель направления на ВК с обоснованием: продление лечения на 14 дней." in sick_leave_vk_text, sick_leave_vk_text
+assert "направление на МСЭ в связи" not in sick_leave_vk_text, sick_leave_vk_text
 
 # Universal-source round-trip: a generated discharge epicrisis must be usable
 # as the next patient source for commission/RVK/VK generation. The parser must
@@ -202,12 +210,10 @@ for source_name, source_path in _source_target_cases:
         if target_kind == "commission":
             source_data.commission_date = manual_data.commission_date
             source_data.commission_number = manual_data.commission_number
-            if source_name == "discharge" and source_data.sick_leave == "нужен":
-                # The discharge form explicitly preserves the positive decision,
-                # but intentionally does not print the original opening date of
-                # the sick-leave certificate. That one genuinely missing fact
-                # must be supplied by the doctor instead of being guessed.
-                source_data.expert_sick_leave_from = manual_data.expert_sick_leave_from
+            # Primary/admission-doctor documents intentionally do not publish
+            # sick-leave facts. Commission generation owns this decision.
+            source_data.expert_sick_leave_needed = manual_data.expert_sick_leave_needed
+            source_data.expert_sick_leave_from = manual_data.expert_sick_leave_from
         elif target_kind == "rvk":
             source_data.discharge_date = source_data.discharge_date or manual_data.discharge_date
             source_data.rvk_act_number = manual_data.rvk_act_number
@@ -270,11 +276,11 @@ assert admission_doctor_roundtrip.admission_date == manual_data.admission_date, 
 )
 assert admission_doctor_roundtrip.input_document_kind == "осмотр врача приёмного покоя"
 
-# Public service round-trip: a generated primary exam renders the sick-leave
-# decision as "нужен с <date>". Parsing that DOCX and regenerating it must
-# reconstruct the canonical decision/date rather than rejecting its own output.
+# Public service round-trip: Primary Exam must not publish or require
+# sick-leave facts. Reusing its generated DOCX stays valid without inventing a
+# certificate decision that does not belong in this form.
 roundtrip_data = service.parse_primary_document(primary_path)
-assert roundtrip_data.sick_leave == "нужен с 15.06.2026", roundtrip_data.sick_leave
+assert roundtrip_data.sick_leave == "", roundtrip_data.sick_leave
 assert roundtrip_data.expert_sick_leave_needed == ""
 assert roundtrip_data.expert_sick_leave_from == ""
 assert roundtrip_data.admission_occurrence == manual_data.admission_occurrence, roundtrip_data.admission_occurrence
@@ -285,10 +291,8 @@ roundtrip_created, roundtrip_used = service.create_documents(
     override_data=roundtrip_data,
 )
 assert len(roundtrip_created) == 1
-assert roundtrip_used.expert_sick_leave_needed == "да"
-assert roundtrip_used.expert_sick_leave_from == "15.06.2026"
-assert roundtrip_used.sick_leave == "нужен с 15.06.2026"
-assert "Больничный лист: нужен с 15.06.2026" in extract_docx_text(roundtrip_created[0])
+roundtrip_primary_text = extract_docx_text(roundtrip_created[0])
+assert "Больничный лист" not in roundtrip_primary_text, roundtrip_primary_text
 
 assert "На основании данных" in discharge_text and "F99.9 Тестовый диагноз из UI" in discharge_text, discharge_text
 for occurrence_text in (primary_text, discharge_text, commission_text, admission_doctor_text, rvk_text):
@@ -306,6 +310,8 @@ assert period_runs and all(run.font.color.rgb == RGBColor(0, 0, 0) for run in pe
     (run.text, run.font.color.rgb) for run in period_runs
 ]
 assert "Экспертный анамнез: Работает в ООО Завод, в должности инженер." in primary_text, primary_text
+assert "Больничный лист" not in primary_text, primary_text
+assert "Больничный лист" not in admission_doctor_text, admission_doctor_text
 primary_expert_pos = primary_text.index("Экспертный анамнез: Работает в ООО Завод, в должности инженер.")
 assert primary_expert_pos > primary_text.index("Эпидемиологический анамнез"), primary_text
 assert "Экспертный анамнез: Работает в ООО Завод, в должности инженер. Больничный лист" not in primary_text, primary_text
@@ -317,9 +323,9 @@ assert "Место работы: ООО РВК, программист" not in e
 assert "военного комиссариата Ленинского района" in combined_text
 assert "Направление от РВК: по направлению из РВК (Ленинского района)" in primary_text
 assert "Место работы, должность: ООО Тест, инженер" in combined_text
-assert "Экспертный анамнез: Работает в ООО Завод, в должности инженер. Больничный лист. Срок лечения с 10.06.2026 по 11.06.2026, 2 дня. К труду с 12.06.2026." in combined_text
+assert "Экспертный анамнез: Работает в ООО Завод, в должности инженер. Больничный лист. Срок лечения с 10.06.2026 по 20.06.2026, 11 дней. К труду с 21.06.2026." in combined_text
 assert "Экспертный анамнез: Работает в ООО Завод, в должности инженер. Больничный лист нужен с 15.06.2026." in combined_text
-assert "К труду с 12.06.2026" in discharge_text
+assert "К труду с 21.06.2026" in discharge_text
 for path in created:
     if any(key in path.name for key in ("Первичный", "Выписной", "Совместный")):
         assert "Экспертный анамнез:" in extract_docx_text(path), path
@@ -347,6 +353,69 @@ for referral_path in (primary_path, admission_doctor_path):
     referral_text = extract_docx_text(referral_path)
     assert "Направление от РВК: по направлению из РВК (Ленинского района)" in referral_text, referral_text
 
+# Chronology is a hard correctness boundary for one inpatient episode.
+invalid_commission = copy.deepcopy(manual_data)
+invalid_commission.discharge_date = "11.06.2026"
+invalid_commission.commission_date = "18.06.2026"
+try:
+    service.create_documents(
+        navigation_path=nav,
+        output_dir=OUT / "invalid_commission_after_discharge",
+        selected_docs=["commission"],
+        override_data=invalid_commission,
+    )
+except ValueError as exc:
+    assert "Дата совместного осмотра не может быть позже даты выписки" in str(exc), exc
+else:
+    raise AssertionError("commission after discharge must be rejected")
+
+invalid_sick_leave = copy.deepcopy(manual_data)
+invalid_sick_leave.discharge_date = "11.06.2026"
+invalid_sick_leave.expert_sick_leave_from = "15.06.2026"
+try:
+    service.create_documents(
+        navigation_path=nav,
+        output_dir=OUT / "invalid_sick_leave_after_discharge",
+        selected_docs=["discharge"],
+        override_data=invalid_sick_leave,
+    )
+except ValueError as exc:
+    assert "Дата начала больничного не может быть позже даты выписки" in str(exc), exc
+else:
+    raise AssertionError("sick-leave start after discharge must be rejected")
+
+# Parsed clinical evidence is immutable. Gender adaptation may format
+# renderer-owned phrases, but it must not rewrite relatives or quotations inside
+# an anamnesis copied from the source document.
+source_truth = copy.deepcopy(manual_data)
+source_truth.life_anamnesis = (
+    "Отец работал водителем. Мать работала врачом. "
+    "Пациентка сообщила эти сведения при осмотре."
+)
+truth_created, _ = service.create_documents(
+    navigation_path=nav,
+    output_dir=OUT / "source_clinical_truth",
+    selected_docs=["primary"],
+    override_data=source_truth,
+)
+truth_text = extract_docx_text(truth_created[0])
+assert source_truth.life_anamnesis in truth_text, truth_text
+assert "Отец работала" not in truth_text, truth_text
+
+# Optional source fields must clear template samples instead of leaking a
+# developer note or another patient's example into the finished document.
+blank_anamnesis = copy.deepcopy(manual_data)
+blank_anamnesis.disease_anamnesis = ""
+blank_created, _ = service.create_documents(
+    navigation_path=nav,
+    output_dir=OUT / "blank_source_fields",
+    selected_docs=["admission_doctor_referral"],
+    override_data=blank_anamnesis,
+)
+blank_text = extract_docx_text(blank_created[0])
+assert "Новые шаблоны учёл по структуре" not in blank_text, blank_text
+assert "Анамнез заболевания:" in blank_text, blank_text
+
 # Negative RVK choice must render explicitly as «нет» and clear any stale area.
 rvk_no_data = copy.deepcopy(manual_data)
 rvk_no_data.rvk_referral_present = "нет"
@@ -372,7 +441,7 @@ psych_yes_data.psych_account_since_year = "2018"
 psych_yes_created, _psych_yes_used = service.create_documents(
     navigation_path=nav,
     output_dir=OUT / "psych_account_yes_all_docs",
-    discharge_date="11.06.2026",
+    discharge_date=manual_data.discharge_date,
     epi_path=epi,
     selected_docs=DOCUMENT_ORDER,
     override_data=psych_yes_data,
@@ -392,7 +461,7 @@ psych_no_address.registered = ""
 psych_no_address_created, _ = service.create_documents(
     navigation_path=nav,
     output_dir=OUT / "psych_account_without_registration",
-    discharge_date="11.06.2026",
+    discharge_date=manual_data.discharge_date,
     epi_path=epi,
     selected_docs=("discharge", "commission", "admission_doctor_referral"),
     override_data=psych_no_address,
