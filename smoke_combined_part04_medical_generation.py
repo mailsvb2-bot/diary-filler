@@ -70,6 +70,7 @@ for created_path in created:
 assert any(path.name == "Маркер Женская Тестовая Выписной эпикриз.docx" for path in created), [p.name for p in created]
 combined_text = "\n".join(extract_docx_text(path) for path in created)
 assert "F99.9 Тестовый диагноз из UI" in combined_text
+assert "данных клинических исследований" not in combined_text, combined_text
 # Investigation results must come from explicit patient evidence, never from
 # bundled template examples or admission-relative guessed dates.
 for fabricated in (
