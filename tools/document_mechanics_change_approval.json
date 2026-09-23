@@ -4,7 +4,7 @@
   "reason": "Deep medical-document correctness audit: evidence-only rendering; no fabricated labs/outcomes/recommendations/prognoses; fail-closed chronology; preserve clinical prose; neutral unknown-gender wording; clean VK scaffolding.",
   "approved_blobs": {
     "dialog_expert.py": "65fdd91fbc9c0b59aca8a544bd8f70296eec3907",
-    "diary_constants.py": "b3dd96211b28d6fcb6af9f16b9857418b9f47b59",
+    "diary_constants.py": "6f98aa9bf043641bf88f33649a93b5272cb42344",
     "diary_service.py": "694b40a53ebef47e3eb9cb0012ecd8e6ba221923",
     "medical_gender.py": "36050151a236a451806acd29551833ba427dc2ff",
     "medical_renderer.py": "8ead4da7b5b411c658ab94f920848e4f7987c852",
