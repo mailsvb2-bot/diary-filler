@@ -92,7 +92,7 @@ class MedicalRendererCommissionMixin:
         editor.replace_block(["Эпидемиологический анамнез"], "Эпидемиологический анамнез:", data.epidemiology, COMMISSION_MARKERS, allow_empty=True)
         editor.remove_all_matching_paragraphs(["Целесообразна госпитализация"])
         self._remove_trailing_clinical_leakage(editor, data)
-        finalize_medical_document(doc, data)
+        finalize_medical_document(doc, data, editor=editor)
         doc.save(str(output_path))
 
     def render_admission_doctor_referral(self, template_path: str | Path, output_path: str | Path, data: PatientData) -> None:
@@ -164,5 +164,5 @@ class MedicalRendererCommissionMixin:
         if not referral_done:
             doc.add_paragraph(target_referral_line)
         editor.replace_block(["Врач психиатр", "Врач-психиатр"], "Врач психиатр", format_staff_short_name(data.doctor), PRIMARY_MARKERS, allow_empty=True)
-        finalize_medical_document(doc, data)
+        finalize_medical_document(doc, data, editor=editor)
         doc.save(str(output_path))
