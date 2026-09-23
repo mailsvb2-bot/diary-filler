@@ -159,6 +159,19 @@ class MedicalRendererSpecialMixin:
             ["Цель направления на ВК"],
             "Цель направления на ВК с обоснованием: продление лечения по листу нетрудоспособности.",
         )
+        # Historical template text contains patient-specific prognoses and a
+        # fixed 14-day commission decision. Those are examples, not evidence.
+        # Remove prognosis rows and own the commission decision explicitly.
+        editor.remove_all_matching_paragraphs([
+            "Прогноз восстановления трудоспособности",
+            "клинический:",
+            "Клинический и трудовой прогноз",
+        ])
+        if not editor.replace_first_matching_paragraph(
+            ["Решение ВК"],
+            "Решение ВК: продлить лечение по листу нетрудоспособности.",
+        ):
+            doc.add_paragraph("Решение ВК: продлить лечение по листу нетрудоспособности.")
         self._finalize_vk_identity_lines(doc, data)
         finalize_medical_document(doc, data)
         doc.save(str(output_path))
