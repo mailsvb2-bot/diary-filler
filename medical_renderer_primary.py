@@ -179,6 +179,5 @@ class MedicalRendererPrimaryMixin:
             f"Врач-психиатр\t{format_staff_short_name(data.doctor)}"
         )
         editor.replace_first_matching_paragraph(["Зав. отд.", "Врач-психиатр"], signature)
-        self._move_discharge_outcome_before_signatures(doc)
         finalize_medical_document(doc, data, editor=editor)
         doc.save(str(output_path))
