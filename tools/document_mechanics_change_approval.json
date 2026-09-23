@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "base_sha": "45a2c067e7327088acd72ae9b259867653eec3f6",
+  "reason": "Deep document-correctness audit: remove sick-leave facts from primary/admission-doctor forms, reject impossible episode chronology, preserve source clinical prose, clear stale clinical placeholders, and clean VK template contradictions/placeholders.",
+  "approved_blobs": {
+    "dialog_expert.py": "65fdd91fbc9c0b59aca8a544bd8f70296eec3907",
+    "medical_gender.py": "36050151a236a451806acd29551833ba427dc2ff",
+    "medical_renderer.py": "8ead4da7b5b411c658ab94f920848e4f7987c852",
+    "medical_renderer_commission.py": "d0e42f2ea165ab5035c542966d823024dd4fa889",
+    "medical_renderer_primary.py": "5897460da10c69de4425180b42cbf8e6cb82971c",
+    "medical_renderer_special.py": "b50acefb48818d3f23b64a81178984c2e626c622",
+    "medical_service.py": "b68aec8976081bea1a24b196b81cac8da19df397"
+  }
+}
