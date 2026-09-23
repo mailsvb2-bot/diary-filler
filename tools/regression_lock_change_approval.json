@@ -18,7 +18,7 @@
     "actions_diary_flow.py": "986922b0f35633c51cf9d5117b029445d98fc70e",
     "dialog_expert.py": "65fdd91fbc9c0b59aca8a544bd8f70296eec3907",
     "diary_constants.py": "6f98aa9bf043641bf88f33649a93b5272cb42344",
-    "diary_service.py": "694b40a53ebef47e3eb9cb0012ecd8e6ba221923",
+    "diary_service.py": "47028a0922eaa9909aede7be210c0d93ff80693e",
     "medical_docx_editor_replace.py": "9a7f5a11c628bc7eeac1125e0b451057ff9b8dd6",
     "medical_gender.py": "bfae762bf174cc11775e3f0695a4a91f44c7a784",
     "medical_markers.py": "f36aae8981323ddc9bc4c0c6b505052242baf4c4",
@@ -36,10 +36,10 @@
     "smoke_combined_part02_ui_parser_regressions.py": "01798735afbee80334d401806c33e79ae2cf980a",
     "smoke_combined_part03_medical_parser_manual.py": "e1c619bae68b3421ccbdafd9b366178f9b2eed86",
     "smoke_combined_part04_medical_generation.py": "4a41c3ff5e796bb762627a90763540fb1e67024b",
-    "smoke_combined_part05_diary_basic_templates.py": "9b42ebe4511862acff93743aa5bdcfefe42448fa",
+    "smoke_combined_part05_diary_basic_templates.py": "3d646b588d5e149c7d405c263815b5502891b2f7",
     "smoke_combined_part06_diary_columns_settings.py": "26a3351ff962fe9655dc0cab5951444076ece614",
     "tests/golden_docx_manifest.json": "ce01c9808be9652acceec987d7330c15e1ffb003",
-    "tools/document_mechanics_change_approval.json": "05791595722129f770b9ec3f1f68c088e82d2252",
+    "tools/document_mechanics_change_approval.json": "0e3e06e1f26bbf8468c0ac2901eeebf7fc3b459a",
     "tools/docx_block_boundary_regression.py": "95977a51422cab35e072a6fcc5f10fb2f89ce619",
     "tools/generation_performance_profile.py": "e89a69cadd0315771070d8f079e421dfb43e75cd"
   }
