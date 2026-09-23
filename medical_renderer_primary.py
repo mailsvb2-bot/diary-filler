@@ -96,7 +96,7 @@ class MedicalRendererPrimaryMixin:
         )
         editor.replace_block(["Врач психиатр", "Врач-психиатр"], "Врач психиатр", format_staff_short_name(data.doctor), PRIMARY_MARKERS, allow_empty=True)
         editor.replace_block(["Зав. отделением", "Зав. отд."], "Зав. отделением", format_staff_short_name(data.head), PRIMARY_MARKERS, allow_empty=True)
-        self._remove_trailing_clinical_leakage(doc, data)
+        self._remove_trailing_clinical_leakage(editor, data)
         finalize_medical_document(doc, data)
         doc.save(str(output_path))
 
