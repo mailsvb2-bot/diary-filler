@@ -766,6 +766,47 @@ assert len(_combined_mse_created) == 2
 assert combined_mse_used.disability_needed == "да"
 assert combined_mse_used.disability == "нужно"
 
+nonworking_vk = service.parse_primary_document(nav)
+nonworking_vk.expert_work_status = "нет"
+nonworking_vk.work_org = "Устаревшее место работы"
+nonworking_vk.position = "Устаревшая должность"
+nonworking_vk.vk_mse_work_org = ""
+nonworking_vk.vk_mse_position = ""
+nonworking_vk.vk_date = "12.06.2026"
+nonworking_vk.vk_protocol_number = "85-NOWORK"
+nonworking_vk.vk_protocol_date = "12.06.2026"
+_nonworking_created, nonworking_used = service.create_documents(
+    navigation_path=nav,
+    output_dir=OUT / "vk_mse_nonworking_no_stale_job",
+    selected_docs=["vk_mse"],
+    override_data=nonworking_vk,
+)
+assert nonworking_used.vk_mse_work_org == "не работает", nonworking_used.vk_mse_work_org
+assert nonworking_used.vk_mse_position == "", nonworking_used.vk_mse_position
+_nonworking_text = extract_docx_text(_nonworking_created[0])
+assert "Устаревшее место работы" not in _nonworking_text, _nonworking_text
+assert "Устаревшая должность" not in _nonworking_text, _nonworking_text
+
+missing_vk_position = service.parse_primary_document(nav)
+missing_vk_position.expert_work_status = "да"
+missing_vk_position.work_org = ""
+missing_vk_position.position = ""
+missing_vk_position.vk_mse_work_org = "Тестовая организация"
+missing_vk_position.vk_mse_position = ""
+missing_vk_position.vk_date = "12.06.2026"
+missing_vk_position.vk_protocol_number = "86-NOPOS"
+missing_vk_position.vk_protocol_date = "12.06.2026"
+try:
+    service.create_documents(
+        navigation_path=nav,
+        output_dir=OUT / "vk_mse_missing_position",
+        selected_docs=["vk_mse"],
+        override_data=missing_vk_position,
+    )
+    raise AssertionError("working VK patient must require both organization and position")
+except ValueError as exc:
+    assert "место работы и должность" in str(exc), str(exc)
+
 bad_sick_vk_order_data = service.parse_primary_document(nav)
 bad_sick_vk_order_data.sick_leave_vk_date = "10.06.2026"
 bad_sick_vk_order_data.sick_leave_vk_protocol_number = "79"
