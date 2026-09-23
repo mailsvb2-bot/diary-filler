@@ -16,7 +16,6 @@ from medical_formatting import format_staff_instrumental_short_name, format_staf
 from medical_docx_editor import (
     apply_readable_section_spacing,
     iter_all_paragraphs,
-    remove_epi_mentions_from_document,
     replace_paragraph_regex_preserving_runs,
     set_paragraph_text,
 )
@@ -230,6 +229,6 @@ def finalize_medical_document(doc: DocxDocument, data: PatientData) -> None:
     """Общие финальные правки перед сохранением любого медицинского документа."""
     normalize_facility_references_in_document(doc)
     normalize_staff_references_in_document(doc, data)
-    if not data.epi_text:
-        remove_epi_mentions_from_document(doc)
+    # EPI/service cleanup is renderer-owned and template-aware. Never scan the
+    # whole finalized document for marker-like patient prose.
     apply_readable_section_spacing(doc)
