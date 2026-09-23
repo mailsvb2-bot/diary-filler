@@ -170,7 +170,10 @@ assert "TEMPLATE_STATUS_TWO пациентка оставалась спокой
 # final text remains diagnosis-independent but is rendered as a joint exam.
 assert "13.06.26 Совместный осмотр с зав. отделением" in contract_joined, contract_joined
 joint_index = contract_lines.index("13.06.26 Совместный осмотр с зав. отделением")
-assert contract_lines[joint_index + 1].startswith("Состояние улучшилось."), contract_lines
+assert contract_lines[joint_index + 1] == "На текущую дату оформлена выписка из стационара. Даны рекомендации.", contract_lines
+assert "Состояние улучшилось." not in contract_joined, contract_joined
+assert "Жалоб не предъявляет." not in contract_joined, contract_joined
+assert "Критика к состоянию присутствует." not in contract_joined, contract_joined
 assert contract_lines[joint_index + 2] == "Лечащий врач Балаганин С.В.", contract_lines
 assert contract_lines[joint_index + 3] == "Зав.отделением Можарова Е.А.", contract_lines
 assert contract_joined.count("Лечащий врач Балаганин С.В.") == 3, contract_joined
