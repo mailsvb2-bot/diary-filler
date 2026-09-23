@@ -178,7 +178,35 @@ class MedicalRendererLabsMixin:
         editor.remove_all_matching_paragraphs(cls._LAB_RESULT_MARKERS)
 
     @classmethod
+    def _render_sourced_investigation_results(
+        cls,
+        editor: DocxBlockEditor,
+        data: PatientData,
+        all_markers,
+        *,
+        before_markers,
+    ) -> bool:
+        """Render only investigation text explicitly present in the source."""
+        cls._remove_template_lab_lines(editor)
+        aliases = ["Результаты обследований", "Результаты исследований"]
+        value = str(getattr(data, "investigation_results", "") or "").strip()
+        if not value:
+            editor.remove_all_matching_paragraphs(aliases)
+            return False
+        if editor.replace_block(
+            aliases,
+            "Результаты обследований:",
+            value,
+            all_markers,
+            allow_empty=True,
+        ):
+            return True
+        return editor.insert_before_first_matching_paragraph(
+            before_markers,
+            "Результаты обследований: " + value,
+        )
+
+    @classmethod
     def _replace_lab_lines(cls, editor: DocxBlockEditor, dates: Dict[str, str]) -> None:
-        # Compatibility entry point used by discharge/RVK renderers. Dates alone
-        # are not evidence of a laboratory or instrumental result.
+        # Legacy compatibility only. Dates alone are not evidence of a result.
         cls._remove_template_lab_lines(editor)
