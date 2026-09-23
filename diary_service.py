@@ -258,8 +258,19 @@ def apply_sick_leave_dynamic_epicrises(
     """Atomically add the historical sick-leave epicrisis blocks to one DOCX."""
     target = Path(path)
     admission = parse_full_date(admission_value)
+    sick_leave_text = str(sick_leave_from or "").strip()
+    if not sick_leave_text:
+        raise ValueError(
+            "Для динамических эпикризов по листу нетрудоспособности укажите дату начала больничного."
+        )
+    try:
+        sick_leave_date = parse_full_date(sick_leave_text)
+    except ValueError as exc:
+        raise ValueError(
+            "Дата начала больничного для динамических эпикризов указана неверно."
+        ) from exc
     discharge = parse_optional_discharge_date(discharge_value)
-    base_date = dynamic_epicrisis_base_date(admission, sick_leave_from)
+    base_date = max(admission, sick_leave_date)
     dates = dynamic_epicrisis_dates(base_date, discharge_date=discharge, limit=12)
     if not dates:
         return 0
@@ -404,6 +415,22 @@ class DiaryService:
         profile_status: str = "",
         treatment_correction: str = "",
     ) -> DiaryBatchResult:
+        # Validate the dynamic-epicrisis contract before the underlying diary
+        # generator commits any visible DOCX. A bad/missing sick-leave date must
+        # never leave a partial kit behind.
+        if sick_leave_dynamic_epicrisis:
+            sick_leave_text = str(sick_leave_from or "").strip()
+            if not sick_leave_text:
+                raise ValueError(
+                    "Для динамических эпикризов по листу нетрудоспособности укажите дату начала больничного."
+                )
+            try:
+                parse_full_date(sick_leave_text)
+            except ValueError as exc:
+                raise ValueError(
+                    "Дата начала больничного для динамических эпикризов указана неверно."
+                ) from exc
+
         def finalize(result: DiaryBatchResult) -> DiaryBatchResult:
             return self._add_dynamic_epicrises_if_needed(
                 result,
