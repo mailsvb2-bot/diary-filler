@@ -201,8 +201,6 @@ class MedicalRendererSpecialMixin:
         """Акт для РВК: нормативную шапку оставляем, заполняем поля ниже."""
         doc = Document(str(template_path))
         editor = DocxBlockEditor(doc)
-        dates = data.lab_dates()
-
         act_number = data.rvk_act_number or data.case_number
         editor.replace_first_matching_paragraph(["О СОСТОЯНИИ"], f"О СОСТОЯНИИ ЗДОРОВЬЯ ГРАЖДАНИНА № {act_number}".rstrip())
         editor.replace_block(["История болезни №"], "История болезни №", data.case_number, RVK_MARKERS, preserve_when_empty=False, allow_empty=True)
@@ -242,7 +240,12 @@ class MedicalRendererSpecialMixin:
         editor.replace_block(["Анамнез заболевания"], "Анамнез заболевания:", data.disease_anamnesis, RVK_MARKERS, allow_empty=True)
         editor.replace_block(["Психический статус"], "Психический статус:", data.mental_status, RVK_MARKERS, allow_empty=True)
         editor.replace_block(["Сомато-неврологический статус", "Соматический статус"], "Сомато-неврологический статус:", data.somatic_status, RVK_MARKERS, allow_empty=True)
-        self._replace_lab_lines(editor, dates)
+        self._render_sourced_investigation_results(
+            editor,
+            data,
+            RVK_MARKERS,
+            before_markers=["ЭПИ", "Диагноз", "Зам. гл. врача", "Зав. отделением"],
+        )
         if data.epi_text:
             editor.replace_block(["ЭПИ"], "ЭПИ -", data.epi_text, RVK_MARKERS)
         else:
