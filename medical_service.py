@@ -214,7 +214,7 @@ class MedicalDocumentService:
         # dates even though the manual UI would have asked the doctor first.
         data.fio = self._require_core_text(data.fio, "Ф.И.О.")
         data.birth = self._require_core_text(data.birth, "год/дата рождения")
-        data.admission_date = self._require_core_text(data.admission_date, "дата госпитализации")
+        data.admission_date = self._normalize_required_date(data.admission_date, "Дата госпитализации")
         data.case_number = self._require_text(data.case_number, "номер истории болезни")
         data.diagnosis = self._require_text(data.diagnosis, "диагноз")
 
@@ -348,6 +348,12 @@ class MedicalDocumentService:
             self._ensure_date_not_before_admission(data.admission_date, data.sick_leave_vk_protocol_date, "Дата протокола ВК больничного")
             data.sick_leave_vk_commission_date = self._normalize_required_date(data.sick_leave_vk_commission_date, "Дата проведения комиссии ВК больничного")
             self._ensure_date_not_before_admission(data.admission_date, data.sick_leave_vk_commission_date, "Дата проведения комиссии ВК больничного")
+            for value, label in (
+                (data.sick_leave_vk_date, "Дата ВК больничного"),
+                (data.sick_leave_vk_protocol_date, "Дата протокола ВК больничного"),
+                (data.sick_leave_vk_commission_date, "Дата проведения комиссии ВК больничного"),
+            ):
+                self._ensure_date_not_after_discharge(data.discharge_date, value, label)
             data.sick_leave_vk_work_org = (data.sick_leave_vk_work_org or data.work_org).strip()
             data.sick_leave_vk_position = (data.sick_leave_vk_position or data.position).strip()
             data.sick_leave_vk_work_position = data.sick_leave_vk_work_position or ", ".join(
