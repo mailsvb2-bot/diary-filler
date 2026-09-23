@@ -64,7 +64,7 @@ def _make_fixture(root: Path):
 
     service = MedicalDocumentService()
     data = service.parse_navigation(nav)
-    data.discharge_date = "11.06.2026"
+    data.discharge_date = "20.06.2026"
     data.diagnosis = "F99.9 Тестовый диагноз из UI"
     data.admission_occurrence = "повторно"
     data.rvk_act_number = "77-А"
