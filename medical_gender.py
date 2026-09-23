@@ -232,7 +232,6 @@ def finalize_medical_document(doc: DocxDocument, data: PatientData) -> None:
     """Общие финальные правки перед сохранением любого медицинского документа."""
     normalize_facility_references_in_document(doc)
     normalize_staff_references_in_document(doc, data)
-    adapt_document_to_patient_gender(doc, data)
     if not data.epi_text:
         remove_epi_mentions_from_document(doc)
     apply_readable_section_spacing(doc)
