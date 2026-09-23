@@ -157,7 +157,7 @@ class MedicalRendererSpecialMixin:
         editor.replace_block(["Получает лечение"], "Получает лечение:", data.treatment_plan, SICK_LEAVE_VK_MARKERS)
         editor.replace_first_matching_paragraph(
             ["Цель направления на ВК"],
-            "Цель направления на ВК с обоснованием: продление лечения на 14 дней.",
+            "Цель направления на ВК с обоснованием: продление лечения по листу нетрудоспособности.",
         )
         self._finalize_vk_identity_lines(doc, data)
         finalize_medical_document(doc, data)
