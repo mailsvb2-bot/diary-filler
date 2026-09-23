@@ -446,11 +446,12 @@ missing_sick_date.admission_occurrence = "первично"
 missing_sick_date.expert_sick_leave_needed = "да"
 missing_sick_date.expert_sick_leave_from = ""
 missing_sick_date.disability_needed = "нет"
+missing_sick_date.discharge_date = "20.06.2026"
 try:
     service.create_documents(
         navigation_path=nav,
         output_dir=OUT / "missing_sick_leave_start",
-        selected_docs=["primary"],
+        selected_docs=["discharge"],
         override_data=missing_sick_date,
     )
     raise AssertionError("positive sick-leave choice must require start date")
