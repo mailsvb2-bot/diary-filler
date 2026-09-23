@@ -530,6 +530,35 @@ assert not any(line.startswith("За время лечения") for line in dis
 assert not any(line.startswith("Рекомендовано:") for line in discharge_lines), discharge_lines[-8:]
 assert "Врач-психиатр" in discharge_lines[-1] and "Зав. отд." in discharge_lines[-1], discharge_lines[-5:]
 
+# Historical staff mentions inside patient clinical prose must remain source-owned,
+# while actual template signatures/headings use the configured staff profile.
+_staff_prose_data = copy.deepcopy(manual_data)
+_staff_prose_data.doctor = "Иванов И.И."
+_staff_prose_data.head = "Петрова П.П."
+_staff_prose_data.deputy_chief = "Сидорова С.С."
+_staff_history = (
+    "Врач-психиатр Балаганин С.В. консультировал ранее амбулаторно; "
+    "Зав. отделением Можарова Е.А. указана в старой выписке."
+)
+_staff_prose_data.disease_anamnesis = (
+    "Начало заболевания постепенное.\n" + _staff_history + "\n"
+    "ИСТОРИЧЕСКИЕ_ФАМИЛИИ_НЕ_ПЕРЕПИСЫВАТЬ."
+)
+_staff_created, _ = service.create_documents(
+    navigation_path=nav,
+    output_dir=OUT / "staff_history_source_owned",
+    discharge_date="20.06.2026",
+    selected_docs=["primary", "discharge", "commission", "vk_mse", "sick_leave_vk", "rvk"],
+    override_data=_staff_prose_data,
+)
+for _staff_path in _staff_created:
+    _staff_text = extract_docx_text(_staff_path)
+    assert _staff_history in _staff_text, (_staff_path.name, _staff_text)
+    assert "ИСТОРИЧЕСКИЕ_ФАМИЛИИ_НЕ_ПЕРЕПИСЫВАТЬ" in _staff_text, _staff_text
+_primary_staff_text = extract_docx_text(next(p for p in _staff_created if "Первичный" in p.name))
+assert "Врач психиатр Иванов И.И." in _primary_staff_text, _primary_staff_text
+assert "Петрова П.П." in _primary_staff_text, _primary_staff_text
+
 # Patient prose that resembles a VK purpose instruction must survive unchanged.
 _vk_prose_data = copy.deepcopy(manual_data)
 _vk_prose_data.disease_anamnesis = (
