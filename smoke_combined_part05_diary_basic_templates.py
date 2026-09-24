@@ -319,6 +319,68 @@ assert "Жалобы:" not in empty_dynamic, empty_dynamic
 assert "Психический статус:" not in empty_dynamic, empty_dynamic
 assert "TEMPLATE_STATUS_THREE" not in contract_joined, contract_joined
 assert contract_result.final_rows_filled == 1
+
+# BLOCKER #232: automatic dynamic epicrises may use only an observation selected
+# for the exact same calendar date. Two matching dynamic dates must preserve two
+# different sourced states; no admission or neighboring status may be relabelled.
+dynamic_state_source = OUT / "dynamic_exact_date_states.docx"
+dynamic_state_doc = Document()
+for _status in (
+    "DYNAMIC_STATE_ALPHA пациент спокоен, жалоб активно не предъявляет, в беседе доступен.",
+    "DYNAMIC_STATE_BETA пациент отмечает улучшение сна, настроение ровное, поведение упорядочено.",
+    "DYNAMIC_STATE_GAMMA пациент напряжен, отвечает по существу, режим соблюдает.",
+    "DYNAMIC_STATE_DELTA пациент сообщает о тревоге, контакт продуктивный, назначения выполняет.",
+    "DYNAMIC_STATE_EPSILON пациент стабилен, сон удовлетворительный, поведение спокойное.",
+):
+    dynamic_state_doc.add_paragraph(_status)
+dynamic_state_doc.save(dynamic_state_source)
+
+dynamic_exact_result = DiaryService().create_text_diaries(
+    status_files=[dynamic_state_source],
+    diary_files=[contract_dates],
+    output_dir=OUT / "dynamic_exact_date_evidence",
+    patient_name="Маркер Женская Дополнительная",
+    gender_source_name="Маркер Женская Дополнительная",
+    admission_value="08.06.2026",
+    discharge_value="08.07.2026",
+    sick_leave_dynamic_epicrisis=True,
+    sick_leave_from="12.06.2026",
+    birth_date="01.01.1980",
+)
+assert getattr(dynamic_exact_result, "dynamic_epicrisis_count", 0) == 2
+assert dynamic_exact_result.dated_clinical_states[_calendar_date(2026, 6, 22)].startswith("DYNAMIC_STATE_ALPHA")
+assert dynamic_exact_result.dated_clinical_states[_calendar_date(2026, 7, 2)].startswith("DYNAMIC_STATE_DELTA")
+_dynamic_exact_doc = Document(dynamic_exact_result.created_files[0])
+_dynamic_exact_lines = [p.text for p in _dynamic_exact_doc.paragraphs if p.text.strip()]
+_dynamic_first = next(line for line in _dynamic_exact_lines if line.startswith("22.06.26 Динамический эпикриз."))
+_dynamic_second = next(line for line in _dynamic_exact_lines if line.startswith("02.07.26 Динамический эпикриз."))
+assert "Динамическое наблюдение: DYNAMIC_STATE_ALPHA" in _dynamic_first, _dynamic_first
+assert "DYNAMIC_STATE_DELTA" not in _dynamic_first, _dynamic_first
+assert "Динамическое наблюдение: DYNAMIC_STATE_DELTA" in _dynamic_second, _dynamic_second
+assert "DYNAMIC_STATE_ALPHA" not in _dynamic_second, _dynamic_second
+
+# If the dynamic date is absent from the semantic diary plan, fail closed:
+# render administrative facts/signatures only, never borrow a nearby state.
+dynamic_missing_result = DiaryService().create_text_diaries(
+    status_files=[dynamic_state_source],
+    diary_files=[contract_dates],
+    output_dir=OUT / "dynamic_missing_exact_date_evidence",
+    patient_name="Маркер Женская Дополнительная",
+    gender_source_name="Маркер Женская Дополнительная",
+    admission_value="09.06.2026",
+    discharge_value="03.07.2026",
+    sick_leave_dynamic_epicrisis=True,
+    sick_leave_from="09.06.2026",
+    birth_date="01.01.1980",
+)
+assert getattr(dynamic_missing_result, "dynamic_epicrisis_count", 0) == 2
+_dynamic_missing_doc = Document(dynamic_missing_result.created_files[0])
+_dynamic_missing_lines = [p.text for p in _dynamic_missing_doc.paragraphs if p.text.strip()]
+_dynamic_with_source = next(line for line in _dynamic_missing_lines if line.startswith("19.06.26 Динамический эпикриз."))
+_dynamic_without_source = next(line for line in _dynamic_missing_lines if line.startswith("29.06.26 Динамический эпикриз."))
+assert "Динамическое наблюдение: DYNAMIC_STATE_EPSILON" in _dynamic_with_source, _dynamic_with_source
+assert "Динамическое наблюдение:" not in _dynamic_without_source, _dynamic_without_source
+assert "DYNAMIC_STATE_" not in _dynamic_without_source, _dynamic_without_source
 for section in contract_output.sections:
     assert abs(section.left_margin.cm - 1.5) < 0.03
     assert abs(section.right_margin.cm - 1.0) < 0.03

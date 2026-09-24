@@ -442,7 +442,19 @@ def _assert_dynamic_epicrisis_is_additive(root: Path) -> None:
     assert epicrisis_heads[0].startswith("11.09.26 Динамический эпикриз. ФИО:"), epicrisis_heads[0]
     assert epicrisis_heads[1].startswith("21.09.26 Динамический эпикриз. ФИО:"), epicrisis_heads[1]
     assert getattr(with_result, "dynamic_epicrisis_count", 0) == 2
-    assert all("Психический статус: Состояние стабильное." in text for text in epicrisis_heads), epicrisis_heads
+    # 11.09 is an actual semantic diary date, so the dynamic epicrisis reuses
+    # exactly that selected observation. 21.09 is not in the diary plan (the
+    # next planned observation is 22.09), so it must stay administrative-only.
+    assert "Динамическое наблюдение: Состояние спокойное. Контакт продуктивный." in epicrisis_heads[0], epicrisis_heads
+    assert "Динамическое наблюдение:" not in epicrisis_heads[1], epicrisis_heads
+    assert date(2026, 9, 11) in with_result.dated_clinical_states
+    assert date(2026, 9, 21) not in with_result.dated_clinical_states
+    # Undated admission-style arguments supplied to the public compatibility
+    # surface must not leak into the automatic multi-date production route.
+    for text in epicrisis_heads:
+        assert "Жалобы:" not in text, text
+        assert "Принимает:" not in text, text
+        assert "Психический статус:" not in text, text
     assert not any("Профильный статус:" in text for text in paragraphs), paragraphs
     assert not any(text.startswith("Психический статус:") for text in paragraphs), paragraphs
 

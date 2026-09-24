@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Sequence
+from typing import Mapping, Sequence
 
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -27,6 +27,9 @@ class DynamicEpicrisisInput:
     patient_name: str = ""
     birth_date: str = ""
     sick_leave_from: str = ""
+    # Clinical wording selected for this exact epicrisis date from the semantic
+    # diary plan. Never substitute a neighboring/admission observation.
+    clinical_state: str = ""
     complaints: str = ""
     treatment: str = ""
     profile_status: str = ""
@@ -111,6 +114,7 @@ def build_dynamic_epicrisis_text(data: DynamicEpicrisisInput) -> str:
     patient_name = str(data.patient_name or "").strip()
     birth_date = str(data.birth_date or "").strip()
     sick_leave_from = str(data.sick_leave_from or "").strip()
+    clinical_state = str(data.clinical_state or "").strip()
     complaints = str(data.complaints or "").strip()
     treatment = str(data.treatment or "").strip()
     profile_status = str(data.profile_status or "").strip()
@@ -122,6 +126,8 @@ def build_dynamic_epicrisis_text(data: DynamicEpicrisisInput) -> str:
         lines.append(f"Дата рождения: {birth_date}.")
     if sick_leave_from:
         lines.append(f"Лечится с: {sick_leave_from}.")
+    if clinical_state:
+        lines.append(f"Динамическое наблюдение: {clinical_state}")
     if complaints:
         lines.append(f"Жалобы: {complaints}.")
     if treatment:
@@ -254,6 +260,7 @@ def apply_sick_leave_dynamic_epicrises(
     treatment_correction: str = "",
     treating_physician: str = "",
     department_head: str = "",
+    clinical_state_by_date: Mapping[date, str] | None = None,
 ) -> int:
     """Atomically add the historical sick-leave epicrisis blocks to one DOCX."""
     target = Path(path)
@@ -275,20 +282,27 @@ def apply_sick_leave_dynamic_epicrises(
     if not dates:
         return 0
 
-    data = DynamicEpicrisisInput(
-        patient_name=patient_name,
-        birth_date=birth_date,
-        sick_leave_from=f"{base_date:%d.%m.%Y}",
-        complaints=complaints,
-        treatment=treatment,
-        profile_status=profile_status,
-        treatment_correction=treatment_correction,
-        treating_physician=treating_physician,
-        department_head=department_head,
-    )
-    lines = tuple(build_dynamic_epicrisis_text(data).splitlines())
+    # A mapping (even an empty one) means the automatic production route is
+    # enforcing date-specific evidence. Legacy undated clinical arguments are
+    # retained only for explicit low-level callers that do not provide a map.
+    use_legacy_undated = clinical_state_by_date is None
+    state_by_date = clinical_state_by_date or {}
+
     doc = Document(str(target))
     for item_date in dates:
+        data = DynamicEpicrisisInput(
+            patient_name=patient_name,
+            birth_date=birth_date,
+            sick_leave_from=f"{base_date:%d.%m.%Y}",
+            clinical_state=state_by_date.get(item_date, ""),
+            complaints=complaints if use_legacy_undated else "",
+            treatment=treatment if use_legacy_undated else "",
+            profile_status=profile_status if use_legacy_undated else "",
+            treatment_correction=treatment_correction if use_legacy_undated else "",
+            treating_physician=treating_physician,
+            department_head=department_head,
+        )
+        lines = tuple(build_dynamic_epicrisis_text(data).splitlines())
         _remove_regular_diary_block_for_date(doc, item_date)
         _insert_dynamic_block(doc, item_date, lines)
 
@@ -384,7 +398,9 @@ class DiaryService:
                 complaints=complaints,
                 treatment=treatment,
                 profile_status=profile_status,
-                treatment_correction=treatment_correction,
+                # Only exact-date semantic diary observations may supply the
+                # clinical body of an automatic dynamic epicrisis.
+                clinical_state_by_date=result.dated_clinical_states,
                 treating_physician=doctor_name,
                 department_head=department_head_name,
             )

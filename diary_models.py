@@ -5,7 +5,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from datetime import date
 from pathlib import Path
 
 @dataclass
@@ -32,3 +33,6 @@ class DiaryBatchResult:
     gender_replacements: int
     removed_holiday_rows: int
     removed_after_discharge_rows: int
+    # Exact semantic diary observations selected for specific calendar dates.
+    # Dynamic epicrises may consume only an exact-date entry from this map.
+    dated_clinical_states: dict[date, str] = field(default_factory=dict)
