@@ -17,13 +17,14 @@ from tools.generation_performance_profile import Probe, _make_fixture
 
 
 TARGETS = (
-    (medical_gender, "adapt_patient_data_to_gender"),
+    # Keep this list aligned with the helpers actually invoked by
+    # medical_gender.finalize_medical_document. Historical global gender/EPI
+    # cleanup helpers are intentionally excluded: clinical prose is source-owned
+    # and EPI cleanup is now renderer-owned/template-aware.
     (medical_gender, "normalize_facility_references_in_document"),
-    (medical_gender, "adapt_document_to_patient_gender"),
-    (medical_gender, "remove_epi_mentions_from_document"),
+    (medical_gender, "normalize_staff_references_in_document"),
     (medical_gender, "apply_readable_section_spacing"),
     (medical_gender, "replace_paragraph_regex_preserving_runs"),
-    (medical_gender, "patient_gender"),
 )
 
 
