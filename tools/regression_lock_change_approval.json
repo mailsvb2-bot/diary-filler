@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "ad952289a1bcc5bc7c53d00843673f1139c32fb7",
-  "reason": "Deep document correctness audit: source-owned clinical prose and investigation results; template-owned cleanup; no fabricated clinical facts; coherent chronology/employment/commission semantics; one year-aware production calendar shared by ordinary diary holiday removal and dynamic epicrisis scheduling; explicitly approved runtime architecture budget 126; stale imports removed; safety transaction fixture now supplies the mandatory explicit employment decision.",
+  "reason": "Deep document correctness audit: source-owned clinical prose and investigation results; template-owned cleanup; no fabricated clinical facts; coherent chronology/employment/commission semantics; year-aware production calendar; runtime budget 126; stale holiday imports removed; regression fixtures aligned with strengthened employment, selected-form, sick-leave and discharge/commission chronology contracts.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -32,7 +32,7 @@
     "medical_renderer_special.py": "66caa8568c6aaa6de609397be2b70f402de7e997",
     "medical_service.py": "19105374a78f3fb05c3ca04047532c84b992d988",
     "prod_audit.py": "58da22c954f9217a5b4ff0e7f44dace45787dad9",
-    "safety_integrity_check.py": "2cb1176d842348000611bf59272957322ed7a7b1",
+    "safety_integrity_check.py": "2f406ddce4080a0a11db86804f3732af1b8d158d",
     "smoke_combined_part02_ui_parser_regressions.py": "01798735afbee80334d401806c33e79ae2cf980a",
     "smoke_combined_part03_medical_parser_manual.py": "e1c619bae68b3421ccbdafd9b366178f9b2eed86",
     "smoke_combined_part04_medical_generation.py": "6243fe3199c0542841b78096ea016b382200fdbe",
