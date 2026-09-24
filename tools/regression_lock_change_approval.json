@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "ad952289a1bcc5bc7c53d00843673f1139c32fb7",
-  "reason": "Deep document correctness audit: source-owned clinical prose and investigation results; template-owned cleanup; no fabricated clinical facts; coherent chronology/employment/commission semantics; one year-aware production calendar shared by ordinary diary holiday removal and dynamic epicrisis scheduling; explicitly approved runtime architecture budget 126; stale holiday imports removed; safety transaction fixture updated to satisfy the strengthened explicit employment decision contract.",
+  "reason": "Deep document correctness audit: source-owned clinical prose and investigation results; template-owned cleanup; no fabricated clinical facts; coherent chronology/employment/commission semantics; one year-aware production calendar shared by ordinary diary holiday removal and dynamic epicrisis scheduling; runtime architecture budget 126; stale holiday imports removed; regression fixtures aligned with explicit employment and selected-form decisions.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -41,7 +41,7 @@
     "tests/golden_docx_manifest.json": "ce01c9808be9652acceec987d7330c15e1ffb003",
     "tools/document_mechanics_change_approval.json": "121b331a9ef2cb036d9ca8e73e8acbd5223dfd2e",
     "tools/docx_block_boundary_regression.py": "95977a51422cab35e072a6fcc5f10fb2f89ce619",
-    "tools/generation_performance_profile.py": "e89a69cadd0315771070d8f079e421dfb43e75cd",
+    "tools/generation_performance_profile.py": "d4fc2714f48ecba832b33e3bb2db4730b72203a8",
     "diary_calendar.py": "cd5400014909b82881b6301ef0f6c463aa7ecf82",
     "diary_table_numbers.py": "f99cad80d4ad3a690cec04fbe6b233e5cae7a26b",
     "diary_table_rows.py": "2a421f17a35a2a6fd85de12de5a03c760b842dc5",
