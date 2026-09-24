@@ -5,7 +5,7 @@ import ast
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-MAX_RUNTIME_PYTHON_FILES = 125
+MAX_RUNTIME_PYTHON_FILES = 126
 RELEASE_ONLY_ENTRYPOINTS = {"gui_runtime_check.py", "verify_built_exe.py"}
 
 

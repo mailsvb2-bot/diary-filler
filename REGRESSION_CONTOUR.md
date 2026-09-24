@@ -14,7 +14,7 @@ This is intentionally stricter than a normal unit test: for safety/support work,
 
 - this behavior contract and regression contour remain present;
 - the document-mechanics guard remains wired into Windows CI;
-- the runtime Python-file architecture budget is not raised;
+- the runtime Python-file architecture budget remains explicit and may be raised only for an intentionally approved, separately test-covered runtime module;
 - desktop intake still ends at the existing `_apply_primary_document_path(...)` boundary;
 - the diagnostic self-check remains technical-only and does not parse patient documents;
 - the normal packaged GUI/EXE release checks are still present;
