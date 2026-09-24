@@ -13,7 +13,7 @@ from docx.document import Document as DocxDocument
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.shared import Cm, Pt
 
-from diary_constants import DIARY_SIGNATURE_GAP_LINES, HOLIDAY_SKIP_END_DAY, HOLIDAY_SKIP_MONTHS, HOLIDAY_SKIP_START_DAY, STATUS_FONT_SIZE_PT, STRUCTURAL_DIARY_PREFIXES
+from diary_constants import DIARY_SIGNATURE_GAP_LINES, STATUS_FONT_SIZE_PT, STRUCTURAL_DIARY_PREFIXES
 from diary_dates import add_month, format_month_year, parse_month_year, safe_row_date
 from diary_text_parser import is_signature_paragraph_text, normalize_text, remove_examinee_words
 

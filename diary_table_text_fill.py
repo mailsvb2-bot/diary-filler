@@ -12,7 +12,7 @@ from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.shared import Pt
 
-from diary_constants import HOLIDAY_SKIP_END_DAY, HOLIDAY_SKIP_MONTHS, HOLIDAY_SKIP_START_DAY, STATUS_FONT_SIZE_PT, STRUCTURAL_DIARY_PREFIXES
+from diary_constants import STATUS_FONT_SIZE_PT, STRUCTURAL_DIARY_PREFIXES
 from diary_dates import add_month, format_month_year, parse_month_year, safe_row_date
 from diary_text_parser import is_signature_paragraph_text, normalize_text, remove_examinee_words
 from diary_table_cells import clear_paragraph_keep_properties, first_signature_paragraph_index, is_structural_diary_prefix, reset_cell_to_one_paragraph, write_diary_text_into_existing_paragraph

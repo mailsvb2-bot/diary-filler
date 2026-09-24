@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "base_sha": "45a2c067e7327088acd72ae9b259867653eec3f6",
-  "reason": "Deep medical-document correctness audit: evidence-only rendering and source-owned clinical prose; template-owned cleanup; coherent work/commission decisions and chronology; year-aware shared production calendar for diary rows and dynamic epicrises; no fabricated clinical facts.",
+  "reason": "Deep medical-document correctness audit: evidence-only rendering and source-owned clinical prose; template-owned cleanup; coherent work/commission decisions and chronology; year-aware shared production calendar for diary rows and dynamic epicrises; no fabricated clinical facts; remove stale imports of retired holiday constants after calendar extraction.",
   "approved_blobs": {
     "actions_diary_flow.py": "986922b0f35633c51cf9d5117b029445d98fc70e",
     "dialog_expert.py": "65fdd91fbc9c0b59aca8a544bd8f70296eec3907",
@@ -22,6 +22,9 @@
     "medical_renderer_labs.py": "51f25950f3a849d7328b712cab7b7be6bb523914",
     "medical_renderer_primary.py": "6cd8c30352e282fd9bcdbcb05e38074edcee411e",
     "medical_renderer_special.py": "66caa8568c6aaa6de609397be2b70f402de7e997",
-    "medical_service.py": "19105374a78f3fb05c3ca04047532c84b992d988"
+    "medical_service.py": "19105374a78f3fb05c3ca04047532c84b992d988",
+    "diary_table_cells.py": "aeea399266ef433161f0ff9f9ad94de99c197b6a",
+    "diary_table_columns.py": "0f3c159226aaadee2ce01eb3931b2cfafae52b08",
+    "diary_table_text_fill.py": "d3e53e85ec3e7b1bbc579e65164921c562e02116"
   }
 }
