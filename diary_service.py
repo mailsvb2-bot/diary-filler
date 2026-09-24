@@ -14,11 +14,11 @@ from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 
 from diary_batch import _clinical_diary_offsets, create_text_diaries
+from diary_calendar import is_fixed_holiday, is_non_working_day
 from diary_dates import parse_full_date, parse_optional_discharge_date
 from diary_models import DiaryBatchResult
 
 
-FIXED_HOLIDAY_RANGES: tuple[tuple[int, int, int], ...] = ((1, 1, 9), (5, 1, 9))
 _LEADING_DATE_RE = re.compile(r"^\s*([0-3]?\d)[./-]([01]?\d)[./-](\d{2}|20\d{2})(?=\s|$)")
 
 
@@ -33,14 +33,6 @@ class DynamicEpicrisisInput:
     treatment_correction: str = ""
     treating_physician: str = ""
     department_head: str = ""
-
-
-def is_fixed_holiday(day: date) -> bool:
-    return any(month == day.month and start <= day.day <= end for month, start, end in FIXED_HOLIDAY_RANGES)
-
-
-def is_non_working_day(day: date) -> bool:
-    return day.weekday() >= 5 or is_fixed_holiday(day)
 
 
 def next_working_day(day: date, *, used=()) -> date:
@@ -114,21 +106,34 @@ def dynamic_epicrisis_signature_lines(
 
 
 def build_dynamic_epicrisis_text(data: DynamicEpicrisisInput) -> str:
-    correction = str(data.treatment_correction or "").strip() or "Лекарства принимает согласно назначениям."
-    return "\n".join(
-        [
-            "Динамический эпикриз.",
-            f"ФИО: {data.patient_name or 'не указано'}.",
-            f"Дата рождения: {data.birth_date or 'не указана'}.",
-            f"Лечится с: {data.sick_leave_from or 'не указано'}.",
-            f"Жалобы: {data.complaints or 'без существенной динамики'}.",
-            f"Принимает: {data.treatment or 'согласно листу назначений'}.",
-            f"Психический статус: {data.profile_status or 'без существенной динамики'}.",
-            correction,
-            "Продолжение лечения по листу нетрудоспособности.",
-            *dynamic_epicrisis_signature_lines(data.treating_physician, data.department_head),
-        ]
-    )
+    """Build only from explicit patient/source facts; never invent clinical state."""
+    lines = ["Динамический эпикриз."]
+    patient_name = str(data.patient_name or "").strip()
+    birth_date = str(data.birth_date or "").strip()
+    sick_leave_from = str(data.sick_leave_from or "").strip()
+    complaints = str(data.complaints or "").strip()
+    treatment = str(data.treatment or "").strip()
+    profile_status = str(data.profile_status or "").strip()
+    correction = str(data.treatment_correction or "").strip()
+
+    if patient_name:
+        lines.append(f"ФИО: {patient_name}.")
+    if birth_date:
+        lines.append(f"Дата рождения: {birth_date}.")
+    if sick_leave_from:
+        lines.append(f"Лечится с: {sick_leave_from}.")
+    if complaints:
+        lines.append(f"Жалобы: {complaints}.")
+    if treatment:
+        lines.append(f"Принимает: {treatment}.")
+    if profile_status:
+        lines.append(f"Психический статус: {profile_status}.")
+    if correction:
+        lines.append(correction)
+
+    lines.append("Продолжение лечения по листу нетрудоспособности.")
+    lines.extend(dynamic_epicrisis_signature_lines(data.treating_physician, data.department_head))
+    return "\n".join(lines)
 
 
 def _leading_date(text: str) -> date | None:
@@ -253,8 +258,19 @@ def apply_sick_leave_dynamic_epicrises(
     """Atomically add the historical sick-leave epicrisis blocks to one DOCX."""
     target = Path(path)
     admission = parse_full_date(admission_value)
+    sick_leave_text = str(sick_leave_from or "").strip()
+    if not sick_leave_text:
+        raise ValueError(
+            "Для динамических эпикризов по листу нетрудоспособности укажите дату начала больничного."
+        )
+    try:
+        sick_leave_date = parse_full_date(sick_leave_text)
+    except ValueError as exc:
+        raise ValueError(
+            "Дата начала больничного для динамических эпикризов указана неверно."
+        ) from exc
     discharge = parse_optional_discharge_date(discharge_value)
-    base_date = dynamic_epicrisis_base_date(admission, sick_leave_from)
+    base_date = max(admission, sick_leave_date)
     dates = dynamic_epicrisis_dates(base_date, discharge_date=discharge, limit=12)
     if not dates:
         return 0
@@ -399,6 +415,22 @@ class DiaryService:
         profile_status: str = "",
         treatment_correction: str = "",
     ) -> DiaryBatchResult:
+        # Validate the dynamic-epicrisis contract before the underlying diary
+        # generator commits any visible DOCX. A bad/missing sick-leave date must
+        # never leave a partial kit behind.
+        if sick_leave_dynamic_epicrisis:
+            sick_leave_text = str(sick_leave_from or "").strip()
+            if not sick_leave_text:
+                raise ValueError(
+                    "Для динамических эпикризов по листу нетрудоспособности укажите дату начала больничного."
+                )
+            try:
+                parse_full_date(sick_leave_text)
+            except ValueError as exc:
+                raise ValueError(
+                    "Дата начала больничного для динамических эпикризов указана неверно."
+                ) from exc
+
         def finalize(result: DiaryBatchResult) -> DiaryBatchResult:
             return self._add_dynamic_epicrises_if_needed(
                 result,

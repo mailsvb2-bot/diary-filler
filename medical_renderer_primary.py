@@ -23,7 +23,7 @@ from medical_formatting import (
     format_staff_short_name,
     treatment_period_text,
 )
-from medical_gender import finalize_medical_document
+from medical_gender import finalize_medical_document, patient_gender
 from medical_markers import (
     COMMISSION_MARKERS,
     DISCHARGE_MARKERS,
@@ -35,9 +35,6 @@ from medical_markers import (
 from medical_models import PatientData, admission_occurrence_label, clean_admission_detail
 from medical_parser_sanitize import sanitize_diagnosis
 from medical_text_utils import normalize_match
-
-
-DISCHARGE_RECOMMENDATION_TEXT = "Рекомендовано: наблюдение у районного психиатра, приём препаратов"
 
 
 class MedicalRendererPrimaryMixin:
@@ -56,9 +53,12 @@ class MedicalRendererPrimaryMixin:
         editor.replace_block(["Год рождения", "Дата рождения"], "Год рождения:", data.birth, PRIMARY_MARKERS, allow_empty=True)
         editor.replace_block(["Зарегистрирован", "Регистрация по адресу"], "Регистрация по адресу:", data.registered, PRIMARY_MARKERS, allow_empty=True)
         self._place_psych_account_after_registration(editor, data, ["Регистрация по адресу"], fallback_markers=["Ф.И.О.", "ФИО"])
-        editor.replace_block(["Работает в организации"], "Работает в организации:", data.work_org, PRIMARY_MARKERS, allow_empty=True)
-        editor.replace_block(["Должность"], "Должность:", data.position, PRIMARY_MARKERS, allow_empty=True)
-        editor.replace_block(["Больничный лист"], "Больничный лист:", data.sick_leave, PRIMARY_MARKERS, allow_empty=True)
+        if data.expert_work_status == "нет":
+            editor.remove_all_matching_paragraphs(["Работает в организации", "Должность"])
+        else:
+            editor.replace_block(["Работает в организации"], "Работает в организации:", data.work_org, PRIMARY_MARKERS, allow_empty=True)
+            editor.replace_block(["Должность"], "Должность:", data.position, PRIMARY_MARKERS, allow_empty=True)
+        editor.remove_all_matching_paragraphs(["Больничный лист"])
         editor.replace_block(["Оформление инвалидности"], "Оформление инвалидности:", data.disability, PRIMARY_MARKERS, allow_empty=True)
         editor.replace_block(["Направление от РВК"], "Направление от РВК:", data.rvk_referral, PRIMARY_MARKERS, allow_empty=True)
         editor.remove_all_matching_paragraphs(["Экспертный анамнез"])
@@ -70,22 +70,22 @@ class MedicalRendererPrimaryMixin:
             allow_empty=True,
         )
         editor.remove_all_matching_paragraphs(["Целесообразна госпитализация"])
-        editor.replace_block(["Жалобы на момент осмотра", "Жалобы"], "Жалобы на момент осмотра:", data.complaints, PRIMARY_MARKERS)
-        editor.replace_block(["Анамнез жизни"], "Анамнез жизни:", data.life_anamnesis, PRIMARY_MARKERS)
-        editor.replace_block(["Анамнез заболевания"], "Анамнез заболевания:", data.disease_anamnesis, PRIMARY_MARKERS)
-        editor.replace_block(["Психический статус"], "Психический статус:", data.mental_status, PRIMARY_MARKERS)
-        editor.replace_block(["Соматический статус"], "Соматический статус:", data.somatic_status, PRIMARY_MARKERS)
-        editor.replace_block(["План обследования"], "План обследования:", data.examination_plan, PRIMARY_MARKERS)
+        editor.replace_block(["Жалобы на момент осмотра", "Жалобы"], "Жалобы на момент осмотра:", data.complaints, PRIMARY_MARKERS, allow_empty=True)
+        editor.replace_block(["Анамнез жизни"], "Анамнез жизни:", data.life_anamnesis, PRIMARY_MARKERS, allow_empty=True)
+        editor.replace_block(["Анамнез заболевания"], "Анамнез заболевания:", data.disease_anamnesis, PRIMARY_MARKERS, allow_empty=True)
+        editor.replace_block(["Психический статус"], "Психический статус:", data.mental_status, PRIMARY_MARKERS, allow_empty=True)
+        editor.replace_block(["Соматический статус"], "Соматический статус:", data.somatic_status, PRIMARY_MARKERS, allow_empty=True)
+        editor.replace_block(["План обследования"], "План обследования:", data.examination_plan, PRIMARY_MARKERS, allow_empty=True)
         editor.replace_block(["План лечения"], "План лечения:", data.treatment_plan, PRIMARY_MARKERS)
 
-        diagnosis_sentence = ""
         diagnosis = sanitize_diagnosis(data.diagnosis)
-        if diagnosis:
-            diagnosis_sentence = (
-                "На основании данных анамнеза жизни и заболевания, психического статуса, "
-                f"данных клинических исследований установлен диагноз: {diagnosis}"
-            )
-        editor.replace_block(["На основании данных", "Диагноз"], "", diagnosis_sentence, PRIMARY_MARKERS)
+        editor.replace_block(
+            ["На основании данных", "Диагноз"],
+            "Диагноз:",
+            diagnosis,
+            PRIMARY_MARKERS,
+            allow_empty=True,
+        )
         editor.replace_block(["Эпидемиологический анамнез"], "Эпидемиологический анамнез:", data.epidemiology, PRIMARY_MARKERS, allow_empty=True)
         put_expert_anamnesis(
             editor,
@@ -99,15 +99,13 @@ class MedicalRendererPrimaryMixin:
         )
         editor.replace_block(["Врач психиатр", "Врач-психиатр"], "Врач психиатр", format_staff_short_name(data.doctor), PRIMARY_MARKERS, allow_empty=True)
         editor.replace_block(["Зав. отделением", "Зав. отд."], "Зав. отделением", format_staff_short_name(data.head), PRIMARY_MARKERS, allow_empty=True)
-        self._remove_trailing_clinical_leakage(doc, data)
-        finalize_medical_document(doc, data)
+        self._remove_trailing_clinical_leakage(editor, data)
+        finalize_medical_document(doc, data, editor=editor)
         doc.save(str(output_path))
 
     def render_discharge(self, template_path: str | Path, output_path: str | Path, data: PatientData) -> None:
         doc = Document(str(template_path))
         editor = DocxBlockEditor(doc)
-        dates = data.lab_dates()
-
         header_date = data.discharge_date or data.admission_date or "Дата, время"
         header = f"{header_date}      Выписной эпикриз № {data.case_number}".rstrip()
         editor.replace_first_matching_paragraph(["Дата, время"], header)
@@ -118,7 +116,13 @@ class MedicalRendererPrimaryMixin:
         person_line = ", ".join(part for part in person_parts if part).strip(" ,")
         editor.replace_first_matching_paragraph(["г.р.,", "зарегистрирован по адресу", "регистрация по адресу"], person_line)
         self._place_psych_account_after_registration(editor, data, ["регистрация по адресу"], fallback_markers=[data.fio])
-        period = f"Находился на лечении в ГБУЗ НО «НКЦПЗ» диспансер №2 с {data.admission_date} по {data.discharge_date}".strip()
+        gender = patient_gender(data)
+        if gender == "female":
+            period = f"Находилась на лечении в ГБУЗ НО «НКЦПЗ» диспансер №2 с {data.admission_date} по {data.discharge_date}".strip()
+        elif gender == "male":
+            period = f"Находился на лечении в ГБУЗ НО «НКЦПЗ» диспансер №2 с {data.admission_date} по {data.discharge_date}".strip()
+        else:
+            period = f"Период лечения в ГБУЗ НО «НКЦПЗ» диспансер №2: с {data.admission_date} по {data.discharge_date}".strip()
         editor.replace_first_matching_paragraph(["Находился на лечении"], period)
         period_index = editor.find_paragraph_index(["Находился на лечении"])
         if period_index is not None:
@@ -136,20 +140,29 @@ class MedicalRendererPrimaryMixin:
             DISCHARGE_MARKERS,
             allow_empty=True,
         )
-        editor.replace_block(["Жалобы при поступлении", "Жалобы"], "Жалобы при поступлении:", data.complaints, DISCHARGE_MARKERS)
-        editor.replace_block(["Анамнез жизни"], "Анамнез жизни:", data.life_anamnesis, DISCHARGE_MARKERS)
-        editor.replace_block(["Анамнез заболевания"], "Анамнез заболевания:", data.disease_anamnesis, DISCHARGE_MARKERS)
-        editor.replace_block(["Психический статус при поступлении", "Психический статус"], "Психический статус при поступлении:", data.mental_status, DISCHARGE_MARKERS)
+        editor.replace_block(["Жалобы при поступлении", "Жалобы"], "Жалобы при поступлении:", data.complaints, DISCHARGE_MARKERS, allow_empty=True)
+        editor.replace_block(["Анамнез жизни"], "Анамнез жизни:", data.life_anamnesis, DISCHARGE_MARKERS, allow_empty=True)
+        editor.replace_block(["Анамнез заболевания"], "Анамнез заболевания:", data.disease_anamnesis, DISCHARGE_MARKERS, allow_empty=True)
+        editor.replace_block(["Психический статус при поступлении", "Психический статус"], "Психический статус при поступлении:", data.mental_status, DISCHARGE_MARKERS, allow_empty=True)
         diagnosis = sanitize_diagnosis(data.diagnosis)
         if diagnosis:
-            diagnosis_sentence = (
-                "На основании данных анамнеза жизни и заболевания, психического статуса, "
-                f"данных клинических исследований установлен диагноз: {diagnosis}"
-            )
-            if not editor.replace_block(["На основании данных", "Диагноз"], "", diagnosis_sentence, DISCHARGE_MARKERS):
-                editor.insert_before_first_matching_paragraph(["Сомато-неврологический статус", "Соматический статус"], diagnosis_sentence)
-        editor.replace_block(["Сомато-неврологический статус", "Соматический статус"], "Сомато-неврологический статус:", data.somatic_status, DISCHARGE_MARKERS)
-        self._replace_lab_lines(editor, dates)
+            if not editor.replace_block(
+                ["На основании данных", "Диагноз"],
+                "Диагноз:",
+                diagnosis,
+                DISCHARGE_MARKERS,
+            ):
+                editor.insert_before_first_matching_paragraph(
+                    ["Сомато-неврологический статус", "Соматический статус"],
+                    f"Диагноз: {diagnosis}",
+                )
+        editor.replace_block(["Сомато-неврологический статус", "Соматический статус"], "Сомато-неврологический статус:", data.somatic_status, DISCHARGE_MARKERS, allow_empty=True)
+        self._render_sourced_investigation_results(
+            editor,
+            data,
+            DISCHARGE_MARKERS,
+            before_markers=["ЭПИ", "Диагноз", "Лечение", "Зав. отд."],
+        )
         if data.epi_text:
             editor.replace_block(["ЭПИ"], "ЭПИ –", data.epi_text, DISCHARGE_MARKERS)
         else:
@@ -157,17 +170,11 @@ class MedicalRendererPrimaryMixin:
         if data.treatment_plan:
             editor.replace_block(["Лечение"], "Лечение:", data.treatment_plan, DISCHARGE_MARKERS)
 
-        # The recommendation is owned by the discharge renderer.  Never allow a
-        # stale sentence bundled in an old template to leak into the final epicrisis.
-        recommendation_done = editor.replace_first_matching_paragraph(
-            ["Рекомендовано"], DISCHARGE_RECOMMENDATION_TEXT
-        )
-        if not recommendation_done:
-            recommendation_done = editor.insert_before_first_matching_paragraph(
-                ["Зав. отд.", "Врач-психиатр"], DISCHARGE_RECOMMENDATION_TEXT
-            )
-        if not recommendation_done:
-            doc.add_paragraph(DISCHARGE_RECOMMENDATION_TEXT)
+        # Historical bundled templates contain a fixed positive treatment
+        # outcome and generic medical recommendations. Neither is patient
+        # evidence. Until explicit discharge-outcome/recommendation fields are
+        # sourced from the doctor, remove those example blocks fail-closed.
+        editor.remove_all_matching_paragraphs(["За время лечения", "Рекомендовано"])
 
         signature = (
             f"  Зав. отд. {format_staff_short_name(data.head)}"
@@ -175,6 +182,5 @@ class MedicalRendererPrimaryMixin:
             f"Врач-психиатр\t{format_staff_short_name(data.doctor)}"
         )
         editor.replace_first_matching_paragraph(["Зав. отд.", "Врач-психиатр"], signature)
-        self._move_discharge_outcome_before_signatures(doc)
-        finalize_medical_document(doc, data)
+        finalize_medical_document(doc, data, editor=editor)
         doc.save(str(output_path))

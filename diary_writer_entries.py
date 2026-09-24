@@ -208,7 +208,15 @@ def find_final_entry_index(
     for entry_index in range(len(data_entries) - 1, -1, -1):
         day_value = dated_entries[entry_index]["day"]
         row_month = int(dated_entries[entry_index]["month"])
-        if not (remove_holiday_rows and is_holiday_skip_date(day_value if isinstance(day_value, int) else None, row_month)):
+        row_year = int(dated_entries[entry_index]["year"])
+        if not (
+            remove_holiday_rows
+            and is_holiday_skip_date(
+                day_value if isinstance(day_value, int) else None,
+                row_month,
+                row_year,
+            )
+        ):
             return entry_index
     return None
 
@@ -223,6 +231,7 @@ def mark_skip_flags(
     for entry_index, entry in enumerate(dated_entries):
         day_value = entry["day"]
         row_month = int(entry["month"])
+        row_year = int(entry["year"])
         is_final_row = final_entry_index is not None and entry_index == final_entry_index
         after_final_discharge_row = (
             discharge_date is not None
@@ -233,7 +242,11 @@ def mark_skip_flags(
         entry["skip_after_discharge"] = after_final_discharge_row
         entry["skip_holiday"] = (
             remove_holiday_rows
-            and is_holiday_skip_date(day_value if isinstance(day_value, int) else None, row_month)
+            and is_holiday_skip_date(
+                day_value if isinstance(day_value, int) else None,
+                row_month,
+                row_year,
+            )
             and not is_final_row
             and not after_final_discharge_row
         )

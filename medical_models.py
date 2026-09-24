@@ -183,6 +183,7 @@ class PatientData:
     mental_status: str = ""
     somatic_status: str = ""
     examination_plan: str = ""
+    investigation_results: str = ""
     treatment_plan: str = ""
     # True only when the primary document itself contains an explicit
     # treatment section row: «Лечение», «Назначенное лечение» or

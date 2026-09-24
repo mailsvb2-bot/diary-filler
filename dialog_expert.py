@@ -164,7 +164,7 @@ class DialogExpertMixin:
         that contains an EPI block. One answer is reused across all selected docs.
         """
         selected = set(selected_medical)
-        sick_leave_docs = {"primary", "admission_doctor_referral", "discharge", "commission"}
+        sick_leave_docs = {"discharge", "commission"}
         disability_docs = {"primary", "admission_doctor_referral"}
         epi_docs = {"discharge", "commission", "vk_mse", "sick_leave_vk", "rvk"}
         rvk_referral_docs = {"primary", "admission_doctor_referral"}

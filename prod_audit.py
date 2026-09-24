@@ -17,10 +17,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 TARGET_VERSION = "1.4.23"
 TARGET_VERSION_LABEL = "v1.4.23-word-safety"
-MAX_PYTHON_FILES = 125
+MAX_PYTHON_FILES = 126
 MAX_TINY_PYTHON_FILES = 25
 # Release/CI probes are executable quality gates, not runtime architecture.
-# Keep the 125-file runtime budget intact instead of "fixing" the gate by
+# Keep the explicit runtime budget intact instead of "fixing" the gate by
 # silently raising it whenever a new QA entrypoint is added.
 RELEASE_ONLY_ENTRYPOINTS = {"gui_runtime_check.py", "verify_built_exe.py"}
 
@@ -682,6 +682,9 @@ def _assert_clinical_popup_and_document_order_contract() -> None:
     labs = _read("medical_renderer_labs.py")
     special = _read("medical_renderer_special.py")
     parser = _read("medical_parser.py")
+    parser_blocks = _read("medical_parser_blocks.py")
+    models = _read("medical_models.py")
+    editor_replace = _read("medical_docx_editor_replace.py")
 
     required_dialog = (
         "На учёте у психиатров",
@@ -731,6 +734,23 @@ def _assert_clinical_popup_and_document_order_contract() -> None:
 
     if '"Регистрация по адресу"' not in parser:
         _fail("parser cannot read the canonical registration wording")
+    if "investigation_results: str" not in models:
+        _fail("PatientData lost the source-owned investigation-results field")
+    if '"investigation_results": ("Результаты обследований", "Результаты исследований")' not in parser:
+        _fail("parser no longer preserves the explicit investigation-results block")
+    if "inside_investigation_results" not in parser_blocks or 'marker_norm == normalize_match("ЭЭГ")' not in parser_blocks:
+        _fail("EEG can truncate the sourced investigation-results block")
+    if "_render_sourced_investigation_results" not in labs:
+        _fail("source-owned investigation-results renderer is missing")
+    for filename, source in (
+        ("medical_renderer_primary.py", primary),
+        ("medical_renderer_commission.py", commission),
+        ("medical_renderer_special.py", special),
+    ):
+        if "_render_sourced_investigation_results(" not in source:
+            _fail(f"{filename} no longer carries sourced investigation results")
+        if "_replace_lab_lines(editor, dates)" in source:
+            _fail(f"{filename} reintroduced date-driven fabricated investigation results")
     for filename, source in (
         ("medical_renderer_primary.py", primary),
         ("medical_renderer_commission.py", commission),
@@ -747,8 +767,10 @@ def _assert_clinical_popup_and_document_order_contract() -> None:
         _fail("joint-exam header may fall back to a wrong non-popup date")
     if "data.commission_date or data.admission_date" in commission:
         _fail("joint-exam date silently falls back to admission date")
-    if "_remove_trailing_clinical_leakage(doc, data)" not in primary or "_remove_trailing_clinical_leakage(doc, data)" not in commission:
-        _fail("clinical trailing-leak cleanup is missing from primary/joint/admission flow")
+    if "_remove_trailing_clinical_leakage(editor, data)" not in primary or "_remove_trailing_clinical_leakage(editor, data)" not in commission:
+        _fail("template-aware clinical trailing-leak cleanup is missing from primary/joint/admission flow")
+    if "_remove_trailing_clinical_leakage(doc, data)" in primary or "_remove_trailing_clinical_leakage(doc, data)" in commission:
+        _fail("clinical trailing-leak cleanup bypasses template ownership and may delete patient prose")
     if r"\bцелесообразна\s+госпитализация\b" not in labs:
         _fail("trailing cleanup lost the word-boundary guard for hospitalization recommendation")
     if "replace_paragraph_regex_preserving_runs" not in labs:
@@ -757,8 +779,18 @@ def _assert_clinical_popup_and_document_order_contract() -> None:
         _fail("psychiatric-account placement lacks a fallback when registration is empty")
     if "_TRAILING_COMPLAINT_RE" not in labs or "_complaints_equivalent" not in labs or "SequenceMatcher" not in labs:
         _fail("legacy trailing complaint cleanup no longer handles prose/morphology variants")
-    if "_move_discharge_outcome_before_signatures(doc)" not in primary:
-        _fail("discharge outcome/recommendations are no longer forced before signatures")
+    if "DISCHARGE_RECOMMENDATION_TEXT" in primary:
+        _fail("discharge renderer reintroduced a hard-coded patient recommendation")
+    if 'remove_all_matching_paragraphs(["За время лечения", "Рекомендовано"])' not in primary:
+        _fail("discharge renderer no longer clears unsourced template outcome/recommendations")
+    if "_move_discharge_outcome_before_signatures" in primary or "_move_discharge_outcome_before_signatures" in labs:
+        _fail("discharge post-processing may move patient recommendation prose out of anamnesis")
+    if 'template_text = editor.template_paragraph_text(paragraph)' not in commission:
+        _fail("admission-doctor referral finalizer no longer distinguishes template rows from patient prose")
+    if 'if template_text is None or "направляется" not in template_text:' not in commission:
+        _fail("admission-doctor referral finalizer can match patient narrative")
+    if 'def replace_first_matching_regex' not in editor_replace or 'template_text = self.template_paragraph_text(paragraph)' not in editor_replace:
+        _fail("regex document replacement can target inserted patient text")
 
 
 def _assert_diary_service_boundary() -> None:
@@ -783,6 +815,19 @@ def _assert_diary_service_boundary() -> None:
     for forbidden in ("fill_diary_batch", "text_output"):
         if forbidden in actions:
             _fail(f"GUI diary flow still selects legacy architecture through: {forbidden}")
+    # Admission-time clinical fields are not evidence for a later dated dynamic
+    # epicrisis. The production GUI must fail closed until a date-specific
+    # observation source is wired.
+    for forbidden in (
+        "complaints = patient_data_snapshot.complaints",
+        "treatment = patient_data_snapshot.treatment_plan",
+        "profile_status = patient_data_snapshot.mental_status",
+        'getattr(live_data, "complaints"',
+        'getattr(live_data, "treatment_plan"',
+        'getattr(live_data, "mental_status"',
+    ):
+        if forbidden in actions:
+            _fail("dynamic epicrisis relabels admission snapshot as later clinical state: " + forbidden)
     if "class DiaryService" not in service or "def create_text_diaries" not in service:
         _fail("Production DiaryService contract is missing")
     if "text_output" in service or "from diary_batch import fill_diary_batch" in service:
@@ -951,9 +996,9 @@ def _assert_shared_clinical_popup_contract() -> None:
         (medical_flow, 'data.disability = "нужно"', "disability decision is not copied into patient snapshot"),
         (init, 'self.epi_present_var = tk.StringVar()', "EPI decision state is not patient scoped"),
         (window, 'self._diary_compact_row(files, 0)', "Block 02 no longer starts with Dates/Texts row"),
-        (expert, 'sick_leave_docs = {"primary", "admission_doctor_referral", "discharge", "commission"}', "shared popup skips sick-leave decision for expert-anamnesis documents"),
+        (expert, 'sick_leave_docs = {"discharge", "commission"}', "shared popup must scope sick-leave decision to discharge/commission documents"),
         (expert, 'disability_docs = {"primary", "admission_doctor_referral"}', "shared popup disability scope drifted from templates with explicit disability rows"),
-        (service, 'sick_leave_docs = {"primary", "admission_doctor_referral", "discharge", "commission"}', "service boundary skips sick-leave validation for expert-anamnesis documents"),
+        (service, 'sick_leave_docs = {"discharge", "commission"}', "service boundary must scope sick-leave validation to discharge/commission documents"),
         (service, 'disability_docs = {"primary", "admission_doctor_referral"}', "service boundary disability scope drifted from explicit template rows"),
         (service, 'parse_sick_leave_value(data.sick_leave)', "service boundary cannot round-trip rendered sick-leave values"),
         (service, 'data.expert_sick_leave_from = rendered_sick_from', "rendered sick-leave start date is not restored at service boundary"),
@@ -1010,8 +1055,15 @@ def _assert_diagnosis_diary_text_contract() -> None:
         _fail("production diary route lost the universal final-discharge diary text")
     if "adapt_text_to_patient_gender(FINAL_DIARY_TEXT" not in batch:
         _fail("final discharge diary is no longer generated from FINAL_DIARY_TEXT")
-    if "Состояние улучшилось." not in constants or "На текущую дату оформлена выписка" not in constants:
-        _fail("canonical universal final diary text was changed or removed")
+    if "На текущую дату оформлена выписка" not in constants:
+        _fail("canonical universal final-discharge diary text was changed or removed")
+    for fabricated_claim in (
+        "Состояние улучшилось.",
+        "суицидальных мыслей не высказывает",
+        "Критика к состоянию присутствует",
+    ):
+        if fabricated_claim in constants:
+            _fail(f"final diary contains unsourced clinical claim: {fabricated_claim}")
 
     for required in (
         "def _direct_diagnosis_name_rank",

@@ -102,12 +102,46 @@ class MedicalRendererLabsMixin:
         return SequenceMatcher(None, left, right).ratio() >= 0.92
 
     @classmethod
-    def _remove_trailing_clinical_leakage(cls, doc, data: PatientData) -> None:
+    def _remove_trailing_clinical_leakage(cls, editor: DocxBlockEditor, data: PatientData) -> None:
+        """Clean legacy template leakage without touching inserted patient prose."""
         complaint_core = cls._complaint_core(data.complaints)
-        for paragraph in list(iter_all_paragraphs(doc)):
+        previous_nonempty_text = ""
+        for paragraph in list(iter_all_paragraphs(editor.doc)):
+            template_owned = editor.template_paragraph_text(paragraph) is not None
             text = normalize_match(paragraph.text)
             if not text:
                 continue
+            prior_nonempty_text = previous_nonempty_text
+            previous_nonempty_text = text
+
+            # The legacy parser can attach one trailing complaints sentence to the
+            # epidemiology value when that sentence follows the epidemiology prose
+            # in the source document.  This is the only source-owned cleanup done
+            # here: remove that terminal duplicate only when it semantically
+            # matches the already extracted complaints field.  Other patient prose
+            # remains immutable.
+            if not template_owned:
+                trailing = cls._TRAILING_COMPLAINT_RE.search(paragraph.text)
+                is_epi_paragraph = text.startswith("эпидемиологический анамнез:")
+                is_epi_tail_paragraph = (
+                    prior_nonempty_text.startswith("эпидемиологический анамнез:")
+                    and cls._TRAILING_COMPLAINT_RE.fullmatch(paragraph.text or "") is not None
+                )
+                if (
+                    trailing
+                    and complaint_core
+                    and (is_epi_paragraph or is_epi_tail_paragraph)
+                    and cls._complaints_equivalent(trailing.group("body"), complaint_core)
+                ):
+                    replace_paragraph_regex_preserving_runs(
+                        paragraph, cls._TRAILING_COMPLAINT_RE, ""
+                    )
+                    if not normalize_match(paragraph.text):
+                        remove_paragraph(paragraph)
+                        continue
+                    text = normalize_match(paragraph.text)
+                continue
+
             if cls._HOSPITALIZATION_RECOMMENDATION_RE.search(paragraph.text):
                 def _preserve_spacing(match: re.Match[str]) -> str:
                     before = match.string[:match.start()].strip()
@@ -145,32 +179,52 @@ class MedicalRendererLabsMixin:
                 if not normalize_match(paragraph.text):
                     remove_paragraph(paragraph)
 
-    @staticmethod
-    def _move_discharge_outcome_before_signatures(doc) -> bool:
-        paragraphs = list(doc.paragraphs)
-        outcome = next((p for p in paragraphs if normalize_match(p.text).startswith("за время лечения")), None)
-        recommendation = next((p for p in paragraphs if normalize_match(p.text).startswith("рекомендовано")), None)
-        signature = next((p for p in paragraphs if "врач-психиатр" in normalize_match(p.text) or normalize_match(p.text).startswith("зав. отд")), None)
-        if signature is None or outcome is None or recommendation is None:
-            return False
-        signature._p.addprevious(outcome._p)
-        signature._p.addprevious(recommendation._p)
-        return True
+    _LAB_RESULT_MARKERS = (
+        "ОАК", "ОАМ", "RW", "HCV", "HBsAg", "ВИЧ", "Биохимия крови",
+        "Глюкоза крови", "Кал на яйца глист", "Флюорография", "ЭКГ", "ЭЭГ",
+    )
 
-    @staticmethod
-    def _replace_lab_lines(editor: DocxBlockEditor, dates: Dict[str, str]) -> None:
-        replacements = [
-            (["ОАК"], f"ОАК - в норме - {dates['day1']}"),
-            (["ОАМ"], f"ОАМ - в норме - {dates['day1']}"),
-            (["RW"], f"RW - в норме - {dates['day1']}"),
-            (["HCV"], f"HCV - в норме - {dates['day1']}"),
-            (["HBsAg"], f"HBsAg - в норме - {dates['day1']}"),
-            (["ВИЧ"], f"ВИЧ - в норме - {dates['day2']}"),
-            (["Биохимия крови"], f"Биохимия крови - в норме - {dates['day1']}"),
-            (["Глюкоза крови"], f"Глюкоза крови - 3,40 ммоль/л - {dates['day1']}"),
-            (["Кал на яйца глист"], f"Кал на яйца глист - не обнаружены - {dates['day1']}"),
-            (["Флюорография"], f"Флюорография - патологии не выявлено - {dates['flg']}"),
-            (["ЭКГ"], f"ЭКГ - ритм синусовый, ЧСС 65 ударов в минуту, рисунок ЭКГ в пределах нормы, ЭОС нормальная - {dates['day1']}"),
-        ]
-        for markers, text in replacements:
-            editor.replace_first_matching_paragraph(markers, text)
+    @classmethod
+    def _remove_template_lab_lines(cls, editor: DocxBlockEditor) -> None:
+        """Never fabricate examination results from bundled template examples.
+
+        Historical templates contain example values ("в норме", glucose 3.40,
+        fixed ECG/EEG phrases and old dates). Until an explicit structured
+        investigation source is wired into PatientData, publishing those rows
+        would turn template examples into patient facts.
+        """
+        editor.remove_all_matching_paragraphs(cls._LAB_RESULT_MARKERS)
+
+    @classmethod
+    def _render_sourced_investigation_results(
+        cls,
+        editor: DocxBlockEditor,
+        data: PatientData,
+        all_markers,
+        *,
+        before_markers,
+    ) -> bool:
+        """Render only investigation text explicitly present in the source."""
+        cls._remove_template_lab_lines(editor)
+        aliases = ["Результаты обследований", "Результаты исследований"]
+        value = str(getattr(data, "investigation_results", "") or "").strip()
+        if not value:
+            editor.remove_all_matching_paragraphs(aliases)
+            return False
+        if editor.replace_block(
+            aliases,
+            "Результаты обследований:",
+            value,
+            all_markers,
+            allow_empty=True,
+        ):
+            return True
+        return editor.insert_before_first_matching_paragraph(
+            before_markers,
+            "Результаты обследований: " + value,
+        )
+
+    @classmethod
+    def _replace_lab_lines(cls, editor: DocxBlockEditor, dates: Dict[str, str]) -> None:
+        # Legacy compatibility only. Dates alone are not evidence of a result.
+        cls._remove_template_lab_lines(editor)

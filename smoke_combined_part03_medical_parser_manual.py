@@ -317,7 +317,7 @@ assert clean_admission_detail("добровольно нецелесообраз
 assert parse_sick_leave_value("неизвестно") == ("", "")
 
 manual_data = service.parse_navigation(nav)
-manual_data.discharge_date = "11.06.2026"
+manual_data.discharge_date = "20.06.2026"
 manual_data.diagnosis = "F99.9 Тестовый диагноз из UI"
 manual_data.admission_occurrence = "повторно"
 manual_data.rvk_act_number = "77-А"
@@ -344,16 +344,16 @@ manual_data.expert_work_org = "ООО Завод"
 manual_data.expert_position = "инженер"
 manual_data.expert_sick_leave_needed = "да"
 manual_data.expert_sick_leave_from = "15.06.2026"
-manual_data.disability_needed = "нет"
-manual_data.disability = "не нужно"
+manual_data.disability_needed = "да"
+manual_data.disability = "нужно"
 manual_data.work_org = manual_data.expert_work_org
 manual_data.position = manual_data.expert_position
 manual_data.sick_leave = "нужен с 15.06.2026"
-assert build_expert_anamnesis(manual_data) == "Работает в ООО Завод, в должности инженер. Больничный лист. Срок лечения с 10.06.2026 по 11.06.2026, 2 дня. К труду с 12.06.2026."
+assert build_expert_anamnesis(manual_data) == "Работает в ООО Завод, в должности инженер. Больничный лист. Срок лечения с 10.06.2026 по 20.06.2026, 11 дней. К труду с 21.06.2026."
 assert build_expert_anamnesis(manual_data, include_sick_leave_number=False) == "Работает в ООО Завод, в должности инженер. Больничный лист нужен с 15.06.2026."
 assert build_expert_anamnesis(manual_data, include_sick_leave=False) == "Работает в ООО Завод, в должности инженер."
 manual_data.expert_sick_leave_number = "123456789"
-assert build_expert_anamnesis(manual_data) == "Работает в ООО Завод, в должности инженер. Больничный лист № 123456789. Срок лечения с 10.06.2026 по 11.06.2026, 2 дня. К труду с 12.06.2026."
+assert build_expert_anamnesis(manual_data) == "Работает в ООО Завод, в должности инженер. Больничный лист № 123456789. Срок лечения с 10.06.2026 по 20.06.2026, 11 дней. К труду с 21.06.2026."
 manual_data.expert_sick_leave_number = ""
 
 # --- Treatment section detection contract ---
@@ -380,3 +380,25 @@ with_treatment_marker = service.parser.parse_text("""
 """)
 assert with_treatment_marker.has_treatment_section is True, with_treatment_marker.has_treatment_section
 assert with_treatment_marker.treatment_plan == "терапия по схеме.", with_treatment_marker.treatment_plan
+
+
+# Global facility normalization must never truncate an arbitrary narrative
+# paragraph merely because it begins with «Направляется на лечение».
+from medical_gender import normalize_facility_references_in_document
+
+_facility_doc = Document()
+_facility_text = (
+    "Направляется на лечение в дневной стационар после консультации; "
+    "дальнейшая тактика определяется лечащим врачом."
+)
+_facility_doc.add_paragraph(_facility_text)
+normalize_facility_references_in_document(_facility_doc)
+assert _facility_doc.paragraphs[0].text == _facility_text, _facility_doc.paragraphs[0].text
+
+_facility_legacy = Document()
+_facility_legacy.add_paragraph(
+    "Ранее лечилась в ГБУЗ НО ПБ №2, затем наблюдалась амбулаторно."
+)
+normalize_facility_references_in_document(_facility_legacy)
+assert "ГБУЗ НО «НКЦПЗ» диспансер №2" in _facility_legacy.paragraphs[0].text
+assert "затем наблюдалась амбулаторно" in _facility_legacy.paragraphs[0].text

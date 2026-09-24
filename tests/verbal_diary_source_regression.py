@@ -272,9 +272,12 @@ def _assert_selected_text_does_not_require_dates(root: Path) -> None:
     assert captured.get("sick_leave_dynamic_epicrisis") is True, captured
     assert captured.get("sick_leave_from") == "20.05.2026", captured
     assert captured.get("birth_date") == "01.01.1980", captured
-    assert captured.get("complaints") == "Жалоб не предъявляет", captured
-    assert captured.get("treatment") == "Терапия по листу назначений", captured
-    assert captured.get("profile_status") == "Состояние стабильное", captured
+    # Admission/source clinical prose is not a dated observation for a later
+    # dynamic epicrisis. The diary route must fail closed instead of relabelling
+    # admission complaints/treatment/mental status as the +10/+20 day state.
+    assert captured.get("complaints") == "", captured
+    assert captured.get("treatment") == "", captured
+    assert captured.get("profile_status") == "", captured
 
 
 def _assert_discharge_plus_diaries_keeps_dynamic_epicrisis(root: Path) -> None:
@@ -312,9 +315,12 @@ def _assert_discharge_plus_diaries_keeps_dynamic_epicrisis(root: Path) -> None:
     for text in dynamic_paragraphs:
         assert "Дата рождения:" in text, text
         assert "Лечится с:" in text, text
-        assert "Жалобы:" in text, text
-        assert "Принимает:" in text, text
-        assert "Психический статус:" in text, text
+        # No dated observation source is available for these +10/+20 day
+        # epicrises, so admission complaints/treatment/mental status must not
+        # be relabelled as the patient's later state.
+        assert "Жалобы:" not in text, text
+        assert "Принимает:" not in text, text
+        assert "Психический статус:" not in text, text
         assert "Продолжение лечения по листу нетрудоспособности." in text, text
     # Clinical fields must stay in the same Word paragraph instead of becoming
     # a vertical stack of forced paragraphs. Signatures remain separate.

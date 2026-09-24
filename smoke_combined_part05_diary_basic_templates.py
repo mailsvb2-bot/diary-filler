@@ -127,7 +127,83 @@ assert "не предъявляла" in diary_text2
 assert result_filename_male.created_files[0].name.startswith("Маркер Мужской Тестовый")
 
 # --- Production text diaries: clinical entries come from diagnosis template; discharge is universal ---
-from diary_service import DiaryService
+from diary_service import DiaryService, dynamic_epicrisis_dates, is_non_working_day
+from diary_table_numbers import is_holiday_skip_date, should_remove_holiday
+from diary_writer_entries import mark_skip_flags
+# 2026 federal production-calendar regression. The old implementation
+# incorrectly treated every May 1-9 as a holiday.
+from datetime import date as _calendar_date
+assert is_non_working_day(_calendar_date(2026, 5, 1))
+assert not is_non_working_day(_calendar_date(2026, 5, 4))
+assert is_non_working_day(_calendar_date(2026, 5, 9))
+assert is_non_working_day(_calendar_date(2026, 5, 11))  # transfer from Sat May 9
+assert is_non_working_day(_calendar_date(2026, 3, 9))   # transfer from Sun Mar 8
+assert is_non_working_day(_calendar_date(2026, 1, 9))   # government transfer
+assert not is_non_working_day(_calendar_date(2026, 1, 12))
+assert is_non_working_day(_calendar_date(2026, 12, 31)) # government transfer
+
+# Ordinary diary holiday removal uses the same calendar but does not remove
+# generic weekends. It must be year-aware so transferred holidays are correct.
+assert is_holiday_skip_date(1, 5, 2026)
+assert not is_holiday_skip_date(4, 5, 2026)
+assert is_holiday_skip_date(11, 5, 2026)
+assert is_holiday_skip_date(9, 1, 2026)
+assert not is_holiday_skip_date(12, 1, 2026)
+assert should_remove_holiday(_calendar_date(2026, 5, 11))
+assert not should_remove_holiday(_calendar_date(2026, 5, 4))
+
+_calendar_entries = [
+    {"day": 1, "month": 5, "year": 2026, "date": _calendar_date(2026, 5, 1)},
+    {"day": 4, "month": 5, "year": 2026, "date": _calendar_date(2026, 5, 4)},
+    {"day": 9, "month": 5, "year": 2026, "date": _calendar_date(2026, 5, 9)},
+    {"day": 11, "month": 5, "year": 2026, "date": _calendar_date(2026, 5, 11)},
+]
+for _entry in _calendar_entries:
+    _entry.update(after_discharge=False, skip_holiday=False, skip_after_discharge=False)
+mark_skip_flags(
+    _calendar_entries,
+    final_entry_index=None,
+    discharge_date=None,
+    remove_holiday_rows=True,
+)
+assert [_entry["skip_holiday"] for _entry in _calendar_entries] == [True, False, True, True]
+
+# A discharge/final row is clinically required even when the discharge date is
+# a public holiday; only non-final holiday diary rows are removed.
+_final_holiday_entries = [
+    {"day": 9, "month": 5, "year": 2026, "date": _calendar_date(2026, 5, 9)},
+    {"day": 11, "month": 5, "year": 2026, "date": _calendar_date(2026, 5, 11)},
+]
+for _entry in _final_holiday_entries:
+    _entry.update(after_discharge=False, skip_holiday=False, skip_after_discharge=False)
+mark_skip_flags(
+    _final_holiday_entries,
+    final_entry_index=1,
+    discharge_date=_calendar_date(2026, 5, 11),
+    remove_holiday_rows=True,
+)
+assert _final_holiday_entries[0]["skip_holiday"] is True
+assert _final_holiday_entries[1]["skip_holiday"] is False
+assert _final_holiday_entries[1]["skip_after_discharge"] is False
+
+# Ten days after 27.02.2026 is the transferred holiday 09.03.2026, so the
+# dynamic epicrisis moves to 10.03. It is forbidden when discharge is 10.03.
+assert dynamic_epicrisis_dates(
+    _calendar_date(2026, 2, 27),
+    discharge_date=_calendar_date(2026, 3, 10),
+    limit=1,
+) == ()
+assert dynamic_epicrisis_dates(
+    _calendar_date(2026, 2, 27),
+    discharge_date=_calendar_date(2026, 3, 11),
+    limit=1,
+) == (_calendar_date(2026, 3, 10),)
+assert dynamic_epicrisis_dates(
+    _calendar_date(2026, 4, 24),
+    discharge_date=_calendar_date(2026, 5, 5),
+    limit=1,
+) == (_calendar_date(2026, 5, 4),)
+
 contract_texts = OUT / "F20 Параноидная шизофрения.docx"
 contract_doc = Document()
 contract_doc.add_paragraph("TEMPLATE_STATUS_ONE пациент пришел спокойно.")
@@ -144,6 +220,28 @@ for hospital_day in (1, 2, 3, 7):
     row.cells[0].text = str(hospital_day)
     row.cells[3].text = "Лечащий врач Балаганин С.В.\nЗав.отделением Можарова Е.А."
 contract_dates_doc.save(contract_dates)
+
+# Dynamic sick-leave epicrises require a real sick-leave start date before any
+# output is committed; admission date is not a silent substitute.
+for _bad_sick_from in ("", "99.99.2026"):
+    _bad_dynamic_out = OUT / ("dynamic_bad_sick_" + ("empty" if not _bad_sick_from else "invalid"))
+    try:
+        DiaryService().create_text_diaries(
+            status_files=[contract_texts],
+            diary_files=[contract_dates],
+            output_dir=_bad_dynamic_out,
+            patient_name="Маркер Женская Дополнительная",
+            gender_source_name="Маркер Женская Дополнительная",
+            admission_value="10.06.2026",
+            discharge_value="30.06.2026",
+            sick_leave_dynamic_epicrisis=True,
+            sick_leave_from=_bad_sick_from,
+        )
+        raise AssertionError("dynamic epicrisis must require a valid sick-leave start date")
+    except ValueError as exc:
+        assert "Дата начала больничного" in str(exc) or "дату начала больничного" in str(exc), str(exc)
+    assert not list(_bad_dynamic_out.glob("*.docx")) if _bad_dynamic_out.exists() else True
+
 contract_result = DiaryService().create_text_diaries(
     status_files=[contract_texts],
     diary_files=[contract_dates],
@@ -170,11 +268,24 @@ assert "TEMPLATE_STATUS_TWO пациентка оставалась спокой
 # final text remains diagnosis-independent but is rendered as a joint exam.
 assert "13.06.26 Совместный осмотр с зав. отделением" in contract_joined, contract_joined
 joint_index = contract_lines.index("13.06.26 Совместный осмотр с зав. отделением")
-assert contract_lines[joint_index + 1].startswith("Состояние улучшилось."), contract_lines
+assert contract_lines[joint_index + 1] == "На текущую дату оформлена выписка из стационара.", contract_lines
+assert "Даны рекомендации" not in contract_joined, contract_joined
+assert "Состояние улучшилось." not in contract_joined, contract_joined
+assert "суицидальных мыслей" not in contract_joined, contract_joined
+assert "Критика к состоянию присутствует." not in contract_joined, contract_joined
 assert contract_lines[joint_index + 2] == "Лечащий врач Балаганин С.В.", contract_lines
 assert contract_lines[joint_index + 3] == "Зав.отделением Можарова Е.А.", contract_lines
 assert contract_joined.count("Лечащий врач Балаганин С.В.") == 3, contract_joined
 assert contract_joined.count("Зав.отделением Можарова Е.А.") == 1, contract_joined
+
+# Dynamic epicrisis must not invent missing clinical facts.
+from diary_service import DynamicEpicrisisInput, build_dynamic_epicrisis_text
+empty_dynamic = build_dynamic_epicrisis_text(DynamicEpicrisisInput())
+assert "без существенной динамики" not in empty_dynamic, empty_dynamic
+assert "согласно листу назначений" not in empty_dynamic, empty_dynamic
+assert "Лекарства принимает согласно назначениям" not in empty_dynamic, empty_dynamic
+assert "Жалобы:" not in empty_dynamic, empty_dynamic
+assert "Психический статус:" not in empty_dynamic, empty_dynamic
 assert "TEMPLATE_STATUS_THREE" not in contract_joined, contract_joined
 assert contract_result.final_rows_filled == 1
 for section in contract_output.sections:

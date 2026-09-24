@@ -64,7 +64,7 @@ def _make_fixture(root: Path):
 
     service = MedicalDocumentService()
     data = service.parse_navigation(nav)
-    data.discharge_date = "11.06.2026"
+    data.discharge_date = "20.06.2026"
     data.diagnosis = "F99.9 Тестовый диагноз из UI"
     data.admission_occurrence = "повторно"
     data.rvk_act_number = "77-А"
@@ -91,8 +91,8 @@ def _make_fixture(root: Path):
     data.expert_position = "инженер"
     data.expert_sick_leave_needed = "да"
     data.expert_sick_leave_from = "15.06.2026"
-    data.disability_needed = "нет"
-    data.disability = "не нужно"
+    data.disability_needed = "да"
+    data.disability = "нужно"
     data.work_org = data.expert_work_org
     data.position = data.expert_position
     data.sick_leave = "нужен с 15.06.2026"

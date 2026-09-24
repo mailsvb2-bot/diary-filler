@@ -193,6 +193,7 @@ except ValueError as exc:
 
 missing_discharge_required_data = service.parse_primary_document(nav)
 missing_discharge_required_data.admission_occurrence = "первично"
+missing_discharge_required_data.expert_work_status = "нет"
 missing_discharge_required_data.expert_sick_leave_needed = "нет"
 missing_discharge_required_data.sick_leave = "не нужен"
 try:
@@ -223,6 +224,7 @@ for occurrence_kind in ("primary", "discharge", "commission", "admission_doctor_
 
 missing_commission_fields_data = service.parse_primary_document(nav)
 missing_commission_fields_data.admission_occurrence = "первично"
+missing_commission_fields_data.expert_work_status = "нет"
 missing_commission_fields_data.expert_sick_leave_needed = "нет"
 missing_commission_fields_data.sick_leave = "не нужен"
 try:
@@ -284,10 +286,12 @@ except ValueError as exc:
     assert "военкомат" in str(exc), str(exc)
 
 compact_popup_data = service.parse_primary_document(nav)
-compact_popup_data.discharge_date = "11062026"
+compact_popup_data.discharge_date = "20062026"
 compact_popup_data.admission_occurrence = "повторно"
-compact_popup_data.expert_sick_leave_needed = "нет"
-compact_popup_data.sick_leave = "не нужен"
+compact_popup_data.expert_work_status = "нет"
+compact_popup_data.expert_sick_leave_needed = "да"
+compact_popup_data.expert_sick_leave_from = "10062026"
+compact_popup_data.sick_leave = "нужен"
 compact_popup_data.commission_date = "18062026"
 compact_popup_data.commission_number = "12"
 compact_popup_data.vk_date = "19062026"
@@ -305,7 +309,7 @@ compact_created, compact_used = service.create_documents(
     selected_docs=["discharge", "commission", "vk_mse", "sick_leave_vk", "rvk"],
     override_data=compact_popup_data,
 )
-assert compact_used.discharge_date == "11.06.2026"
+assert compact_used.discharge_date == "20.06.2026"
 assert compact_used.admission_occurrence == "повторно"
 assert compact_used.commission_date == "18.06.2026"
 assert compact_used.vk_date == "19.06.2026"
@@ -317,6 +321,7 @@ assert "18.06.2026" in compact_text and "19.06.2026" in compact_text and "20.06.
 dupe_out = OUT / "duplicate_selected_docs"
 dupe_data = service.parse_primary_document(nav)
 dupe_data.admission_occurrence = "первично"
+dupe_data.expert_work_status = "нет"
 dupe_data.expert_sick_leave_needed = "нет"
 dupe_data.disability_needed = "нет"
 dupe_data.commission_date = "18062026"
@@ -392,23 +397,23 @@ except ValueError as exc:
 
 missing_sick_choice = service.parse_primary_document(nav)
 missing_sick_choice.admission_occurrence = "первично"
+missing_sick_choice.expert_work_status = "нет"
 missing_sick_choice.sick_leave = ""
 missing_sick_choice.expert_sick_leave_needed = ""
 missing_sick_choice.disability_needed = "нет"
-try:
-    service.create_documents(
-        navigation_path=nav,
-        output_dir=OUT / "missing_sick_leave_choice",
-        selected_docs=["primary"],
-        override_data=missing_sick_choice,
-    )
-    raise AssertionError("primary must require explicit sick-leave decision")
-except ValueError as exc:
-    assert "нужен ли больничный" in str(exc), str(exc)
+primary_without_sick_choice, _ = service.create_documents(
+    navigation_path=nav,
+    output_dir=OUT / "primary_without_sick_leave_choice",
+    selected_docs=["primary"],
+    override_data=missing_sick_choice,
+)
+assert len(primary_without_sick_choice) == 1
+assert "Больничный лист" not in extract_docx_text(primary_without_sick_choice[0])
 
 for sick_required_kind in ("discharge", "commission"):
     missing_standalone_sick = service.parse_primary_document(nav)
     missing_standalone_sick.admission_occurrence = "первично"
+    missing_standalone_sick.expert_work_status = "нет"
     missing_standalone_sick.sick_leave = ""
     missing_standalone_sick.expert_sick_leave_needed = ""
     missing_standalone_sick.disability_needed = ""
@@ -428,6 +433,7 @@ for sick_required_kind in ("discharge", "commission"):
 
 missing_disability_choice = service.parse_primary_document(nav)
 missing_disability_choice.admission_occurrence = "первично"
+missing_disability_choice.expert_work_status = "нет"
 missing_disability_choice.expert_sick_leave_needed = "нет"
 missing_disability_choice.sick_leave = "не нужен"
 missing_disability_choice.disability = ""
@@ -445,14 +451,16 @@ except ValueError as exc:
 
 missing_sick_date = service.parse_primary_document(nav)
 missing_sick_date.admission_occurrence = "первично"
+missing_sick_date.expert_work_status = "нет"
 missing_sick_date.expert_sick_leave_needed = "да"
 missing_sick_date.expert_sick_leave_from = ""
 missing_sick_date.disability_needed = "нет"
+missing_sick_date.discharge_date = "20.06.2026"
 try:
     service.create_documents(
         navigation_path=nav,
         output_dir=OUT / "missing_sick_leave_start",
-        selected_docs=["primary"],
+        selected_docs=["discharge"],
         override_data=missing_sick_date,
     )
     raise AssertionError("positive sick-leave choice must require start date")
@@ -463,6 +471,7 @@ missing_epi_text = service.parse_primary_document(nav)
 missing_epi_text.commission_date = "18.06.2026"
 missing_epi_text.commission_number = "9"
 missing_epi_text.admission_occurrence = "первично"
+missing_epi_text.expert_work_status = "нет"
 missing_epi_text.expert_sick_leave_needed = "нет"
 missing_epi_text.sick_leave = "не нужен"
 missing_epi_text.epi_present = "да"
@@ -480,6 +489,7 @@ except ValueError as exc:
 
 single_kind_data = service.parse_primary_document(nav)
 single_kind_data.admission_occurrence = "первично"
+single_kind_data.expert_work_status = "нет"
 single_kind_data.expert_sick_leave_needed = "нет"
 single_kind_data.disability_needed = "нет"
 single_kind_created, _single_kind_data = service.create_documents(
@@ -492,6 +502,7 @@ assert len(single_kind_created) == 1 and single_kind_created[0].name.endswith("�
 
 none_output_data = service.parse_primary_document(nav)
 none_output_data.admission_occurrence = "первично"
+none_output_data.expert_work_status = "нет"
 none_output_data.expert_sick_leave_needed = "нет"
 none_output_data.disability_needed = "нет"
 none_output_created, _none_output_data = service.create_documents(
@@ -505,6 +516,7 @@ assert none_output_created[0].parent == nav.parent
 override_data = service.parse_primary_document(nav)
 override_data.discharge_date = ""
 override_data.admission_occurrence = "первично"
+override_data.expert_work_status = "нет"
 override_data.expert_sick_leave_needed = "нет"
 override_data.sick_leave = "не нужен"
 _mutation_created, used_override = service.create_documents(
@@ -588,7 +600,7 @@ try:
     )
     raise AssertionError("medical service must require admission date")
 except ValueError as exc:
-    assert "дата госпитализации" in str(exc), str(exc)
+    assert "дата госпитализации" in str(exc).lower(), str(exc)
 
 bad_rvk_act_number_data = service.parse_primary_document(nav)
 bad_rvk_act_number_data.discharge_date = "11.06.2026"
@@ -608,6 +620,7 @@ except ValueError as exc:
 
 bad_commission_order_data = service.parse_primary_document(nav)
 bad_commission_order_data.admission_occurrence = "первично"
+bad_commission_order_data.expert_work_status = "нет"
 bad_commission_order_data.expert_sick_leave_needed = "нет"
 bad_commission_order_data.sick_leave = "не нужен"
 bad_commission_order_data.commission_date = "09.06.2026"
@@ -637,6 +650,300 @@ try:
     raise AssertionError("VK MSE date before admission must be rejected")
 except ValueError as exc:
     assert "раньше" in str(exc), str(exc)
+
+invalid_admission_data = service.parse_primary_document(nav)
+invalid_admission_data.admission_date = "99.99.2026"
+try:
+    service.create_documents(
+        navigation_path=nav,
+        output_dir=OUT / "invalid_admission_service_boundary",
+        selected_docs=["primary"],
+        override_data=invalid_admission_data,
+    )
+    raise AssertionError("invalid admission date must be rejected")
+except ValueError as exc:
+    assert "Дата госпитализации" in str(exc), str(exc)
+
+late_sick_vk_data = service.parse_primary_document(nav)
+late_sick_vk_data.discharge_date = "11.06.2026"
+late_sick_vk_data.sick_leave_vk_date = "12.06.2026"
+late_sick_vk_data.sick_leave_vk_protocol_number = "79-LATE"
+late_sick_vk_data.sick_leave_vk_protocol_date = "12.06.2026"
+late_sick_vk_data.sick_leave_vk_commission_date = "12.06.2026"
+try:
+    service.create_documents(
+        navigation_path=nav,
+        output_dir=OUT / "sick_vk_after_discharge_service_boundary",
+        selected_docs=["sick_leave_vk"],
+        override_data=late_sick_vk_data,
+    )
+    raise AssertionError("sick-leave VK after known discharge must be rejected")
+except ValueError as exc:
+    assert "позже даты выписки" in str(exc), str(exc)
+
+contradictory_sick_vk = service.parse_primary_document(nav)
+contradictory_sick_vk.expert_sick_leave_needed = "нет"
+contradictory_sick_vk.sick_leave = "не нужен"
+contradictory_sick_vk.sick_leave_vk_date = "12.06.2026"
+contradictory_sick_vk.sick_leave_vk_protocol_number = "79-CONFLICT"
+contradictory_sick_vk.sick_leave_vk_protocol_date = "12.06.2026"
+contradictory_sick_vk.sick_leave_vk_commission_date = "12.06.2026"
+try:
+    service.create_documents(
+        navigation_path=nav,
+        output_dir=OUT / "contradictory_sick_vk",
+        selected_docs=["sick_leave_vk"],
+        override_data=contradictory_sick_vk,
+    )
+    raise AssertionError("sick-leave VK must reject explicit no-sick-leave decision")
+except ValueError as exc:
+    assert "больничный лист не нужен" in str(exc), str(exc)
+
+contradictory_mse = service.parse_primary_document(nav)
+contradictory_mse.disability_needed = "нет"
+contradictory_mse.disability = "не нужно"
+contradictory_mse.vk_date = "12.06.2026"
+contradictory_mse.vk_protocol_number = "80-CONFLICT"
+contradictory_mse.vk_protocol_date = "12.06.2026"
+try:
+    service.create_documents(
+        navigation_path=nav,
+        output_dir=OUT / "contradictory_vk_mse",
+        selected_docs=["vk_mse"],
+        override_data=contradictory_mse,
+    )
+    raise AssertionError("VK MSE must reject explicit no-disability decision")
+except ValueError as exc:
+    assert "оформление инвалидности не нужно" in str(exc), str(exc)
+
+implicit_sick_vk = service.parse_primary_document(nav)
+implicit_sick_vk.expert_work_status = "нет"
+implicit_sick_vk.expert_sick_leave_needed = ""
+implicit_sick_vk.sick_leave = ""
+implicit_sick_vk.sick_leave_vk_date = "12.06.2026"
+implicit_sick_vk.sick_leave_vk_protocol_number = "81-IMPLICIT"
+implicit_sick_vk.sick_leave_vk_protocol_date = "12.06.2026"
+implicit_sick_vk.sick_leave_vk_commission_date = "12.06.2026"
+_implicit_created, implicit_used = service.create_documents(
+    navigation_path=nav,
+    output_dir=OUT / "implicit_sick_vk_positive",
+    selected_docs=["sick_leave_vk"],
+    override_data=implicit_sick_vk,
+)
+assert implicit_used.expert_sick_leave_needed == "да", implicit_used.expert_sick_leave_needed
+
+implicit_mse = service.parse_primary_document(nav)
+implicit_mse.expert_work_status = "нет"
+implicit_mse.disability_needed = ""
+implicit_mse.disability = ""
+implicit_mse.vk_date = "12.06.2026"
+implicit_mse.vk_protocol_number = "82-IMPLICIT"
+implicit_mse.vk_protocol_date = "12.06.2026"
+_implicit_mse_created, implicit_mse_used = service.create_documents(
+    navigation_path=nav,
+    output_dir=OUT / "implicit_mse_positive",
+    selected_docs=["vk_mse"],
+    override_data=implicit_mse,
+)
+assert implicit_mse_used.disability_needed == "да", implicit_mse_used.disability_needed
+
+combined_sick_vk = service.parse_primary_document(nav)
+combined_sick_vk.admission_occurrence = "первично"
+combined_sick_vk.discharge_date = "20.06.2026"
+combined_sick_vk.expert_work_status = "нет"
+combined_sick_vk.expert_sick_leave_needed = ""
+combined_sick_vk.sick_leave = ""
+combined_sick_vk.expert_sick_leave_from = "10.06.2026"
+combined_sick_vk.sick_leave_vk_date = "18.06.2026"
+combined_sick_vk.sick_leave_vk_protocol_number = "83-COMBINED"
+combined_sick_vk.sick_leave_vk_protocol_date = "18.06.2026"
+combined_sick_vk.sick_leave_vk_commission_date = "18.06.2026"
+_combined_sick_created, combined_sick_used = service.create_documents(
+    navigation_path=nav,
+    output_dir=OUT / "combined_discharge_sick_vk",
+    selected_docs=["discharge", "sick_leave_vk"],
+    override_data=combined_sick_vk,
+)
+assert len(_combined_sick_created) == 2
+assert combined_sick_used.expert_sick_leave_needed == "да"
+assert combined_sick_used.expert_sick_leave_from == "10.06.2026"
+
+combined_mse = service.parse_primary_document(nav)
+combined_mse.admission_occurrence = "первично"
+combined_mse.expert_work_status = "нет"
+combined_mse.disability_needed = ""
+combined_mse.disability = ""
+combined_mse.vk_date = "12.06.2026"
+combined_mse.vk_protocol_number = "84-COMBINED"
+combined_mse.vk_protocol_date = "12.06.2026"
+_combined_mse_created, combined_mse_used = service.create_documents(
+    navigation_path=nav,
+    output_dir=OUT / "combined_primary_mse",
+    selected_docs=["primary", "vk_mse"],
+    override_data=combined_mse,
+)
+assert len(_combined_mse_created) == 2
+assert combined_mse_used.disability_needed == "да"
+assert combined_mse_used.disability == "нужно"
+
+nonworking_vk = service.parse_primary_document(nav)
+nonworking_vk.expert_work_status = "нет"
+nonworking_vk.work_org = "Устаревшее место работы"
+nonworking_vk.position = "Устаревшая должность"
+nonworking_vk.vk_mse_work_org = ""
+nonworking_vk.vk_mse_position = ""
+nonworking_vk.vk_date = "12.06.2026"
+nonworking_vk.vk_protocol_number = "85-NOWORK"
+nonworking_vk.vk_protocol_date = "12.06.2026"
+_nonworking_created, nonworking_used = service.create_documents(
+    navigation_path=nav,
+    output_dir=OUT / "vk_mse_nonworking_no_stale_job",
+    selected_docs=["vk_mse"],
+    override_data=nonworking_vk,
+)
+assert nonworking_used.vk_mse_work_org == "не работает", nonworking_used.vk_mse_work_org
+assert nonworking_used.vk_mse_position == "", nonworking_used.vk_mse_position
+_nonworking_text = extract_docx_text(_nonworking_created[0])
+assert "Устаревшее место работы" not in _nonworking_text, _nonworking_text
+assert "Устаревшая должность" not in _nonworking_text, _nonworking_text
+
+missing_vk_position = service.parse_primary_document(nav)
+missing_vk_position.expert_work_status = "да"
+missing_vk_position.work_org = ""
+missing_vk_position.position = ""
+missing_vk_position.vk_mse_work_org = "Тестовая организация"
+missing_vk_position.vk_mse_position = ""
+missing_vk_position.vk_date = "12.06.2026"
+missing_vk_position.vk_protocol_number = "86-NOPOS"
+missing_vk_position.vk_protocol_date = "12.06.2026"
+try:
+    service.create_documents(
+        navigation_path=nav,
+        output_dir=OUT / "vk_mse_missing_position",
+        selected_docs=["vk_mse"],
+        override_data=missing_vk_position,
+    )
+    raise AssertionError("working VK patient must require both organization and position")
+except ValueError as exc:
+    assert "место работы и должность" in str(exc), str(exc)
+
+missing_expert_work = service.parse_primary_document(nav)
+missing_expert_work.expert_work_status = ""
+missing_expert_work.expert_work_org = ""
+missing_expert_work.expert_position = ""
+missing_expert_work.work_org = ""
+missing_expert_work.position = ""
+missing_expert_work.disability_needed = "нет"
+missing_expert_work.rvk_referral_present = "нет"
+try:
+    service.create_documents(
+        navigation_path=nav,
+        output_dir=OUT / "primary_missing_expert_work",
+        selected_docs=["primary"],
+        override_data=missing_expert_work,
+    )
+    raise AssertionError("primary expert anamnesis must require work status")
+except ValueError as exc:
+    assert "работает пациент или нет" in str(exc), str(exc)
+
+incomplete_expert_work = service.parse_primary_document(nav)
+incomplete_expert_work.expert_work_status = "да"
+incomplete_expert_work.expert_work_org = "Тестовая организация"
+incomplete_expert_work.expert_position = ""
+incomplete_expert_work.work_org = ""
+incomplete_expert_work.position = ""
+incomplete_expert_work.disability_needed = "нет"
+incomplete_expert_work.rvk_referral_present = "нет"
+try:
+    service.create_documents(
+        navigation_path=nav,
+        output_dir=OUT / "primary_incomplete_expert_work",
+        selected_docs=["primary"],
+        override_data=incomplete_expert_work,
+    )
+    raise AssertionError("working patient must require organization and position")
+except ValueError as exc:
+    assert "место работы и должность" in str(exc), str(exc)
+
+nonworking_primary = service.parse_primary_document(nav)
+nonworking_primary.admission_occurrence = "первично"
+nonworking_primary.expert_work_status = "нет"
+nonworking_primary.expert_work_org = ""
+nonworking_primary.expert_position = ""
+nonworking_primary.work_org = "Устаревшая организация"
+nonworking_primary.position = "Устаревшая должность"
+nonworking_primary.disability_needed = "нет"
+nonworking_primary.rvk_referral_present = "нет"
+_nonworking_primary_created, nonworking_primary_used = service.create_documents(
+    navigation_path=nav,
+    output_dir=OUT / "primary_nonworking_clears_stale_job",
+    selected_docs=["primary"],
+    override_data=nonworking_primary,
+)
+assert nonworking_primary_used.expert_work_status == "нет"
+assert nonworking_primary_used.work_org == ""
+assert nonworking_primary_used.position == ""
+_nonworking_primary_text = extract_docx_text(_nonworking_primary_created[0])
+assert "Устаревшая организация" not in _nonworking_primary_text, _nonworking_primary_text
+assert "Устаревшая должность" not in _nonworking_primary_text, _nonworking_primary_text
+assert "Экспертный анамнез: Не работает." in _nonworking_primary_text, _nonworking_primary_text
+assert "Работает в организации:" not in _nonworking_primary_text, _nonworking_primary_text
+assert "Должность:" not in _nonworking_primary_text, _nonworking_primary_text
+
+nonworking_admission = service.parse_primary_document(nav)
+nonworking_admission.admission_occurrence = "первично"
+nonworking_admission.expert_work_status = "нет"
+nonworking_admission.expert_work_org = ""
+nonworking_admission.expert_position = ""
+nonworking_admission.work_org = "Устаревшая организация"
+nonworking_admission.position = "Устаревшая должность"
+nonworking_admission.disability_needed = "нет"
+nonworking_admission.rvk_referral_present = "нет"
+_nonworking_admission_created, nonworking_admission_used = service.create_documents(
+    navigation_path=nav,
+    output_dir=OUT / "admission_doctor_nonworking_clears_stale_job",
+    selected_docs=["admission_doctor_referral"],
+    override_data=nonworking_admission,
+)
+assert nonworking_admission_used.work_org == ""
+assert nonworking_admission_used.position == ""
+_nonworking_admission_text = extract_docx_text(_nonworking_admission_created[0])
+assert "Устаревшая организация" not in _nonworking_admission_text, _nonworking_admission_text
+assert "Устаревшая должность" not in _nonworking_admission_text, _nonworking_admission_text
+assert "Работает в организации:" not in _nonworking_admission_text, _nonworking_admission_text
+assert "Должность:" not in _nonworking_admission_text, _nonworking_admission_text
+
+future_birth_data = service.parse_primary_document(nav)
+future_birth_data.birth = "01.01.2030"
+try:
+    service.create_documents(
+        navigation_path=nav,
+        output_dir=OUT / "admission_before_birth",
+        selected_docs=["primary"],
+        override_data=future_birth_data,
+    )
+    raise AssertionError("admission before birth must be rejected")
+except ValueError as exc:
+    assert "раньше даты рождения" in str(exc), str(exc)
+
+prebirth_psych_data = service.parse_primary_document(nav)
+prebirth_psych_data.birth = "01.01.1980"
+prebirth_psych_data.expert_work_status = "нет"
+prebirth_psych_data.disability_needed = "нет"
+prebirth_psych_data.rvk_referral_present = "нет"
+prebirth_psych_data.psych_account_status = "да"
+prebirth_psych_data.psych_account_since_year = "1970"
+prebirth_psych_data.psych_account = "состоит с 1970"
+try:
+    service.create_documents(
+        navigation_path=nav,
+        output_dir=OUT / "psych_account_before_birth",
+        selected_docs=["primary"],
+        override_data=prebirth_psych_data,
+    )
+    raise AssertionError("psychiatric account before birth must be rejected")
+except ValueError as exc:
+    assert "раньше года рождения" in str(exc), str(exc)
 
 bad_sick_vk_order_data = service.parse_primary_document(nav)
 bad_sick_vk_order_data.sick_leave_vk_date = "10.06.2026"
@@ -733,6 +1040,7 @@ file_output_target = OUT / "not_a_directory_output.txt"
 file_output_target.write_text("I am a file, not an output directory", encoding="utf-8")
 file_output_data = service.parse_primary_document(nav)
 file_output_data.admission_occurrence = "первично"
+file_output_data.expert_work_status = "нет"
 file_output_data.expert_sick_leave_needed = "нет"
 file_output_data.disability_needed = "нет"
 try:
@@ -748,6 +1056,7 @@ except ValueError as exc:
 
 label_selected_data = service.parse_primary_document(nav)
 label_selected_data.admission_occurrence = "первично"
+label_selected_data.expert_work_status = "нет"
 label_selected_data.expert_sick_leave_needed = "нет"
 label_selected_data.disability_needed = "нет"
 label_selected_created, _label_selected_data = service.create_documents(

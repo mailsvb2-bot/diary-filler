@@ -40,8 +40,6 @@ class MedicalRendererCommissionMixin:
         """Комиссионный: шапку/первую строку оставляем, заполняем клиническую часть ниже."""
         doc = Document(str(template_path))
         editor = DocxBlockEditor(doc)
-        dates = data.lab_dates()
-
         commission_date = format_date_with_russian_year_suffix(data.commission_date)
         header = (
             f"{commission_date} 10:00      "
@@ -68,45 +66,36 @@ class MedicalRendererCommissionMixin:
             COMMISSION_MARKERS,
             allow_empty=True,
         )
-        editor.replace_block(["Жалобы при поступлении", "Жалобы"], "Жалобы при поступлении:", data.complaints, COMMISSION_MARKERS)
-        editor.replace_block(["Анамнез жизни"], "Анамнез жизни:", data.life_anamnesis, COMMISSION_MARKERS)
-        editor.replace_block(["Анамнез заболевания"], "Анамнез заболевания:", data.disease_anamnesis, COMMISSION_MARKERS)
-        editor.replace_block(["Психический статус при поступлении", "Психический статус"], "Психический статус при поступлении:", data.mental_status, COMMISSION_MARKERS)
-        editor.replace_block(["Соматический статус", "Сомато-неврологический статус"], "Соматический статус:", data.somatic_status, COMMISSION_MARKERS)
+        editor.replace_block(["Жалобы при поступлении", "Жалобы"], "Жалобы при поступлении:", data.complaints, COMMISSION_MARKERS, allow_empty=True)
+        editor.replace_block(["Анамнез жизни"], "Анамнез жизни:", data.life_anamnesis, COMMISSION_MARKERS, allow_empty=True)
+        editor.replace_block(["Анамнез заболевания"], "Анамнез заболевания:", data.disease_anamnesis, COMMISSION_MARKERS, allow_empty=True)
+        editor.replace_block(["Психический статус при поступлении", "Психический статус"], "Психический статус при поступлении:", data.mental_status, COMMISSION_MARKERS, allow_empty=True)
+        editor.replace_block(["Соматический статус", "Сомато-неврологический статус"], "Соматический статус:", data.somatic_status, COMMISSION_MARKERS, allow_empty=True)
 
-        lab_lines = [
-            (["ОАК"], f"ОАК ({dates['day1']}) - в норме"),
-            (["ОАМ"], f"ОАМ ({dates['day1']}) - в норме"),
-            (["RW"], f"RW (от {dates['day1']}) - в норме"),
-            (["HCV"], f"HCV (от {dates['day1']}) - в норме"),
-            (["HBsAg"], f"HBsAg (от {dates['day1']}) - в норме"),
-            (["ВИЧ"], f"ВИЧ (от {dates['day2']}) - в норме"),
-            (["Биохимия крови"], f"Биохимия крови ({dates['day1']}) - в норме"),
-            (["Глюкоза крови"], f"Глюкоза крови ({dates['day1']}) – 3,40 ммоль/л"),
-            (["Кал на яйца глист"], f"Кал на яйца глист ({dates['day1']}) - не обнаружены."),
-            (["Флюорография"], f"Флюорография ({dates['flg']}) - патологии не выявлено."),
-            (["ЭКГ"], f"ЭКГ ({dates['day1']}) – ритм синусовый, ЭОС нормальная."),
-        ]
-        for markers, text in lab_lines:
-            editor.replace_first_matching_paragraph(markers, text)
+        self._render_sourced_investigation_results(
+            editor,
+            data,
+            COMMISSION_MARKERS,
+            before_markers=["ЭПИ", "Диагноз", "Лечение", "Эпидемиологический анамнез"],
+        )
         if data.epi_text:
-            editor.replace_block(["ЭПИ"], f"ЭПИ ({dates['day2']}) -", data.epi_text, COMMISSION_MARKERS)
+            editor.replace_block(["ЭПИ"], "ЭПИ -", data.epi_text, COMMISSION_MARKERS)
         else:
             editor.remove_all_matching_paragraphs(["ЭПИ"])
 
-        diagnosis_sentence = ""
         diagnosis = sanitize_diagnosis(data.diagnosis)
-        if diagnosis:
-            diagnosis_sentence = (
-                "На основании данных анамнеза жизни и заболевания, психического статуса, "
-                f"данных клинических исследований установлен диагноз: {diagnosis}"
-            )
-        editor.replace_block(["На основании данных", "Диагноз"], "", diagnosis_sentence, COMMISSION_MARKERS)
+        editor.replace_block(
+            ["На основании данных", "Диагноз"],
+            "Диагноз:",
+            diagnosis,
+            COMMISSION_MARKERS,
+            allow_empty=True,
+        )
         editor.replace_block(["Лечение"], "Лечение:", data.treatment_plan, COMMISSION_MARKERS)
         editor.replace_block(["Эпидемиологический анамнез"], "Эпидемиологический анамнез:", data.epidemiology, COMMISSION_MARKERS, allow_empty=True)
         editor.remove_all_matching_paragraphs(["Целесообразна госпитализация"])
-        self._remove_trailing_clinical_leakage(doc, data)
-        finalize_medical_document(doc, data)
+        self._remove_trailing_clinical_leakage(editor, data)
+        finalize_medical_document(doc, data, editor=editor)
         doc.save(str(output_path))
 
     def render_admission_doctor_referral(self, template_path: str | Path, output_path: str | Path, data: PatientData) -> None:
@@ -134,9 +123,12 @@ class MedicalRendererCommissionMixin:
         if person_line.strip(" ,"):
             editor.replace_first_matching_paragraph(["Сидоров", "Ф.И.О.", "ФИО"], person_line)
         self._place_psych_account_after_registration(editor, data, ["регистрация по адресу"], fallback_markers=[data.fio])
-        editor.replace_block(["Работает в организации"], "Работает в организации:", data.work_org, PRIMARY_MARKERS, allow_empty=True)
-        editor.replace_block(["Должность"], "Должность:", data.position, PRIMARY_MARKERS, allow_empty=True)
-        editor.replace_block(["Больничный лист"], "Больничный лист:", data.sick_leave, PRIMARY_MARKERS, allow_empty=True)
+        if data.expert_work_status == "нет":
+            editor.remove_all_matching_paragraphs(["Работает в организации", "Должность"])
+        else:
+            editor.replace_block(["Работает в организации"], "Работает в организации:", data.work_org, PRIMARY_MARKERS, allow_empty=True)
+            editor.replace_block(["Должность"], "Должность:", data.position, PRIMARY_MARKERS, allow_empty=True)
+        editor.remove_all_matching_paragraphs(["Больничный лист"])
         editor.replace_block(["Оформление инвалидности"], "Оформление инвалидности:", data.disability, PRIMARY_MARKERS, allow_empty=True)
         editor.replace_block(["Направление от РВК"], "Направление от РВК:", data.rvk_referral, PRIMARY_MARKERS, allow_empty=True)
         editor.replace_block(
@@ -146,30 +138,32 @@ class MedicalRendererCommissionMixin:
             PRIMARY_MARKERS,
             allow_empty=True,
         )
-        editor.replace_block(["Жалобы на момент осмотра", "Жалобы"], "Жалобы на момент осмотра:", data.complaints, PRIMARY_MARKERS)
-        editor.replace_block(["Анамнез жизни"], "Анамнез жизни:", data.life_anamnesis, PRIMARY_MARKERS)
-        editor.replace_block(["Анамнез заболевания"], "Анамнез заболевания:", data.disease_anamnesis, PRIMARY_MARKERS)
-        editor.replace_block(["Психический статус"], "Психический статус:", data.mental_status, PRIMARY_MARKERS)
-        editor.replace_block(["Соматический статус"], "Соматический статус:", data.somatic_status, PRIMARY_MARKERS)
-        editor.replace_block(["План обследования"], "План обследования:", data.examination_plan, PRIMARY_MARKERS)
+        editor.replace_block(["Жалобы на момент осмотра", "Жалобы"], "Жалобы на момент осмотра:", data.complaints, PRIMARY_MARKERS, allow_empty=True)
+        editor.replace_block(["Анамнез жизни"], "Анамнез жизни:", data.life_anamnesis, PRIMARY_MARKERS, allow_empty=True)
+        editor.replace_block(["Анамнез заболевания"], "Анамнез заболевания:", data.disease_anamnesis, PRIMARY_MARKERS, allow_empty=True)
+        editor.replace_block(["Психический статус"], "Психический статус:", data.mental_status, PRIMARY_MARKERS, allow_empty=True)
+        editor.replace_block(["Соматический статус"], "Соматический статус:", data.somatic_status, PRIMARY_MARKERS, allow_empty=True)
+        editor.replace_block(["План обследования"], "План обследования:", data.examination_plan, PRIMARY_MARKERS, allow_empty=True)
         diagnosis = sanitize_diagnosis(data.diagnosis)
-        diagnosis_sentence = ""
-        if diagnosis:
-            diagnosis_sentence = (
-                "На основании данных анамнеза жизни и заболевания, психического статуса, "
-                f"данных клинических исследований был выставлен диагноз: {diagnosis}"
-            )
-        editor.replace_block(["На основании данных", "Диагноз"], "", diagnosis_sentence, PRIMARY_MARKERS)
+        editor.replace_block(
+            ["На основании данных", "Диагноз"],
+            "Диагноз:",
+            diagnosis,
+            PRIMARY_MARKERS,
+            allow_empty=True,
+        )
         editor.replace_block(["Эпидемиологический анамнез"], "Эпидемиологический анамнез:", data.epidemiology, PRIMARY_MARKERS, allow_empty=True)
-        self._remove_trailing_clinical_leakage(doc, data)
+        self._remove_trailing_clinical_leakage(editor, data)
         # Финальная фраза должна быть строго такой по пользовательскому требованию.
         target_referral_line = f"В связи с психическим состоянием, направляется на лечение в {TARGET_MEDICAL_FACILITY}"
         referral_done = False
-        for paragraph in list(iter_all_paragraphs(doc)):
-            if "направляется" in normalize_match(paragraph.text):
-                set_paragraph_text(paragraph, target_referral_line)
-                referral_done = True
-                break
+        for paragraph in editor.paragraphs:
+            template_text = editor.template_paragraph_text(paragraph)
+            if template_text is None or "направляется" not in template_text:
+                continue
+            set_paragraph_text(paragraph, target_referral_line)
+            referral_done = True
+            break
         if not referral_done:
             referral_done = editor.insert_before_first_matching_paragraph(
                 ["Врач психиатр", "Врач-психиатр"],
@@ -178,5 +172,5 @@ class MedicalRendererCommissionMixin:
         if not referral_done:
             doc.add_paragraph(target_referral_line)
         editor.replace_block(["Врач психиатр", "Врач-психиатр"], "Врач психиатр", format_staff_short_name(data.doctor), PRIMARY_MARKERS, allow_empty=True)
-        finalize_medical_document(doc, data)
+        finalize_medical_document(doc, data, editor=editor)
         doc.save(str(output_path))

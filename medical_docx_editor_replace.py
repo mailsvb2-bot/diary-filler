@@ -19,10 +19,17 @@ class DocxEditorReplaceMixin:
         return True
 
     def replace_all_matching_paragraphs(self, markers: Sequence[str], text: str) -> int:
+        """Replace only template-owned placeholder paragraphs.
+
+        Patient paragraphs inserted by replace_block are content, never
+        template structure, even when their text begins with a known marker.
+        """
         count = 0
         for paragraph in self.paragraphs:
-            text_norm = normalize_match(paragraph.text)
-            if any(paragraph_matches_marker(text_norm, marker) for marker in markers):
+            template_text = self.template_paragraph_text(paragraph)
+            if template_text is None:
+                continue
+            if any(paragraph_matches_marker(template_text, marker) for marker in markers):
                 set_paragraph_text(paragraph, text)
                 count += 1
         return count
@@ -40,23 +47,42 @@ class DocxEditorReplaceMixin:
         return True
 
     def remove_all_matching_paragraphs(self, markers: Sequence[str]) -> int:
-        """Удалить все абзацы, которые начинаются с указанных маркеров.
+        """Remove matching paragraphs only when they belong to the template.
 
-        Используется для ЭПИ: если файл ЭПИ не выбран, в итоговых документах
-        не должно оставаться ни строки «ЭПИ - ...», ни шаблонной подсказки.
+        Cleanup helpers for ЭПИ/labs/service rows run after patient clinical
+        blocks may already have been inserted. Marker-like patient prose must
+        never be deleted as template scaffolding.
         """
         count = 0
         for paragraph in list(self.paragraphs):
-            text_norm = normalize_match(paragraph.text)
-            if any(paragraph_matches_marker(text_norm, marker) for marker in markers):
+            template_text = self.template_paragraph_text(paragraph)
+            if template_text is None:
+                continue
+            if any(paragraph_matches_marker(template_text, marker) for marker in markers):
+                remove_paragraph(paragraph)
+                count += 1
+        return count
+
+    def remove_exact_template_paragraphs(self, values: Sequence[str]) -> int:
+        """Remove exact service rows only when they came from the template."""
+        normalized_values = {normalize_match(value) for value in values if normalize_match(value)}
+        count = 0
+        for paragraph in list(self.paragraphs):
+            if self.template_paragraph_text(paragraph) is None:
+                continue
+            if normalize_match(paragraph.text) in normalized_values:
                 remove_paragraph(paragraph)
                 count += 1
         return count
 
     def replace_first_matching_regex(self, pattern: str, text: str) -> bool:
+        """Replace the first regex-matching template paragraph only."""
         rx = re.compile(pattern, flags=re.IGNORECASE)
         for paragraph in self.paragraphs:
-            if rx.search(normalize_text(paragraph.text)):
+            template_text = self.template_paragraph_text(paragraph)
+            if template_text is None:
+                continue
+            if rx.search(template_text):
                 set_paragraph_text(paragraph, text)
                 return True
         return False

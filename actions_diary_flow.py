@@ -104,9 +104,13 @@ class ActionsDiaryFlowMixin:
             ) == "да"
             sick_leave_from = patient_data_snapshot.expert_sick_leave_from
             birth_date = patient_data_snapshot.birth
-            complaints = patient_data_snapshot.complaints
-            treatment = patient_data_snapshot.treatment_plan
-            profile_status = patient_data_snapshot.mental_status
+            # Admission/source clinical prose is not evidence of the patient's
+            # state on a later +10/+20/+30 day epicrisis date. Until a dated
+            # observation source is wired, fail closed instead of relabelling
+            # admission complaints/status/treatment as a current examination.
+            complaints = ""
+            treatment = ""
+            profile_status = ""
         else:
             live_data = getattr(self, "data", None)
             sick_leave_needed_var = getattr(self, "expert_sick_leave_needed_var", None)
@@ -118,9 +122,11 @@ class ActionsDiaryFlowMixin:
                 sick_leave_from_var.get().strip() if sick_leave_from_var is not None else ""
             )
             birth_date = str(getattr(live_data, "birth", "") or "")
-            complaints = str(getattr(live_data, "complaints", "") or "")
-            treatment = str(getattr(live_data, "treatment_plan", "") or "")
-            profile_status = str(getattr(live_data, "mental_status", "") or "")
+            # Same fail-closed rule for the legacy live-UI path: these fields
+            # describe the source/admission snapshot, not a later dated review.
+            complaints = ""
+            treatment = ""
+            profile_status = ""
 
         from diary_service import DiaryService
         result = DiaryService().create_text_diaries(

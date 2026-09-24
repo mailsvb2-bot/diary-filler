@@ -4,7 +4,7 @@ from __future__ import annotations
 import re
 from datetime import date
 
-from diary_constants import HOLIDAY_SKIP_END_DAY, HOLIDAY_SKIP_MONTHS, HOLIDAY_SKIP_START_DAY
+from diary_calendar import is_fixed_holiday, is_public_holiday
 from diary_text_parser import normalize_text
 
 
@@ -27,18 +27,20 @@ def hospitalization_day_int(text: str) -> int | None:
     result = int(match.group(1))
     return result if 1 <= result <= 3660 else None
 
-def is_holiday_skip_date(day: int | None, month: int) -> bool:
-    """Return True for rows dated 01.01-09.01 and 01.05-09.05."""
-    return (
-        day is not None
-        and month in HOLIDAY_SKIP_MONTHS
-        and HOLIDAY_SKIP_START_DAY <= day <= HOLIDAY_SKIP_END_DAY
-    )
+def is_holiday_skip_date(day: int | None, month: int, year: int | None = None) -> bool:
+    """Return True for a public-holiday diary row.
+
+    Year-aware callers include statutory transfers. The legacy no-year form can
+    only identify fixed statutory holidays and intentionally does not guess.
+    """
+    if day is None:
+        return False
+    try:
+        probe = date(year if year is not None else 2000, month, day)
+    except ValueError:
+        return False
+    return is_public_holiday(probe) if year is not None else is_fixed_holiday(probe)
+
 
 def should_remove_holiday(row_date: date | None) -> bool:
-    if row_date is None:
-        return False
-    return (
-        row_date.month in HOLIDAY_SKIP_MONTHS
-        and HOLIDAY_SKIP_START_DAY <= row_date.day <= HOLIDAY_SKIP_END_DAY
-    )
+    return bool(row_date is not None and is_public_holiday(row_date))

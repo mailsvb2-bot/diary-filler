@@ -173,6 +173,16 @@ class MedicalDocumentService:
             raise ValueError(f"{label} не может быть раньше даты госпитализации.")
 
     @staticmethod
+    def _ensure_date_not_after_discharge(discharge_date: str, value: str, label: str) -> None:
+        """Protect episode-bound dates from extending beyond discharge."""
+        if not discharge_date or not value:
+            return
+        discharge = parse_date(discharge_date)
+        parsed = parse_date(value)
+        if discharge and parsed and parsed.date() > discharge.date():
+            raise ValueError(f"{label} не может быть позже даты выписки.")
+
+    @staticmethod
     def _require_core_text(value: str, label: str) -> str:
         normalized = str(value or "").strip()
         if not normalized:
@@ -195,6 +205,50 @@ class MedicalDocumentService:
             raise ValueError(f"Не заполнено обязательное поле: {label}.")
         return normalized
 
+    @staticmethod
+    def _normalize_commission_work_fields(
+        *,
+        explicit_org: str,
+        explicit_position: str,
+        fallback_org: str,
+        fallback_position: str,
+        work_status: str,
+        label: str,
+    ) -> tuple[str, str]:
+        """Return coherent VK work fields without reviving stale employment data."""
+        explicit_org = str(explicit_org or "").strip()
+        explicit_position = str(explicit_position or "").strip()
+        status = normalize_yes_no(work_status)
+
+        if status == "нет":
+            if explicit_position or (
+                explicit_org and normalize_yes_no(explicit_org) != "нет"
+            ):
+                raise ValueError(
+                    f"{label}: указан статус «не работает», но заполнены место работы/должность."
+                )
+            return "не работает", ""
+
+        org = explicit_org or str(fallback_org or "").strip()
+        position = explicit_position or str(fallback_position or "").strip()
+        org_decision = normalize_yes_no(org)
+        if org_decision == "нет":
+            if status == "да":
+                raise ValueError(
+                    f"{label}: статус «работает» противоречит значению «не работает»."
+                )
+            if position:
+                raise ValueError(
+                    f"{label}: при значении «не работает» должность должна быть пустой."
+                )
+            return "не работает", ""
+
+        if not org or not position:
+            raise ValueError(
+                f"{label}: укажите место работы и должность либо явно «не работает»."
+            )
+        return org, position
+
     def _validate_and_normalize_selected_data(self, data: PatientData, selected: Sequence[str]) -> None:
         selected_set = set(selected)
 
@@ -204,7 +258,19 @@ class MedicalDocumentService:
         # dates even though the manual UI would have asked the doctor first.
         data.fio = self._require_core_text(data.fio, "Ф.И.О.")
         data.birth = self._require_core_text(data.birth, "год/дата рождения")
-        data.admission_date = self._require_core_text(data.admission_date, "дата госпитализации")
+        data.admission_date = self._normalize_required_date(data.admission_date, "Дата госпитализации")
+        admission_dt = parse_date(data.admission_date)
+        birth_dt = parse_date(data.birth)
+        birth_year_match = re.search(r"(?<!\d)((?:19|20)\d{2})(?!\d)", data.birth)
+        birth_year = (
+            birth_dt.year
+            if birth_dt is not None
+            else int(birth_year_match.group(1)) if birth_year_match else None
+        )
+        if birth_dt is not None and admission_dt is not None and admission_dt.date() < birth_dt.date():
+            raise ValueError("Дата госпитализации не может быть раньше даты рождения.")
+        if birth_dt is None and birth_year is not None and admission_dt is not None and admission_dt.year < birth_year:
+            raise ValueError("Дата госпитализации не может быть раньше года рождения.")
         data.case_number = self._require_text(data.case_number, "номер истории болезни")
         data.diagnosis = self._require_text(data.diagnosis, "диагноз")
 
@@ -212,8 +278,65 @@ class MedicalDocumentService:
         if selected_set & treatment_docs:
             data.treatment_plan = self._require_text(data.treatment_plan, "лечение")
 
-        sick_leave_docs = {"primary", "admission_doctor_referral", "discharge", "commission"}
+        expert_work_docs = {"primary", "discharge", "commission", "admission_doctor_referral"}
+        if selected_set & expert_work_docs:
+            work_status = normalize_yes_no(data.expert_work_status)
+            expert_org = (data.expert_work_org or data.work_org).strip()
+            expert_position = (data.expert_position or data.position).strip()
+            if not work_status:
+                joined = f"{expert_org} {expert_position}".lower().replace("ё", "е")
+                if "не работает" in joined:
+                    work_status = "нет"
+                elif expert_org or expert_position:
+                    work_status = "да"
+            if not work_status:
+                raise ValueError("Укажите, работает пациент или нет.")
+            data.expert_work_status = work_status
+            if work_status == "да":
+                if not expert_org or not expert_position:
+                    raise ValueError(
+                        "Для работающего пациента укажите место работы и должность."
+                    )
+                data.expert_work_org = expert_org
+                data.expert_position = expert_position
+                data.work_org = expert_org
+                data.position = expert_position
+            else:
+                data.expert_work_org = ""
+                data.expert_position = ""
+                data.work_org = ""
+                data.position = ""
+
+        sick_leave_docs = {"discharge", "commission"}
         disability_docs = {"primary", "admission_doctor_referral"}
+
+        # A selected specialized form is itself a positive routing decision.
+        # Normalize that implication before validating shared forms so combined
+        # selections (e.g. discharge + sick-leave VK) do not fail merely because
+        # the shared yes/no field was initially empty.
+        if "sick_leave_vk" in selected_set:
+            sick_vk_decision = normalize_yes_no(data.expert_sick_leave_needed)
+            rendered_sick_vk_decision, _ = parse_sick_leave_value(data.sick_leave)
+            if not sick_vk_decision:
+                sick_vk_decision = rendered_sick_vk_decision
+            if sick_vk_decision == "нет":
+                raise ValueError(
+                    "ВК больничный нельзя создать при решении «больничный лист не нужен»."
+                )
+            data.expert_sick_leave_needed = "да"
+            if not data.sick_leave.strip():
+                data.sick_leave = "нужен"
+
+        if "vk_mse" in selected_set:
+            mse_decision = normalize_yes_no(data.disability_needed)
+            if not mse_decision:
+                mse_decision = normalize_yes_no(data.disability)
+            if mse_decision == "нет":
+                raise ValueError(
+                    "ВК на МСЭ нельзя создать при решении «оформление инвалидности не нужно»."
+                )
+            data.disability_needed = "да"
+            data.disability = "нужно"
         if selected_set & sick_leave_docs:
             sick_decision = normalize_yes_no(data.expert_sick_leave_needed)
             rendered_sick_decision, rendered_sick_from = parse_sick_leave_value(data.sick_leave)
@@ -261,6 +384,10 @@ class MedicalDocumentService:
             current_year = datetime.now().year
             if int(year) > current_year:
                 raise ValueError("Год постановки на учёт у психиатров не может быть в будущем.")
+            if birth_year is not None and int(year) < birth_year:
+                raise ValueError(
+                    "Год постановки на учёт у психиатров не может быть раньше года рождения."
+                )
             data.psych_account_since_year = year
         else:
             data.psych_account_since_year = ""
@@ -308,10 +435,17 @@ class MedicalDocumentService:
         if {"discharge", "rvk"} & selected_set:
             data.discharge_date = self._normalize_required_date(data.discharge_date, "Дата выписки")
             self._ensure_discharge_not_before_admission(data.admission_date, data.discharge_date)
+            if "discharge" in selected_set and data.expert_sick_leave_needed == "да":
+                self._ensure_date_not_after_discharge(
+                    data.discharge_date,
+                    data.expert_sick_leave_from,
+                    "Дата начала больничного",
+                )
 
         if "commission" in selected_set:
             data.commission_date = self._normalize_required_date(data.commission_date, "Дата совместного осмотра")
             self._ensure_date_not_before_admission(data.admission_date, data.commission_date, "Дата совместного осмотра")
+            self._ensure_date_not_after_discharge(data.discharge_date, data.commission_date, "Дата совместного осмотра")
             data.commission_number = self._require_text(data.commission_number, "номер совместного осмотра")
 
         if "vk_mse" in selected_set:
@@ -320,8 +454,14 @@ class MedicalDocumentService:
             data.vk_protocol_number = self._require_text(data.vk_protocol_number, "номер протокола ВК на МСЭ")
             data.vk_protocol_date = self._normalize_required_date(data.vk_protocol_date, "Дата протокола ВК на МСЭ")
             self._ensure_date_not_before_admission(data.admission_date, data.vk_protocol_date, "Дата протокола ВК на МСЭ")
-            data.vk_mse_work_org = (data.vk_mse_work_org or data.work_org).strip()
-            data.vk_mse_position = (data.vk_mse_position or data.position).strip()
+            data.vk_mse_work_org, data.vk_mse_position = self._normalize_commission_work_fields(
+                explicit_org=data.vk_mse_work_org,
+                explicit_position=data.vk_mse_position,
+                fallback_org=data.work_org,
+                fallback_position=data.position,
+                work_status=data.expert_work_status,
+                label="ВК на МСЭ",
+            )
 
         if "sick_leave_vk" in selected_set:
             data.sick_leave_vk_date = self._normalize_required_date(data.sick_leave_vk_date, "Дата ВК больничного")
@@ -331,9 +471,24 @@ class MedicalDocumentService:
             self._ensure_date_not_before_admission(data.admission_date, data.sick_leave_vk_protocol_date, "Дата протокола ВК больничного")
             data.sick_leave_vk_commission_date = self._normalize_required_date(data.sick_leave_vk_commission_date, "Дата проведения комиссии ВК больничного")
             self._ensure_date_not_before_admission(data.admission_date, data.sick_leave_vk_commission_date, "Дата проведения комиссии ВК больничного")
-            data.sick_leave_vk_work_org = (data.sick_leave_vk_work_org or data.work_org).strip()
-            data.sick_leave_vk_position = (data.sick_leave_vk_position or data.position).strip()
-            data.sick_leave_vk_work_position = data.sick_leave_vk_work_position or ", ".join(
+            for value, label in (
+                (data.sick_leave_vk_date, "Дата ВК больничного"),
+                (data.sick_leave_vk_protocol_date, "Дата протокола ВК больничного"),
+                (data.sick_leave_vk_commission_date, "Дата проведения комиссии ВК больничного"),
+            ):
+                self._ensure_date_not_after_discharge(data.discharge_date, value, label)
+            (
+                data.sick_leave_vk_work_org,
+                data.sick_leave_vk_position,
+            ) = self._normalize_commission_work_fields(
+                explicit_org=data.sick_leave_vk_work_org,
+                explicit_position=data.sick_leave_vk_position,
+                fallback_org=data.work_org,
+                fallback_position=data.position,
+                work_status=data.expert_work_status,
+                label="ВК больничный",
+            )
+            data.sick_leave_vk_work_position = ", ".join(
                 part for part in [data.sick_leave_vk_work_org, data.sick_leave_vk_position] if part
             )
 

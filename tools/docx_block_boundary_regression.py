@@ -19,7 +19,9 @@ from docx import Document
 from medical_constants import DOCUMENT_ORDER
 from medical_docx_blocks import extract_docx_text
 from medical_docx_editor import DocxBlockEditor
+from medical_docx_editor_utils import paragraph_matches_marker
 from medical_parser import MedicalTextParser
+from medical_paths import bundled_template_path
 from generation_performance_profile import _make_fixture
 from medical_markers import (
     COMMISSION_MARKERS,
@@ -794,6 +796,139 @@ def _assert_cross_field_order_and_isolation_survive_full_roundtrip() -> None:
                     f"{path.name}: {field_name} line order changed: {positions}"
                 )
 
+
+def _assert_template_cleanup_never_deletes_inserted_patient_marker_lines() -> None:
+    doc = Document()
+    doc.add_paragraph("Анамнез заболевания")
+    doc.add_paragraph("старый текст шаблона")
+    doc.add_paragraph("ЭПИ - шаблонный пример, удалить")
+    doc.add_paragraph("ЭКГ - шаблонный пример, удалить")
+    doc.add_paragraph("ЭЭГ")
+    doc.add_paragraph("Психический статус")
+    doc.add_paragraph("старый статус")
+
+    editor = DocxBlockEditor(doc)
+    source_lines = (
+        "Начало заболевания постепенное.\n"
+        "ЭПИ - ранее проводилось по месту жительства; это часть анамнеза.\n"
+        "ЭКГ - ранее описывалась без особенностей; это часть анамнеза.\n"
+        "ЭЭГ\n"
+        "Рекомендовано: ранее врачом амбулаторно; это исторический факт."
+    )
+    assert editor.replace_block(
+        ["Анамнез заболевания"],
+        "Анамнез заболевания:",
+        source_lines,
+        PRIMARY_MARKERS,
+    )
+
+    editor.remove_all_matching_paragraphs(["ЭПИ", "ЭКГ", "Рекомендовано"])
+    editor.remove_exact_template_paragraphs(["ЭЭГ", "ЭПИ"])
+    editor.replace_all_matching_paragraphs(["Диагноз"], "Диагноз: НЕ ДОЛЖНО ПОЯВИТЬСЯ")
+
+    text = "\n".join(p.text for p in doc.paragraphs)
+    assert "ЭПИ - шаблонный пример" not in text, text
+    assert "ЭКГ - шаблонный пример" not in text, text
+    assert "ЭПИ - ранее проводилось по месту жительства" in text, text
+    assert "ЭКГ - ранее описывалась без особенностей" in text, text
+    assert "\nЭЭГ\n" in "\n" + text + "\n", text
+    assert "Рекомендовано: ранее врачом амбулаторно" in text, text
+
+
+
+def _assert_regex_replacement_never_targets_inserted_patient_text() -> None:
+    doc = Document()
+    doc.add_paragraph("Шаблонный заголовок")
+    editor = DocxBlockEditor(doc)
+    patient = doc.add_paragraph("2026")
+    assert editor.template_paragraph_text(patient) is None
+    assert editor.replace_first_matching_regex(r"^\d{4}$", "ПЕРЕПИСАНО") is False
+    assert patient.text == "2026", patient.text
+
+
+
+def _assert_sourced_investigation_block_survives_input_docx_parse() -> None:
+    """Real sourced studies stay together and stop cleanly at the next section."""
+    with TemporaryDirectory(prefix="medical-autofill-investigation-source-") as temp_dir:
+        root = Path(temp_dir)
+        source = root / "investigation-source.docx"
+        doc = Document()
+        doc.add_paragraph("12.06.2026 Первичный осмотр")
+        doc.add_paragraph("История болезни № ИССЛ-001")
+        doc.add_paragraph("Ф.И.О.: Маркер Исследований Тестовый")
+        doc.add_paragraph("Год рождения: 01.01.1980")
+        doc.add_paragraph("Результаты обследований:")
+        expected = [
+            "ОАК (13.06.2026): Hb 128 г/л; лейкоциты 6,1.",
+            "ЭКГ (13.06.2026): синусовый ритм, ЧСС 72.",
+            "ЭЭГ: без эпилептиформной активности.",
+            "КОНЕЦ_ИССЛЕДОВАНИЙ_НЕ_ОБРЕЗАТЬ.",
+        ]
+        for line in expected:
+            p = doc.add_paragraph()
+            mid = max(1, len(line) // 2)
+            p.add_run(line[:mid]).bold = True
+            p.add_run(line[mid:]).italic = True
+        doc.add_paragraph("Диагноз:")
+        doc.add_paragraph("F99.9 Тестовый диагноз после исследований")
+        doc.add_paragraph("План лечения:")
+        doc.add_paragraph("Тестовая терапия после исследований")
+        doc.save(source)
+
+        parsed = MedicalTextParser().parse_docx(source)
+        assert parsed.investigation_results, parsed
+        positions = []
+        for line in expected:
+            assert parsed.investigation_results.count(line) == 1, (
+                line,
+                parsed.investigation_results,
+            )
+            positions.append(parsed.investigation_results.find(line))
+        assert positions == sorted(positions), positions
+        assert "F99.9 Тестовый диагноз после исследований" not in parsed.investigation_results
+        assert "Тестовая терапия после исследований" not in parsed.investigation_results
+        assert parsed.diagnosis == "F99.9 Тестовый диагноз после исследований", parsed.diagnosis
+        assert parsed.treatment_plan == "Тестовая терапия после исследований", parsed.treatment_plan
+
+
+
+def _assert_bundled_template_structure_is_editor_reachable() -> None:
+    """Structural patient-field markers must not hide inside unsupported tables."""
+    marker_map = {
+        "primary": PRIMARY_MARKERS,
+        "discharge": DISCHARGE_MARKERS,
+        "commission": COMMISSION_MARKERS,
+        "admission_doctor_referral": PRIMARY_MARKERS,
+        "vk_mse": VK_MSE_MARKERS,
+        "sick_leave_vk": SICK_LEAVE_VK_MARKERS,
+        "rvk": RVK_MARKERS,
+    }
+    hidden = []
+    for kind, markers in marker_map.items():
+        doc = Document(str(bundled_template_path(kind)))
+        for table_index, table in enumerate(doc.tables):
+            for row_index, row in enumerate(table.rows):
+                for cell_index, cell in enumerate(row.cells):
+                    for paragraph in cell.paragraphs:
+                        normalized = normalize_match(paragraph.text)
+                        if not normalized:
+                            continue
+                        matched = [
+                            marker
+                            for marker in markers
+                            if paragraph_matches_marker(normalized, marker)
+                        ]
+                        if matched:
+                            hidden.append(
+                                (kind, table_index, row_index, cell_index, paragraph.text, matched)
+                            )
+    assert not hidden, (
+        "Bundled template contains structural markers in table cells that "
+        "DocxBlockEditor cannot safely own/replace: "
+        + repr(hidden)
+    )
+
+
 def verify() -> None:
     _assert_alias_coverage()
     _assert_inserted_marker_like_patient_text_never_becomes_structure()
@@ -805,6 +940,10 @@ def verify() -> None:
     _assert_1250_line_clinical_block_survives_full_roundtrip()
     _assert_all_major_clinical_blocks_survive_long_roundtrip()
     _assert_all_medical_forms_keep_long_clinical_tails()
+    _assert_template_cleanup_never_deletes_inserted_patient_marker_lines()
+    _assert_sourced_investigation_block_survives_input_docx_parse()
+    _assert_bundled_template_structure_is_editor_reachable()
+    _assert_regex_replacement_never_targets_inserted_patient_text()
     print("DOCX BLOCK BOUNDARY REGRESSION OK: structural aliases + cross-field order/isolation + 1250-line stress + complaints/life/somatic + table/run-fragmented long-text integrity across all medical forms")
 
 
