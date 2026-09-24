@@ -1,12 +1,10 @@
 {
   "schema_version": 1,
-  "base_sha": "4d3144b9a61a4dbe67cf46fa4afae4d33754acdb",
-  "reason": "Issue #233: make discharge recommendations explicitly source/doctor-owned; parse only unambiguous discharge-recommendation headings, render only the explicit PatientData field, and keep bundled generic advice fail-closed.",
+  "base_sha": "5442a97978f50e6522149c0075198fe3146d4a02",
+  "reason": "Issue #232: carry exact date-to-clinical-state evidence from the semantic diary plan into automatic dynamic epicrises; use only exact calendar matches and fail closed when a dynamic date has no selected observation.",
   "approved_blobs": {
-    "medical_markers.py": "848d899009bb3cf2a999f38b4d9ddf8b8b2f694a",
-    "medical_models.py": "2ce38020486d09bfa06ed2c1e5e624f99ca6f606",
-    "medical_parser.py": "d14cb06b58af22579a7bba990a7fc712f63425f4",
-    "medical_parser_blocks.py": "7b2956048838c27d4687a7f3bb7ac8e2bf81a4e4",
-    "medical_renderer_primary.py": "9f1eeda5cc335e293866e978b087fc46208d11ba"
+    "diary_models.py": "c725d54e946ea5847e5b9d7d6cb386613e0503d6",
+    "diary_batch.py": "8f1f3c75e73e92307b96f0ac28fe01eb6fa35fd9",
+    "diary_service.py": "aae11f7cb7f28e9a90bba3ea6ad5c336ac29dec0"
   }
 }

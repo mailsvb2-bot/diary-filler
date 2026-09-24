@@ -808,6 +808,7 @@ def _assert_diary_service_boundary() -> None:
     actions = _read("actions_diary_flow.py")
     service = _read("diary_service.py")
     batch = _read("diary_batch.py")
+    models = _read("diary_models.py")
     app_init = _read("app_initialization.py")
 
     dead_legacy_state = (
@@ -844,6 +845,18 @@ def _assert_diary_service_boundary() -> None:
         _fail("Production DiaryService is coupled back to the legacy boolean/table facade")
     if "def create_text_diaries" not in batch:
         _fail("Canonical paragraph diary entry point is missing from diary_batch.py")
+    if "dated_clinical_states" not in models:
+        _fail("DiaryBatchResult lost exact-date clinical state evidence")
+    if "dated_clinical_states={" not in batch or "if not entry.is_final" not in batch:
+        _fail("text diary semantic plan no longer exposes exact-date non-final clinical states")
+    if "clinical_state_by_date=result.dated_clinical_states" not in service:
+        _fail("automatic dynamic epicrisis does not consume exact-date semantic diary evidence")
+    if 'clinical_state=state_by_date.get(item_date, "")' not in service:
+        _fail("dynamic epicrisis may borrow clinical state from another date")
+    if "use_legacy_undated = clinical_state_by_date is None" not in service:
+        _fail("dynamic epicrisis lost fail-closed separation from legacy undated clinical arguments")
+    if "Динамическое наблюдение:" not in service:
+        _fail("date-specific dynamic epicrisis clinical state is not rendered")
 
     # Importing the production DiaryService must not eagerly load the legacy
     # table writer. Keep only the narrow date-source helpers at module scope;

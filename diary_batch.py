@@ -466,6 +466,11 @@ def _fill_text_diary_batch(
         gender_replacements=gender_replacements,
         removed_holiday_rows=0,
         removed_after_discharge_rows=0,
+        dated_clinical_states={
+            entry.date: entry.text
+            for entry in entries
+            if not entry.is_final
+        },
     )
 
 
