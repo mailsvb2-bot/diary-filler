@@ -341,19 +341,19 @@ dynamic_exact_result = DiaryService().create_text_diaries(
     output_dir=OUT / "dynamic_exact_date_evidence",
     patient_name="Маркер Женская Дополнительная",
     gender_source_name="Маркер Женская Дополнительная",
-    admission_value="10.06.2026",
-    discharge_value="10.07.2026",
+    admission_value="08.06.2026",
+    discharge_value="08.07.2026",
     sick_leave_dynamic_epicrisis=True,
-    sick_leave_from="14.06.2026",
+    sick_leave_from="12.06.2026",
     birth_date="01.01.1980",
 )
 assert getattr(dynamic_exact_result, "dynamic_epicrisis_count", 0) == 2
-assert dynamic_exact_result.dated_clinical_states[_calendar_date(2026, 6, 24)].startswith("DYNAMIC_STATE_ALPHA")
-assert dynamic_exact_result.dated_clinical_states[_calendar_date(2026, 7, 4)].startswith("DYNAMIC_STATE_DELTA")
+assert dynamic_exact_result.dated_clinical_states[_calendar_date(2026, 6, 22)].startswith("DYNAMIC_STATE_ALPHA")
+assert dynamic_exact_result.dated_clinical_states[_calendar_date(2026, 7, 2)].startswith("DYNAMIC_STATE_DELTA")
 _dynamic_exact_doc = Document(dynamic_exact_result.created_files[0])
 _dynamic_exact_lines = [p.text for p in _dynamic_exact_doc.paragraphs if p.text.strip()]
-_dynamic_first = next(line for line in _dynamic_exact_lines if line.startswith("24.06.26 Динамический эпикриз."))
-_dynamic_second = next(line for line in _dynamic_exact_lines if line.startswith("04.07.26 Динамический эпикриз."))
+_dynamic_first = next(line for line in _dynamic_exact_lines if line.startswith("22.06.26 Динамический эпикриз."))
+_dynamic_second = next(line for line in _dynamic_exact_lines if line.startswith("02.07.26 Динамический эпикриз."))
 assert "Динамическое наблюдение: DYNAMIC_STATE_ALPHA" in _dynamic_first, _dynamic_first
 assert "DYNAMIC_STATE_DELTA" not in _dynamic_first, _dynamic_first
 assert "Динамическое наблюдение: DYNAMIC_STATE_DELTA" in _dynamic_second, _dynamic_second
@@ -367,17 +367,17 @@ dynamic_missing_result = DiaryService().create_text_diaries(
     output_dir=OUT / "dynamic_missing_exact_date_evidence",
     patient_name="Маркер Женская Дополнительная",
     gender_source_name="Маркер Женская Дополнительная",
-    admission_value="10.06.2026",
-    discharge_value="05.07.2026",
+    admission_value="09.06.2026",
+    discharge_value="03.07.2026",
     sick_leave_dynamic_epicrisis=True,
-    sick_leave_from="10.06.2026",
+    sick_leave_from="09.06.2026",
     birth_date="01.01.1980",
 )
 assert getattr(dynamic_missing_result, "dynamic_epicrisis_count", 0) == 2
 _dynamic_missing_doc = Document(dynamic_missing_result.created_files[0])
 _dynamic_missing_lines = [p.text for p in _dynamic_missing_doc.paragraphs if p.text.strip()]
-_dynamic_with_source = next(line for line in _dynamic_missing_lines if line.startswith("20.06.26 Динамический эпикриз."))
-_dynamic_without_source = next(line for line in _dynamic_missing_lines if line.startswith("30.06.26 Динамический эпикриз."))
+_dynamic_with_source = next(line for line in _dynamic_missing_lines if line.startswith("19.06.26 Динамический эпикриз."))
+_dynamic_without_source = next(line for line in _dynamic_missing_lines if line.startswith("29.06.26 Динамический эпикриз."))
 assert "Динамическое наблюдение: DYNAMIC_STATE_EPSILON" in _dynamic_with_source, _dynamic_with_source
 assert "Динамическое наблюдение:" not in _dynamic_without_source, _dynamic_without_source
 assert "DYNAMIC_STATE_" not in _dynamic_without_source, _dynamic_without_source

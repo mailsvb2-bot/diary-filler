@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "8a9c61c93a056e489a32e1d40babaab4e0991c22",
-  "reason": "Issue #232 dynamic epicrisis correctness: exact date-specific clinical evidence now flows from the semantic diary plan; unmatched dynamic dates fail closed without borrowing admission or neighboring observations.",
+  "reason": "Issue #232 dynamic epicrisis correctness: exact date-specific clinical evidence flows from the semantic diary plan; regression dates explicitly avoid weekend shifting when proving two different exact-date states, while unmatched working-date coverage still fails closed.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -26,6 +26,6 @@
     "diary_models.py": "c725d54e946ea5847e5b9d7d6cb386613e0503d6",
     "diary_batch.py": "8f1f3c75e73e92307b96f0ac28fe01eb6fa35fd9",
     "diary_service.py": "aae11f7cb7f28e9a90bba3ea6ad5c336ac29dec0",
-    "smoke_combined_part05_diary_basic_templates.py": "7b687bee33d59e668cc3d1f6a9a9511c542194c3"
+    "smoke_combined_part05_diary_basic_templates.py": "d8bebcef258731fb19bf90c6a0345ac245d5e436"
   }
 }
