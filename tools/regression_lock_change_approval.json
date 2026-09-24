@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "ad952289a1bcc5bc7c53d00843673f1139c32fb7",
-  "reason": "Deep document correctness audit: source-owned clinical prose and investigation results; template-owned cleanup; no fabricated clinical facts; coherent chronology/employment/commission semantics; year-aware production calendar; runtime budget 126; service-boundary fixtures satisfy mandatory employment unless employment itself is under test; VK-only implicit-positive fixtures explicitly mark the patient non-working so they reach the sick-leave/disability implication contracts; duplicate complaints cleanup remains narrowly scoped.",
+  "reason": "Deep document correctness audit: source-owned clinical prose and investigation results; template-owned cleanup; no fabricated clinical facts; coherent chronology/employment/commission semantics; year-aware production calendar; runtime budget 126; service-boundary fixtures satisfy mandatory employment and admission-occurrence decisions unless those contracts are under test; VK implicit-positive and combined success fixtures are isolated from unrelated mandatory fields; duplicate complaints cleanup remains narrowly scoped.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -37,7 +37,7 @@
     "smoke_combined_part03_medical_parser_manual.py": "e1c619bae68b3421ccbdafd9b366178f9b2eed86",
     "smoke_combined_part04_medical_generation.py": "41079a5ca792e677e64a4c68f39613d8d740faaa",
     "smoke_combined_part05_diary_basic_templates.py": "9aabcbd5532cf61a9d0fa210177fba4f9c053bd1",
-    "smoke_combined_part06_diary_columns_settings.py": "164cff639544324fe90d5e4c141cbad8d4d35da4",
+    "smoke_combined_part06_diary_columns_settings.py": "5f0a5ce4574fca60ac75e113e1cfd3cb0b0730d1",
     "tests/golden_docx_manifest.json": "ce01c9808be9652acceec987d7330c15e1ffb003",
     "tools/document_mechanics_change_approval.json": "528939b885ab73f73fe9c2ad745c548d4268eb88",
     "tools/docx_block_boundary_regression.py": "95977a51422cab35e072a6fcc5f10fb2f89ce619",

@@ -748,6 +748,7 @@ _implicit_mse_created, implicit_mse_used = service.create_documents(
 assert implicit_mse_used.disability_needed == "да", implicit_mse_used.disability_needed
 
 combined_sick_vk = service.parse_primary_document(nav)
+combined_sick_vk.admission_occurrence = "первично"
 combined_sick_vk.discharge_date = "20.06.2026"
 combined_sick_vk.expert_work_status = "нет"
 combined_sick_vk.expert_sick_leave_needed = ""
@@ -768,6 +769,7 @@ assert combined_sick_used.expert_sick_leave_needed == "да"
 assert combined_sick_used.expert_sick_leave_from == "10.06.2026"
 
 combined_mse = service.parse_primary_document(nav)
+combined_mse.admission_occurrence = "первично"
 combined_mse.expert_work_status = "нет"
 combined_mse.disability_needed = ""
 combined_mse.disability = ""
@@ -864,6 +866,7 @@ except ValueError as exc:
     assert "место работы и должность" in str(exc), str(exc)
 
 nonworking_primary = service.parse_primary_document(nav)
+nonworking_primary.admission_occurrence = "первично"
 nonworking_primary.expert_work_status = "нет"
 nonworking_primary.expert_work_org = ""
 nonworking_primary.expert_position = ""
@@ -888,6 +891,7 @@ assert "Работает в организации:" not in _nonworking_primary_
 assert "Должность:" not in _nonworking_primary_text, _nonworking_primary_text
 
 nonworking_admission = service.parse_primary_document(nav)
+nonworking_admission.admission_occurrence = "первично"
 nonworking_admission.expert_work_status = "нет"
 nonworking_admission.expert_work_org = ""
 nonworking_admission.expert_position = ""
