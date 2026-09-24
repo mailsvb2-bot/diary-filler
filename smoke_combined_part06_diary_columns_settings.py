@@ -600,7 +600,7 @@ try:
     )
     raise AssertionError("medical service must require admission date")
 except ValueError as exc:
-    assert "дата госпитализации" in str(exc), str(exc)
+    assert "дата госпитализации" in str(exc).lower(), str(exc)
 
 bad_rvk_act_number_data = service.parse_primary_document(nav)
 bad_rvk_act_number_data.discharge_date = "11.06.2026"
