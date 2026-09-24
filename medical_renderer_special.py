@@ -96,9 +96,12 @@ class MedicalRendererSpecialMixin:
         editor.replace_all_matching_paragraphs(["Год рождения"], f"Год рождения: {data.birth}")
         editor.replace_all_matching_paragraphs(["Проживает", "Регистрация по адресу"], format_registration_text(data.registered))
         self._place_psych_account_after_registration(editor, data, ["Регистрация по адресу"], fallback_markers=["Ф.И.О", "Ф.И.О:"])
+        # Service validation normalizes the VK-specific work fields. Do not fall
+        # back to legacy global work_org/position here: for an explicitly
+        # non-working patient those fields may still contain stale source values.
         vk_work_parts = [
-            (data.vk_mse_work_org or data.work_org).strip(),
-            (data.vk_mse_position or data.position).strip(),
+            data.vk_mse_work_org.strip(),
+            data.vk_mse_position.strip(),
         ]
         vk_work_line = ", ".join(part for part in vk_work_parts if part)
         editor.replace_all_matching_paragraphs(["Место работы"], f"Место работы: {vk_work_line}")
@@ -153,9 +156,12 @@ class MedicalRendererSpecialMixin:
                 if normalize_match(paragraph.text).startswith("от "):
                     clear_paragraph_highlight(paragraph)
 
+        # As with VK on MSE, these fields are normalized by the service layer.
+        # Never revive stale global employment values after an explicit
+        # "не работает" decision.
         work_position = data.sick_leave_vk_work_position or ", ".join(
             part for part in [data.sick_leave_vk_work_org, data.sick_leave_vk_position] if part
-        ).strip(", ") or ", ".join(part for part in [data.work_org, data.position] if part).strip(", ")
+        ).strip(", ")
         treatment_line = treatment_period_text(data.admission_date, data.sick_leave_vk_commission_date or data.sick_leave_vk_date)
 
         editor.replace_all_matching_paragraphs(["Ф.И.О", "Ф.И.О:"], f"Ф.И.О: {data.fio}")
