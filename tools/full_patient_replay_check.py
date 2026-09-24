@@ -50,7 +50,6 @@ def verify_user_flow() -> None:
         "по 11.06.2026",
         "В 3 отделение КДП поступает первично добровольно",
         "Лечение: терапия из пользовательского popup",
-        "Рекомендовано: наблюдение у районного психиатра, приём препаратов",
     )
     for marker in required_primary:
         if marker not in primary_text:
@@ -58,6 +57,11 @@ def verify_user_flow() -> None:
     for marker in required_discharge:
         if marker not in discharge_text:
             raise SystemExit(f"FULL PATIENT REPLAY FAILED: discharge lost marker {marker!r}")
+    # The canonical input contains no sourced discharge recommendation. Generic
+    # advice embedded in a historical template must therefore not become a
+    # patient fact in the replay output.
+    if "Рекомендовано: наблюдение у районного психиатра, приём препаратов" in discharge_text:
+        raise SystemExit("FULL PATIENT REPLAY FAILED: unsourced generic recommendation leaked into discharge DOCX")
     if "академического отпуска" in discharge_text.lower():
         raise SystemExit("FULL PATIENT REPLAY FAILED: stale academic-leave recommendation leaked into discharge DOCX")
 

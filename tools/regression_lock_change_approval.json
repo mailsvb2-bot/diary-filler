@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "ad952289a1bcc5bc7c53d00843673f1139c32fb7",
-  "reason": "Deep document correctness audit: source-owned clinical prose and investigation results; template-owned cleanup; no fabricated clinical facts; coherent chronology/employment/commission semantics; year-aware production calendar; runtime budget 126; stale imports removed; regression fixtures aligned; VK stale-employment leakage fixed; facility regression now preserves arbitrary patient narrative and only normalizes explicit legacy facility tokens.",
+  "reason": "Deep document correctness audit: source-owned clinical prose and investigation results; template-owned cleanup; no fabricated clinical facts; coherent chronology/employment/commission semantics; year-aware production calendar; runtime budget 126; stale imports removed; regression fixtures aligned; VK stale-employment leakage fixed; facility normalization respects source ownership; full-patient replay now rejects unsourced generic discharge recommendations instead of requiring template fiction.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -50,6 +50,7 @@
     "diary_table_cells.py": "aeea399266ef433161f0ff9f9ad94de99c197b6a",
     "diary_table_columns.py": "0f3c159226aaadee2ce01eb3931b2cfafae52b08",
     "diary_table_text_fill.py": "d3e53e85ec3e7b1bbc579e65164921c562e02116",
-    "smoke_combined_runner.py": "38518a0d9b00dbf6e79192e2890543aa142c247b"
+    "smoke_combined_runner.py": "38518a0d9b00dbf6e79192e2890543aa142c247b",
+    "tools/full_patient_replay_check.py": "6763ac8a7df025b9cd3bb703ea74ed227d5acdf3"
   }
 }
