@@ -193,6 +193,7 @@ except ValueError as exc:
 
 missing_discharge_required_data = service.parse_primary_document(nav)
 missing_discharge_required_data.admission_occurrence = "первично"
+missing_discharge_required_data.expert_work_status = "нет"
 missing_discharge_required_data.expert_sick_leave_needed = "нет"
 missing_discharge_required_data.sick_leave = "не нужен"
 try:
