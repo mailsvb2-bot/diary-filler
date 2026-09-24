@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "ad952289a1bcc5bc7c53d00843673f1139c32fb7",
-  "baseline_note": "Cross-field order/isolation regression baseline. PR #226 exact head 3de946ecc74daca971b42b154c051d7ce7913706 passed Windows CI #896 / run 35866539199 completely, including release gate, full patient replay + golden DOCX, long clinical block integrity, packaged EXE intake E2E, installer build and install/uninstall smoke, then merged as ad952289a1bcc5bc7c53d00843673f1139c32fb7. The regression proves clinical tagged lines remain single-copy, ordered, and isolated between neighboring fields across parse and every canonical medical form.",
+  "baseline_ref": "236f329e9fad64dbf4c009ac4fad5eeacbc14137",
+  "baseline_note": "Deep document correctness audit baseline. PR #229 exact head 37848076b5377e0eb9b09bd0a83a8828beb150ae passed Windows CI #1099 / run 36035330877 completely, including release gate, full patient replay + golden DOCX, long clinical block integrity, staff/gender/diary regressions, profiling, GUI, EXE, packaged desktop intake E2E, installer build and install/uninstall smoke; it merged as 236f329e9fad64dbf4c009ac4fad5eeacbc14137. Post-merge main CI #1100 / run 36036030120 then passed the same complete Windows pipeline. This cleanup removes the consumed document-mechanics approval while preserving one exact regression approval for that metadata transition.",
   "required_approval_evidence": [
     "ci_gate_lock"
   ],
