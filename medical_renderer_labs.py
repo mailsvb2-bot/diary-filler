@@ -106,11 +106,32 @@ class MedicalRendererLabsMixin:
         """Clean legacy template leakage without touching inserted patient prose."""
         complaint_core = cls._complaint_core(data.complaints)
         for paragraph in list(iter_all_paragraphs(editor.doc)):
-            if editor.template_paragraph_text(paragraph) is None:
-                continue
+            template_owned = editor.template_paragraph_text(paragraph) is not None
             text = normalize_match(paragraph.text)
             if not text:
                 continue
+
+            # The legacy parser can attach one trailing complaints sentence to the
+            # epidemiology value when that sentence follows the epidemiology prose
+            # in the source document.  This is the only source-owned cleanup done
+            # here: remove that terminal duplicate only when it semantically
+            # matches the already extracted complaints field.  Other patient prose
+            # remains immutable.
+            if not template_owned:
+                if text.startswith("эпидемиологический анамнез:"):
+                    trailing = cls._TRAILING_COMPLAINT_RE.search(paragraph.text)
+                    if (
+                        trailing
+                        and complaint_core
+                        and cls._complaints_equivalent(trailing.group("body"), complaint_core)
+                    ):
+                        replace_paragraph_regex_preserving_runs(
+                            paragraph, cls._TRAILING_COMPLAINT_RE, ""
+                        )
+                        if not normalize_match(paragraph.text):
+                            remove_paragraph(paragraph)
+                continue
+
             if cls._HOSPITALIZATION_RECOMMENDATION_RE.search(paragraph.text):
                 def _preserve_spacing(match: re.Match[str]) -> str:
                     before = match.string[:match.start()].strip()
