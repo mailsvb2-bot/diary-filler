@@ -692,7 +692,7 @@ _epi_prose_data.disease_anamnesis = (
 _epi_prose_created, _ = service.create_documents(
     navigation_path=nav,
     output_dir=OUT / "epi_marker_patient_prose_preserved",
-    discharge_date="11.06.2026",
+    discharge_date="20.06.2026",
     selected_docs=["primary", "discharge", "commission", "vk_mse", "sick_leave_vk", "rvk"],
     override_data=_epi_prose_data,
 )
