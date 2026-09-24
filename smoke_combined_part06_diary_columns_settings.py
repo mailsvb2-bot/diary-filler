@@ -717,6 +717,7 @@ except ValueError as exc:
     assert "оформление инвалидности не нужно" in str(exc), str(exc)
 
 implicit_sick_vk = service.parse_primary_document(nav)
+implicit_sick_vk.expert_work_status = "нет"
 implicit_sick_vk.expert_sick_leave_needed = ""
 implicit_sick_vk.sick_leave = ""
 implicit_sick_vk.sick_leave_vk_date = "12.06.2026"
@@ -732,6 +733,7 @@ _implicit_created, implicit_used = service.create_documents(
 assert implicit_used.expert_sick_leave_needed == "да", implicit_used.expert_sick_leave_needed
 
 implicit_mse = service.parse_primary_document(nav)
+implicit_mse.expert_work_status = "нет"
 implicit_mse.disability_needed = ""
 implicit_mse.disability = ""
 implicit_mse.vk_date = "12.06.2026"
