@@ -185,6 +185,9 @@ class PatientData:
     examination_plan: str = ""
     investigation_results: str = ""
     treatment_plan: str = ""
+    # Explicit source/doctor-owned discharge advice. Never synthesize this from
+    # bundled template examples.
+    discharge_recommendations: str = ""
     # True only when the primary document itself contains an explicit
     # treatment section row: «Лечение», «Назначенное лечение» or
     # «План лечения». Ordinary prose like «за время лечения» is ignored.

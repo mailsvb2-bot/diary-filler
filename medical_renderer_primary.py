@@ -171,10 +171,30 @@ class MedicalRendererPrimaryMixin:
             editor.replace_block(["Лечение"], "Лечение:", data.treatment_plan, DISCHARGE_MARKERS)
 
         # Historical bundled templates contain a fixed positive treatment
-        # outcome and generic medical recommendations. Neither is patient
-        # evidence. Until explicit discharge-outcome/recommendation fields are
-        # sourced from the doctor, remove those example blocks fail-closed.
-        editor.remove_all_matching_paragraphs(["За время лечения", "Рекомендовано"])
+        # outcome and generic medical recommendations. The outcome is still
+        # unsupported and is removed. Discharge advice is rendered only from
+        # the explicit source/doctor-owned PatientData field.
+        editor.remove_all_matching_paragraphs(["За время лечения"])
+        discharge_recommendations = str(data.discharge_recommendations or "").strip()
+        recommendation_aliases = [
+            "Рекомендации при выписке",
+            "Рекомендовано при выписке",
+            "Рекомендовано",
+        ]
+        if discharge_recommendations:
+            if not editor.replace_block(
+                recommendation_aliases,
+                "Рекомендации при выписке:",
+                discharge_recommendations,
+                DISCHARGE_MARKERS,
+                allow_empty=True,
+            ):
+                editor.insert_before_first_matching_paragraph(
+                    ["Зав. отд.", "Врач-психиатр"],
+                    f"Рекомендации при выписке: {discharge_recommendations}",
+                )
+        else:
+            editor.remove_all_matching_paragraphs(recommendation_aliases)
 
         signature = (
             f"  Зав. отд. {format_staff_short_name(data.head)}"

@@ -573,6 +573,35 @@ assert not any(line.startswith("За время лечения") for line in dis
 assert not any(line.startswith("Рекомендовано:") for line in discharge_lines), discharge_lines[-8:]
 assert "Врач-психиатр" in discharge_lines[-1] and "Зав. отд." in discharge_lines[-1], discharge_lines[-5:]
 
+# Explicit discharge recommendations are source/doctor-owned. A custom value
+# must replace the bundled template example, survive a parser round-trip and
+# remain absent when the field is empty.
+_sourced_recommendation = copy.deepcopy(manual_data)
+_sourced_recommendation.discharge_recommendations = (
+    "Наблюдение у лечащего врача по месту жительства; "
+    "контроль состояния по индивидуальному плану."
+)
+_sourced_recommendation_created, _ = service.create_documents(
+    navigation_path=nav,
+    output_dir=OUT / "sourced_discharge_recommendation",
+    discharge_date=manual_data.discharge_date,
+    selected_docs=["discharge"],
+    override_data=_sourced_recommendation,
+)
+_sourced_recommendation_path = _sourced_recommendation_created[0]
+_sourced_recommendation_text = extract_docx_text(_sourced_recommendation_path)
+_expected_recommendation = (
+    "Рекомендации при выписке: Наблюдение у лечащего врача по месту жительства; "
+    "контроль состояния по индивидуальному плану."
+)
+assert _expected_recommendation in _sourced_recommendation_text, _sourced_recommendation_text
+assert "Рекомендовано: наблюдение у районного психиатра, приём препаратов" not in _sourced_recommendation_text
+_sourced_recommendation_roundtrip = service.parse_primary_document(_sourced_recommendation_path)
+assert _sourced_recommendation_roundtrip.discharge_recommendations == (
+    "Наблюдение у лечащего врача по месту жительства; "
+    "контроль состояния по индивидуальному плану."
+), _sourced_recommendation_roundtrip.discharge_recommendations
+
 # Historical staff mentions inside patient clinical prose must remain source-owned,
 # while actual template signatures/headings use the configured staff profile.
 _staff_prose_data = copy.deepcopy(manual_data)

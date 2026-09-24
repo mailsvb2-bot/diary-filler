@@ -736,6 +736,10 @@ def _assert_clinical_popup_and_document_order_contract() -> None:
         _fail("parser cannot read the canonical registration wording")
     if "investigation_results: str" not in models:
         _fail("PatientData lost the source-owned investigation-results field")
+    if "discharge_recommendations: str" not in models:
+        _fail("PatientData lost the source-owned discharge-recommendations field")
+    if '"discharge_recommendations": ("Рекомендации при выписке", "Рекомендовано при выписке")' not in parser:
+        _fail("parser no longer preserves the explicit discharge-recommendations block")
     if '"investigation_results": ("Результаты обследований", "Результаты исследований")' not in parser:
         _fail("parser no longer preserves the explicit investigation-results block")
     if "inside_investigation_results" not in parser_blocks or 'marker_norm == normalize_match("ЭЭГ")' not in parser_blocks:
@@ -781,8 +785,14 @@ def _assert_clinical_popup_and_document_order_contract() -> None:
         _fail("legacy trailing complaint cleanup no longer handles prose/morphology variants")
     if "DISCHARGE_RECOMMENDATION_TEXT" in primary:
         _fail("discharge renderer reintroduced a hard-coded patient recommendation")
-    if 'remove_all_matching_paragraphs(["За время лечения", "Рекомендовано"])' not in primary:
-        _fail("discharge renderer no longer clears unsourced template outcome/recommendations")
+    if 'editor.remove_all_matching_paragraphs(["За время лечения"])' not in primary:
+        _fail("discharge renderer no longer clears the unsourced template treatment outcome")
+    if "data.discharge_recommendations" not in primary:
+        _fail("discharge renderer no longer uses the explicit source-owned recommendation field")
+    if '"Рекомендации при выписке"' not in primary or '"Рекомендовано при выписке"' not in primary:
+        _fail("discharge renderer lost the explicit recommendation aliases")
+    if "editor.remove_all_matching_paragraphs(recommendation_aliases)" not in primary:
+        _fail("empty discharge recommendations no longer clear bundled template advice")
     if "_move_discharge_outcome_before_signatures" in primary or "_move_discharge_outcome_before_signatures" in labs:
         _fail("discharge post-processing may move patient recommendation prose out of anamnesis")
     if 'template_text = editor.template_paragraph_text(paragraph)' not in commission:
