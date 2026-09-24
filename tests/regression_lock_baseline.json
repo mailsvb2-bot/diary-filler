@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "8a9c61c93a056e489a32e1d40babaab4e0991c22",
-  "baseline_note": "Explicit production-calendar correctness baseline. PR #236 exact head 35928960ed31a92f194eeec1a72b395fa4e801e1 passed Windows CI #1104 / run 36037847298 completely, including release gate, golden DOCX, diary/calendar regressions, profiling, GUI, EXE, packaged desktop intake E2E, installer build and install/uninstall smoke; it merged as 8a9c61c93a056e489a32e1d40babaab4e0991c22. Post-merge main CI #1105 / run 36038688431 then passed the same complete Windows pipeline. This cleanup removes the consumed document-mechanics approval while preserving one exact regression approval for that metadata transition.",
+  "baseline_ref": "b82e43de4000d0a918d0628104c36a9b60c25f33",
+  "baseline_note": "Final medical correctness baseline after source-owned discharge recommendations and exact-date dynamic-epicrisis clinical evidence. PR #238 exact head 85b2e0aba59264eca24684aad08cf50c42dc26c6 passed Windows CI #1109 / run 36040730365 completely and merged as 5442a97978f50e6522149c0075198fe3146d4a02; post-merge main CI #1110 / run 36041395247 passed. PR #239 exact head ffacfadb87b24bd4b70072953c2c85882e58a8f8 passed Windows CI #1113 / run 36045554390 completely, including exact-date dynamic-epicrisis regressions, EXE, packaged E2E, installer and install/uninstall smoke, then merged as b82e43de4000d0a918d0628104c36a9b60c25f33. Post-merge main CI #1114 / run 36046151955 passed the same full Windows pipeline. This cleanup removes the consumed document-mechanics approval and retains only exact metadata-transition approval.",
   "required_approval_evidence": [
     "ci_gate_lock"
   ],

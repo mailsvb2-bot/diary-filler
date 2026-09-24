@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "8a9c61c93a056e489a32e1d40babaab4e0991c22",
-  "reason": "Issue #232 dynamic epicrisis correctness: exact-date semantic diary evidence is used only on matching dates; verbal diary regression now proves a matching date receives its selected state while a non-matching date stays administrative-only and ignores undated compatibility arguments.",
+  "baseline_ref": "b82e43de4000d0a918d0628104c36a9b60c25f33",
+  "reason": "Remove the consumed document-mechanics approval after fully verified discharge-recommendation and exact-date dynamic-epicrisis correctness changes.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -15,18 +15,6 @@
     "ci_gate_lock"
   ],
   "approved_blobs": {
-    "medical_markers.py": "848d899009bb3cf2a999f38b4d9ddf8b8b2f694a",
-    "medical_models.py": "2ce38020486d09bfa06ed2c1e5e624f99ca6f606",
-    "medical_parser.py": "d14cb06b58af22579a7bba990a7fc712f63425f4",
-    "medical_parser_blocks.py": "7b2956048838c27d4687a7f3bb7ac8e2bf81a4e4",
-    "medical_renderer_primary.py": "9f1eeda5cc335e293866e978b087fc46208d11ba",
-    "smoke_combined_part04_medical_generation.py": "80ea9064a3308d5d0d0cbdddb6684f1b01cc0d8b",
-    "tools/document_mechanics_change_approval.json": "6cab875f5e7da9ebdfc106ef8abae0a8bb3eaaae",
-    "prod_audit.py": "955bc5d1a9c840ba6a3c851c70a0985f281c2566",
-    "diary_models.py": "c725d54e946ea5847e5b9d7d6cb386613e0503d6",
-    "diary_batch.py": "8f1f3c75e73e92307b96f0ac28fe01eb6fa35fd9",
-    "diary_service.py": "aae11f7cb7f28e9a90bba3ea6ad5c336ac29dec0",
-    "smoke_combined_part05_diary_basic_templates.py": "d8bebcef258731fb19bf90c6a0345ac245d5e436",
-    "tests/verbal_diary_source_regression.py": "19a3a900bac9d8f9804f09dc3c1801b0a7651253"
+    "tools/document_mechanics_change_approval.json": "<deleted>"
   }
 }
