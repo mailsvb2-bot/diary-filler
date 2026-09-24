@@ -111,6 +111,8 @@ class MedicalRendererLabsMixin:
             text = normalize_match(paragraph.text)
             if not text:
                 continue
+            prior_nonempty_text = previous_nonempty_text
+            previous_nonempty_text = text
 
             # The legacy parser can attach one trailing complaints sentence to the
             # epidemiology value when that sentence follows the epidemiology prose
@@ -122,7 +124,7 @@ class MedicalRendererLabsMixin:
                 trailing = cls._TRAILING_COMPLAINT_RE.search(paragraph.text)
                 is_epi_paragraph = text.startswith("эпидемиологический анамнез:")
                 is_epi_tail_paragraph = (
-                    previous_nonempty_text.startswith("эпидемиологический анамнез:")
+                    prior_nonempty_text.startswith("эпидемиологический анамнез:")
                     and cls._TRAILING_COMPLAINT_RE.fullmatch(paragraph.text or "") is not None
                 )
                 if (
@@ -138,7 +140,6 @@ class MedicalRendererLabsMixin:
                         remove_paragraph(paragraph)
                         continue
                     text = normalize_match(paragraph.text)
-                previous_nonempty_text = text
                 continue
 
             if cls._HOSPITALIZATION_RECOMMENDATION_RE.search(paragraph.text):
