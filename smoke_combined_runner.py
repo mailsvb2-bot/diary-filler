@@ -98,7 +98,7 @@ def _run_docx_cache_regression() -> None:
 
 
 def _run_facility_reference_regression() -> None:
-    """Prove facility prefilters preserve every established replacement route."""
+    """Replace explicit legacy facility tokens without rewriting patient narrative."""
     from docx import Document
 
     from medical_constants import TARGET_MEDICAL_FACILITY
@@ -123,8 +123,8 @@ def _run_facility_reference_regression() -> None:
             "Из отделения № 3 переведен по профилю",
             f"Из {TARGET_MEDICAL_FACILITY} переведен по профилю",
         ),
-        ("Направляется на лечение в старое учреждение", f"Направляется в {TARGET_MEDICAL_FACILITY}"),
-        ("   Направляется   в ГБУЗ НО ПБ №2", f"Направляется в {TARGET_MEDICAL_FACILITY}"),
+        ("Направляется на лечение в старое учреждение", "Направляется на лечение в старое учреждение"),
+        ("   Направляется   в ГБУЗ НО ПБ №2", f"   Направляется   в {TARGET_MEDICAL_FACILITY}"),
         ("Психиатрическая помощь амбулаторно", "Психиатрическая помощь амбулаторно"),
         ("отделение №4", "отделение №4"),
         ("Без специальных слов", "Без специальных слов"),
