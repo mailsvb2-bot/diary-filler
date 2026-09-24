@@ -280,6 +280,7 @@ def _test_medical_transaction(tmp: Path) -> None:
         diagnosis="F41.2 тест",
         treatment_plan="тестовое лечение",
         admission_occurrence="первично",
+        expert_work_status="нет",
         expert_sick_leave_needed="нет",
         disability_needed="нет",
         psych_account_status="нет",
