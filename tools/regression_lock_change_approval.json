@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "8a9c61c93a056e489a32e1d40babaab4e0991c22",
-  "reason": "Remove the consumed document-mechanics approval after the fully verified explicit production-calendar change.",
+  "reason": "Issue #233 discharge recommendation correctness: add an explicit source-owned discharge recommendation field, parser round-trip support and fail-closed rendering without reviving bundled generic advice.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -15,6 +15,12 @@
     "ci_gate_lock"
   ],
   "approved_blobs": {
-    "tools/document_mechanics_change_approval.json": "<deleted>"
+    "medical_markers.py": "848d899009bb3cf2a999f38b4d9ddf8b8b2f694a",
+    "medical_models.py": "2ce38020486d09bfa06ed2c1e5e624f99ca6f606",
+    "medical_parser.py": "d14cb06b58af22579a7bba990a7fc712f63425f4",
+    "medical_parser_blocks.py": "7b2956048838c27d4687a7f3bb7ac8e2bf81a4e4",
+    "medical_renderer_primary.py": "9f1eeda5cc335e293866e978b087fc46208d11ba",
+    "smoke_combined_part04_medical_generation.py": "80ea9064a3308d5d0d0cbdddb6684f1b01cc0d8b",
+    "tools/document_mechanics_change_approval.json": "2ba685ea6767a76b45c461bc777e396fcb9e3dbb"
   }
 }
