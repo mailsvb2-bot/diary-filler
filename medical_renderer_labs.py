@@ -105,6 +105,7 @@ class MedicalRendererLabsMixin:
     def _remove_trailing_clinical_leakage(cls, editor: DocxBlockEditor, data: PatientData) -> None:
         """Clean legacy template leakage without touching inserted patient prose."""
         complaint_core = cls._complaint_core(data.complaints)
+        previous_nonempty_text = ""
         for paragraph in list(iter_all_paragraphs(editor.doc)):
             template_owned = editor.template_paragraph_text(paragraph) is not None
             text = normalize_match(paragraph.text)
@@ -118,18 +119,26 @@ class MedicalRendererLabsMixin:
             # matches the already extracted complaints field.  Other patient prose
             # remains immutable.
             if not template_owned:
-                if text.startswith("эпидемиологический анамнез:"):
-                    trailing = cls._TRAILING_COMPLAINT_RE.search(paragraph.text)
-                    if (
-                        trailing
-                        and complaint_core
-                        and cls._complaints_equivalent(trailing.group("body"), complaint_core)
-                    ):
-                        replace_paragraph_regex_preserving_runs(
-                            paragraph, cls._TRAILING_COMPLAINT_RE, ""
-                        )
-                        if not normalize_match(paragraph.text):
-                            remove_paragraph(paragraph)
+                trailing = cls._TRAILING_COMPLAINT_RE.search(paragraph.text)
+                is_epi_paragraph = text.startswith("эпидемиологический анамнез:")
+                is_epi_tail_paragraph = (
+                    previous_nonempty_text.startswith("эпидемиологический анамнез:")
+                    and cls._TRAILING_COMPLAINT_RE.fullmatch(paragraph.text or "") is not None
+                )
+                if (
+                    trailing
+                    and complaint_core
+                    and (is_epi_paragraph or is_epi_tail_paragraph)
+                    and cls._complaints_equivalent(trailing.group("body"), complaint_core)
+                ):
+                    replace_paragraph_regex_preserving_runs(
+                        paragraph, cls._TRAILING_COMPLAINT_RE, ""
+                    )
+                    if not normalize_match(paragraph.text):
+                        remove_paragraph(paragraph)
+                        continue
+                    text = normalize_match(paragraph.text)
+                previous_nonempty_text = text
                 continue
 
             if cls._HOSPITALIZATION_RECOMMENDATION_RE.search(paragraph.text):
