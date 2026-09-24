@@ -272,9 +272,12 @@ def _assert_selected_text_does_not_require_dates(root: Path) -> None:
     assert captured.get("sick_leave_dynamic_epicrisis") is True, captured
     assert captured.get("sick_leave_from") == "20.05.2026", captured
     assert captured.get("birth_date") == "01.01.1980", captured
-    assert captured.get("complaints") == "Жалоб не предъявляет", captured
-    assert captured.get("treatment") == "Терапия по листу назначений", captured
-    assert captured.get("profile_status") == "Состояние стабильное", captured
+    # Admission/source clinical prose is not a dated observation for a later
+    # dynamic epicrisis. The diary route must fail closed instead of relabelling
+    # admission complaints/treatment/mental status as the +10/+20 day state.
+    assert captured.get("complaints") == "", captured
+    assert captured.get("treatment") == "", captured
+    assert captured.get("profile_status") == "", captured
 
 
 def _assert_discharge_plus_diaries_keeps_dynamic_epicrisis(root: Path) -> None:
