@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "ad952289a1bcc5bc7c53d00843673f1139c32fb7",
-  "reason": "Deep document correctness audit: source-owned clinical prose and investigation results; template-owned cleanup; no fabricated clinical facts; coherent chronology/employment/commission semantics; year-aware production calendar; runtime budget 126; stale imports removed; regression fixtures aligned; VK stale-employment leakage fixed; facility normalization preserves narrative; words-only diary regression aligned with fail-closed dynamic-epicrisis clinical state.",
+  "reason": "Deep document correctness audit: source-owned clinical prose and investigation results; template-owned cleanup; no fabricated clinical facts; coherent chronology/employment/commission semantics; year-aware production calendar; runtime budget 126; stale imports removed; regression fixtures aligned; VK stale-employment leakage fixed; facility normalization preserves narrative; verbal diary regressions now consistently enforce fail-closed dynamic-epicrisis clinical state when no dated observation source exists.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -52,6 +52,6 @@
     "diary_table_text_fill.py": "d3e53e85ec3e7b1bbc579e65164921c562e02116",
     "smoke_combined_runner.py": "38518a0d9b00dbf6e79192e2890543aa142c247b",
     "tools/full_patient_replay_check.py": "6763ac8a7df025b9cd3bb703ea74ed227d5acdf3",
-    "tests/verbal_diary_source_regression.py": "b8072c2c7f0fa93970d517a3ccb3fad6b9033968"
+    "tests/verbal_diary_source_regression.py": "248d0ed96c28fc30ddc495afbd03991749d8de0f"
   }
 }

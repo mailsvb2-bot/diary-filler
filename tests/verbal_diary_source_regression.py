@@ -315,9 +315,12 @@ def _assert_discharge_plus_diaries_keeps_dynamic_epicrisis(root: Path) -> None:
     for text in dynamic_paragraphs:
         assert "Дата рождения:" in text, text
         assert "Лечится с:" in text, text
-        assert "Жалобы:" in text, text
-        assert "Принимает:" in text, text
-        assert "Психический статус:" in text, text
+        # No dated observation source is available for these +10/+20 day
+        # epicrises, so admission complaints/treatment/mental status must not
+        # be relabelled as the patient's later state.
+        assert "Жалобы:" not in text, text
+        assert "Принимает:" not in text, text
+        assert "Психический статус:" not in text, text
         assert "Продолжение лечения по листу нетрудоспособности." in text, text
     # Clinical fields must stay in the same Word paragraph instead of becoming
     # a vertical stack of forced paragraphs. Signatures remain separate.
