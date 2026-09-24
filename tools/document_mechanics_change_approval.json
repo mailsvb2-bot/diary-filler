@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "base_sha": "45a2c067e7327088acd72ae9b259867653eec3f6",
-  "reason": "Deep medical-document correctness audit: evidence-only rendering and source-owned clinical prose; template-owned cleanup; coherent work/commission decisions and chronology; year-aware shared production calendar; no fabricated clinical facts; VK renderers must use service-normalized form-specific employment fields and never revive stale global job data for an explicitly non-working patient.",
+  "reason": "Deep medical-document correctness audit: evidence-only rendering and source-owned clinical prose; template-owned cleanup; coherent work/commission decisions and chronology; year-aware shared production calendar; no fabricated clinical facts; preserve the green-main canonical facility referral normalization for explicit legacy referral paragraphs.",
   "approved_blobs": {
     "actions_diary_flow.py": "986922b0f35633c51cf9d5117b029445d98fc70e",
     "dialog_expert.py": "65fdd91fbc9c0b59aca8a544bd8f70296eec3907",
@@ -12,7 +12,7 @@
     "diary_table_rows.py": "2a421f17a35a2a6fd85de12de5a03c760b842dc5",
     "diary_writer_entries.py": "2f03c0bfc53422bbf8a7cb900305f6cde627ee28",
     "medical_docx_editor_replace.py": "9a7f5a11c628bc7eeac1125e0b451057ff9b8dd6",
-    "medical_gender.py": "bfae762bf174cc11775e3f0695a4a91f44c7a784",
+    "medical_gender.py": "0d84d12b4c7da529fd6dc4de8c533416d6bda95e",
     "medical_markers.py": "f36aae8981323ddc9bc4c0c6b505052242baf4c4",
     "medical_models.py": "38a42064609a982331641337dea40b84b0d4a6c6",
     "medical_parser.py": "cc1b964965c90048380789946db98a08bbc6874b",

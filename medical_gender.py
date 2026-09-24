@@ -158,10 +158,12 @@ def normalize_facility_references_in_document(doc: DocxDocument) -> None:
             continue
 
         folded = original.casefold()
-        # Never replace an entire narrative paragraph merely because it starts
-        # with «Направляется ...». Renderers own document-specific referral
-        # sentences; this global finalizer only normalizes explicit legacy
-        # facility tokens and must preserve the rest of source clinical prose.
+        if "направляется" in folded:
+            normalized = normalize_match(original)
+            if normalized.startswith("направляется на лечение") or normalized.startswith("направляется в гбуз"):
+                set_paragraph_text(paragraph, f"Направляется в {target}")
+                continue
+
         if not any(token in folded for token in _FACILITY_REFERENCE_PREFILTERS):
             continue
         for pattern in _FACILITY_REFERENCE_PATTERNS:
