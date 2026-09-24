@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "8a9c61c93a056e489a32e1d40babaab4e0991c22",
-  "reason": "Issue #232 dynamic epicrisis correctness: exact date-specific clinical evidence flows from the semantic diary plan; regression dates explicitly avoid weekend shifting when proving two different exact-date states, while unmatched working-date coverage still fails closed.",
+  "reason": "Issue #232 dynamic epicrisis correctness: exact-date semantic diary evidence is used only on matching dates; verbal diary regression now proves a matching date receives its selected state while a non-matching date stays administrative-only and ignores undated compatibility arguments.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -26,6 +26,7 @@
     "diary_models.py": "c725d54e946ea5847e5b9d7d6cb386613e0503d6",
     "diary_batch.py": "8f1f3c75e73e92307b96f0ac28fe01eb6fa35fd9",
     "diary_service.py": "aae11f7cb7f28e9a90bba3ea6ad5c336ac29dec0",
-    "smoke_combined_part05_diary_basic_templates.py": "d8bebcef258731fb19bf90c6a0345ac245d5e436"
+    "smoke_combined_part05_diary_basic_templates.py": "d8bebcef258731fb19bf90c6a0345ac245d5e436",
+    "tests/verbal_diary_source_regression.py": "19a3a900bac9d8f9804f09dc3c1801b0a7651253"
   }
 }
