@@ -91,8 +91,8 @@ def _make_fixture(root: Path):
     data.expert_position = "инженер"
     data.expert_sick_leave_needed = "да"
     data.expert_sick_leave_from = "15.06.2026"
-    data.disability_needed = "нет"
-    data.disability = "не нужно"
+    data.disability_needed = "да"
+    data.disability = "нужно"
     data.work_org = data.expert_work_org
     data.position = data.expert_position
     data.sick_leave = "нужен с 15.06.2026"
