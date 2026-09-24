@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "base_sha": "957e1084ad36576e13edc10dcf1272356e999cee",
+  "reason": "Issue #231: explicit year-aware production-calendar exceptions replace inferred annual holiday transfers; 2025 includes transferred weekdays and working Saturday 01.11.2025, while 2026 records its distinct transfers explicitly.",
+  "approved_blobs": {
+    "diary_calendar.py": "8abbbcc529861d5a759c79f21acdfe4749264708"
+  }
+}

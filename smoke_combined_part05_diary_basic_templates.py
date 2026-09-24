@@ -142,6 +142,18 @@ assert is_non_working_day(_calendar_date(2026, 1, 9))   # government transfer
 assert not is_non_working_day(_calendar_date(2026, 1, 12))
 assert is_non_working_day(_calendar_date(2026, 12, 31)) # government transfer
 
+# 2025 proves why annual transfers must be explicit rather than derived from
+# the weekday of the statutory holiday. Government Resolution No. 1335 moved
+# 23 February to 8 May and 8 March to 13 June; 1 November became a working
+# Saturday when its day off moved to 3 November.
+assert not is_non_working_day(_calendar_date(2025, 2, 24))
+assert is_non_working_day(_calendar_date(2025, 5, 8))
+assert not is_non_working_day(_calendar_date(2025, 3, 10))
+assert is_non_working_day(_calendar_date(2025, 6, 13))
+assert not is_non_working_day(_calendar_date(2025, 11, 1))
+assert is_non_working_day(_calendar_date(2025, 11, 3))
+assert is_non_working_day(_calendar_date(2025, 12, 31))
+
 # Ordinary diary holiday removal uses the same calendar but does not remove
 # generic weekends. It must be year-aware so transferred holidays are correct.
 assert is_holiday_skip_date(1, 5, 2026)
@@ -149,6 +161,9 @@ assert not is_holiday_skip_date(4, 5, 2026)
 assert is_holiday_skip_date(11, 5, 2026)
 assert is_holiday_skip_date(9, 1, 2026)
 assert not is_holiday_skip_date(12, 1, 2026)
+assert not is_holiday_skip_date(24, 2, 2025)
+assert is_holiday_skip_date(8, 5, 2025)
+assert is_holiday_skip_date(3, 11, 2025)
 assert should_remove_holiday(_calendar_date(2026, 5, 11))
 assert not should_remove_holiday(_calendar_date(2026, 5, 4))
 
@@ -203,6 +218,22 @@ assert dynamic_epicrisis_dates(
     discharge_date=_calendar_date(2026, 5, 5),
     limit=1,
 ) == (_calendar_date(2026, 5, 4),)
+
+# In 2025 the Sunday 23 February day off was transferred to 8 May, not to
+# Monday 24 February. A +10-day epicrisis due on 24 February therefore stays
+# on 24 February.
+assert dynamic_epicrisis_dates(
+    _calendar_date(2025, 2, 14),
+    discharge_date=_calendar_date(2025, 2, 25),
+    limit=1,
+) == (_calendar_date(2025, 2, 24),)
+
+# 01.11.2025 is an explicitly working Saturday.
+assert dynamic_epicrisis_dates(
+    _calendar_date(2025, 10, 22),
+    discharge_date=_calendar_date(2025, 11, 2),
+    limit=1,
+) == (_calendar_date(2025, 11, 1),)
 
 contract_texts = OUT / "F20 Параноидная шизофрения.docx"
 contract_doc = Document()
