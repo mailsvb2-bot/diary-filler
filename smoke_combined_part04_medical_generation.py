@@ -736,7 +736,7 @@ _patient_prose_data.disease_anamnesis = (
 _patient_prose_created, _ = service.create_documents(
     navigation_path=nav,
     output_dir=OUT / "patient_marker_like_prose_preserved",
-    discharge_date="11.06.2026",
+    discharge_date="20.06.2026",
     selected_docs=["primary", "commission", "admission_doctor_referral"],
     override_data=_patient_prose_data,
 )
