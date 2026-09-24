@@ -12,13 +12,12 @@ from pathlib import Path
 from typing import Any
 
 import medical_gender
-import medical_renderer
 from medical_constants import DOCUMENT_ORDER
 from tools.generation_performance_profile import Probe, _make_fixture
 
 
 TARGETS = (
-    (medical_renderer, "adapt_patient_data_to_gender"),
+    (medical_gender, "adapt_patient_data_to_gender"),
     (medical_gender, "normalize_facility_references_in_document"),
     (medical_gender, "adapt_document_to_patient_gender"),
     (medical_gender, "remove_epi_mentions_from_document"),
