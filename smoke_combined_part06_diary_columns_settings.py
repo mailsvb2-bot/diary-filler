@@ -412,7 +412,7 @@ assert "Больничный лист" not in extract_docx_text(primary_without_
 for sick_required_kind in ("discharge", "commission"):
     missing_standalone_sick = service.parse_primary_document(nav)
     missing_standalone_sick.admission_occurrence = "первично"
-missing_standalone_sick.expert_work_status = "нет"
+    missing_standalone_sick.expert_work_status = "нет"
     missing_standalone_sick.sick_leave = ""
     missing_standalone_sick.expert_sick_leave_needed = ""
     missing_standalone_sick.disability_needed = ""
