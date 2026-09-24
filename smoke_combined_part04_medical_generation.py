@@ -875,6 +875,7 @@ for generated in created:
 phrase_data = service.parse_navigation(nav)
 phrase_data.admission = "добровольно Целесообразна госпитализация пациентки в 3 отделение КДП"
 phrase_data.admission_occurrence = "первично"
+phrase_data.expert_work_status = "нет"
 phrase_data.diagnosis = "F41.2 Тест"
 phrase_data.commission_date = "18.06.2026"
 phrase_data.commission_number = "10"
