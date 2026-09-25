@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "da4eab977ed83ea4f7e13d5eecd1ee886677f90f",
-  "baseline_note": "Final VK pagination baseline after PR #242. Exact PR head 56512e1aa2658d58f645dd7b617490967290cfaf passed Windows CI #1119 / run 36189662757 completely, including document mechanics, full patient replay + golden DOCX, long-block/staff/gender/diary regressions, EXE, packaged E2E, installer and install/uninstall smoke. PR #242 merged as da4eab977ed83ea4f7e13d5eecd1ee886677f90f; post-merge main CI #1120 / run 36190033838 passed the same full Windows pipeline. This cleanup removes the consumed document-mechanics approval and retains only an exact metadata-transition approval.",
+  "baseline_ref": "76c2009b79cee2e0c1cac65ea4815ea460cdd074",
+  "baseline_note": "Final clean VK pagination baseline. PR #242 fixed template-only VK spacer paragraphs and passed Windows CI #1119 / run 36189662757; merged as da4eab977ed83ea4f7e13d5eecd1ee886677f90f and post-merge CI #1120 / run 36190033838 passed. PR #243 advanced the baseline and removed the consumed document-mechanics approval; PR CI #1121 / run 36190541073 and post-merge main CI #1122 / run 36191279832 both passed the complete Windows pipeline. This final metadata cleanup removes the last temporary regression approval; runtime/document behavior is unchanged.",
   "required_approval_evidence": [
     "ci_gate_lock"
   ],
