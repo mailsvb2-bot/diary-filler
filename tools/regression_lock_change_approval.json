@@ -17,6 +17,7 @@
   "approved_blobs": {
     "medical_renderer_special.py": "7ed05a10bf3ea912f5b82e8e90d4b5327c461f9c",
     "smoke_combined_part04_medical_generation.py": "be93cf5a1bca29b3af292d67c915f15834c2dcd8",
-    "tests/golden_docx_manifest.json": "d025c0003928f0c3380557498345e54a7a22c310"
+    "tests/golden_docx_manifest.json": "d025c0003928f0c3380557498345e54a7a22c310",
+    "tools/document_mechanics_change_approval.json": "910d168bf6ce8f51593951f63ec3e1f0e9a13281"
   }
 }
