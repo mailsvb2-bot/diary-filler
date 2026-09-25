@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "b82e43de4000d0a918d0628104c36a9b60c25f33",
-  "baseline_note": "Final medical correctness baseline after source-owned discharge recommendations and exact-date dynamic-epicrisis clinical evidence. PR #238 exact head 85b2e0aba59264eca24684aad08cf50c42dc26c6 passed Windows CI #1109 / run 36040730365 completely and merged as 5442a97978f50e6522149c0075198fe3146d4a02; post-merge main CI #1110 / run 36041395247 passed. PR #239 exact head ffacfadb87b24bd4b70072953c2c85882e58a8f8 passed Windows CI #1113 / run 36045554390 completely, including exact-date dynamic-epicrisis regressions, EXE, packaged E2E, installer and install/uninstall smoke, then merged as b82e43de4000d0a918d0628104c36a9b60c25f33. Post-merge main CI #1114 / run 36046151955 passed the same full Windows pipeline. This cleanup removes the consumed document-mechanics approval and retains only exact metadata-transition approval.",
+  "baseline_ref": "da4eab977ed83ea4f7e13d5eecd1ee886677f90f",
+  "baseline_note": "Final VK pagination baseline after PR #242. Exact PR head 56512e1aa2658d58f645dd7b617490967290cfaf passed Windows CI #1119 / run 36189662757 completely, including document mechanics, full patient replay + golden DOCX, long-block/staff/gender/diary regressions, EXE, packaged E2E, installer and install/uninstall smoke. PR #242 merged as da4eab977ed83ea4f7e13d5eecd1ee886677f90f; post-merge main CI #1120 / run 36190033838 passed the same full Windows pipeline. This cleanup removes the consumed document-mechanics approval and retains only an exact metadata-transition approval.",
   "required_approval_evidence": [
     "ci_gate_lock"
   ],
