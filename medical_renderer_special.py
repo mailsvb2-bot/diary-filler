@@ -9,6 +9,7 @@ from medical_docx_editor import (
     DocxBlockEditor,
     clear_paragraph_highlight,
     iter_all_paragraphs,
+    remove_paragraph,
     set_paragraph_text,
 )
 from medical_expert import put_expert_anamnesis
@@ -77,6 +78,35 @@ class MedicalRendererSpecialMixin:
                     f"Лечащий врач {format_staff_short_name(data.doctor)}".rstrip(),
                 )
 
+    @staticmethod
+    def _compact_vk_signature_tail(editor: DocxBlockEditor) -> None:
+        """Remove template-only spacer paragraphs that can orphan VK signatures.
+
+        Historical VK templates contain several empty paragraphs immediately
+        before the final signature block and again after it. With real patient
+        text these spacers can push one or two signatures onto an otherwise
+        empty second page. Keep one visual separator before the final block and
+        remove only the empty tail paragraphs; clinical/source text is untouched.
+        """
+        while editor.paragraphs and not normalize_match(editor.paragraphs[-1].text):
+            remove_paragraph(editor.paragraphs[-1])
+
+        final_chair_indices = [
+            index
+            for index, paragraph in enumerate(editor.paragraphs)
+            if normalize_match(paragraph.text).startswith("председатель вк")
+        ]
+        if not final_chair_indices:
+            return
+
+        index = final_chair_indices[-1] - 1
+        blank_before = []
+        while index >= 0 and not normalize_match(editor.paragraphs[index].text):
+            blank_before.append(editor.paragraphs[index])
+            index -= 1
+        for paragraph in blank_before[1:]:
+            remove_paragraph(paragraph)
+
     def render_vk_mse(self, template_path: str | Path, output_path: str | Path, data: PatientData) -> None:
         """ВК на МСЭ: заполняем факты пациента; прогнозы шаблона не публикуем."""
         doc = Document(str(template_path))
@@ -137,6 +167,7 @@ class MedicalRendererSpecialMixin:
             doc.add_paragraph("Решение ВК: направить на МСЭ.")
         self._clean_vk_purpose_instruction(editor)
         self._finalize_vk_identity_lines(editor, data)
+        self._compact_vk_signature_tail(editor)
         finalize_medical_document(doc, data, editor=editor)
         doc.save(str(output_path))
 
@@ -200,6 +231,7 @@ class MedicalRendererSpecialMixin:
         ):
             doc.add_paragraph("Решение ВК: продлить лечение по листу нетрудоспособности.")
         self._finalize_vk_identity_lines(editor, data)
+        self._compact_vk_signature_tail(editor)
         finalize_medical_document(doc, data, editor=editor)
         doc.save(str(output_path))
 

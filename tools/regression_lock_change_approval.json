@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "b82e43de4000d0a918d0628104c36a9b60c25f33",
-  "reason": "Remove the consumed document-mechanics approval after fully verified discharge-recommendation and exact-date dynamic-epicrisis correctness changes.",
+  "reason": "Fix VK final-signature pagination by removing only redundant template spacer paragraphs and lock the updated canonical DOCX fingerprints.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -15,6 +15,9 @@
     "ci_gate_lock"
   ],
   "approved_blobs": {
-    "tools/document_mechanics_change_approval.json": "<deleted>"
+    "medical_renderer_special.py": "7ed05a10bf3ea912f5b82e8e90d4b5327c461f9c",
+    "smoke_combined_part04_medical_generation.py": "be93cf5a1bca29b3af292d67c915f15834c2dcd8",
+    "tests/golden_docx_manifest.json": "d025c0003928f0c3380557498345e54a7a22c310",
+    "tools/document_mechanics_change_approval.json": "910d168bf6ce8f51593951f63ec3e1f0e9a13281"
   }
 }

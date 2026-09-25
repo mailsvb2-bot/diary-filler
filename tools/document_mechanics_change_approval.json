@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "base_sha": "bad5b021af532603719d0d05c8c8e7e47c809a71",
+  "reason": "Compact only template-owned VK spacer paragraphs so final commission signatures stay on the populated page without changing patient clinical content.",
+  "approved_blobs": {
+    "medical_renderer_special.py": "7ed05a10bf3ea912f5b82e8e90d4b5327c461f9c"
+  }
+}

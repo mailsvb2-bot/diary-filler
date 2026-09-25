@@ -164,6 +164,24 @@ assert "(первичный, повторный)" not in vk_mse_text, vk_mse_tex
 assert "(первичный, повторный)" not in sick_leave_vk_text, sick_leave_vk_text
 assert "________________" not in vk_mse_text, vk_mse_text
 assert "________________" not in sick_leave_vk_text, sick_leave_vk_text
+# VK templates historically carried enough empty spacer paragraphs to push the
+# final signature block onto an otherwise blank second page. Lock the exact
+# structural cause without depending on a particular Word/PDF renderer.
+for _vk_path in (vk_mse_path, sick_leave_vk_path):
+    _vk_doc = Document(_vk_path)
+    _vk_paragraphs = _vk_doc.paragraphs
+    assert _vk_paragraphs and _vk_paragraphs[-1].text.strip(), _vk_path
+    _final_chair = max(
+        index
+        for index, paragraph in enumerate(_vk_paragraphs)
+        if paragraph.text.strip().startswith("Председатель ВК")
+    )
+    _blank_before_final = 0
+    _probe = _final_chair - 1
+    while _probe >= 0 and not _vk_paragraphs[_probe].text.strip():
+        _blank_before_final += 1
+        _probe -= 1
+    assert _blank_before_final <= 1, (_vk_path, _blank_before_final)
 assert "Цель направления на ВК с обоснованием: продление лечения по листу нетрудоспособности." in sick_leave_vk_text, sick_leave_vk_text
 assert "Решение ВК: продлить лечение по листу нетрудоспособности." in sick_leave_vk_text, sick_leave_vk_text
 for unsourced_vk_claim in (
