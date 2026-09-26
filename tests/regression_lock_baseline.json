@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "da4eab977ed83ea4f7e13d5eecd1ee886677f90f",
-  "baseline_note": "Final VK pagination baseline after PR #242. Exact PR head 56512e1aa2658d58f645dd7b617490967290cfaf passed Windows CI #1119 / run 36189662757 completely, including document mechanics, full patient replay + golden DOCX, long-block/staff/gender/diary regressions, EXE, packaged E2E, installer and install/uninstall smoke. PR #242 merged as da4eab977ed83ea4f7e13d5eecd1ee886677f90f; post-merge main CI #1120 / run 36190033838 passed the same full Windows pipeline. This cleanup removes the consumed document-mechanics approval and retains only an exact metadata-transition approval.",
+  "baseline_ref": "913e98124f5a0fbc1447f83a5beb70e0add834d6",
+  "baseline_note": "Final fixed clinical template-text baseline after PR #245. Exact PR head 3800a22dac6ee289e2896557d6ef423a197fe804 passed Windows CI #1126 / run 36224296720 completely, including document mechanics, full patient replay + golden DOCX, long-block/staff/gender/diary regressions, EXE, packaged E2E, installer and install/uninstall smoke. PR #245 merged as 913e98124f5a0fbc1447f83a5beb70e0add834d6; post-merge main CI #1127 / run 36224591863 passed the same full Windows pipeline. This cleanup removes the consumed document-mechanics approval and retains only an exact metadata-transition approval.",
   "required_approval_evidence": [
     "ci_gate_lock"
   ],
