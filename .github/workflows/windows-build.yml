@@ -83,6 +83,11 @@ jobs:
           PYTHONPATH: .
         run: python tests/clinical_roundtrip_matrix.py
 
+      - name: Run one-paragraph primary document regression
+        env:
+          PYTHONPATH: .
+        run: python tests/one_paragraph_primary_regression.py
+
       - name: Run staff profile regression
         env:
           PYTHONPATH: .
