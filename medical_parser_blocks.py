@@ -538,6 +538,12 @@ class MedicalParserBlocksMixin:
         marker_norm = normalize_match(marker)
         if marker_norm.startswith("на основании"):
             return True
+        # Compact diagnosis in one-paragraph exports is a strong structural
+        # signal even without a colon: "Диагноз F20.0 ...".
+        if marker_norm == normalize_match("Диагноз") and re.match(
+            r"\s*[FФ]\s*\d", text[end:end + 16], flags=re.IGNORECASE
+        ):
+            return True
         if at_line_start:
             return True
         return has_label_separator
