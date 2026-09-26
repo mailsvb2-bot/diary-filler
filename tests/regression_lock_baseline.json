@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "4b3d4b3e1b614b0c7b5d9c02e17573e23aa22acf",
-  "baseline_note": "One-paragraph primary-document parser baseline after PR #249. Exact PR head 08a22de85f42e778d500e0c735c7cd1cb326be52 passed Windows CI #1142 / run 36229900594 completely, including the dedicated one-paragraph primary regression, full patient replay + golden DOCX, complete clinical roundtrip matrix, long-block/staff/gender/diary regressions, performance, EXE, packaged E2E, installer and install/uninstall smoke. PR #249 merged as 4b3d4b3e1b614b0c7b5d9c02e17573e23aa22acf; post-merge main CI #1143 / run 36230204228 passed the same full Windows pipeline. This cleanup removes the consumed document-mechanics approval and retains only an exact metadata-transition approval.",
+  "baseline_ref": "17be84e5f7abea693c195fef6d7d0b4f93733e62",
+  "baseline_note": "Full user journey regression baseline after PR #251. Exact PR head 8635d019a5a949598e94eac6a8cbf068a1484694 passed Windows CI #1150 / run 36232174459 completely, including full user journey, full patient replay + golden DOCX, clinical roundtrip, one-paragraph source, staff/gender/diary regressions, performance, EXE, packaged E2E, installer and install/uninstall smoke. PR #251 merged as 17be84e5f7abea693c195fef6d7d0b4f93733e62; post-merge main CI #1151 / run 36232444366 passed the same full Windows pipeline. This cleanup removes the consumed user-journey mechanics approval.",
   "required_approval_evidence": [
     "ci_gate_lock"
   ],
