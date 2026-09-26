@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "base_sha": "554bcbf1e736547c2db570ef30c4101fbbc3e0ac",
+  "approved_blobs": {
+    "medical_docx_blocks.py": "84f0b019670f79d7c1eabccd81fc12d8592f22e8",
+    "medical_docx_editor_replace.py": "3f8ede28017aa09bb9c9891780b5d3ba06d134c0",
+    "medical_markers.py": "0e5e8dae5bc72b548bd73a5325352a8b24bf0649",
+    "medical_parser.py": "631bacd83679828bfacb1caf96b870baee2bfad4",
+    "medical_renderer_commission.py": "20a52571dc40d094dfb1f3409262503d8350b050",
+    "medical_renderer_labs.py": "d3f88373e36d38bed1bdc97b84881c87b18538f0",
+    "medical_renderer_primary.py": "09465dfb61ba77d4f8792df098564d5ea62b1c7a",
+    "medical_renderer_special.py": "1437eeebedf73c56f9e6aa5676a6c911eeab47c7"
+  },
+  "reason": "Explicit document-mechanics task: complete sourced clinical field roundtrip across all medical forms; add Word text-box/header/footer extraction; lock full field-by-form sentinel matrix."
+}
