@@ -18,6 +18,6 @@
     ".github/workflows/release.yml": "24d9db1e8129450d085ae1104636f5f745578a53",
     ".github/workflows/windows-build.yml": "00680b69f3dd4323335b50ef95bdbdbf4a74a50f",
     "tests/windows_e1_exhaustive_user_matrix.py": "a2cbe434a9be5505e5427b67e07bbfa0f406679b",
-    "tools/ci_gate_lock.py": "e71cf8f0ad342a42f51843c598971cecf580d319"
+    "tools/ci_gate_lock.py": "3f41c019f2300b6a7a96d1439007fde193ab0f41"
   }
 }
