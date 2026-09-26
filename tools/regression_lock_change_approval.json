@@ -17,8 +17,8 @@
   ],
   "approved_blobs": {
     ".github/workflows/windows-build.yml": "14bc968ebae1ef718b8b43119efaf6b9ae72ac42",
-    "medical_parser_blocks.py": "e2f30860cde724c1277f1dcb68391568fdea6e88",
+    "medical_parser_blocks.py": "6cda5496566beedd5fe7aead8a42f9ecbda4d859",
     "tests/one_paragraph_primary_regression.py": "a1ad66a9ac693c71d0375a83e08227d68caae4d8",
-    "tools/document_mechanics_change_approval.json": "e196e3966bf07e1d72889c6b571f4905b0896b94"
+    "tools/document_mechanics_change_approval.json": "7b486b88176b65d050f4f97636bdfe8c7cb02e23"
   }
 }
