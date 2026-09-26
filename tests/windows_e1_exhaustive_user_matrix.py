@@ -50,6 +50,14 @@ class E1JourneyApp(JourneyApp):
             names.append(DIARY_KIND)
         return names
 
+    # RVK preflight queries these production helpers before deciding whether its
+    # merged popup is necessary. The matrix supplies complete confirmed values.
+    def _case_number_missing(self): return False
+    def _current_admission_occurrence(self): return "первично"
+    def _should_prompt_discharge_date(self): return False
+    def _manual_treatment_missing(self): return False
+    def _hospitalization_details_missing(self): return False
+
 
 def _all_non_empty_selections():
     for size in range(1, len(ALL_OUTPUTS) + 1):
