@@ -25,7 +25,7 @@
     "medical_renderer_labs.py": "d3f88373e36d38bed1bdc97b84881c87b18538f0",
     "medical_renderer_primary.py": "09465dfb61ba77d4f8792df098564d5ea62b1c7a",
     "medical_renderer_special.py": "1437eeebedf73c56f9e6aa5676a6c911eeab47c7",
-    "tests/clinical_roundtrip_matrix.py": "c4054dd5284d9ad010c245ea44e877468571a207",
+    "tests/clinical_roundtrip_matrix.py": "01b819e1ad51bea718fbe2f731ad51f886acbdd9",
     "tools/document_mechanics_change_approval.json": "c2e4c22b20a567577757618e1d38e02befb7160e",
     "tests/golden_docx_manifest.json": "2559e4cdb6751db6aa98cbbea81ce3c9349aaaf2"
   }
