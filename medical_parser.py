@@ -56,6 +56,7 @@ class MedicalTextParser(
     }
 
     SECTION_MARKERS: Sequence[str] = (
+        "__DOCX_STORY_BOUNDARY__",
         "Дата, время",
         "История болезни №",
         "Ф.И.О.",
