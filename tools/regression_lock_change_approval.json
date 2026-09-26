@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "913e98124f5a0fbc1447f83a5beb70e0add834d6",
-  "reason": "Complete sourced clinical roundtrip across all seven medical forms, add Word text-box/header/footer extraction, and lock every long field line with a dedicated matrix regression.",
+  "reason": "Complete sourced clinical roundtrip across all seven medical forms, add Word text-box/header/footer extraction, lock every long field line, and approve the two targeted golden outputs changed by newly carried treatment.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -26,6 +26,7 @@
     "medical_renderer_primary.py": "09465dfb61ba77d4f8792df098564d5ea62b1c7a",
     "medical_renderer_special.py": "1437eeebedf73c56f9e6aa5676a6c911eeab47c7",
     "tests/clinical_roundtrip_matrix.py": "c4054dd5284d9ad010c245ea44e877468571a207",
-    "tools/document_mechanics_change_approval.json": "c2e4c22b20a567577757618e1d38e02befb7160e"
+    "tools/document_mechanics_change_approval.json": "c2e4c22b20a567577757618e1d38e02befb7160e",
+    "tests/golden_docx_manifest.json": "2559e4cdb6751db6aa98cbbea81ce3c9349aaaf2"
   }
 }
