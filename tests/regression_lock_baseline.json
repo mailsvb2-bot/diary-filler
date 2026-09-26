@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "17be84e5f7abea693c195fef6d7d0b4f93733e62",
-  "baseline_note": "Full user journey regression baseline after PR #251. Exact PR head 8635d019a5a949598e94eac6a8cbf068a1484694 passed Windows CI #1150 / run 36232174459 completely, including full user journey, full patient replay + golden DOCX, clinical roundtrip, one-paragraph source, staff/gender/diary regressions, performance, EXE, packaged E2E, installer and install/uninstall smoke. PR #251 merged as 17be84e5f7abea693c195fef6d7d0b4f93733e62; post-merge main CI #1151 / run 36232444366 passed the same full Windows pipeline. This cleanup removes the consumed user-journey mechanics approval.",
+  "baseline_ref": "a3946377b26724d44c12c0e8c12071d1b8510498",
+  "baseline_note": "User-perceived performance baseline after PR #253. PR head 02d0eaaa68ea480bba76f35e8a64f0302fbbec83 passed Windows CI #1158 / run 36234456187, including full user journey, parse/generation performance, EXE, packaged intake E2E, installer and uninstall smoke. PR #253 merged as a3946377b26724d44c12c0e8c12071d1b8510498; post-merge main CI #1159 / run 36234751388 passed the same pipeline. Measured PR figures: primary parse median 16.002 ms, 7-document end-to-end median 336.549 ms, installed startup 393 ms, installed intake drop-to-visible 1962 ms.",
   "required_approval_evidence": [
     "ci_gate_lock"
   ],
