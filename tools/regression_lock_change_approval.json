@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "a3946377b26724d44c12c0e8c12071d1b8510498",
+  "reason": "Add mandatory Windows E1 exhaustive user-selection matrix and lock it into PR/main and release CI without changing production document mechanics.",
+  "required_evidence": [
+    "document_mechanics_guard",
+    "full_patient_replay",
+    "golden_docx",
+    "staff_profile_regression",
+    "gender_generation_matrix",
+    "desktop_intake_contract",
+    "intake_lifecycle_regression",
+    "packaged_desktop_intake_e2e",
+    "installer_uninstall_smoke",
+    "ci_gate_lock"
+  ],
+  "approved_blobs": {
+    ".github/workflows/release.yml": "24d9db1e8129450d085ae1104636f5f745578a53",
+    ".github/workflows/windows-build.yml": "00680b69f3dd4323335b50ef95bdbdbf4a74a50f",
+    "tests/windows_e1_exhaustive_user_matrix.py": "a2cbe434a9be5505e5427b67e07bbfa0f406679b",
+    "tools/ci_gate_lock.py": "3f41c019f2300b6a7a96d1439007fde193ab0f41"
+  }
+}
