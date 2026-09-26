@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "a3946377b26724d44c12c0e8c12071d1b8510498",
-  "baseline_note": "User-perceived performance baseline after PR #253. PR head 02d0eaaa68ea480bba76f35e8a64f0302fbbec83 passed Windows CI #1158 / run 36234456187, including full user journey, parse/generation performance, EXE, packaged intake E2E, installer and uninstall smoke. PR #253 merged as a3946377b26724d44c12c0e8c12071d1b8510498; post-merge main CI #1159 / run 36234751388 passed the same pipeline. Measured PR figures: primary parse median 16.002 ms, 7-document end-to-end median 336.549 ms, installed startup 393 ms, installed intake drop-to-visible 1962 ms.",
+  "baseline_ref": "1ea5109076060848c315288408b98a8d3b58bce2",
+  "baseline_note": "Windows E1 exhaustive user-matrix baseline after PR #255. PR head 70822a0c049a9ae5490484b166c1b87c1fd6908b passed Windows CI #1165 / run 36271044777, including 255 non-empty output selections plus empty selection, full patient replay/golden DOCX, clinical regressions, real Tk GUI, EXE, packaged desktop-intake E2E, installer install/uninstall and performance gates. PR #255 merged as 1ea5109076060848c315288408b98a8d3b58bce2; post-merge main CI #1166 / run 36271339870 passed the same pipeline.",
   "required_approval_evidence": [
     "ci_gate_lock"
   ],
