@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "d3c4806cfcfe23932897ab09674bfa247db0f874",
-  "reason": "Remove the consumed complete-clinical-roundtrip document-mechanics approval after fully green PR and post-merge Windows pipelines.",
+  "reason": "Add conservative one-paragraph primary-document parsing and a mandatory regression that covers colon, dash, dot, separatorless section headings, and false-positive narrative marker phrases.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -12,9 +12,13 @@
     "intake_lifecycle_regression",
     "packaged_desktop_intake_e2e",
     "installer_uninstall_smoke",
-    "ci_gate_lock"
+    "ci_gate_lock",
+    "one_paragraph_primary_regression"
   ],
   "approved_blobs": {
-    "tools/document_mechanics_change_approval.json": "<deleted>"
+    ".github/workflows/windows-build.yml": "14bc968ebae1ef718b8b43119efaf6b9ae72ac42",
+    "medical_parser_blocks.py": "02914dbdc2c534e7586f32e93a2a30fe44b61159",
+    "tests/one_paragraph_primary_regression.py": "a1ad66a9ac693c71d0375a83e08227d68caae4d8",
+    "tools/document_mechanics_change_approval.json": "167164d7e4532e635c1b10274bb1f72678ab6aab"
   }
 }

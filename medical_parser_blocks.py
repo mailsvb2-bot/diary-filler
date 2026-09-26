@@ -386,6 +386,83 @@ class MedicalParserBlocksMixin:
         return best
 
     @classmethod
+    def _is_safe_one_line_clinical_boundary(
+        cls,
+        text: str,
+        start: int,
+        end: int,
+        marker: str,
+    ) -> bool:
+        """Recognize conservative section starts inside one physical paragraph.
+
+        Some primary Word documents are written as one very long paragraph:
+        "... complaints text. Anamnesis vitae born ... Mental status oriented ...".
+        With no line breaks and no colon after the heading, ordinary structural
+        rules cannot see the next block.  Accept such a marker only after clear
+        sentence punctuation and reject common narrative continuations that use
+        the same clinical words inside prose.
+        """
+        marker_norm = normalize_match(marker)
+        if marker_norm not in cls._STRICT_CLINICAL_BOUNDARY_MARKERS:
+            return False
+
+        prefix = text[max(0, start - 8):start]
+        if not re.search(r"[.!?;]\s*$", prefix):
+            return False
+
+        tail = normalize_match(text[end:end + 96])
+        if not tail:
+            return False
+
+        narrative_starts = {
+            normalize_match("Жалобы"): (
+                "на протяжении", "ранее", "периодически", "усиливались", "сохранялись",
+            ),
+            normalize_match("Анамнез жизни"): (
+                "ранее", "в динамике",
+            ),
+            normalize_match("Анамнез заболевания"): (
+                "ранее", "в динамике",
+            ),
+            normalize_match("Психический статус"): (
+                "в динамике", "ранее", "изменялся", "менялся", "оставался",
+            ),
+            normalize_match("Психический статус при поступлении"): (
+                "в динамике", "ранее", "изменялся", "менялся", "оставался",
+            ),
+            normalize_match("Соматический статус"): (
+                "в динамике", "ранее", "изменялся", "оставался",
+            ),
+            normalize_match("Сомато-неврологический статус"): (
+                "в динамике", "ранее", "изменялся", "оставался",
+            ),
+            normalize_match("Лечение"): (
+                "ранее", "проводилось", "получал", "получала", "обсуждает",
+                "корректировалось", "в детстве", "амбулаторно",
+            ),
+            normalize_match("План лечения"): (
+                "ранее", "обсуждался", "корректировался",
+            ),
+            normalize_match("Диагноз"): (
+                "ранее", "обсуждался", "уточнялся", "менялся", "формулировался",
+            ),
+            normalize_match("Результаты обследований"): (
+                "ранее", "обсуждались",
+            ),
+            normalize_match("Результаты исследований"): (
+                "ранее", "обсуждались",
+            ),
+        }
+        blocked = narrative_starts.get(marker_norm, ())
+        if any(tail.startswith(item) for item in blocked):
+            return False
+
+        # Strong compact forms that commonly appear in one-paragraph exports.
+        if marker_norm == normalize_match("Диагноз"):
+            return bool(re.match(r"[fф]\s*\d", tail, flags=re.IGNORECASE))
+        return True
+
+    @classmethod
     def _is_valid_section_boundary_occurrence(
         cls,
         text: str,
@@ -434,7 +511,9 @@ class MedicalParserBlocksMixin:
 
         if marker_norm in cls._STRICT_CLINICAL_BOUNDARY_MARKERS:
             if not at_line_start:
-                return has_label_separator
+                return has_label_separator or cls._is_safe_one_line_clinical_boundary(
+                    text, start, end, marker
+                )
             if not after_on_line.strip():
                 return True
             if has_label_separator:
@@ -449,8 +528,14 @@ class MedicalParserBlocksMixin:
         # One-line metadata blocks may still be written as "ФИО: ... Диагноз: ...".
         return has_label_separator
 
-    @staticmethod
-    def _is_valid_section_marker_occurrence(text: str, start: int, end: int, marker: str) -> bool:
+    @classmethod
+    def _is_valid_section_marker_occurrence(
+        cls,
+        text: str,
+        start: int,
+        end: int,
+        marker: str,
+    ) -> bool:
         """Permissive marker recognition used for locating the block's own start."""
         before = text[max(0, start - 3):start]
         after = text[end:end + 8]
@@ -459,9 +544,19 @@ class MedicalParserBlocksMixin:
         marker_norm = normalize_match(marker)
         if marker_norm.startswith("на основании"):
             return True
+        # Compact diagnosis in one-paragraph exports is a strong structural
+        # signal even without a colon: "Диагноз F20.0 ...".
+        if marker_norm == normalize_match("Диагноз") and re.match(
+            r"\s*[FФ]\s*\d", text[end:end + 16], flags=re.IGNORECASE
+        ):
+            return True
         if at_line_start:
             return True
-        return has_label_separator
+        if has_label_separator:
+            return True
+        return cls._is_safe_one_line_clinical_boundary(
+            text, start, end, marker
+        )
 
     @staticmethod
     def _alias_pattern(alias: str) -> str:
