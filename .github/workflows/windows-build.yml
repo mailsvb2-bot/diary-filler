@@ -78,6 +78,11 @@ jobs:
           PYTHONPATH: .
         run: python tools/docx_block_boundary_regression.py
 
+      - name: Run complete clinical field roundtrip matrix
+        env:
+          PYTHONPATH: .
+        run: python tests/clinical_roundtrip_matrix.py
+
       - name: Run staff profile regression
         env:
           PYTHONPATH: .

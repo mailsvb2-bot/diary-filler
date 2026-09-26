@@ -46,6 +46,34 @@ class DocxEditorReplaceMixin:
             new_para.add_run(text)
         return True
 
+    def insert_block_before_first_matching_paragraph(
+        self,
+        markers: Sequence[str],
+        label: str,
+        value: str,
+    ) -> bool:
+        """Insert a complete multiline patient block before template structure.
+
+        This is the safe fallback for output forms whose historical template has
+        no dedicated placeholder for a newly supported sourced field. Every
+        source line becomes its own paragraph; no tail is collapsed or dropped.
+        """
+        idx = self.find_paragraph_index(markers)
+        if idx is None:
+            return False
+        target = self.paragraphs[idx]
+        lines = [line.strip() for line in normalize_text(value).splitlines() if line.strip()]
+        if not lines:
+            return False
+
+        rendered = [f"{label} {lines[0]}".rstrip(), *lines[1:]]
+        for line in rendered:
+            new_p = OxmlElement("w:p")
+            target._p.addprevious(new_p)
+            new_para = Paragraph(new_p, target._parent)
+            new_para.add_run(line)
+        return True
+
     def remove_all_matching_paragraphs(self, markers: Sequence[str]) -> int:
         """Remove matching paragraphs only when they belong to the template.
 

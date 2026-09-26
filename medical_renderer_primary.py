@@ -75,7 +75,13 @@ class MedicalRendererPrimaryMixin:
         editor.replace_block(["Анамнез заболевания"], "Анамнез заболевания:", data.disease_anamnesis, PRIMARY_MARKERS, allow_empty=True)
         editor.replace_block(["Психический статус"], "Психический статус:", data.mental_status, PRIMARY_MARKERS, allow_empty=True)
         editor.replace_block(["Соматический статус"], "Соматический статус:", data.somatic_status, PRIMARY_MARKERS, allow_empty=True)
-        # Canonical plan is template-owned and intentionally immutable.
+        self._render_sourced_investigation_results(
+            editor,
+            data,
+            PRIMARY_MARKERS,
+            before_markers=["План лечения", "На основании данных", "Диагноз", "Врач психиатр", "Врач-психиатр"],
+        )
+        # Canonical examination plan is template-owned and intentionally immutable.
         editor.replace_block(["План лечения"], "План лечения:", data.treatment_plan, PRIMARY_MARKERS)
 
         diagnosis = sanitize_diagnosis(data.diagnosis)

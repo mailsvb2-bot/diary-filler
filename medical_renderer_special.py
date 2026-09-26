@@ -146,6 +146,12 @@ class MedicalRendererSpecialMixin:
         else:
             editor.remove_all_matching_paragraphs(["ЭПИ"])
         editor.replace_block(["Сомато-неврологический статус", "Соматический статус"], "Сомато-неврологический статус:", data.somatic_status, VK_MSE_MARKERS, allow_empty=True)
+        self._render_sourced_investigation_results(
+            editor,
+            data,
+            VK_MSE_MARKERS,
+            before_markers=["Получает лечение", "Прогноз восстановления", "Цель направления", "Зав. отделением", "Лечащий врач"],
+        )
         editor.replace_block(["Получает лечение"], "Получает лечение:", data.treatment_plan, VK_MSE_MARKERS)
         # The selected form itself proves only the routing decision to MSE.
         # Historical prognoses/functional-severity claims in the bundled template
@@ -212,6 +218,12 @@ class MedicalRendererSpecialMixin:
         else:
             editor.remove_all_matching_paragraphs(["ЭПИ"])
         editor.replace_block(["Сомато-неврологический статус", "Соматический статус"], "Сомато-неврологический статус:", data.somatic_status, SICK_LEAVE_VK_MARKERS, allow_empty=True)
+        self._render_sourced_investigation_results(
+            editor,
+            data,
+            SICK_LEAVE_VK_MARKERS,
+            before_markers=["Получает лечение", "Прогноз восстановления", "Цель направления", "Зав. отделением", "Лечащий врач"],
+        )
         editor.replace_block(["Получает лечение"], "Получает лечение:", data.treatment_plan, SICK_LEAVE_VK_MARKERS)
         editor.replace_first_matching_paragraph(
             ["Цель направления на ВК"],
@@ -288,6 +300,14 @@ class MedicalRendererSpecialMixin:
             editor.replace_block(["ЭПИ"], "ЭПИ -", data.epi_text, RVK_MARKERS)
         else:
             editor.remove_all_matching_paragraphs(["ЭПИ"])
+        self._render_sourced_block(
+            editor,
+            aliases=["План лечения", "Назначенное лечение", "Лечение"],
+            label="Лечение:",
+            value=data.treatment_plan,
+            all_markers=RVK_MARKERS,
+            before_markers=["Исходя из выше изложенного", "Диагноз", "Зам. гл. врача", "Зав. отделением"],
+        )
         # В шаблоне Акта РВК после блока ЭПИ/ЭЭГ есть служебная одиночная строка "ЭЭГ".
         # Она не относится к результату исследования и должна исчезать из итогового документа.
         editor.remove_exact_template_paragraphs(["ЭЭГ", "ЭПИ"])

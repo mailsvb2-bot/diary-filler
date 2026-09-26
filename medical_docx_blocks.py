@@ -33,6 +33,7 @@ _DOCX_TEXT_CACHE: dict[str, tuple[int, int, str]] = {}
 
 
 _SUPPORTED_WORD_SUFFIXES = {".doc", ".docx", ".docm"}
+_DOCX_STORY_BOUNDARY = "__DOCX_STORY_BOUNDARY__"
 
 _LEGACY_DOC_CACHE_LOCK = threading.Lock()
 _LEGACY_DOC_CACHE_CONTEXT: TemporaryDirectory | None = None
@@ -302,6 +303,9 @@ def iter_block_items(parent) -> Iterable[Paragraph | Table]:
         parent_elm = parent.element.body
     elif isinstance(parent, _Cell):
         parent_elm = parent._tc
+    elif hasattr(parent, "_element"):
+        # Header/footer story objects expose their XML root as _element.
+        parent_elm = parent._element
     else:
         return
 
@@ -310,6 +314,34 @@ def iter_block_items(parent) -> Iterable[Paragraph | Table]:
             yield Paragraph(child, parent)
         elif child.tag.endswith("}tbl"):
             yield Table(child, parent)
+
+
+def _xml_local_name(tag: str) -> str:
+    return str(tag).rsplit("}", 1)[-1]
+
+
+def _text_container_lines(element) -> list[str]:
+    """Extract text stored in Word text boxes / drawing shape text containers."""
+    result: list[str] = []
+    for container in element.iter():
+        if _xml_local_name(container.tag) not in {"txbxContent", "txBody"}:
+            continue
+        for paragraph in container.iter():
+            if _xml_local_name(paragraph.tag) != "p":
+                continue
+            chunks: list[str] = []
+            for node in paragraph.iter():
+                name = _xml_local_name(node.tag)
+                if name == "t" and node.text:
+                    chunks.append(node.text)
+                elif name == "tab":
+                    chunks.append("\t")
+                elif name in {"br", "cr"}:
+                    chunks.append("\n")
+            value = normalize_text("".join(chunks)).strip()
+            if value:
+                result.append(value)
+    return result
 
 
 def extract_docx_text(path: str | Path) -> str:
@@ -323,7 +355,14 @@ def extract_docx_text(path: str | Path) -> str:
     def walk(parent):
         for block in iter_block_items(parent):
             if isinstance(block, Paragraph):
-                lines.append(block.text)
+                paragraph_text = block.text
+                lines.append(paragraph_text)
+                normalized_paragraph = normalize_text(paragraph_text)
+                for shape_text in _text_container_lines(block._p):
+                    # python-docx normally omits text-box text from Paragraph.text.
+                    # If a future version exposes it, avoid duplicating the same text.
+                    if shape_text not in normalized_paragraph:
+                        lines.append(shape_text)
             elif isinstance(block, Table):
                 for row in block.rows:
                     seen_cells: set[int] = set()
@@ -339,6 +378,41 @@ def extract_docx_text(path: str | Path) -> str:
     with materialize_word_source_as_docx(candidate) as readable_path:
         doc = Document(str(readable_path))
         walk(doc)
+
+        # Headers/footers are independent Word "stories". Append each unique part
+        # behind an explicit parser boundary so footer/header text can never become
+        # the tail of the last clinical block in the document body.
+        seen_story_parts: set[str] = set()
+        for section in doc.sections:
+            for story in (
+                section.header,
+                section.first_page_header,
+                section.even_page_header,
+                section.footer,
+                section.first_page_footer,
+                section.even_page_footer,
+            ):
+                try:
+                    part_key = str(story.part.partname)
+                except Exception:
+                    part_key = str(id(story._element))
+                if part_key in seen_story_parts:
+                    continue
+                seen_story_parts.add(part_key)
+                story_lines: list[str] = []
+                previous_lines = lines
+                lines = story_lines
+                try:
+                    walk(story)
+                    for shape_text in _text_container_lines(story._element):
+                        if shape_text not in "\n".join(story_lines):
+                            story_lines.append(shape_text)
+                finally:
+                    lines = previous_lines
+                if any(normalize_text(item).strip() for item in story_lines):
+                    lines.append(_DOCX_STORY_BOUNDARY)
+                    lines.extend(story_lines)
+
     text = normalize_text("\n".join(lines))
 
     # Cache only a stable read. If Word/Explorer modified or replaced the file

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "913e98124f5a0fbc1447f83a5beb70e0add834d6",
-  "reason": "Remove the consumed fixed-clinical-text document-mechanics approval after fully verified PR and post-merge Windows pipelines.",
+  "reason": "Complete sourced clinical roundtrip across all seven medical forms, add Word text-box/header/footer extraction, lock every long field line, and approve the two targeted golden outputs changed by newly carried treatment.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -12,9 +12,21 @@
     "intake_lifecycle_regression",
     "packaged_desktop_intake_e2e",
     "installer_uninstall_smoke",
-    "ci_gate_lock"
+    "ci_gate_lock",
+    "clinical_roundtrip_matrix"
   ],
   "approved_blobs": {
-    "tools/document_mechanics_change_approval.json": "<deleted>"
+    ".github/workflows/windows-build.yml": "f5d1a1463110c05bb900fc798293c49390885a23",
+    "medical_docx_blocks.py": "84f0b019670f79d7c1eabccd81fc12d8592f22e8",
+    "medical_docx_editor_replace.py": "3f8ede28017aa09bb9c9891780b5d3ba06d134c0",
+    "medical_markers.py": "0e5e8dae5bc72b548bd73a5325352a8b24bf0649",
+    "medical_parser.py": "631bacd83679828bfacb1caf96b870baee2bfad4",
+    "medical_renderer_commission.py": "20a52571dc40d094dfb1f3409262503d8350b050",
+    "medical_renderer_labs.py": "d3f88373e36d38bed1bdc97b84881c87b18538f0",
+    "medical_renderer_primary.py": "09465dfb61ba77d4f8792df098564d5ea62b1c7a",
+    "medical_renderer_special.py": "1437eeebedf73c56f9e6aa5676a6c911eeab47c7",
+    "tests/clinical_roundtrip_matrix.py": "01b819e1ad51bea718fbe2f731ad51f886acbdd9",
+    "tools/document_mechanics_change_approval.json": "c2e4c22b20a567577757618e1d38e02befb7160e",
+    "tests/golden_docx_manifest.json": "2559e4cdb6751db6aa98cbbea81ce3c9349aaaf2"
   }
 }

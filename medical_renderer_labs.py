@@ -195,6 +195,35 @@ class MedicalRendererLabsMixin:
         """
         editor.remove_all_matching_paragraphs(cls._LAB_RESULT_MARKERS)
 
+    @staticmethod
+    def _render_sourced_block(
+        editor: DocxBlockEditor,
+        *,
+        aliases,
+        label: str,
+        value: str,
+        all_markers,
+        before_markers,
+    ) -> bool:
+        """Render a complete multiline source field with a structural fallback."""
+        sourced = str(value or "").strip()
+        if not sourced:
+            editor.remove_all_matching_paragraphs(aliases)
+            return False
+        if editor.replace_block(
+            aliases,
+            label,
+            sourced,
+            all_markers,
+            allow_empty=True,
+        ):
+            return True
+        return editor.insert_block_before_first_matching_paragraph(
+            before_markers,
+            label,
+            sourced,
+        )
+
     @classmethod
     def _render_sourced_investigation_results(
         cls,
@@ -211,17 +240,13 @@ class MedicalRendererLabsMixin:
         if not value:
             editor.remove_all_matching_paragraphs(aliases)
             return False
-        if editor.replace_block(
-            aliases,
-            "Результаты обследований:",
-            value,
-            all_markers,
-            allow_empty=True,
-        ):
-            return True
-        return editor.insert_before_first_matching_paragraph(
-            before_markers,
-            "Результаты обследований: " + value,
+        return cls._render_sourced_block(
+            editor,
+            aliases=aliases,
+            label="Результаты обследований:",
+            value=value,
+            all_markers=all_markers,
+            before_markers=before_markers,
         )
 
     @classmethod
