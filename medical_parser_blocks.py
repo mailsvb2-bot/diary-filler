@@ -528,8 +528,14 @@ class MedicalParserBlocksMixin:
         # One-line metadata blocks may still be written as "ФИО: ... Диагноз: ...".
         return has_label_separator
 
-    @staticmethod
-    def _is_valid_section_marker_occurrence(text: str, start: int, end: int, marker: str) -> bool:
+    @classmethod
+    def _is_valid_section_marker_occurrence(
+        cls,
+        text: str,
+        start: int,
+        end: int,
+        marker: str,
+    ) -> bool:
         """Permissive marker recognition used for locating the block's own start."""
         before = text[max(0, start - 3):start]
         after = text[end:end + 8]
@@ -546,7 +552,11 @@ class MedicalParserBlocksMixin:
             return True
         if at_line_start:
             return True
-        return has_label_separator
+        if has_label_separator:
+            return True
+        return cls._is_safe_one_line_clinical_boundary(
+            text, start, end, marker
+        )
 
     @staticmethod
     def _alias_pattern(alias: str) -> str:
