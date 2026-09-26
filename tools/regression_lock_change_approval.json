@@ -3,14 +3,17 @@
   "baseline_ref": "17be84e5f7abea693c195fef6d7d0b4f93733e62",
   "reason": "Extend the already-verified full-user-journey baseline cleanup with a mandatory user-perceived performance profile for primary parsing and seven-document end-to-end generation.",
   "required_evidence": [
-    "full_user_journey_regression",
+    "document_mechanics_guard",
     "full_patient_replay",
     "golden_docx",
+    "staff_profile_regression",
+    "gender_generation_matrix",
     "desktop_intake_contract",
     "intake_lifecycle_regression",
     "packaged_desktop_intake_e2e",
     "installer_uninstall_smoke",
     "ci_gate_lock",
+    "full_user_journey_regression",
     "user_perceived_performance"
   ],
   "approved_blobs": {
