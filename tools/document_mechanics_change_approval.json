@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "base_sha": "4799d648f8f1571de11235d8ad47180420109ff9",
+  "approved_blobs": {
+    "actions_creation_orchestrator.py": "96c7d2cd22c5ea8e37272fc7abf1bad2465a8c4d"
+  },
+  "reason": "Explicit user-journey mechanics task: correct partial-set retry guidance so the UI reports the actual generation failure instead of always blaming diary sources."
+}

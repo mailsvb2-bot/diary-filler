@@ -88,6 +88,11 @@ jobs:
           PYTHONPATH: .
         run: python tests/one_paragraph_primary_regression.py
 
+      - name: Run full user journey regression
+        env:
+          PYTHONPATH: .
+        run: python tests/full_user_journey_regression.py
+
       - name: Run staff profile regression
         env:
           PYTHONPATH: .

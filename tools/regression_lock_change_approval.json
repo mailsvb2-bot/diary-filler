@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "4b3d4b3e1b614b0c7b5d9c02e17573e23aa22acf",
-  "reason": "Remove the consumed one-paragraph-primary document-mechanics approval after fully green PR and post-merge Windows pipelines.",
+  "reason": "Run and lock the full user journey orchestration: preflight failures, complete save, partial diary failure, retry without duplicate medical files, accurate partial-error guidance, and double-click suppression.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -12,9 +12,13 @@
     "intake_lifecycle_regression",
     "packaged_desktop_intake_e2e",
     "installer_uninstall_smoke",
-    "ci_gate_lock"
+    "ci_gate_lock",
+    "full_user_journey_regression"
   ],
   "approved_blobs": {
-    "tools/document_mechanics_change_approval.json": "<deleted>"
+    ".github/workflows/windows-build.yml": "729ddd184413396f850f298e348aa0589fae945f",
+    "actions_creation_orchestrator.py": "96c7d2cd22c5ea8e37272fc7abf1bad2465a8c4d",
+    "tests/full_user_journey_regression.py": "a03e74c68e090eecaa3361ccb328b953e1ccc45e",
+    "tools/document_mechanics_change_approval.json": "d4167d6c5678430ac378b7345aa6498f64c771a7"
   }
 }
