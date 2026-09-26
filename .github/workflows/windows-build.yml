@@ -118,6 +118,11 @@ jobs:
           PYTHONPATH: .
         run: python tools/generation_performance_profile.py --runs 3 --json-out generation_performance_profile.json
 
+      - name: Profile user-perceived parse and generation latency
+        env:
+          PYTHONPATH: .
+        run: python tools/user_perceived_performance_profile.py
+
       - name: Upload generation performance profile
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
         with:
