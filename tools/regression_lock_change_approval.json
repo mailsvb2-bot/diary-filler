@@ -15,8 +15,6 @@
   ],
   "approved_blobs": {
     ".github/workflows/windows-build.yml": "fc192c43293229694e53c84f43e14b0dc66b2f07",
-    "tests/regression_lock_baseline.json": "f6caa0e44727b38dca9d66d6d4e192ed31c84e5d",
-    "tools/document_mechanics_change_approval.json": "<deleted>",
-    "tools/user_perceived_performance_profile.py": "8bc05dbb11864e214b101ade9ea2f1c26d8fdae0"
+    "tools/document_mechanics_change_approval.json": "<deleted>"
   }
 }
