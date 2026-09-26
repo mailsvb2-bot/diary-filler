@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "d3c4806cfcfe23932897ab09674bfa247db0f874",
-  "baseline_note": "Complete clinical roundtrip baseline after PR #247. Exact PR head 6d087bc9f1c66cef44a716186385da5257b9cefa passed Windows CI #1134 / run 36228124461 completely, including the new clinical roundtrip matrix, full patient replay + golden DOCX, long-block/staff/gender/diary regressions, performance, EXE, packaged E2E, installer and install/uninstall smoke. PR #247 merged as d3c4806cfcfe23932897ab09674bfa247db0f874; post-merge main CI #1135 / run 36228466219 passed the same full Windows pipeline. This cleanup removes the consumed document-mechanics approval and retains only an exact metadata-transition approval.",
+  "baseline_ref": "4b3d4b3e1b614b0c7b5d9c02e17573e23aa22acf",
+  "baseline_note": "One-paragraph primary-document parser baseline after PR #249. Exact PR head 08a22de85f42e778d500e0c735c7cd1cb326be52 passed Windows CI #1142 / run 36229900594 completely, including the dedicated one-paragraph primary regression, full patient replay + golden DOCX, complete clinical roundtrip matrix, long-block/staff/gender/diary regressions, performance, EXE, packaged E2E, installer and install/uninstall smoke. PR #249 merged as 4b3d4b3e1b614b0c7b5d9c02e17573e23aa22acf; post-merge main CI #1143 / run 36230204228 passed the same full Windows pipeline. This cleanup removes the consumed document-mechanics approval and retains only an exact metadata-transition approval.",
   "required_approval_evidence": [
     "ci_gate_lock"
   ],
