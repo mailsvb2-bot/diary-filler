@@ -7,7 +7,8 @@ from unittest.mock import patch
 
 from actions_creation_orchestrator import ActionsCreationOrchestratorMixin
 from actions_selection import ActionsSelectionMixin
-from medical_constants import DOCUMENT_ORDER, DIARY_KIND
+from medical_constants import DOCUMENT_ORDER
+from app_config import DIARY_KIND
 
 
 class Var:
