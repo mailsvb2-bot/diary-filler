@@ -19,6 +19,6 @@
     ".github/workflows/windows-build.yml": "729ddd184413396f850f298e348aa0589fae945f",
     "actions_creation_orchestrator.py": "96c7d2cd22c5ea8e37272fc7abf1bad2465a8c4d",
     "tests/full_user_journey_regression.py": "dd5f653ce8ff65ec52d5632afd2ac875444b948a",
-    "tools/document_mechanics_change_approval.json": "<deleted>"
+    "tools/document_mechanics_change_approval.json": "d4167d6c5678430ac378b7345aa6498f64c771a7"
   }
 }
