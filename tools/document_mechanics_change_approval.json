@@ -2,7 +2,7 @@
   "schema_version": 1,
   "base_sha": "12de286a5cec6f044dd2c5d8cf454213477bf307",
   "approved_blobs": {
-    "medical_parser_blocks.py": "6cda5496566beedd5fe7aead8a42f9ecbda4d859"
+    "medical_parser_blocks.py": "02914dbdc2c534e7586f32e93a2a30fe44b61159"
   },
   "reason": "Explicit parser mechanics task: safely recognize clinical section boundaries inside a single Word paragraph without truncating narrative uses of treatment, diagnosis, or mental-status phrases."
 }
