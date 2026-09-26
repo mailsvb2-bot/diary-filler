@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "da4eab977ed83ea4f7e13d5eecd1ee886677f90f",
-  "reason": "Remove the consumed VK pagination document-mechanics approval after fully verified PR and post-merge Windows pipelines.",
+  "reason": "Restore historical template ownership for immutable examination-plan and epidemiological-anamnesis text, with exact regression locks for the three affected canonical DOCX outputs.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -15,6 +15,10 @@
     "ci_gate_lock"
   ],
   "approved_blobs": {
-    "tools/document_mechanics_change_approval.json": "<deleted>"
+    "medical_renderer_commission.py": "5da17333fb135a29384ac6779b2a2e413aa18c70",
+    "medical_renderer_primary.py": "b46a05f40d1bf4670535b6706921a4227ca64584",
+    "smoke_combined_part04_medical_generation.py": "a348557233d8b6f8fbc5b7caef770a5e26b28701",
+    "tests/golden_docx_manifest.json": "99e95671454d022b9099b4d6eb9902e98258bf21",
+    "tools/document_mechanics_change_approval.json": "2d043956790c31c3710d5ca5df4eb1ded2090c2e"
   }
 }
