@@ -17,7 +17,7 @@
   "approved_blobs": {
     ".github/workflows/release.yml": "24d9db1e8129450d085ae1104636f5f745578a53",
     ".github/workflows/windows-build.yml": "00680b69f3dd4323335b50ef95bdbdbf4a74a50f",
-    "tests/windows_e1_exhaustive_user_matrix.py": "fcea05cbac64202b3a42235e994ee4a3da74ada3",
+    "tests/windows_e1_exhaustive_user_matrix.py": "a2cbe434a9be5505e5427b67e07bbfa0f406679b",
     "tools/ci_gate_lock.py": "e71cf8f0ad342a42f51843c598971cecf580d319"
   }
 }
