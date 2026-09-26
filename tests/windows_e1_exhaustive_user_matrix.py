@@ -90,7 +90,7 @@ def assert_every_output_selection_commits_exactly_once() -> int:
     return executed
 
 
-def assert_empty_selection_is_the_only_zero-output_selection() -> None:
+def assert_empty_selection_is_the_only_zero_output_selection() -> None:
     with TemporaryDirectory(prefix="windows-e1-empty-") as raw:
         app = E1JourneyApp(Path(raw), selected=())
         events, record = _messagebox_recorder()
