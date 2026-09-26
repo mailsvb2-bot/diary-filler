@@ -9,7 +9,7 @@ from docx.oxml import OxmlElement
 from medical_constants import DOCUMENT_ORDER
 from medical_docx_reader import extract_docx_text
 from medical_parser import MedicalTextParser
-from tools.docx_block_boundary_regression import _make_fixture
+from tools.generation_performance_profile import _make_fixture
 
 
 def _long_lines(prefix: str, count: int = 40) -> list[str]:
