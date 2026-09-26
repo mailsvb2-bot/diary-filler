@@ -71,6 +71,7 @@ assert any(path.name == "Маркер Женская Тестовая Выпис
 combined_text = "\n".join(extract_docx_text(path) for path in created)
 assert "F99.9 Тестовый диагноз из UI" in combined_text
 assert "данных клинических исследований" not in combined_text, combined_text
+
 # Broad semantic canary: none of these patient-specific conclusions exist in
 # the fixture source. If they appear, they leaked from a bundled template or a
 # renderer default and must not be published as patient facts.
@@ -160,6 +161,39 @@ commission_text = extract_docx_text(commission_path)
 admission_doctor_text = extract_docx_text(admission_doctor_path)
 vk_mse_text = extract_docx_text(vk_mse_path)
 sick_leave_vk_text = extract_docx_text(sick_leave_vk_path)
+# These two blocks are canonical template text, not patient-editable source fields.
+# Historical production templates own the wording; generation must never erase
+# or replace it with parsed/UI values.
+_CANONICAL_EXAMINATION_PLAN = (
+    "План обследования: ОАК, ОАМ, я/глист (кал), кровь на ВИЧ, RW, HCV, HBsAg, "
+    "б/х крови, сахар крови, ЭКГ, МНО, ПВ, ФЛГ, ЭПИ, ЭЭГ."
+)
+_CANONICAL_EPIDEMIOLOGY = (
+    "Эпидемиологический анамнез: со слов пациента, за пределы Нижегородской области "
+    "в течение трёх предыдущих месяцев не выезжал, в контакте с инфекционными больными "
+    "не был. Венерические заболевания, туберкулёз, вирусные гепатиты отрицает."
+)
+assert _CANONICAL_EXAMINATION_PLAN in primary_text, primary_text
+assert _CANONICAL_EXAMINATION_PLAN in admission_doctor_text, admission_doctor_text
+for _fixed_epi_text in (primary_text, commission_text, admission_doctor_text):
+    assert _CANONICAL_EPIDEMIOLOGY in _fixed_epi_text, _fixed_epi_text
+
+_fixed_text_probe = copy.deepcopy(manual_data)
+_fixed_text_probe.examination_plan = "НЕ КАНОН: пользовательский план не должен попасть в эти формы"
+_fixed_text_probe.epidemiology = "НЕ КАНОН: пользовательский эпиданамнез не должен попасть в эти формы"
+_fixed_text_created, _ = service.create_documents(
+    navigation_path=nav,
+    output_dir=OUT / "fixed_template_clinical_texts",
+    discharge_date="20.06.2026",
+    selected_docs=["primary", "commission", "admission_doctor_referral"],
+    override_data=_fixed_text_probe,
+)
+for _fixed_path in _fixed_text_created:
+    _fixed_text = extract_docx_text(_fixed_path)
+    assert "НЕ КАНОН:" not in _fixed_text, (_fixed_path.name, _fixed_text)
+    assert _CANONICAL_EPIDEMIOLOGY in _fixed_text, (_fixed_path.name, _fixed_text)
+    if "Первичный" in _fixed_path.name or "приёмного покоя" in _fixed_path.name:
+        assert _CANONICAL_EXAMINATION_PLAN in _fixed_text, (_fixed_path.name, _fixed_text)
 assert "(первичный, повторный)" not in vk_mse_text, vk_mse_text
 assert "(первичный, повторный)" not in sick_leave_vk_text, sick_leave_vk_text
 assert "________________" not in vk_mse_text, vk_mse_text

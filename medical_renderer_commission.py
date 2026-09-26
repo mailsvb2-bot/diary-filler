@@ -92,7 +92,7 @@ class MedicalRendererCommissionMixin:
             allow_empty=True,
         )
         editor.replace_block(["Лечение"], "Лечение:", data.treatment_plan, COMMISSION_MARKERS)
-        editor.replace_block(["Эпидемиологический анамнез"], "Эпидемиологический анамнез:", data.epidemiology, COMMISSION_MARKERS, allow_empty=True)
+        # Canonical epidemiological anamnesis is template-owned and intentionally immutable.
         editor.remove_all_matching_paragraphs(["Целесообразна госпитализация"])
         self._remove_trailing_clinical_leakage(editor, data)
         finalize_medical_document(doc, data, editor=editor)
@@ -143,7 +143,7 @@ class MedicalRendererCommissionMixin:
         editor.replace_block(["Анамнез заболевания"], "Анамнез заболевания:", data.disease_anamnesis, PRIMARY_MARKERS, allow_empty=True)
         editor.replace_block(["Психический статус"], "Психический статус:", data.mental_status, PRIMARY_MARKERS, allow_empty=True)
         editor.replace_block(["Соматический статус"], "Соматический статус:", data.somatic_status, PRIMARY_MARKERS, allow_empty=True)
-        editor.replace_block(["План обследования"], "План обследования:", data.examination_plan, PRIMARY_MARKERS, allow_empty=True)
+        # Canonical plan is template-owned and intentionally immutable.
         diagnosis = sanitize_diagnosis(data.diagnosis)
         editor.replace_block(
             ["На основании данных", "Диагноз"],
@@ -152,7 +152,7 @@ class MedicalRendererCommissionMixin:
             PRIMARY_MARKERS,
             allow_empty=True,
         )
-        editor.replace_block(["Эпидемиологический анамнез"], "Эпидемиологический анамнез:", data.epidemiology, PRIMARY_MARKERS, allow_empty=True)
+        # Canonical epidemiological anamnesis is template-owned and intentionally immutable.
         self._remove_trailing_clinical_leakage(editor, data)
         # Финальная фраза должна быть строго такой по пользовательскому требованию.
         target_referral_line = f"В связи с психическим состоянием, направляется на лечение в {TARGET_MEDICAL_FACILITY}"
