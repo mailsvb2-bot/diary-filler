@@ -93,6 +93,11 @@ jobs:
           PYTHONPATH: .
         run: python tests/full_user_journey_regression.py
 
+      - name: Run Windows E1 exhaustive finite user matrix
+        env:
+          PYTHONPATH: .
+        run: python tests/windows_e1_exhaustive_user_matrix.py
+
       - name: Run staff profile regression
         env:
           PYTHONPATH: .
