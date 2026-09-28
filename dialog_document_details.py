@@ -284,7 +284,10 @@ class DialogDocumentDetailsMixin:
         date_default = self.vk_date_var.get().strip()
         protocol_date_default = self.vk_protocol_date_var.get().strip() or date_default
         shared_org, shared_position = self._shared_work_defaults()
-        nonworking = self._normalize_yes_no(self.expert_work_status_var.get()) == "нет"
+        work_status_var = getattr(self, "expert_work_status_var", None)
+        nonworking = self._normalize_yes_no(
+            work_status_var.get() if work_status_var is not None else ""
+        ) == "нет"
         rows = [
             ("Номер истории болезни", self._case_number_popup_default()),
             ("Дата ВК на МСЭ", date_default),
@@ -338,7 +341,10 @@ class DialogDocumentDetailsMixin:
         protocol_date_default = self.sick_leave_vk_protocol_date_var.get().strip() or date_default
         commission_date_default = self.sick_leave_vk_commission_date_var.get().strip() or date_default
         shared_org, shared_position = self._shared_work_defaults()
-        nonworking = self._normalize_yes_no(self.expert_work_status_var.get()) == "нет"
+        work_status_var = getattr(self, "expert_work_status_var", None)
+        nonworking = self._normalize_yes_no(
+            work_status_var.get() if work_status_var is not None else ""
+        ) == "нет"
         rows = [
             ("Номер истории болезни", self._case_number_popup_default()),
             ("Дата / дата проведения ВК", date_default),
