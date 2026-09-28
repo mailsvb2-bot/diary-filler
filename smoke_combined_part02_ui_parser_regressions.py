@@ -684,6 +684,14 @@ for clinical_kind in ("discharge", "commission"):
 
 # Positive EPI selection must use the chosen file and persist its text.
 epi_logic = _main_module.CombinedMedicalDiaryApp.__new__(_main_module.CombinedMedicalDiaryApp)
+epi_logic.expert_work_status_var = _FakeVar("")
+epi_logic.expert_work_org_var = _FakeVar("")
+epi_logic.expert_position_var = _FakeVar("")
+epi_logic.vk_mse_work_org_var = _FakeVar("")
+epi_logic.vk_mse_position_var = _FakeVar("")
+epi_logic.sick_leave_vk_work_org_var = _FakeVar("")
+epi_logic.sick_leave_vk_position_var = _FakeVar("")
+epi_logic.sick_leave_vk_work_position_var = _FakeVar("")
 epi_logic.expert_sick_leave_needed_var = _FakeVar("нет")
 epi_logic.expert_sick_leave_from_var = _FakeVar("")
 epi_logic.expert_sick_leave_number_var = _FakeVar("")
@@ -702,6 +710,7 @@ epi_logic._update_expert_sick_leave_display = lambda: None
 def _epi_prompt(title, rows, width=46, linked_groups=None, choice_options=None):
     values = {
         "На учёте у психиатров": "не состоит",
+        "Работает ли пациент": "нет",
         "Нужен ли больничный лист": "нет",
         "Есть ли ЭПИ": "да",
     }
@@ -715,6 +724,14 @@ assert "EPI_PLACEMENT_SENTINEL_7F31" in epi_logic.data.epi_text
 
 # Universal-source EPI must be reusable without forcing a second file picker.
 source_epi_logic = _main_module.CombinedMedicalDiaryApp.__new__(_main_module.CombinedMedicalDiaryApp)
+source_epi_logic.expert_work_status_var = _FakeVar("")
+source_epi_logic.expert_work_org_var = _FakeVar("")
+source_epi_logic.expert_position_var = _FakeVar("")
+source_epi_logic.vk_mse_work_org_var = _FakeVar("")
+source_epi_logic.vk_mse_position_var = _FakeVar("")
+source_epi_logic.sick_leave_vk_work_org_var = _FakeVar("")
+source_epi_logic.sick_leave_vk_position_var = _FakeVar("")
+source_epi_logic.sick_leave_vk_work_position_var = _FakeVar("")
 source_epi_logic.expert_sick_leave_needed_var = _FakeVar("нет")
 source_epi_logic.expert_sick_leave_from_var = _FakeVar("")
 source_epi_logic.expert_sick_leave_number_var = _FakeVar("")
