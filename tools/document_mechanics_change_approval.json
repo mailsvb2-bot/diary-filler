@@ -4,7 +4,7 @@
   "reason": "Explicit mechanics fix for employment-status collection and preservation across discharge/commission plus VK document flows.",
   "approved_blobs": {
     "dialog_expert.py": "c4626d4b6cb109d225924bd79f8671bda5316443",
-    "dialog_document_details.py": "a0cf5296536ce56c1627f98053282daf450648dd",
-    "actions_creation_orchestrator.py": "04b6b7cd337c70c83c0e342ebfb8154da03644c5"
+    "dialog_document_details.py": "dac67eda9f1c7d1caf02e2b3fa1ee1af71cad5c6",
+    "actions_creation_orchestrator.py": "49c01ded380ccb8a34ad1897d1d3a9dc2ab6271a"
   }
 }
