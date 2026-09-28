@@ -682,6 +682,54 @@ for clinical_kind in ("discharge", "commission"):
     assert standalone_logic.expert_sick_leave_needed_var.get() == "нет"
     assert standalone_logic.epi_present_var.get() == "нет"
 
+# Combined expert + VK flows must preserve an explicit «не работает» decision.
+# The specialized VK dialogs still collect their dates/protocols, but must not
+# ask for a fictitious employer or silently flip employment back to «да».
+for vk_kind in ("vk_mse", "sick_leave_vk"):
+    nonworking_vk = _main_module.CombinedMedicalDiaryApp.__new__(_main_module.CombinedMedicalDiaryApp)
+    nonworking_vk.case_number_var = _FakeVar("К-904")
+    nonworking_vk.navigation_path_var = _FakeVar("")
+    nonworking_vk.expert_work_status_var = _FakeVar("нет")
+    nonworking_vk.expert_work_org_var = _FakeVar("")
+    nonworking_vk.expert_position_var = _FakeVar("")
+    nonworking_vk.vk_mse_work_org_var = _FakeVar("")
+    nonworking_vk.vk_mse_position_var = _FakeVar("")
+    nonworking_vk.sick_leave_vk_work_org_var = _FakeVar("")
+    nonworking_vk.sick_leave_vk_position_var = _FakeVar("")
+    nonworking_vk.sick_leave_vk_work_position_var = _FakeVar("")
+    nonworking_vk.vk_date_var = _FakeVar("")
+    nonworking_vk.vk_protocol_number_var = _FakeVar("")
+    nonworking_vk.vk_protocol_date_var = _FakeVar("")
+    nonworking_vk.sick_leave_vk_date_var = _FakeVar("")
+    nonworking_vk.sick_leave_vk_protocol_number_var = _FakeVar("")
+    nonworking_vk.sick_leave_vk_protocol_date_var = _FakeVar("")
+    nonworking_vk.sick_leave_vk_commission_date_var = _FakeVar("")
+    nonworking_vk.data = PatientData(case_number="К-904", expert_work_status="нет")
+    nonworking_vk._remember_committee_dates = lambda **_kwargs: None
+    captured_vk_rows = []
+    def _nonworking_vk_prompt(title, rows, width=64, linked_groups=None, choice_options=None):
+        captured_vk_rows.append((title, list(rows)))
+        labels = [label for label, _ in rows]
+        assert "Место работы" not in labels, labels
+        assert "Должность" not in labels, labels
+        if title == "ВК на МСЭ":
+            return ["К-904", "12062026", "17", "12062026"]
+        if title == "ВК больничный":
+            return ["К-904", "12062026", "18", "12062026", "12062026"]
+        raise AssertionError((title, rows))
+    nonworking_vk._prompt_fields = _nonworking_vk_prompt
+    if vk_kind == "vk_mse":
+        assert nonworking_vk._prompt_vk_mse_details() is True
+        assert nonworking_vk.vk_mse_work_org_var.get() == ""
+        assert nonworking_vk.vk_mse_position_var.get() == ""
+    else:
+        assert nonworking_vk._prompt_sick_leave_vk_details() is True
+        assert nonworking_vk.sick_leave_vk_work_org_var.get() == ""
+        assert nonworking_vk.sick_leave_vk_position_var.get() == ""
+        assert nonworking_vk.sick_leave_vk_work_position_var.get() == ""
+    assert nonworking_vk.expert_work_status_var.get() == "нет"
+    assert len(captured_vk_rows) == 1
+
 # Positive EPI selection must use the chosen file and persist its text.
 epi_logic = _main_module.CombinedMedicalDiaryApp.__new__(_main_module.CombinedMedicalDiaryApp)
 epi_logic.expert_work_status_var = _FakeVar("")
