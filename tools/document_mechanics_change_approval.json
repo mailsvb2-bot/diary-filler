@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "base_sha": "c3b9b31020e46980aaa77f96dc0b8c4344bb23af",
+  "reason": "Explicit document-mechanics fix for missing employment-status collection before strict medical generation validation.",
+  "approved_blobs": {
+    "dialog_expert.py": "c4626d4b6cb109d225924bd79f8671bda5316443"
+  }
+}
