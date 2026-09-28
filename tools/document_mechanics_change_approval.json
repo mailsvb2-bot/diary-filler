@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "base_sha": "9dd539098a92c64f47396a0672fe5f963e72bd4f",
+  "reason": "Restore the user-approved canonical final discharge diary wording and lock that exact diary mechanics behavior.",
+  "approved_blobs": {
+    "diary_constants.py": "950704c2711c881ae93d263b32cd83580218b8ef"
+  }
+}
