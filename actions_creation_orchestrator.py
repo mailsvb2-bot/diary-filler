@@ -631,8 +631,9 @@ class ActionsCreationOrchestratorMixin:
             )
             if rvk_needs_popup and not self._prompt_rvk_details():
                 return
+        from medical_models import normalize_yes_no
         work_status_var = getattr(self, "expert_work_status_var", None)
-        nonworking = self._normalize_yes_no(
+        nonworking = normalize_yes_no(
             work_status_var.get() if work_status_var is not None else ""
         ) == "нет"
         vk_mse_complete = all([
