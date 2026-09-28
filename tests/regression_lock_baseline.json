@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "1ea5109076060848c315288408b98a8d3b58bce2",
-  "baseline_note": "Windows E1 exhaustive user-matrix baseline after PR #255. PR head 70822a0c049a9ae5490484b166c1b87c1fd6908b passed Windows CI #1165 / run 36271044777, including 255 non-empty output selections plus empty selection, full patient replay/golden DOCX, clinical regressions, real Tk GUI, EXE, packaged desktop-intake E2E, installer install/uninstall and performance gates. PR #255 merged as 1ea5109076060848c315288408b98a8d3b58bce2; post-merge main CI #1166 / run 36271339870 passed the same pipeline.",
+  "baseline_ref": "43ee686d2182279accdb4fc08472817fe0ede133",
+  "baseline_note": "Canonical final discharge diary baseline. PR #258 head 51def68dbaa89a93e775e8aab8be78ca7c451bbd passed Windows CI #1197 / run 36457424482, including regression locks, full patient replay and golden DOCX, clinical regressions, Windows E1 exhaustive matrix, real Tk GUI, EXE, packaged desktop-intake E2E, installer build/install/uninstall and performance gates. The identical tested tree was merged as 43ee686d2182279accdb4fc08472817fe0ede133; this metadata cleanup closes the temporary approval surface and restores canonical merge provenance on main.",
   "required_approval_evidence": [
     "ci_gate_lock"
   ],
