@@ -521,6 +521,14 @@ assert normalize_prompt_field_values(
 
 # --- Shared clinical popup behavior regression ---
 clinical_logic = _main_module.CombinedMedicalDiaryApp.__new__(_main_module.CombinedMedicalDiaryApp)
+clinical_logic.expert_work_status_var = _FakeVar("")
+clinical_logic.expert_work_org_var = _FakeVar("")
+clinical_logic.expert_position_var = _FakeVar("")
+clinical_logic.vk_mse_work_org_var = _FakeVar("")
+clinical_logic.vk_mse_position_var = _FakeVar("")
+clinical_logic.sick_leave_vk_work_org_var = _FakeVar("")
+clinical_logic.sick_leave_vk_position_var = _FakeVar("")
+clinical_logic.sick_leave_vk_work_position_var = _FakeVar("")
 clinical_logic.expert_sick_leave_needed_var = _FakeVar("")
 clinical_logic.expert_sick_leave_from_var = _FakeVar("")
 clinical_logic.expert_sick_leave_number_var = _FakeVar("")
@@ -543,6 +551,7 @@ def _clinical_prompt(title, rows, width=46, linked_groups=None, choice_options=N
         values = {
             "На учёте у психиатров": "состоит",
             "По направлению из РВК": "да",
+            "Работает ли пациент": "да",
             "Нужен ли больничный лист": "да",
             "Нужно ли оформление инвалидности": "нет",
             "Есть ли ЭПИ": "нет",
@@ -552,18 +561,23 @@ def _clinical_prompt(title, rows, width=46, linked_groups=None, choice_options=N
         return ["2018"]
     if title == "Направление из РВК":
         return ["Ленинский"]
+    if title == "Место работы":
+        return ["ООО Тест", "врач"]
     if title == "Больничный лист":
         return ["12062026"]
     raise AssertionError((title, rows))
 clinical_logic._prompt_fields = _clinical_prompt
 assert clinical_logic._prompt_shared_clinical_options_if_needed(["primary", "commission"]) is True
+assert clinical_logic.expert_work_status_var.get() == "да"
+assert clinical_logic.expert_work_org_var.get() == "ООО Тест"
+assert clinical_logic.expert_position_var.get() == "врач"
 assert clinical_logic.expert_sick_leave_needed_var.get() == "да"
 assert clinical_logic.expert_sick_leave_from_var.get() == "12.06.2026"
 assert clinical_logic.disability_needed_var.get() == "нет"
 assert clinical_logic.epi_present_var.get() == "нет"
 assert clinical_logic.epi_path_var.get() == ""
 assert clinical_logic.data.disability == "не нужно"
-assert [call[0] for call in clinical_prompts] == ["Дополнительные данные", "Учёт у психиатров", "Направление из РВК", "Больничный лист"]
+assert [call[0] for call in clinical_prompts] == ["Дополнительные данные", "Учёт у психиатров", "Направление из РВК", "Место работы", "Больничный лист"]
 assert clinical_logic.psych_account_status_var.get() == "да"
 assert clinical_logic.psych_account_since_year_var.get() == "2018"
 assert clinical_logic.rvk_referral_present_var.get() == "да"
@@ -571,6 +585,7 @@ assert clinical_logic.rvk_referral_commissariat_var.get() == "Ленинский
 choices = clinical_prompts[0][2]
 assert choices["На учёте у психиатров"] == ("состоит", "не состоит")
 assert choices["По направлению из РВК"] == ("нет", "да")
+assert choices["Работает ли пациент"] == ("нет", "да")
 assert choices["Нужен ли больничный лист"] == ("нет", "да")
 assert choices["Нужно ли оформление инвалидности"] == ("нет", "да")
 assert choices["Есть ли ЭПИ"] == ("нет", "да")
@@ -586,13 +601,17 @@ def _revision_prompt(title, rows, width=46, linked_groups=None, choice_options=N
     values = {
         "На учёте у психиатров": "не состоит",
         "По направлению из РВК": "нет",
+        "Работает ли пациент": "нет",
         "Нужен ли больничный лист": "нет",
         "Нужно ли оформление инвалидности": "да",
     }
     return [values[label] for label, _ in rows]
 clinical_logic._prompt_fields = _revision_prompt
 assert clinical_logic._prompt_shared_clinical_options_if_needed(["primary"]) is True
-assert [initial for _label, initial in revision_rows] == ["состоит", "да", "нет"], revision_rows
+assert [initial for _label, initial in revision_rows] == ["состоит", "да", "да", "нет"], revision_rows
+assert clinical_logic.expert_work_status_var.get() == "нет"
+assert clinical_logic.expert_work_org_var.get() == ""
+assert clinical_logic.expert_position_var.get() == ""
 assert clinical_logic.psych_account_status_var.get() == "нет"
 assert clinical_logic.psych_account_since_year_var.get() == ""
 assert clinical_logic.rvk_referral_present_var.get() == "нет"
@@ -627,6 +646,14 @@ assert len(date_revision_prompts) == 1
 # of these popups because those templates do not expose that standalone field.
 for clinical_kind in ("discharge", "commission"):
     standalone_logic = _main_module.CombinedMedicalDiaryApp.__new__(_main_module.CombinedMedicalDiaryApp)
+    standalone_logic.expert_work_status_var = _FakeVar("")
+    standalone_logic.expert_work_org_var = _FakeVar("")
+    standalone_logic.expert_position_var = _FakeVar("")
+    standalone_logic.vk_mse_work_org_var = _FakeVar("")
+    standalone_logic.vk_mse_position_var = _FakeVar("")
+    standalone_logic.sick_leave_vk_work_org_var = _FakeVar("")
+    standalone_logic.sick_leave_vk_position_var = _FakeVar("")
+    standalone_logic.sick_leave_vk_work_position_var = _FakeVar("")
     standalone_logic.expert_sick_leave_needed_var = _FakeVar("")
     standalone_logic.expert_sick_leave_from_var = _FakeVar("")
     standalone_logic.expert_sick_leave_number_var = _FakeVar("")
@@ -646,16 +673,73 @@ for clinical_kind in ("discharge", "commission"):
     def _standalone_prompt(title, rows, width=46, linked_groups=None, choice_options=None):
         standalone_calls.append((title, list(rows), choice_options))
         assert title == "Дополнительные данные"
-        return ["не состоит", "нет", "нет"]
+        return ["не состоит", "нет", "нет", "нет"]
     standalone_logic._prompt_fields = _standalone_prompt
     assert standalone_logic._prompt_shared_clinical_options_if_needed([clinical_kind]) is True
-    assert [label for label, _ in standalone_calls[0][1]] == ["На учёте у психиатров", "Нужен ли больничный лист", "Есть ли ЭПИ"]
+    assert [label for label, _ in standalone_calls[0][1]] == ["На учёте у психиатров", "Работает ли пациент", "Нужен ли больничный лист", "Есть ли ЭПИ"]
+    assert standalone_logic.expert_work_status_var.get() == "нет"
     assert "Нужно ли оформление инвалидности" not in [label for label, _ in standalone_calls[0][1]]
     assert standalone_logic.expert_sick_leave_needed_var.get() == "нет"
     assert standalone_logic.epi_present_var.get() == "нет"
 
+# Combined expert + VK flows must preserve an explicit «не работает» decision.
+# The specialized VK dialogs still collect their dates/protocols, but must not
+# ask for a fictitious employer or silently flip employment back to «да».
+for vk_kind in ("vk_mse", "sick_leave_vk"):
+    nonworking_vk = _main_module.CombinedMedicalDiaryApp.__new__(_main_module.CombinedMedicalDiaryApp)
+    nonworking_vk.case_number_var = _FakeVar("К-904")
+    nonworking_vk.navigation_path_var = _FakeVar("")
+    nonworking_vk.expert_work_status_var = _FakeVar("нет")
+    nonworking_vk.expert_work_org_var = _FakeVar("")
+    nonworking_vk.expert_position_var = _FakeVar("")
+    nonworking_vk.vk_mse_work_org_var = _FakeVar("")
+    nonworking_vk.vk_mse_position_var = _FakeVar("")
+    nonworking_vk.sick_leave_vk_work_org_var = _FakeVar("")
+    nonworking_vk.sick_leave_vk_position_var = _FakeVar("")
+    nonworking_vk.sick_leave_vk_work_position_var = _FakeVar("")
+    nonworking_vk.vk_date_var = _FakeVar("")
+    nonworking_vk.vk_protocol_number_var = _FakeVar("")
+    nonworking_vk.vk_protocol_date_var = _FakeVar("")
+    nonworking_vk.sick_leave_vk_date_var = _FakeVar("")
+    nonworking_vk.sick_leave_vk_protocol_number_var = _FakeVar("")
+    nonworking_vk.sick_leave_vk_protocol_date_var = _FakeVar("")
+    nonworking_vk.sick_leave_vk_commission_date_var = _FakeVar("")
+    nonworking_vk.data = PatientData(case_number="К-904", expert_work_status="нет")
+    nonworking_vk._remember_committee_dates = lambda **_kwargs: None
+    captured_vk_rows = []
+    def _nonworking_vk_prompt(title, rows, width=64, linked_groups=None, choice_options=None):
+        captured_vk_rows.append((title, list(rows)))
+        labels = [label for label, _ in rows]
+        assert "Место работы" not in labels, labels
+        assert "Должность" not in labels, labels
+        if title == "ВК на МСЭ":
+            return ["К-904", "12062026", "17", "12062026"]
+        if title == "ВК больничный":
+            return ["К-904", "12062026", "18", "12062026", "12062026"]
+        raise AssertionError((title, rows))
+    nonworking_vk._prompt_fields = _nonworking_vk_prompt
+    if vk_kind == "vk_mse":
+        assert nonworking_vk._prompt_vk_mse_details() is True
+        assert nonworking_vk.vk_mse_work_org_var.get() == ""
+        assert nonworking_vk.vk_mse_position_var.get() == ""
+    else:
+        assert nonworking_vk._prompt_sick_leave_vk_details() is True
+        assert nonworking_vk.sick_leave_vk_work_org_var.get() == ""
+        assert nonworking_vk.sick_leave_vk_position_var.get() == ""
+        assert nonworking_vk.sick_leave_vk_work_position_var.get() == ""
+    assert nonworking_vk.expert_work_status_var.get() == "нет"
+    assert len(captured_vk_rows) == 1
+
 # Positive EPI selection must use the chosen file and persist its text.
 epi_logic = _main_module.CombinedMedicalDiaryApp.__new__(_main_module.CombinedMedicalDiaryApp)
+epi_logic.expert_work_status_var = _FakeVar("")
+epi_logic.expert_work_org_var = _FakeVar("")
+epi_logic.expert_position_var = _FakeVar("")
+epi_logic.vk_mse_work_org_var = _FakeVar("")
+epi_logic.vk_mse_position_var = _FakeVar("")
+epi_logic.sick_leave_vk_work_org_var = _FakeVar("")
+epi_logic.sick_leave_vk_position_var = _FakeVar("")
+epi_logic.sick_leave_vk_work_position_var = _FakeVar("")
 epi_logic.expert_sick_leave_needed_var = _FakeVar("нет")
 epi_logic.expert_sick_leave_from_var = _FakeVar("")
 epi_logic.expert_sick_leave_number_var = _FakeVar("")
@@ -674,6 +758,7 @@ epi_logic._update_expert_sick_leave_display = lambda: None
 def _epi_prompt(title, rows, width=46, linked_groups=None, choice_options=None):
     values = {
         "На учёте у психиатров": "не состоит",
+        "Работает ли пациент": "нет",
         "Нужен ли больничный лист": "нет",
         "Есть ли ЭПИ": "да",
     }
@@ -687,6 +772,14 @@ assert "EPI_PLACEMENT_SENTINEL_7F31" in epi_logic.data.epi_text
 
 # Universal-source EPI must be reusable without forcing a second file picker.
 source_epi_logic = _main_module.CombinedMedicalDiaryApp.__new__(_main_module.CombinedMedicalDiaryApp)
+source_epi_logic.expert_work_status_var = _FakeVar("")
+source_epi_logic.expert_work_org_var = _FakeVar("")
+source_epi_logic.expert_position_var = _FakeVar("")
+source_epi_logic.vk_mse_work_org_var = _FakeVar("")
+source_epi_logic.vk_mse_position_var = _FakeVar("")
+source_epi_logic.sick_leave_vk_work_org_var = _FakeVar("")
+source_epi_logic.sick_leave_vk_position_var = _FakeVar("")
+source_epi_logic.sick_leave_vk_work_position_var = _FakeVar("")
 source_epi_logic.expert_sick_leave_needed_var = _FakeVar("нет")
 source_epi_logic.expert_sick_leave_from_var = _FakeVar("")
 source_epi_logic.expert_sick_leave_number_var = _FakeVar("")

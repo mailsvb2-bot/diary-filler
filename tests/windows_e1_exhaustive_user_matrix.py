@@ -37,6 +37,7 @@ class E1JourneyApp(JourneyApp):
         self.vk_protocol_number_var = Var("МСЭ-01")
         self.vk_protocol_date_var = Var("21.06.2026")
         self.vk_mse_work_org_var = Var("Организация")
+        self.vk_mse_position_var = Var("Должность")
         self.sick_leave_vk_date_var = Var("21.06.2026")
         self.sick_leave_vk_protocol_number_var = Var("БЛ-01")
         self.sick_leave_vk_protocol_date_var = Var("21.06.2026")

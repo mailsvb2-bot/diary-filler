@@ -166,6 +166,7 @@ class DialogExpertMixin:
         selected = set(selected_medical)
         sick_leave_docs = {"discharge", "commission"}
         disability_docs = {"primary", "admission_doctor_referral"}
+        expert_work_docs = {"primary", "discharge", "commission", "admission_doctor_referral"}
         epi_docs = {"discharge", "commission", "vk_mse", "sick_leave_vk", "rvk"}
         rvk_referral_docs = {"primary", "admission_doctor_referral"}
         # Freeze embedded source EPI before any popup/UI mutation. A doctor may
@@ -209,6 +210,26 @@ class DialogExpertMixin:
             label = "По направлению из РВК"
             rows.append((label, rvk_referral))
             fields.append("rvk_referral")
+            choices[label] = ("нет", "да")
+
+        if selected & expert_work_docs:
+            work_status = self._normalize_yes_no(self.expert_work_status_var.get())
+            work_org, work_position = self._shared_work_defaults()
+            if not work_status and hasattr(self, "data"):
+                raw_work = " ".join(
+                    part for part in [
+                        getattr(self.data, "work_org", ""),
+                        getattr(self.data, "position", ""),
+                    ]
+                    if part
+                ).lower().replace("ё", "е")
+                if "не работает" in raw_work:
+                    work_status = "нет"
+                elif work_org or work_position:
+                    work_status = "да"
+            label = "Работает ли пациент"
+            rows.append((label, work_status))
+            fields.append("work_status")
             choices[label] = ("нет", "да")
 
         if selected & sick_leave_docs:
@@ -262,6 +283,8 @@ class DialogExpertMixin:
                     self.rvk_referral_present_var.set(value)
                     if hasattr(self, "data"):
                         self.data.rvk_referral_present = value
+                elif field == "work_status":
+                    self.expert_work_status_var.set(value)
                 elif field == "sick_leave":
                     self.expert_sick_leave_needed_var.set(value)
                 elif field == "disability":
@@ -282,6 +305,43 @@ class DialogExpertMixin:
                 self.rvk_referral_commissariat_var.set("")
             elif not self._prompt_rvk_referral_commissariat_if_needed():
                 return False
+
+        if selected & expert_work_docs:
+            work_status = self._normalize_yes_no(self.expert_work_status_var.get())
+            if work_status == "нет":
+                self.expert_work_org_var.set("")
+                self.expert_position_var.set("")
+                self.vk_mse_work_org_var.set("")
+                self.vk_mse_position_var.set("")
+                self.sick_leave_vk_work_org_var.set("")
+                self.sick_leave_vk_position_var.set("")
+                self.sick_leave_vk_work_position_var.set("")
+            elif work_status == "да":
+                work_org, work_position = self._shared_work_defaults()
+                if not work_org or not work_position:
+                    if hasattr(self, "data"):
+                        parsed_org, parsed_position = self._primary_work_pair_from_data(self.data)
+                        work_org = work_org or parsed_org
+                        work_position = work_position or parsed_position
+                    values = self._prompt_fields(
+                        title="Место работы",
+                        rows=[
+                            ("Где работает / организация", work_org),
+                            ("Должность", work_position),
+                        ],
+                        width=64,
+                    )
+                    if values is None:
+                        return False
+                    work_org = self._clean_popup_work_org(values[0])
+                    work_position = self._clean_popup_position(values[1])
+                    if not work_org or not work_position:
+                        messagebox.showwarning(
+                            "Не заполнено поле",
+                            "Для работающего пациента укажите место работы и должность.",
+                        )
+                        return False
+                self._sync_shared_work_details(work_org, work_position)
 
         if selected & sick_leave_docs:
             sick = self._normalize_yes_no(self.expert_sick_leave_needed_var.get())

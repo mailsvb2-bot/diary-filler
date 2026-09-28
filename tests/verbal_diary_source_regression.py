@@ -99,6 +99,14 @@ class _DischargeDiaryHarness(DialogExpertMixin, ActionsMedicalFlowMixin, Actions
         self.admission_date_var = _Var("01.09.2026")
         self.discharge_date_var = _Var("25.09.2026")
         self.diagnosis_var = _Var("F41.2 Тестовый диагноз")
+        self.expert_work_status_var = _Var("")
+        self.expert_work_org_var = _Var("")
+        self.expert_position_var = _Var("")
+        self.vk_mse_work_org_var = _Var("")
+        self.vk_mse_position_var = _Var("")
+        self.sick_leave_vk_work_org_var = _Var("")
+        self.sick_leave_vk_position_var = _Var("")
+        self.sick_leave_vk_work_position_var = _Var("")
         self.expert_sick_leave_needed_var = _Var("")
         self.expert_sick_leave_from_var = _Var("")
         self.expert_sick_leave_number_var = _Var("")
@@ -137,6 +145,7 @@ class _DischargeDiaryHarness(DialogExpertMixin, ActionsMedicalFlowMixin, Actions
         if title == "Дополнительные данные":
             answers = {
                 "На учёте у психиатров": "не состоит",
+                "Работает ли пациент": "нет",
                 "Нужен ли больничный лист": "да",
                 "Есть ли ЭПИ": "нет",
             }
@@ -154,6 +163,17 @@ class _DischargeDiaryHarness(DialogExpertMixin, ActionsMedicalFlowMixin, Actions
 
     def _medical_override_data(self, _navigation: str) -> PatientData:
         data = copy.deepcopy(self.data)
+        data.expert_work_status = self._normalize_yes_no(
+            self.expert_work_status_var.get()
+        )
+        data.expert_work_org = self.expert_work_org_var.get().strip()
+        data.expert_position = self.expert_position_var.get().strip()
+        if data.expert_work_status == "нет":
+            data.work_org = "не работает"
+            data.position = ""
+        elif data.expert_work_status == "да":
+            data.work_org = data.expert_work_org
+            data.position = data.expert_position
         data.expert_sick_leave_needed = self._normalize_yes_no(
             self.expert_sick_leave_needed_var.get()
         )

@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "base_sha": "c3b9b31020e46980aaa77f96dc0b8c4344bb23af",
+  "reason": "Explicit mechanics fix for employment-status collection and preservation across discharge/commission plus VK document flows.",
+  "approved_blobs": {
+    "dialog_expert.py": "c4626d4b6cb109d225924bd79f8671bda5316443",
+    "dialog_document_details.py": "dac67eda9f1c7d1caf02e2b3fa1ee1af71cad5c6",
+    "actions_creation_orchestrator.py": "b87caaf471633892b935b9a121fdd1ffbdff050c"
+  }
+}

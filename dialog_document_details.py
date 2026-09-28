@@ -284,16 +284,24 @@ class DialogDocumentDetailsMixin:
         date_default = self.vk_date_var.get().strip()
         protocol_date_default = self.vk_protocol_date_var.get().strip() or date_default
         shared_org, shared_position = self._shared_work_defaults()
-        values = self._prompt_fields(
-            title="ВК на МСЭ",
-            rows=[
-                ("Номер истории болезни", self._case_number_popup_default()),
-                ("Дата ВК на МСЭ", date_default),
-                ("Протокол номер", self.vk_protocol_number_var.get().strip()),
-                ("Дата протокола", protocol_date_default),
+        work_status_var = getattr(self, "expert_work_status_var", None)
+        nonworking = self._normalize_yes_no(
+            work_status_var.get() if work_status_var is not None else ""
+        ) == "нет"
+        rows = [
+            ("Номер истории болезни", self._case_number_popup_default()),
+            ("Дата ВК на МСЭ", date_default),
+            ("Протокол номер", self.vk_protocol_number_var.get().strip()),
+            ("Дата протокола", protocol_date_default),
+        ]
+        if not nonworking:
+            rows.extend([
                 ("Место работы", self.vk_mse_work_org_var.get().strip() or shared_org),
                 ("Должность", self.vk_mse_position_var.get().strip() or shared_position),
-            ],
+            ])
+        values = self._prompt_fields(
+            title="ВК на МСЭ",
+            rows=rows,
             width=64,
             # Если врач меняет первую дату, поле «От / дата протокола»
             # автоматически получает ту же дату, пока врач сам его не изменил.
@@ -309,18 +317,22 @@ class DialogDocumentDetailsMixin:
         if vk_date is None or vk_protocol_date is None:
             return False
         protocol_number = values[2].strip()
-        work_org = values[4].strip()
-        position = values[5].strip()
         if not protocol_number:
             messagebox.showwarning("Не заполнено поле", "Укажите номер протокола ВК.")
-            return False
-        if not work_org:
-            messagebox.showwarning("Не заполнено поле", "Укажите место работы.")
             return False
         self.vk_date_var.set(vk_date)
         self.vk_protocol_number_var.set(protocol_number)
         self.vk_protocol_date_var.set(vk_protocol_date)
-        self._sync_shared_work_details(work_org, position)
+        if nonworking:
+            self.vk_mse_work_org_var.set("")
+            self.vk_mse_position_var.set("")
+        else:
+            work_org = values[4].strip()
+            position = values[5].strip()
+            if not work_org or not position:
+                messagebox.showwarning("Не заполнено поле", "Укажите место работы и должность.")
+                return False
+            self._sync_shared_work_details(work_org, position)
         self._remember_committee_dates(committee_date=vk_date, protocol_date=vk_protocol_date)
         return True
 
@@ -329,17 +341,25 @@ class DialogDocumentDetailsMixin:
         protocol_date_default = self.sick_leave_vk_protocol_date_var.get().strip() or date_default
         commission_date_default = self.sick_leave_vk_commission_date_var.get().strip() or date_default
         shared_org, shared_position = self._shared_work_defaults()
-        values = self._prompt_fields(
-            title="ВК больничный",
-            rows=[
-                ("Номер истории болезни", self._case_number_popup_default()),
-                ("Дата / дата проведения ВК", date_default),
-                ("Номер протокола", self.sick_leave_vk_protocol_number_var.get().strip()),
-                ("Дата протокола", protocol_date_default),
-                ("Дата проведения комиссии", commission_date_default),
+        work_status_var = getattr(self, "expert_work_status_var", None)
+        nonworking = self._normalize_yes_no(
+            work_status_var.get() if work_status_var is not None else ""
+        ) == "нет"
+        rows = [
+            ("Номер истории болезни", self._case_number_popup_default()),
+            ("Дата / дата проведения ВК", date_default),
+            ("Номер протокола", self.sick_leave_vk_protocol_number_var.get().strip()),
+            ("Дата протокола", protocol_date_default),
+            ("Дата проведения комиссии", commission_date_default),
+        ]
+        if not nonworking:
+            rows.extend([
                 ("Место работы", self.sick_leave_vk_work_org_var.get().strip() or shared_org),
                 ("Должность", self.sick_leave_vk_position_var.get().strip() or shared_position),
-            ],
+            ])
+        values = self._prompt_fields(
+            title="ВК больничный",
+            rows=rows,
             width=64,
             # Первая дата автоматически дублируется в «От» и в
             # «Дата проведения комиссии», но оба поля можно изменить вручную.
@@ -356,19 +376,24 @@ class DialogDocumentDetailsMixin:
         if sick_vk_date is None or sick_vk_protocol_date is None or sick_vk_commission_date is None:
             return False
         protocol_number = values[2].strip()
-        work_org = values[5].strip()
-        position = values[6].strip()
         if not protocol_number:
             messagebox.showwarning("Не заполнено поле", "Укажите номер протокола ВК больничного.")
-            return False
-        if not work_org:
-            messagebox.showwarning("Не заполнено поле", "Укажите место работы.")
             return False
         self.sick_leave_vk_date_var.set(sick_vk_date)
         self.sick_leave_vk_protocol_number_var.set(protocol_number)
         self.sick_leave_vk_protocol_date_var.set(sick_vk_protocol_date)
         self.sick_leave_vk_commission_date_var.set(sick_vk_commission_date)
-        self._sync_shared_work_details(work_org, position)
+        if nonworking:
+            self.sick_leave_vk_work_org_var.set("")
+            self.sick_leave_vk_position_var.set("")
+            self.sick_leave_vk_work_position_var.set("")
+        else:
+            work_org = values[5].strip()
+            position = values[6].strip()
+            if not work_org or not position:
+                messagebox.showwarning("Не заполнено поле", "Укажите место работы и должность.")
+                return False
+            self._sync_shared_work_details(work_org, position)
         self._remember_committee_dates(committee_date=sick_vk_commission_date or sick_vk_date, protocol_date=sick_vk_protocol_date)
         return True
 

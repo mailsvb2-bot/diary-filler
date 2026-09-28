@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "1ea5109076060848c315288408b98a8d3b58bce2",
+  "reason": "Fix employment-status generation dead-ends, keep explicit nonworking state across combined VK flows, and align regression harnesses with the production UI contract.",
+  "required_evidence": [
+    "document_mechanics_guard",
+    "full_patient_replay",
+    "golden_docx",
+    "staff_profile_regression",
+    "gender_generation_matrix",
+    "desktop_intake_contract",
+    "intake_lifecycle_regression",
+    "packaged_desktop_intake_e2e",
+    "installer_uninstall_smoke",
+    "ci_gate_lock"
+  ],
+  "approved_blobs": {
+    "actions_creation_orchestrator.py": "b87caaf471633892b935b9a121fdd1ffbdff050c",
+    "dialog_document_details.py": "dac67eda9f1c7d1caf02e2b3fa1ee1af71cad5c6",
+    "dialog_expert.py": "c4626d4b6cb109d225924bd79f8671bda5316443",
+    "smoke_combined_part02_ui_parser_regressions.py": "504eb52fd0dacd9aaac8b55f7464980b61718ef4",
+    "smoke_combined_part04_medical_generation.py": "e0d13d8ab5698b8b6eaf5b851fe58d8e11a8415a",
+    "tests/verbal_diary_source_regression.py": "705b7fbe84d86921d08081c85d627f371d43d508",
+    "tests/windows_e1_exhaustive_user_matrix.py": "e911b82af3fd5eb85c3ba801beb8275bc0afa319",
+    "tools/document_mechanics_change_approval.json": "701bb30da7d7771a1729648d85dbca5608f8dbea"
+  }
+}
