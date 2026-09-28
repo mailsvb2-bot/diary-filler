@@ -17,6 +17,7 @@
   "approved_blobs": {
     "dialog_expert.py": "c4626d4b6cb109d225924bd79f8671bda5316443",
     "smoke_combined_part02_ui_parser_regressions.py": "ba5ec7c8ae9d4742064418ef152f1fef995c3306",
+    "smoke_combined_part04_medical_generation.py": "dbaeaea91af898517620ceac6ad2a25960e6ab89",
     "tools/document_mechanics_change_approval.json": "a3951c61ebe39dc89cbc265d10c8e3deb1443af2"
   }
 }
