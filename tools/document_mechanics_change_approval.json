@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "base_sha": "9dd539098a92c64f47396a0672fe5f963e72bd4f",
-  "reason": "Restore the user-approved canonical final discharge diary wording and lock that exact diary mechanics behavior.",
+  "base_sha": "36a1c8a10f4bacc4ba4b7ee481eaeeffffa9b1ff",
+  "reason": "Release-only version metadata update for v1.4.24; app_config.py changes only APP_VERSION/APP_TITLE label and does not alter document generation mechanics.",
   "approved_blobs": {
-    "diary_constants.py": "950704c2711c881ae93d263b32cd83580218b8ef"
+    "app_config.py": "8d61d47beddb691fd17d16d0d05cd344340d3b35"
   }
 }
