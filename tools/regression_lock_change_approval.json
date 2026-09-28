@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "1ea5109076060848c315288408b98a8d3b58bce2",
-  "reason": "Fix generation dead-end where employment status is required by strict medical validation but was not collected by the UI before creating discharge/commission documents.",
+  "reason": "Fix employment-status generation dead-ends, keep explicit nonworking state across combined VK flows, and align regression harnesses with the production UI contract.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -15,10 +15,12 @@
     "ci_gate_lock"
   ],
   "approved_blobs": {
+    "actions_creation_orchestrator.py": "04b6b7cd337c70c83c0e342ebfb8154da03644c5",
+    "dialog_document_details.py": "a0cf5296536ce56c1627f98053282daf450648dd",
     "dialog_expert.py": "c4626d4b6cb109d225924bd79f8671bda5316443",
-    "smoke_combined_part02_ui_parser_regressions.py": "ba5ec7c8ae9d4742064418ef152f1fef995c3306",
+    "smoke_combined_part02_ui_parser_regressions.py": "504eb52fd0dacd9aaac8b55f7464980b61718ef4",
     "smoke_combined_part04_medical_generation.py": "e0d13d8ab5698b8b6eaf5b851fe58d8e11a8415a",
-    "tools/document_mechanics_change_approval.json": "a3951c61ebe39dc89cbc265d10c8e3deb1443af2",
-    "tests/verbal_diary_source_regression.py": "705b7fbe84d86921d08081c85d627f371d43d508"
+    "tests/verbal_diary_source_regression.py": "705b7fbe84d86921d08081c85d627f371d43d508",
+    "tools/document_mechanics_change_approval.json": "4b2eac3c3eacd3fef05cc7e50ae4a90df80cacb4"
   }
 }
