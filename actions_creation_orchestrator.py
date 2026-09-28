@@ -636,34 +636,34 @@ class ActionsCreationOrchestratorMixin:
         nonworking = normalize_yes_no(
             work_status_var.get() if work_status_var is not None else ""
         ) == "нет"
-        vk_mse_complete = all([
-            self.vk_date_var.get().strip(),
-            self.vk_protocol_number_var.get().strip(),
-            self.vk_protocol_date_var.get().strip(),
-        ]) and (
-            nonworking
-            or all([
-                self.vk_mse_work_org_var.get().strip(),
-                self.vk_mse_position_var.get().strip(),
-            ])
-        )
-        if "vk_mse" in selected_medical and not vk_mse_complete:
-            if not self._prompt_vk_mse_details():
+        if "vk_mse" in selected_medical:
+            vk_mse_complete = all([
+                self.vk_date_var.get().strip(),
+                self.vk_protocol_number_var.get().strip(),
+                self.vk_protocol_date_var.get().strip(),
+            ]) and (
+                nonworking
+                or all([
+                    self.vk_mse_work_org_var.get().strip(),
+                    self.vk_mse_position_var.get().strip(),
+                ])
+            )
+            if not vk_mse_complete and not self._prompt_vk_mse_details():
                 return
-        sick_leave_vk_complete = all([
-            self.sick_leave_vk_date_var.get().strip(),
-            self.sick_leave_vk_protocol_number_var.get().strip(),
-            self.sick_leave_vk_protocol_date_var.get().strip(),
-            self.sick_leave_vk_commission_date_var.get().strip(),
-        ]) and (
-            nonworking
-            or all([
-                self.sick_leave_vk_work_org_var.get().strip(),
-                self.sick_leave_vk_position_var.get().strip(),
-            ])
-        )
-        if "sick_leave_vk" in selected_medical and not sick_leave_vk_complete:
-            if not self._prompt_sick_leave_vk_details():
+        if "sick_leave_vk" in selected_medical:
+            sick_leave_vk_complete = all([
+                self.sick_leave_vk_date_var.get().strip(),
+                self.sick_leave_vk_protocol_number_var.get().strip(),
+                self.sick_leave_vk_protocol_date_var.get().strip(),
+                self.sick_leave_vk_commission_date_var.get().strip(),
+            ]) and (
+                nonworking
+                or all([
+                    self.sick_leave_vk_work_org_var.get().strip(),
+                    self.sick_leave_vk_position_var.get().strip(),
+                ])
+            )
+            if not sick_leave_vk_complete and not self._prompt_sick_leave_vk_details():
                 return
         if (
             selected_medical
