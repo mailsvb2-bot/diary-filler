@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "8574d48955a9a5b78a1df44fd4b4dafefa5f62c1",
-  "baseline_note": "v1.4.24 canonical-diary release baseline. PR #260 head 24b50239acc332f30ed4f770a6103ba778ded294 passed Windows CI #1202 / run 36468711842, including version sync, regression/document-mechanics locks, full patient replay/golden DOCX, clinical matrices, Windows E1, real Tk GUI, EXE, packaged desktop-intake E2E, installer build/install/uninstall and performance gates. PR #260 merged with canonical GitHub merge commit 8574d48955a9a5b78a1df44fd4b4dafefa5f62c1; post-merge main CI #1203 / run 36469339011 passed the same production contour.",
+  "baseline_ref": "8d17dc1fcbad65f9c9980c9d5db1ae16b323290f",
+  "baseline_note": "v1.4.24 clean release baseline. PR #262 head e7cc740f40edf4177e971a21f7bd4b187448cb7b passed Windows CI #1206 / run 36475728652, including regression/document-mechanics gates, full patient replay and golden DOCX, clinical matrices, Windows E1, real Tk GUI, EXE, packaged desktop-intake E2E, installer build/install/uninstall and performance gates. PR #262 merged with canonical GitHub merge commit 8d17dc1fcbad65f9c9980c9d5db1ae16b323290f; this metadata-only finalization removes the consumed regression approval.",
   "required_approval_evidence": [
     "ci_gate_lock"
   ],
