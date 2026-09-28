@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "43ee686d2182279accdb4fc08472817fe0ede133",
-  "baseline_note": "Canonical final discharge diary baseline. PR #258 head 51def68dbaa89a93e775e8aab8be78ca7c451bbd passed Windows CI #1197 / run 36457424482, including regression locks, full patient replay and golden DOCX, clinical regressions, Windows E1 exhaustive matrix, real Tk GUI, EXE, packaged desktop-intake E2E, installer build/install/uninstall and performance gates. The identical tested tree was merged as 43ee686d2182279accdb4fc08472817fe0ede133; this metadata cleanup closes the temporary approval surface and restores canonical merge provenance on main.",
+  "baseline_ref": "8574d48955a9a5b78a1df44fd4b4dafefa5f62c1",
+  "baseline_note": "v1.4.24 canonical-diary release baseline. PR #260 head 24b50239acc332f30ed4f770a6103ba778ded294 passed Windows CI #1202 / run 36468711842, including version sync, regression/document-mechanics locks, full patient replay/golden DOCX, clinical matrices, Windows E1, real Tk GUI, EXE, packaged desktop-intake E2E, installer build/install/uninstall and performance gates. PR #260 merged with canonical GitHub merge commit 8574d48955a9a5b78a1df44fd4b4dafefa5f62c1; post-merge main CI #1203 / run 36469339011 passed the same production contour.",
   "required_approval_evidence": [
     "ci_gate_lock"
   ],
