@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "1ea5109076060848c315288408b98a8d3b58bce2",
-  "reason": "Fix employment-status generation dead-ends, keep explicit nonworking state across combined VK flows, and align regression harnesses with the production UI contract.",
+  "reason": "Restore the mandatory canonical final discharge diary wording, reverse the prior safety regression that stripped clinical text, and lock the generated DOCX wording end-to-end.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -22,6 +22,11 @@
     "smoke_combined_part04_medical_generation.py": "e0d13d8ab5698b8b6eaf5b851fe58d8e11a8415a",
     "tests/verbal_diary_source_regression.py": "705b7fbe84d86921d08081c85d627f371d43d508",
     "tests/windows_e1_exhaustive_user_matrix.py": "e911b82af3fd5eb85c3ba801beb8275bc0afa319",
-    "tools/document_mechanics_change_approval.json": "701bb30da7d7771a1729648d85dbca5608f8dbea"
+    "tools/document_mechanics_change_approval.json": "01f62d9d39d349c1ad781431a6a0826b9f65b889",
+    "diary_constants.py": "950704c2711c881ae93d263b32cd83580218b8ef",
+    "prod_audit.py": "631aecdca8e2c8f06a4a2aa7b7ab8f2e95faea7b",
+    "safety_integrity_check.py": "ad5ace44fd2d76366431e189d1402cf1a6ea2cc5",
+    "smoke_combined_part05_diary_basic_templates.py": "f03e0d597e08e7b70d7778941bfa09f72e6bafbb",
+    "tests/golden_docx_manifest.json": "846ddd2369d6894a42d244968ddbafe8464448e1"
   }
 }

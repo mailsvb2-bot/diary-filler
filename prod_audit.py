@@ -1078,15 +1078,13 @@ def _assert_diagnosis_diary_text_contract() -> None:
         _fail("production diary route lost the universal final-discharge diary text")
     if "adapt_text_to_patient_gender(FINAL_DIARY_TEXT" not in batch:
         _fail("final discharge diary is no longer generated from FINAL_DIARY_TEXT")
-    if "На текущую дату оформлена выписка" not in constants:
+    required_final_diary_clauses = (
+        "Состояние улучшилось. Жалоб не предъявляет. Острой психотической симптоматики не продуцирует. ",
+        "Фон настроения ровный, суицидальных мыслей не высказывает. Критика к состоянию присутствует. ",
+        "На текущую дату оформлена выписка из стационара. Даны рекомендации",
+    )
+    if not all(clause in constants for clause in required_final_diary_clauses):
         _fail("canonical universal final-discharge diary text was changed or removed")
-    for fabricated_claim in (
-        "Состояние улучшилось.",
-        "суицидальных мыслей не высказывает",
-        "Критика к состоянию присутствует",
-    ):
-        if fabricated_claim in constants:
-            _fail(f"final diary contains unsourced clinical claim: {fabricated_claim}")
 
     for required in (
         "def _direct_diagnosis_name_rank",
