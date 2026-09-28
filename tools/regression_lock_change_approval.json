@@ -15,12 +15,12 @@
     "ci_gate_lock"
   ],
   "approved_blobs": {
-    "actions_creation_orchestrator.py": "ad27d902305b67a5fac2e6d9636b0c86992db3fd",
+    "actions_creation_orchestrator.py": "b87caaf471633892b935b9a121fdd1ffbdff050c",
     "dialog_document_details.py": "dac67eda9f1c7d1caf02e2b3fa1ee1af71cad5c6",
     "dialog_expert.py": "c4626d4b6cb109d225924bd79f8671bda5316443",
     "smoke_combined_part02_ui_parser_regressions.py": "504eb52fd0dacd9aaac8b55f7464980b61718ef4",
     "smoke_combined_part04_medical_generation.py": "e0d13d8ab5698b8b6eaf5b851fe58d8e11a8415a",
     "tests/verbal_diary_source_regression.py": "705b7fbe84d86921d08081c85d627f371d43d508",
-    "tools/document_mechanics_change_approval.json": "807d9a1953d60b0400b38f1c2959da48c6eea926"
+    "tools/document_mechanics_change_approval.json": "701bb30da7d7771a1729648d85dbca5608f8dbea"
   }
 }
