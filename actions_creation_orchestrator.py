@@ -631,7 +631,10 @@ class ActionsCreationOrchestratorMixin:
             )
             if rvk_needs_popup and not self._prompt_rvk_details():
                 return
-        nonworking = self._normalize_yes_no(self.expert_work_status_var.get()) == "нет"
+        work_status_var = getattr(self, "expert_work_status_var", None)
+        nonworking = self._normalize_yes_no(
+            work_status_var.get() if work_status_var is not None else ""
+        ) == "нет"
         vk_mse_complete = all([
             self.vk_date_var.get().strip(),
             self.vk_protocol_number_var.get().strip(),
