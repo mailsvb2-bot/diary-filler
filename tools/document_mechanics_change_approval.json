@@ -5,6 +5,6 @@
   "approved_blobs": {
     "dialog_expert.py": "c4626d4b6cb109d225924bd79f8671bda5316443",
     "dialog_document_details.py": "dac67eda9f1c7d1caf02e2b3fa1ee1af71cad5c6",
-    "actions_creation_orchestrator.py": "ad27d902305b67a5fac2e6d9636b0c86992db3fd"
+    "actions_creation_orchestrator.py": "b87caaf471633892b935b9a121fdd1ffbdff050c"
   }
 }
