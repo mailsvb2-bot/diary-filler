@@ -1,8 +1,0 @@
-{
-  "schema_version": 1,
-  "base_sha": "e35db73e1225d4d525f04dfbad2dcaa7d12906b4",
-  "reason": "Release-only version metadata update for v1.4.25; app_config.py changes only APP_VERSION/APP_TITLE label and does not alter document generation mechanics.",
-  "approved_blobs": {
-    "app_config.py": "2c094a33bcdff1457da00c42fcd2027f3f206595"
-  }
-}
