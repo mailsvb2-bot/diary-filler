@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "60ee35f200766dad5b54e106d6c5aad4f5b790e7",
-  "baseline_note": "Windows 10 + Windows 11 independent physical live E2E matrix baseline. PR #274 merged as 60ee35f200766dad5b54e106d6c5aad4f5b790e7 after full PR Windows CI success (run 36783581287); the post-merge main run 36784218446 then passed the complete production contour including regression/CI/live-matrix contracts, document mechanics, golden DOCX/full patient replay, clinical/user matrices, 255-selection matrix, real Tk GUI, EXE/TkDND, packaged desktop-intake E2E, installer build/install/uninstall, performance gates, and release artifacts. The matrix uses fail-fast=false so Win10 and Win11 physical jobs are independent.",
+  "baseline_ref": "c065984fc39f92f89a743c8be6d85b5e33249572",
+  "baseline_note": "Windows 10 1607+ CMD/live-runner compatibility baseline. PR #276 merged as c065984fc39f92f89a743c8be6d85b5e33249572 after full PR Windows CI success (run 36788117941); post-merge main run 36788616485 then passed the complete production contour including regression/CI/live-matrix contracts, document mechanics, golden DOCX/full patient replay, clinical/user matrices, 255-selection matrix, Tk GUI, EXE/TkDND, packaged desktop-intake E2E, installer build/install/uninstall, performance gates, and release artifacts. The live contour now supports Windows 10 client build 14393..21999 using built-in Windows PowerShell 5.1 without curl.exe or pwsh, while Windows 11 remains build 22000+.",
   "required_approval_evidence": [
     "ci_gate_lock"
   ],
