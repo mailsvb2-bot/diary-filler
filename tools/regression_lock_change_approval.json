@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "60ee35f200766dad5b54e106d6c5aad4f5b790e7",
-  "reason": "Add a CMD-first bootstrap for registering the existing trusted Windows 10/11 live E2E runner without changing production document mechanics; protect the wrapper in CI/release contracts and delegate all privileged setup to the already-tested PowerShell bootstrap.",
+  "reason": "Make the physical Windows live runner bootstrap work on stock Windows 10 1607 (build 14393) through Windows 11 without curl.exe or PowerShell 7: use built-in Windows PowerShell 5.1, widen the Win10 preflight to the Windows 10 generation, and protect the compatibility contract in CI/release gates.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -16,10 +16,13 @@
     "windows_live_e2e_contract"
   ],
   "approved_blobs": {
+    ".github/workflows/windows-live-e2e-core.yml": "69ae24c36199c395f639861d0367cd467ec2c20f",
     "release_check.py": "3ec1ce084c33553872be62f9e9deb03757e7079c",
     "tests/regression_surface_inventory.py": "ad44b5e5f33c244e3660d9d7040b4d6fd55e5432",
-    "tests/windows_live_e2e_contract.py": "e6644cec98110a0bdcf8638009c01f18efff67d3",
+    "tests/windows_live_e2e_contract.py": "6a3f62796ed293eb62e62d5e9ac87f0bac77fb12",
     "tools/ci_gate_lock.py": "338595931832d84ded3cce5176674bbce5175972",
-    "tools/install_windows_live_runner.cmd": "95e3eef81b1e3e97db7c2db2e557e8c8f2492568"
+    "tools/install_windows_live_runner.cmd": "c0cf6df6412e7464a84d27f5920fb0ff83145d09",
+    "tools/install_windows_live_runner.ps1": "b0ee8d72fd35585b1f35a4b0b46cc27d9260040f",
+    "tools/windows_live_e2e_preflight.ps1": "a99ca5c03f658f2e4ee51770a60ab6f2fa123ad1"
   }
 }
