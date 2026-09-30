@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "60ee35f200766dad5b54e106d6c5aad4f5b790e7",
+  "reason": "Add a CMD-first bootstrap for registering the existing trusted Windows 10/11 live E2E runner without changing production document mechanics; protect the wrapper in CI/release contracts and delegate all privileged setup to the already-tested PowerShell bootstrap.",
+  "required_evidence": [
+    "document_mechanics_guard",
+    "full_patient_replay",
+    "golden_docx",
+    "staff_profile_regression",
+    "gender_generation_matrix",
+    "desktop_intake_contract",
+    "intake_lifecycle_regression",
+    "packaged_desktop_intake_e2e",
+    "installer_uninstall_smoke",
+    "ci_gate_lock",
+    "windows_live_e2e_contract"
+  ],
+  "approved_blobs": {
+    "release_check.py": "3ec1ce084c33553872be62f9e9deb03757e7079c",
+    "tests/regression_surface_inventory.py": "ad44b5e5f33c244e3660d9d7040b4d6fd55e5432",
+    "tests/windows_live_e2e_contract.py": "e6644cec98110a0bdcf8638009c01f18efff67d3",
+    "tools/ci_gate_lock.py": "338595931832d84ded3cce5176674bbce5175972",
+    "tools/install_windows_live_runner.cmd": "95e3eef81b1e3e97db7c2db2e557e8c8f2492568"
+  }
+}
