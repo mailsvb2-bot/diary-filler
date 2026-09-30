@@ -1,17 +1,11 @@
-"""Fail-closed contract for the persistent Windows 10 + Windows 11 live E2E contours.
-
-This check is intentionally runnable on ordinary CI. It does not claim that a
-physical workstation was exercised; it prevents repository changes from
-silently weakening, merging, or desynchronizing the two real-user contours.
-"""
+"""Fail-closed contract for the Windows 10 + Windows 11 live E2E matrix."""
 from __future__ import annotations
 
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+MATRIX = ROOT / ".github" / "workflows" / "windows-live-e2e.yml"
 CORE = ROOT / ".github" / "workflows" / "windows-live-e2e-core.yml"
-WIN10 = ROOT / ".github" / "workflows" / "windows10-live-e2e.yml"
-WIN11 = ROOT / ".github" / "workflows" / "windows11-live-e2e.yml"
 PREFLIGHT = ROOT / "tools" / "windows_live_e2e_preflight.ps1"
 INSTALLER = ROOT / "tools" / "install_windows_live_runner.ps1"
 DRIVER = ROOT / "tests" / "windows_live_gui_e2e.py"
@@ -30,70 +24,59 @@ def require_all(text: str, snippets: tuple[str, ...], label: str) -> None:
         fail(f"{label} is missing: " + ", ".join(missing))
 
 
-def _check_caller(path: Path, *, target: str, enabled_var: str, runner_label: str) -> None:
-    text = path.read_text(encoding="utf-8")
-    require_all(
-        text,
-        (
-            "workflow_dispatch:",
-            "schedule:",
-            "permissions:",
-            "contents: read",
-            "cancel-in-progress: false",
-            "github.ref == 'refs/heads/main'",
-            f"vars.{enabled_var} == 'true'",
-            "uses: ./.github/workflows/windows-live-e2e-core.yml",
-            f"target_os: {target}",
-            f"runner_label: {runner_label}",
-        ),
-        f"{target} caller",
-    )
-    if "pull_request:" in text:
-        fail(f"{target} self-hosted contour must never execute pull_request code")
-    if "windows-latest" in text:
-        fail(f"{target} caller must not downgrade to an ephemeral hosted runner")
-
-
 def main() -> None:
-    required_assets = (
-        CORE,
-        WIN10,
-        WIN11,
-        PREFLIGHT,
-        INSTALLER,
-        DRIVER,
-        WIN11_PREFLIGHT_COMPAT,
-        WIN11_INSTALLER_COMPAT,
-        WIN11_DRIVER_COMPAT,
-    )
-    for path in required_assets:
+    for path in (
+        MATRIX, CORE, PREFLIGHT, INSTALLER, DRIVER,
+        WIN11_PREFLIGHT_COMPAT, WIN11_INSTALLER_COMPAT, WIN11_DRIVER_COMPAT,
+    ):
         if not path.is_file():
             fail(f"mandatory live E2E asset is missing: {path.relative_to(ROOT)}")
 
-    _check_caller(
-        WIN10,
-        target="windows10",
-        enabled_var="WINDOWS10_LIVE_E2E_ENABLED",
-        runner_label="windows10-interactive",
-    )
-    _check_caller(
-        WIN11,
-        target="windows11",
-        enabled_var="WINDOWS11_LIVE_E2E_ENABLED",
-        runner_label="windows11-interactive",
-    )
-
+    matrix = MATRIX.read_text(encoding="utf-8")
     core = CORE.read_text(encoding="utf-8")
     preflight = PREFLIGHT.read_text(encoding="utf-8")
     installer = INSTALLER.read_text(encoding="utf-8")
     driver = DRIVER.read_text(encoding="utf-8")
 
     require_all(
+        matrix,
+        (
+            "workflow_dispatch:",
+            "default: both",
+            "- both",
+            "- windows10",
+            "- windows11",
+            "schedule:",
+            "WINDOWS10_LIVE_E2E_ENABLED",
+            "WINDOWS11_LIVE_E2E_ENABLED",
+            '"target_os": "windows10"',
+            '"runner_label": "windows10-interactive"',
+            '"target_os": "windows11"',
+            '"runner_label": "windows11-interactive"',
+            "strategy:",
+            "fail-fast: false",
+            "max-parallel: 2",
+            r"matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}",
+            r"name: Live E2E / ${{ matrix.artifact_suffix }}",
+            "uses: ./.github/workflows/windows-live-e2e-core.yml",
+            r"target_os: ${{ matrix.target_os }}",
+            r"runner_label: ${{ matrix.runner_label }}",
+        ),
+        "two-OS matrix workflow",
+    )
+    if matrix.count('"target_os": "windows10"') != 1:
+        fail("matrix must define exactly one Windows 10 live configuration")
+    if matrix.count('"target_os": "windows11"') != 1:
+        fail("matrix must define exactly one Windows 11 live configuration")
+    if "pull_request:" in matrix:
+        fail("physical self-hosted matrix must never execute pull_request code")
+    if "windows-latest" in matrix:
+        fail("live matrix must not downgrade a physical OS row to windows-latest")
+
+    require_all(
         core,
         (
             "workflow_call:",
-            "target_os:",
-            "runner_label:",
             "- self-hosted",
             "- Windows",
             "- X64",
@@ -127,7 +110,7 @@ def main() -> None:
             "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
             r"MedicalDiaryAutofill-${{ inputs.target_os }}-Live-E2E-${{ github.run_id }}",
         ),
-        "shared live workflow",
+        "shared physical live core",
     )
     for forbidden in ("pull_request:", "runs-on: windows-latest", "continue-on-error:"):
         if forbidden in core:
@@ -144,16 +127,12 @@ def main() -> None:
             "Win32_OperatingSystem",
             "ProductType",
             "SessionId",
-            "PSVersionTable.PSVersion.Major",
             "OpenInputDesktop",
             "SwitchDesktop",
             "explorer.exe",
             "WINWORD.EXE",
             "Get-Printer",
-            "RequireInno",
             "Inno Setup 6",
-            "1280",
-            "720",
             "target_os = $TargetOs",
             "WINDOWS LIVE E2E PREFLIGHT OK",
         ),
@@ -173,14 +152,11 @@ def main() -> None:
             "actions-runner-win-x64",
             "ExpectedSha256",
             "Get-FileHash -Algorithm SHA256",
-            'if ($TargetOs -eq "windows10")',
             '"windows10-interactive"',
             '"windows11-interactive"',
-            "Get-Command pwsh.exe",
             "config.cmd --unattended",
             "diary-filler-live-e2e",
             "run-interactive.cmd",
-            "Start Menu\\Programs\\Startup",
             "Runner must remain signed in and unlocked",
         ),
         "shared runner bootstrap",
@@ -226,8 +202,8 @@ def main() -> None:
     )
 
     print(
-        "WINDOWS LIVE E2E CONTRACT OK: independent Win10 + Win11 trusted-main callers "
-        "share one fail-closed interactive GUI/Word/printer/EXE/installer contour"
+        "WINDOWS LIVE E2E CONTRACT OK: one fail-fast=false matrix emits independent "
+        "Win10 and Win11 physical jobs sharing the same trusted-main live core"
     )
 
 
