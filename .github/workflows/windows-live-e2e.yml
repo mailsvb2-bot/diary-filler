@@ -1,0 +1,92 @@
+name: Windows 10 + 11 Live E2E Matrix
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_os:
+        description: Physical Windows contour to run
+        required: true
+        default: both
+        type: choice
+        options:
+          - both
+          - windows10
+          - windows11
+  schedule:
+    - cron: '17 2 * * 1-5'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: diary-filler-windows-live-e2e
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    name: Resolve enabled Windows live targets
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+      has_targets: ${{ steps.plan.outputs.has_targets }}
+    steps:
+      - id: plan
+        name: Build exact two-OS matrix
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          MANUAL_TARGET: ${{ inputs.target_os }}
+          WINDOWS10_ENABLED: ${{ vars.WINDOWS10_LIVE_E2E_ENABLED }}
+          WINDOWS11_ENABLED: ${{ vars.WINDOWS11_LIVE_E2E_ENABLED }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+
+          candidates = [
+              {
+                  "target_os": "windows10",
+                  "runner_label": "windows10-interactive",
+                  "artifact_suffix": "Windows10",
+              },
+              {
+                  "target_os": "windows11",
+                  "runner_label": "windows11-interactive",
+                  "artifact_suffix": "Windows11",
+              },
+          ]
+
+          event_name = os.environ.get("EVENT_NAME", "")
+          manual_target = os.environ.get("MANUAL_TARGET", "both") or "both"
+          enabled = {
+              "windows10": os.environ.get("WINDOWS10_ENABLED", "").strip().lower() == "true",
+              "windows11": os.environ.get("WINDOWS11_ENABLED", "").strip().lower() == "true",
+          }
+
+          if event_name == "workflow_dispatch":
+              if manual_target == "both":
+                  selected = candidates
+              else:
+                  selected = [item for item in candidates if item["target_os"] == manual_target]
+          else:
+              selected = [item for item in candidates if enabled[item["target_os"]]]
+
+          payload = {"include": selected}
+          print("Resolved Windows live E2E matrix:", json.dumps(payload, ensure_ascii=False))
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write("matrix=" + json.dumps(payload, separators=(",", ":")) + "\n")
+              output.write("has_targets=" + ("true" if selected else "false") + "\n")
+          PY
+
+  live-e2e:
+    name: Live E2E / ${{ matrix.artifact_suffix }}
+    needs: plan
+    if: needs.plan.outputs.has_targets == 'true'
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    uses: ./.github/workflows/windows-live-e2e-core.yml
+    with:
+      target_os: ${{ matrix.target_os }}
+      runner_label: ${{ matrix.runner_label }}
