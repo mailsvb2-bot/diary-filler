@@ -15,8 +15,8 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
-TARGET_VERSION = "1.4.24"
-TARGET_VERSION_LABEL = "v1.4.24-canonical-diary"
+TARGET_VERSION = "1.4.25"
+TARGET_VERSION_LABEL = "v1.4.25-sick-vk-diagnosis"
 MAX_PYTHON_FILES = 126
 MAX_TINY_PYTHON_FILES = 25
 # Release/CI probes are executable quality gates, not runtime architecture.
@@ -392,7 +392,7 @@ def _assert_final_user_flow_gate_contract() -> None:
         (release_workflow, "python tools/generation_performance_profile.py --runs 3", "official release must enforce generation performance budget"),
         (release_workflow, "python verify_built_exe.py", "official release must verify the exact packaged EXE"),
         (release_workflow, "./tools/windows_desktop_intake_e2e.ps1 -AppPath ./dist/MedicalDiaryAutofill.exe", "official release must exercise packaged desktop intake"),
-        (release_workflow, "./tools/windows_installer_smoke.ps1 -InstallerPath ./dist/MedicalDiaryAutofill-Setup-1.4.24.exe", "official release must smoke-test install/uninstall"),
+        (release_workflow, "./tools/windows_installer_smoke.ps1 -InstallerPath ./dist/MedicalDiaryAutofill-Setup-1.4.25.exe", "official release must smoke-test install/uninstall"),
         (release_workflow, "Create guarded release tag", "official release must create its immutable tag only after validation"),
         (release_workflow, "gh release create", "official release needs a stable GitHub Release channel"),
     ]
