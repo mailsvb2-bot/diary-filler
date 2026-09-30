@@ -1,6 +1,7 @@
 param(
     [switch]$RequireWord = $true,
     [switch]$RequirePrinter = $true,
+    [switch]$RequireInno = $true,
     [string]$JsonOut = "live-e2e-artifacts\preflight.json"
 )
 
@@ -12,6 +13,7 @@ function Fail([string]$Message) {
 }
 
 if (-not $IsWindows) { Fail "runner is not Windows" }
+if ($PSVersionTable.PSVersion.Major -lt 7) { Fail "PowerShell 7+ (pwsh) is required" }
 if (-not [Environment]::Is64BitOperatingSystem) { Fail "Windows is not x64" }
 
 $os = Get-CimInstance Win32_OperatingSystem
@@ -45,6 +47,8 @@ public static class LiveDesktopProbe {
     [DllImport("user32.dll", SetLastError=true)]
     public static extern IntPtr OpenInputDesktop(uint flags, bool inherit, uint desiredAccess);
     [DllImport("user32.dll", SetLastError=true)]
+    public static extern bool SwitchDesktop(IntPtr hDesktop);
+    [DllImport("user32.dll", SetLastError=true)]
     public static extern bool CloseDesktop(IntPtr hDesktop);
 }
 "@
@@ -52,7 +56,11 @@ $desktop = [LiveDesktopProbe]::OpenInputDesktop(0, $false, 0x0100)
 if ($desktop -eq [IntPtr]::Zero) {
     Fail "input desktop cannot be opened; session is locked, disconnected, or non-interactive"
 }
+$desktopSwitchable = [LiveDesktopProbe]::SwitchDesktop($desktop)
 [void][LiveDesktopProbe]::CloseDesktop($desktop)
+if (-not $desktopSwitchable) {
+    Fail "input desktop is not switchable; the workstation is locked or on a secure/non-interactive desktop"
+}
 
 Add-Type -AssemblyName System.Windows.Forms
 $screen = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
@@ -92,6 +100,9 @@ $inno = @(
     "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe",
     "$env:ProgramFiles\Inno Setup 6\ISCC.exe"
 ) | Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1
+if ($RequireInno -and -not $inno) {
+    Fail "Inno Setup 6 is required on the permanent live runner"
+}
 
 $artifactDir = Split-Path -Parent $JsonOut
 if ($artifactDir) { New-Item -ItemType Directory -Force -Path $artifactDir | Out-Null }
