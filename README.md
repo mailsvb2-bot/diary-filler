@@ -276,10 +276,10 @@ python make_release_zip.py
 
 Физический GUI-контур разделён на две независимые пользовательские среды:
 
-- `Windows 10 Live E2E` — self-hosted x64 workstation с label `windows10-interactive`;
-- `Windows 11 Live E2E` — self-hosted x64 workstation с label `windows11-interactive`.
+- единая matrix `Windows 10 + 11 Live E2E Matrix` создаёт независимый job для `windows10-interactive`;
+- та же matrix создаёт независимый job для `windows11-interactive`.
 
-Оба workflow вызывают один общий fail-closed контур `.github/workflows/windows-live-e2e-core.yml`, поэтому набор проверок не расходится между версиями Windows. Он проверяет интерактивную разблокированную сессию, Word, принтер, физические клики мышью по реальному Tk/TkDND UI, все 255 сочетаний выбора выходных документов, реальную генерацию восьми DOCX, packaged EXE, desktop intake, сборку installer и install/uninstall smoke.
+Matrix работает с `fail-fast: false` и `max-parallel: 2`: сбой одной ОС не отменяет вторую. Обе строки вызывают один общий fail-closed контур `.github/workflows/windows-live-e2e-core.yml`, поэтому набор проверок не расходится между версиями Windows. Он проверяет интерактивную разблокированную сессию, Word, принтер, физические клики мышью по реальному Tk/TkDND UI, все 255 сочетаний выбора выходных документов, реальную генерацию восьми DOCX, packaged EXE, desktop intake, сборку installer и install/uninstall smoke.
 
 Live-runner намеренно не устанавливается как Windows service: GUI-проверка должна выполняться в обычной пользовательской сессии. Общий bootstrap — `tools/install_windows_live_runner.ps1` с `-TargetOs windows10` или `-TargetOs windows11`. Для pinned Node 24 GitHub Actions требуется Actions Runner не ниже `2.327.1`.
 
