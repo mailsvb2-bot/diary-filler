@@ -8,27 +8,21 @@ if /I not "%TARGET_OS%"=="windows10" if /I not "%TARGET_OS%"=="windows11" (
   exit /b 2
 )
 
-where pwsh.exe >nul 2>&1
+where powershell.exe >nul 2>&1
 if errorlevel 1 (
-  echo ERROR: PowerShell 7 ^(pwsh.exe^) is required by the live E2E runner.
-  echo Install PowerShell 7, then run this CMD file again.
+  echo ERROR: Windows PowerShell is required.
   exit /b 3
 )
 
 set "SCRIPT_URL=https://raw.githubusercontent.com/mailsvb2-bot/diary-filler/main/tools/install_windows_live_runner.ps1"
 set "SCRIPT_PATH=%TEMP%\install_windows_live_runner.ps1"
 
-where curl.exe >nul 2>&1
-if errorlevel 1 (
-  echo ERROR: curl.exe was not found on this Windows installation.
-  exit /b 4
-)
-
 echo Downloading diary-filler live runner bootstrap...
-curl.exe -fL "%SCRIPT_URL%" -o "%SCRIPT_PATH%"
+powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ^
+  "[Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -UseBasicParsing -Uri '%SCRIPT_URL%' -OutFile '%SCRIPT_PATH%'"
 if errorlevel 1 (
   echo ERROR: failed to download install_windows_live_runner.ps1
-  exit /b 5
+  exit /b 4
 )
 
 set /p "RUNNER_TOKEN=Paste GitHub runner registration token and press Enter: "
@@ -39,7 +33,7 @@ if "%RUNNER_TOKEN%"=="" (
 
 echo.
 echo Registering %TARGET_OS% live runner...
-pwsh.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%SCRIPT_PATH%" ^
+powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%SCRIPT_PATH%" ^
   -RepositoryUrl "https://github.com/mailsvb2-bot/diary-filler" ^
   -RegistrationToken "%RUNNER_TOKEN%" ^
   -RunnerVersion "2.337.0" ^
