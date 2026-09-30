@@ -436,10 +436,21 @@ def _test_release_pins() -> None:
     build_requirements = (ROOT / "requirements_build.txt").read_text(encoding="utf-8")
     assert "python-docx==1.2.0" in build_requirements
     assert "pyinstaller==6.21.0" in build_requirements
-    workflow = (ROOT / ".github/workflows/windows-build.yml").read_text(encoding="utf-8")
-    assert "actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5" in workflow
-    assert "actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065" in workflow
-    assert "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02" in workflow
+
+    checkout = "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1"
+    setup_python = "actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97"
+    upload_artifact = "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"
+
+    workflows = {
+        "windows-build.yml": (ROOT / ".github/workflows/windows-build.yml").read_text(encoding="utf-8"),
+        "release.yml": (ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8"),
+        "windows11-live-e2e.yml": (ROOT / ".github/workflows/windows11-live-e2e.yml").read_text(encoding="utf-8"),
+    }
+    for name, workflow in workflows.items():
+        assert checkout in workflow, f"{name}: checkout pin drifted"
+        assert setup_python in workflow, f"{name}: setup-python pin drifted"
+    for name in ("windows-build.yml", "windows11-live-e2e.yml"):
+        assert upload_artifact in workflows[name], f"{name}: upload-artifact pin drifted"
 
 
 def main() -> None:
