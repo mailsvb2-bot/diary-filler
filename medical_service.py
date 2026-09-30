@@ -315,17 +315,12 @@ class MedicalDocumentService:
         # selections (e.g. discharge + sick-leave VK) do not fail merely because
         # the shared yes/no field was initially empty.
         if "sick_leave_vk" in selected_set:
-            sick_vk_decision = normalize_yes_no(data.expert_sick_leave_needed)
-            rendered_sick_vk_decision, _ = parse_sick_leave_value(data.sick_leave)
-            if not sick_vk_decision:
-                sick_vk_decision = rendered_sick_vk_decision
-            if sick_vk_decision == "нет":
-                raise ValueError(
-                    "ВК больничный нельзя создать при решении «больничный лист не нужен»."
-                )
+            # The selected specialized form is the doctor's current explicit
+            # intent and therefore outranks stale/default shared yes/no state.
+            # Keep the service boundary consistent with the UI preflight too,
+            # including direct/programmatic callers that bypass dialogs.
             data.expert_sick_leave_needed = "да"
-            if not data.sick_leave.strip():
-                data.sick_leave = "нужен"
+            data.sick_leave = "нужен"
 
         if "vk_mse" in selected_set:
             mse_decision = normalize_yes_no(data.disability_needed)

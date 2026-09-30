@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "8d17dc1fcbad65f9c9980c9d5db1ae16b323290f",
+  "reason": "Fix user-reported generation preflight defects: missing diagnosis must be collected before any medical output, and selecting sick-leave VK must override stale sick-leave state. Includes exact regression coverage.",
+  "required_evidence": [
+    "document_mechanics_guard",
+    "full_patient_replay",
+    "golden_docx",
+    "staff_profile_regression",
+    "gender_generation_matrix",
+    "desktop_intake_contract",
+    "intake_lifecycle_regression",
+    "packaged_desktop_intake_e2e",
+    "installer_uninstall_smoke",
+    "ci_gate_lock"
+  ],
+  "approved_blobs": {
+    "dialog_expert.py": "2dfde3856308ca50cf9a77f8181028906e2e76f5",
+    "medical_service.py": "e7b276f427e991253e504a16d16f51bf4115e627",
+    "smoke_combined_part02_ui_parser_regressions.py": "049e44bc391552ddfb8f3205fc5aa9d7e4e46df9",
+    "tools/document_mechanics_change_approval.json": "5a069ce31e4da372e041b65392492b7078b7c83b",
+    "smoke_combined_part06_diary_columns_settings.py": "8fa964a34a9184dda1393b794204c50ed8ad6d3e"
+  }
+}

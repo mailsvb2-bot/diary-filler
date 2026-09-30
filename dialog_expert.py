@@ -165,6 +165,13 @@ class DialogExpertMixin:
         """
         selected = set(selected_medical)
         sick_leave_docs = {"discharge", "commission"}
+        # Choosing the specialized sick-leave VK form is itself an explicit
+        # positive sick-leave decision. A stale/default «нет» from the shared
+        # patient state must never block the document the doctor just selected.
+        sick_leave_vk_selected = "sick_leave_vk" in selected
+        if sick_leave_vk_selected:
+            self.expert_sick_leave_needed_var.set("да")
+            self._update_expert_sick_leave_display()
         disability_docs = {"primary", "admission_doctor_referral"}
         expert_work_docs = {"primary", "discharge", "commission", "admission_doctor_referral"}
         epi_docs = {"discharge", "commission", "vk_mse", "sick_leave_vk", "rvk"}
@@ -232,7 +239,7 @@ class DialogExpertMixin:
             fields.append("work_status")
             choices[label] = ("нет", "да")
 
-        if selected & sick_leave_docs:
+        if selected & sick_leave_docs and not sick_leave_vk_selected:
             sick = self._normalize_yes_no(self.expert_sick_leave_needed_var.get())
             label = "Нужен ли больничный лист"
             rows.append((label, sick))
@@ -817,6 +824,10 @@ class DialogExpertMixin:
         the medical documents themselves.
         """
         fio, birth = self._source_identity_defaults()
+        data = getattr(self, "data", None)
+        diagnosis_var = getattr(self, "diagnosis_var", None)
+        diagnosis = diagnosis_var.get().strip() if diagnosis_var is not None else ""
+        diagnosis = diagnosis or sanitize_diagnosis(getattr(data, "diagnosis", ""))
         rows: list[tuple[str, str]] = []
         fields: list[str] = []
         if not fio:
@@ -825,6 +836,9 @@ class DialogExpertMixin:
         if not birth:
             rows.append(("Дата / год рождения", ""))
             fields.append("birth")
+        if not diagnosis:
+            rows.append(("Диагноз", ""))
+            fields.append("diagnosis")
         if not rows:
             return True
 
@@ -866,6 +880,19 @@ class DialogExpertMixin:
                 self._popup_birth_override = normalized
                 if hasattr(self, "data"):
                     self.data.birth = normalized
+            elif field == "diagnosis":
+                normalizer = getattr(self, "_normalize_popup_diagnosis_value", None)
+                normalized_value = normalizer(value) if callable(normalizer) else value
+                diagnosis_value = sanitize_diagnosis(normalized_value)
+                if not diagnosis_value:
+                    messagebox.showwarning("Не заполнено поле", "Укажите диагноз.")
+                    return False
+                if diagnosis_var is not None:
+                    diagnosis_var.set(diagnosis_value)
+                self._popup_diagnosis_override = diagnosis_value
+                self._manual_diagnosis = True
+                if hasattr(self, "data"):
+                    self.data.diagnosis = diagnosis_value
         return True
 
     def _prompt_common_output_requirements(self, *, include_discharge_date: bool, include_case_number: bool = True, include_medical_details: bool = True, include_admission_occurrence: bool = False, include_admission_date: bool = False) -> bool:
