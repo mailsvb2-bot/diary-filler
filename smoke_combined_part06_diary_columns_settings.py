@@ -681,23 +681,24 @@ try:
 except ValueError as exc:
     assert "позже даты выписки" in str(exc), str(exc)
 
-contradictory_sick_vk = service.parse_primary_document(nav)
-contradictory_sick_vk.expert_sick_leave_needed = "нет"
-contradictory_sick_vk.sick_leave = "не нужен"
-contradictory_sick_vk.sick_leave_vk_date = "12.06.2026"
-contradictory_sick_vk.sick_leave_vk_protocol_number = "79-CONFLICT"
-contradictory_sick_vk.sick_leave_vk_protocol_date = "12.06.2026"
-contradictory_sick_vk.sick_leave_vk_commission_date = "12.06.2026"
-try:
-    service.create_documents(
-        navigation_path=nav,
-        output_dir=OUT / "contradictory_sick_vk",
-        selected_docs=["sick_leave_vk"],
-        override_data=contradictory_sick_vk,
-    )
-    raise AssertionError("sick-leave VK must reject explicit no-sick-leave decision")
-except ValueError as exc:
-    assert "больничный лист не нужен" in str(exc), str(exc)
+stale_no_sick_vk = service.parse_primary_document(nav)
+stale_no_sick_vk.expert_work_status = "нет"
+stale_no_sick_vk.expert_sick_leave_needed = "нет"
+stale_no_sick_vk.sick_leave = "не нужен"
+stale_no_sick_vk.sick_leave_vk_date = "12.06.2026"
+stale_no_sick_vk.sick_leave_vk_protocol_number = "79-CURRENT"
+stale_no_sick_vk.sick_leave_vk_protocol_date = "12.06.2026"
+stale_no_sick_vk.sick_leave_vk_commission_date = "12.06.2026"
+stale_no_created, stale_no_used = service.create_documents(
+    navigation_path=nav,
+    output_dir=OUT / "stale_no_sick_vk",
+    selected_docs=["sick_leave_vk"],
+    override_data=stale_no_sick_vk,
+)
+assert len(stale_no_created) == 1, stale_no_created
+assert stale_no_created[0].exists(), stale_no_created
+assert stale_no_used.expert_sick_leave_needed == "да", stale_no_used.expert_sick_leave_needed
+assert stale_no_used.sick_leave == "нужен", stale_no_used.sick_leave
 
 contradictory_mse = service.parse_primary_document(nav)
 contradictory_mse.disability_needed = "нет"
