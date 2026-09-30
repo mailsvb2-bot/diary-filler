@@ -116,6 +116,9 @@ jobs:
       - name: Verify regression lock coverage inventory
         run: python tests/regression_surface_inventory.py
 
+      - name: Lock Windows 11 live E2E infrastructure
+        run: python tests/windows11_live_e2e_contract.py
+
       - name: Guard document mechanics
         run: python tools/document_mechanics_guard.py
 
