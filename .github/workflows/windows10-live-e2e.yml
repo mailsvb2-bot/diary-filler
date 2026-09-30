@@ -1,0 +1,23 @@
+name: Windows 10 Live E2E
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '47 2 * * 1-5'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: diary-filler-windows10-live-e2e
+  cancel-in-progress: false
+
+jobs:
+  live-e2e:
+    # A self-hosted GUI runner must never execute arbitrary branch code.
+    # Scheduled runs remain skipped until the physical workstation is enrolled.
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'workflow_dispatch' || vars.WINDOWS10_LIVE_E2E_ENABLED == 'true')
+    uses: ./.github/workflows/windows-live-e2e-core.yml
+    with:
+      target_os: windows10
+      runner_label: windows10-interactive
