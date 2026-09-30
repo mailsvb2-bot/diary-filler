@@ -48,6 +48,7 @@ REQUIRED_FILES = [
     "tests/windows_live_gui_e2e.py",
     "tools/windows_live_e2e_preflight.ps1",
     "tools/install_windows_live_runner.ps1",
+    "tools/install_windows_live_runner.cmd",
     ".gitattributes",
 ]
 FORBIDDEN_DIR_NAMES = {"__pycache__", "build", "dist", ".pytest_cache", ".vscode", ".idea"}
