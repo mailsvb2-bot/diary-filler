@@ -185,25 +185,33 @@ identity_logic = _main_module.CombinedMedicalDiaryApp.__new__(_main_module.Combi
 identity_logic.data = PatientData()
 identity_logic.navigation_path_var = _FakeVar("")
 identity_logic.patient_name_var = _FakeVar("")
+identity_logic.diagnosis_var = _FakeVar("")
 identity_logic._manual_patient_name = False
+identity_logic._manual_diagnosis = False
 identity_logic._popup_fio_override = ""
 identity_logic._popup_birth_override = ""
+identity_logic._popup_diagnosis_override = ""
+identity_logic._normalize_popup_diagnosis_value = lambda value: value
 identity_logic._set_ui_var = lambda var, value: var.set(value)
 identity_calls = []
 identity_logic._prompt_fields = lambda title, rows, width=64: identity_calls.append((title, rows)) or [
     "Маркер Мужской Дополнительный",
     "01011980",
+    "F41.2 Тестовый диагноз",
 ]
 assert identity_logic._prompt_missing_patient_identity_if_needed() is True
-assert [label for label, _default in identity_calls[0][1]] == ["Ф.И.О. пациента", "Дата / год рождения"]
+assert [label for label, _default in identity_calls[0][1]] == ["Ф.И.О. пациента", "Дата / год рождения", "Диагноз"]
 assert identity_logic._popup_fio_override == "Маркер Мужской Дополнительный"
 assert identity_logic._popup_birth_override == "01.01.1980"
+assert identity_logic._popup_diagnosis_override == "F41.2 Тестовый диагноз"
 assert identity_logic.data.fio == "Маркер Мужской Дополнительный"
 assert identity_logic.data.birth == "01.01.1980"
+assert identity_logic.data.diagnosis == "F41.2 Тестовый диагноз"
+assert identity_logic.diagnosis_var.get() == "F41.2 Тестовый диагноз"
 assert identity_logic.patient_name_var.get() == "Маркер Мужской Дополнительный"
 
 birth_only_logic = _main_module.CombinedMedicalDiaryApp.__new__(_main_module.CombinedMedicalDiaryApp)
-birth_only_logic.data = PatientData(fio="Маркер Мужской Тестовый")
+birth_only_logic.data = PatientData(fio="Маркер Мужской Тестовый", diagnosis="F41.2 Существующий диагноз")
 birth_only_logic.navigation_path_var = _FakeVar("")
 birth_only_logic.patient_name_var = _FakeVar("Свое имя файла")
 birth_only_logic._manual_patient_name = True
@@ -216,6 +224,29 @@ assert [label for label, _default in birth_only_calls[0]] == ["Дата / год
 assert birth_only_logic._popup_fio_override == ""
 assert birth_only_logic._popup_birth_override == "1985"
 assert birth_only_logic.patient_name_var.get() == "Свое имя файла"
+
+# A normal primary source may contain identity/treatment but no diagnosis.
+# Any medical generation must collect that required value before the strict
+# service boundary instead of aborting after the doctor presses Create.
+diagnosis_only_logic = _main_module.CombinedMedicalDiaryApp.__new__(_main_module.CombinedMedicalDiaryApp)
+diagnosis_only_logic.data = PatientData(fio="Маркер Мужской Тестовый", birth="1985")
+diagnosis_only_logic.navigation_path_var = _FakeVar("")
+diagnosis_only_logic.patient_name_var = _FakeVar("Маркер Мужской Тестовый")
+diagnosis_only_logic.diagnosis_var = _FakeVar("")
+diagnosis_only_logic._manual_patient_name = True
+diagnosis_only_logic._manual_diagnosis = False
+diagnosis_only_logic._popup_fio_override = ""
+diagnosis_only_logic._popup_birth_override = ""
+diagnosis_only_logic._popup_diagnosis_override = ""
+diagnosis_only_logic._normalize_popup_diagnosis_value = lambda value: value
+diagnosis_only_calls = []
+diagnosis_only_logic._prompt_fields = lambda title, rows, width=64: diagnosis_only_calls.append((title, rows)) or ["F41.2 Введённый диагноз"]
+assert diagnosis_only_logic._prompt_missing_patient_identity_if_needed() is True
+assert [label for label, _default in diagnosis_only_calls[0][1]] == ["Диагноз"]
+assert diagnosis_only_logic.diagnosis_var.get() == "F41.2 Введённый диагноз"
+assert diagnosis_only_logic._popup_diagnosis_override == "F41.2 Введённый диагноз"
+assert diagnosis_only_logic.data.diagnosis == "F41.2 Введённый диагноз"
+
 assert _main_module.CombinedMedicalDiaryApp._normalize_birth_popup_value("2999") == ""
 assert _main_module.CombinedMedicalDiaryApp._normalize_birth_popup_value("1980 г.р.") == "1980"
 assert _main_module.CombinedMedicalDiaryApp._normalize_birth_popup_value("1980 г.") == "1980"
@@ -681,6 +712,60 @@ for clinical_kind in ("discharge", "commission"):
     assert "Нужно ли оформление инвалидности" not in [label for label, _ in standalone_calls[0][1]]
     assert standalone_logic.expert_sick_leave_needed_var.get() == "нет"
     assert standalone_logic.epi_present_var.get() == "нет"
+
+# Selecting «ВК больничный» is itself a current positive sick-leave intent.
+# A stale/shared «нет» must not be presented as a hidden prerequisite or block
+# the specialized form that the doctor explicitly selected.
+sick_vk_intent_logic = _main_module.CombinedMedicalDiaryApp.__new__(_main_module.CombinedMedicalDiaryApp)
+sick_vk_intent_logic.expert_sick_leave_needed_var = _FakeVar("нет")
+sick_vk_intent_logic.expert_sick_leave_from_var = _FakeVar("")
+sick_vk_intent_logic.expert_sick_leave_number_var = _FakeVar("")
+sick_vk_intent_logic.psych_account_status_var = _FakeVar("нет")
+sick_vk_intent_logic.psych_account_since_year_var = _FakeVar("")
+sick_vk_intent_logic.rvk_referral_present_var = _FakeVar("")
+sick_vk_intent_logic.rvk_referral_commissariat_var = _FakeVar("")
+sick_vk_intent_logic.rvk_military_commissariat_var = _FakeVar("")
+sick_vk_intent_logic.epi_present_var = _FakeVar("")
+sick_vk_intent_logic.epi_path_var = _FakeVar("")
+sick_vk_intent_logic.data = PatientData()
+sick_vk_intent_logic._update_expert_sick_leave_display = lambda: None
+sick_vk_rows = []
+def _sick_vk_intent_prompt(title, rows, width=46, linked_groups=None, choice_options=None):
+    assert title == "Дополнительные данные"
+    sick_vk_rows.extend(rows)
+    values = {
+        "На учёте у психиатров": "не состоит",
+        "Есть ли ЭПИ": "нет",
+    }
+    return [values[label] for label, _ in rows]
+sick_vk_intent_logic._prompt_fields = _sick_vk_intent_prompt
+assert sick_vk_intent_logic._prompt_shared_clinical_options_if_needed(["sick_leave_vk"]) is True
+assert sick_vk_intent_logic.expert_sick_leave_needed_var.get() == "да"
+assert "Нужен ли больничный лист" not in [label for label, _ in sick_vk_rows]
+
+# The same rule is enforced at the service boundary for direct/programmatic
+# callers, so the fix cannot regress when UI dialogs are bypassed.
+from medical_service import MedicalDocumentService
+service_sick_vk = PatientData(
+    fio="Маркер Мужской Тестовый",
+    birth="1985",
+    admission_date="10.06.2026",
+    case_number="К-904",
+    diagnosis="F41.2 Тест",
+    treatment_plan="терапия",
+    expert_work_status="нет",
+    expert_sick_leave_needed="нет",
+    sick_leave="не нужен",
+    psych_account_status="нет",
+    epi_present="нет",
+    sick_leave_vk_date="12.06.2026",
+    sick_leave_vk_protocol_number="77",
+    sick_leave_vk_protocol_date="12.06.2026",
+    sick_leave_vk_commission_date="12.06.2026",
+)
+MedicalDocumentService()._validate_and_normalize_selected_data(service_sick_vk, ["sick_leave_vk"])
+assert service_sick_vk.expert_sick_leave_needed == "да"
+assert service_sick_vk.sick_leave == "нужен"
 
 # Combined expert + VK flows must preserve an explicit «не работает» decision.
 # The specialized VK dialogs still collect their dates/protocols, but must not
