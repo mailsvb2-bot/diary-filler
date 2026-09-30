@@ -1,3 +1,14 @@
+# Release notes — v1.4.25-sick-vk-diagnosis
+
+## v1.4.25-sick-vk-diagnosis
+
+- Исправлен сценарий «ВК больничный»: выбор специализированного документа теперь сам задаёт намерение оформить больничный и больше не блокируется ложным требованием предварительно выбрать отдельную галку больничного.
+- Та же семантика закреплена на service boundary, поэтому GUI и прямые/программные вызовы генерации ведут себя одинаково.
+- Если диагноз отсутствует в интерфейсе или исходном документе, preflight теперь запрашивает «Диагноз» через popup до строгой валидации вместо немедленного прекращения создания документа.
+- Добавлены regression-тесты на оба пользовательских сценария; исправления уже прошли полный Windows production CI на main.
+- Версия приложения, EXE/package metadata, Windows installer и guarded release topology синхронизированы как `1.4.25` / `v1.4.25-sick-vk-diagnosis`; installer: `MedicalDiaryAutofill-Setup-1.4.25.exe`.
+- Релиз не ослабляет regression lock, document-mechanics guard, golden DOCX, packaged E2E и install/uninstall smoke gates.
+
 # Release notes — v1.4.24-canonical-diary
 
 ## v1.4.24-canonical-diary
