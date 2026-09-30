@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "f9a72c5af6f3b517fd69fff9706e50f7de8a46fa",
-  "baseline_note": "v1.4.25 sick-leave VK diagnosis release baseline. PR #267 head 82a1a1c7f79d655f89e5f77d9fd75f223411409f passed Windows CI run 36752785919 across the full production contour and merged as canonical GitHub merge commit f9a72c5af6f3b517fd69fff9706e50f7de8a46fa. Post-merge main CI run 36753451470 passed the same contour. Guarded Windows Release run 36754104912 then validated the exact same SHA, built and smoke-tested the 1.4.25 installer, created tag v1.4.25, and published the GitHub Release successfully.",
+  "baseline_ref": "dbf026558f6e3e32e6a53fb03e5c1e6748be60bb",
+  "baseline_note": "v1.4.25 clean release baseline. PR #269 head d3ad12a6199c2d51ed36bf21368cbac08c3c53dc passed Windows CI run 36756955973 across the full production contour, including regression/document-mechanics gates, full patient replay and golden DOCX, clinical matrices, Windows E1, real Tk GUI, EXE, packaged desktop-intake E2E, installer build/install/uninstall and performance gates. PR #269 merged with canonical GitHub merge commit dbf026558f6e3e32e6a53fb03e5c1e6748be60bb; this metadata-only finalization removes the consumed regression approval.",
   "required_approval_evidence": [
     "ci_gate_lock"
   ],
