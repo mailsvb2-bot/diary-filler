@@ -20,9 +20,8 @@ from tools.regression_lock_check import _is_critical
 MUST_BE_LOCKED = (
     ".github/workflows/windows-build.yml",
     ".github/workflows/release.yml",
+    ".github/workflows/windows-live-e2e.yml",
     ".github/workflows/windows-live-e2e-core.yml",
-    ".github/workflows/windows10-live-e2e.yml",
-    ".github/workflows/windows11-live-e2e.yml",
     "installer/MedicalDiaryAutofill.iss",
     "main.py",
     "startup.py",
