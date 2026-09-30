@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "base_sha": "7c35affa665ae820eade6d56b8d433c32283bfde",
+  "reason": "User-reported document-generation UX bugfix: collect a missing diagnosis before generation and make an explicitly selected sick-leave VK form authoritative over stale sick-leave state.",
+  "approved_blobs": {
+    "dialog_expert.py": "2dfde3856308ca50cf9a77f8181028906e2e76f5",
+    "medical_service.py": "e7b276f427e991253e504a16d16f51bf4115e627"
+  }
+}
