@@ -20,13 +20,13 @@ if not defined ISCC (
   exit /b 1
 )
 
-"%ISCC%" /DMyAppVersion=1.4.24 "installer\MedicalDiaryAutofill.iss"
+"%ISCC%" /DMyAppVersion=1.4.25 "installer\MedicalDiaryAutofill.iss"
 if errorlevel 1 exit /b 1
 
-if not exist "dist\MedicalDiaryAutofill-Setup-1.4.24.exe" (
+if not exist "dist\MedicalDiaryAutofill-Setup-1.4.25.exe" (
   echo [ОШИБКА] Installer не создан.
   exit /b 1
 )
 
-echo ГОТОВО: dist\MedicalDiaryAutofill-Setup-1.4.24.exe
+echo ГОТОВО: dist\MedicalDiaryAutofill-Setup-1.4.25.exe
 exit /b 0
