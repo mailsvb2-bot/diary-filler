@@ -53,6 +53,7 @@ def main() -> None:
             '"runner_label": "windows10-interactive"',
             '"target_os": "windows11"',
             '"runner_label": "windows11-interactive"',
+            "github.ref == 'refs/heads/main'",
             "strategy:",
             "fail-fast: false",
             "max-parallel: 2",
