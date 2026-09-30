@@ -12,9 +12,12 @@ param(
     [ValidatePattern("^[A-Fa-f0-9]{64}$")]
     [string]$ExpectedSha256,
 
-    [string]$RunnerName = "$env:COMPUTERNAME-diary-filler-live",
+    [ValidateSet("windows10", "windows11")]
+    [string]$TargetOs = "windows11",
+
+    [string]$RunnerName = "",
     [string]$InstallRoot = "$env:LOCALAPPDATA\GitHubActionsRunner\diary-filler",
-    [string]$Labels = "diary-filler-live-e2e,windows11-interactive"
+    [string]$Labels = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -30,10 +33,45 @@ if (-not (Get-Command pwsh.exe -ErrorAction SilentlyContinue)) {
     Fail "PowerShell 7+ (pwsh.exe) must be installed before registering the interactive runner"
 }
 
-$os = Get-CimInstance Win32_OperatingSystem
-if ([int]$os.ProductType -ne 1 -or [int]$os.BuildNumber -lt 22000) {
-    Fail "Windows 11 workstation is required"
+try {
+    $parsedRunnerVersion = [version]$RunnerVersion
+} catch {
+    Fail "RunnerVersion must be a valid semantic version such as 2.337.0"
 }
+if ($parsedRunnerVersion -lt [version]"2.327.1") {
+    Fail "GitHub Actions runner v2.327.1 or newer is required by the pinned Node 24 actions; requested $RunnerVersion"
+}
+
+$os = Get-CimInstance Win32_OperatingSystem
+if ([int]$os.ProductType -ne 1) {
+    Fail "Windows workstation is required"
+}
+$build = [int]$os.BuildNumber
+if ($TargetOs -eq "windows10") {
+    if ($build -lt 19041 -or $build -ge 22000) {
+        Fail "Windows 10 client build 19041..21999 is required for the windows10 runner; detected build $build"
+    }
+    $targetLabel = "windows10-interactive"
+} elseif ($TargetOs -eq "windows11") {
+    if ($build -lt 22000) {
+        Fail "Windows 11 build >= 22000 is required for the windows11 runner; detected build $build"
+    }
+    $targetLabel = "windows11-interactive"
+} else {
+    Fail "unsupported TargetOs '$TargetOs'"
+}
+
+if ([string]::IsNullOrWhiteSpace($RunnerName)) {
+    $RunnerName = "$env:COMPUTERNAME-diary-filler-$TargetOs-live"
+}
+if ([string]::IsNullOrWhiteSpace($Labels)) {
+    $Labels = "diary-filler-live-e2e,$targetLabel"
+}
+$labelSet = @($Labels.Split(",") | ForEach-Object { $_.Trim().ToLowerInvariant() } | Where-Object { $_ })
+if ($labelSet -notcontains "diary-filler-live-e2e" -or $labelSet -notcontains $targetLabel) {
+    Fail "Labels must include diary-filler-live-e2e and $targetLabel"
+}
+
 $sessionId = (Get-Process -Id $PID).SessionId
 if ($sessionId -eq 0) {
     Fail "run this installer from the interactive Windows user session, not Session 0"
@@ -94,10 +132,13 @@ shell.Run """" & "$escapedLauncher" & """", 0, False
 $readme = Join-Path $InstallRoot "INTERACTIVE-RUNNER.txt"
 @"
 This runner is intentionally NOT installed as a Windows service.
-It must run in a signed-in, unlocked Windows 11 user session.
+It must run in a signed-in, unlocked $TargetOs user session.
 
 Repository: $repo
+Target OS: $TargetOs
+Detected OS: $($os.Caption) build $build
 Runner name: $RunnerName
+Runner version: $RunnerVersion
 Labels: self-hosted, Windows, X64, $Labels
 
 Operational requirements:
@@ -109,7 +150,7 @@ Operational requirements:
 - use a dedicated disposable test profile with no patient data.
 "@ | Set-Content -LiteralPath $readme -Encoding UTF8
 
-Write-Host "LIVE RUNNER CONFIGURED"
+Write-Host "LIVE RUNNER CONFIGURED: $TargetOs / build $build"
 Write-Host "Startup launcher: $startupVbs"
 Write-Host "Starting runner in the current interactive session..."
 Start-Process -FilePath "cmd.exe" -ArgumentList "/c", ('"' + $launcher + '"') -WindowStyle Hidden
