@@ -283,5 +283,5 @@ Matrix работает с `fail-fast: false` и `max-parallel: 2`: сбой о�
 
 Live-runner намеренно не устанавливается как Windows service: GUI-проверка должна выполняться в обычной пользовательской сессии. Общий bootstrap — `tools/install_windows_live_runner.ps1` с `-TargetOs windows10` или `-TargetOs windows11`. Для pinned Node 24 GitHub Actions требуется Actions Runner не ниже `2.327.1`.
 
-Windows 10 contour допускает клиентские x64 builds `19041..21999`; Windows 11 — build `22000+`. Запуск разрешён только из `main`. Плановые проверки включаются независимо repository variables `WINDOWS10_LIVE_E2E_ENABLED=true` и `WINDOWS11_LIVE_E2E_ENABLED=true`, чтобы отсутствие одной физической машины не блокировало вторую.
+Windows 10 contour допускает клиентские x64 builds `14393..21999`; Windows 11 — build `22000+`. Bootstrap и live-скрипты используют встроенный Windows PowerShell 5.1+, поэтому старому Windows 10 не нужны `curl.exe` или PowerShell 7. Запуск разрешён только из `main`. Плановые проверки включаются независимо repository variables `WINDOWS10_LIVE_E2E_ENABLED=true` и `WINDOWS11_LIVE_E2E_ENABLED=true`, чтобы отсутствие одной физической машины не блокировало вторую.
 
