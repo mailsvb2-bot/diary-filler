@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "b9bffe8cf8aa69b9266b8eee8d2b0fb01fdbed1f",
-  "baseline_note": "Sick-leave VK intent + missing-diagnosis preflight baseline. PR #264 head ad88049563fd71568d370671f0f1291fd9c72924 passed Windows CI #1212 / run 36744045187, including regression/document-mechanics gates, release gate, full patient replay and golden DOCX, clinical matrices, full user journey, Windows E1, real Tk GUI, EXE, packaged desktop-intake E2E, installer build/install/uninstall and performance gates. PR #264 merged with canonical GitHub merge commit b9bffe8cf8aa69b9266b8eee8d2b0fb01fdbed1f.",
+  "baseline_ref": "320943154e3c3767dea8a577efc399e43155e289",
+  "baseline_note": "Clean sick-leave VK intent + missing-diagnosis preflight baseline. PR #265 head ff34b203d083a3ac514f09b99e1f8e91e9404367 passed Windows CI run 36745236916 across the full production contour and merged as canonical GitHub merge commit 320943154e3c3767dea8a577efc399e43155e289. This metadata-only finalization removes the consumed regression approval; runtime/document-generation behavior is unchanged.",
   "required_approval_evidence": [
     "ci_gate_lock"
   ],
