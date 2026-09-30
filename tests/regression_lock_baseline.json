@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "320943154e3c3767dea8a577efc399e43155e289",
-  "baseline_note": "Clean sick-leave VK intent + missing-diagnosis preflight baseline. PR #265 head ff34b203d083a3ac514f09b99e1f8e91e9404367 passed Windows CI run 36745236916 across the full production contour and merged as canonical GitHub merge commit 320943154e3c3767dea8a577efc399e43155e289. This metadata-only finalization removes the consumed regression approval; runtime/document-generation behavior is unchanged.",
+  "baseline_ref": "f9a72c5af6f3b517fd69fff9706e50f7de8a46fa",
+  "baseline_note": "v1.4.25 sick-leave VK diagnosis release baseline. PR #267 head 82a1a1c7f79d655f89e5f77d9fd75f223411409f passed Windows CI run 36752785919 across the full production contour and merged as canonical GitHub merge commit f9a72c5af6f3b517fd69fff9706e50f7de8a46fa. Post-merge main CI run 36753451470 passed the same contour. Guarded Windows Release run 36754104912 then validated the exact same SHA, built and smoke-tested the 1.4.25 installer, created tag v1.4.25, and published the GitHub Release successfully.",
   "required_approval_evidence": [
     "ci_gate_lock"
   ],
