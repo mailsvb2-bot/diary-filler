@@ -42,6 +42,13 @@ REQUIRED_FILES = [
     "verify_built_exe.py",
     ".github/workflows/windows-build.yml",
     ".github/workflows/release.yml",
+    ".github/workflows/windows-live-e2e-core.yml",
+    ".github/workflows/windows10-live-e2e.yml",
+    ".github/workflows/windows11-live-e2e.yml",
+    "tests/windows_live_e2e_contract.py",
+    "tests/windows_live_gui_e2e.py",
+    "tools/windows_live_e2e_preflight.ps1",
+    "tools/install_windows_live_runner.ps1",
     ".gitattributes",
 ]
 FORBIDDEN_DIR_NAMES = {"__pycache__", "build", "dist", ".pytest_cache", ".vscode", ".idea"}
