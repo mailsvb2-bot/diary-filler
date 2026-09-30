@@ -1,4 +1,6 @@
 param(
+    [ValidateSet("windows10", "windows11")]
+    [string]$TargetOs = "windows11",
     [switch]$RequireWord = $true,
     [switch]$RequirePrinter = $true,
     [switch]$RequireInno = $true,
@@ -9,7 +11,7 @@ $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
 function Fail([string]$Message) {
-    throw "WINDOWS11 LIVE E2E PREFLIGHT FAILED: $Message"
+    throw "WINDOWS LIVE E2E PREFLIGHT FAILED: $Message"
 }
 
 if (-not $IsWindows) { Fail "runner is not Windows" }
@@ -20,9 +22,20 @@ $os = Get-CimInstance Win32_OperatingSystem
 if ([int]$os.ProductType -ne 1) {
     Fail "Windows workstation is required; server/domain-controller editions are not valid live desktop evidence"
 }
+
 $build = [int]$os.BuildNumber
-if ($build -lt 22000) {
-    Fail "Windows 11 build >= 22000 is required; detected build $build"
+if ($TargetOs -eq "windows10") {
+    # 19041 is the Windows 10 2004 generation. Accept newer Windows 10 client
+    # builds, including 21H2/22H2/LTSC variants, but fail closed before Win11.
+    if ($build -lt 19041 -or $build -ge 22000) {
+        Fail "Windows 10 client build 19041..21999 is required for the windows10 contour; detected build $build"
+    }
+} elseif ($TargetOs -eq "windows11") {
+    if ($build -lt 22000) {
+        Fail "Windows 11 build >= 22000 is required for the windows11 contour; detected build $build"
+    }
+} else {
+    Fail "unsupported TargetOs '$TargetOs'"
 }
 
 $sessionId = (Get-Process -Id $PID).SessionId
@@ -108,8 +121,9 @@ $artifactDir = Split-Path -Parent $JsonOut
 if ($artifactDir) { New-Item -ItemType Directory -Force -Path $artifactDir | Out-Null }
 
 $report = [ordered]@{
-    schema_version = 1
+    schema_version = 2
     timestamp_utc = [DateTime]::UtcNow.ToString("o")
+    target_os = $TargetOs
     os_caption = [string]$os.Caption
     os_version = [string]$os.Version
     os_build = $build
@@ -131,5 +145,5 @@ $report = [ordered]@{
 }
 
 $report | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $JsonOut -Encoding UTF8
-Write-Host "WINDOWS11 LIVE E2E PREFLIGHT OK"
+Write-Host "WINDOWS LIVE E2E PREFLIGHT OK: $TargetOs"
 Write-Host "OS: $($os.Caption) build $build; session=$sessionId; screen=$($screen.Width)x$($screen.Height); printers=$($printers.Count); Word=$([bool]$wordPath)"
