@@ -81,7 +81,7 @@ jobs:
   live-e2e:
     name: Live E2E / ${{ matrix.artifact_suffix }}
     needs: plan
-    if: needs.plan.outputs.has_targets == 'true'
+    if: github.ref == 'refs/heads/main' && needs.plan.outputs.has_targets == 'true'
     strategy:
       fail-fast: false
       max-parallel: 2
