@@ -444,12 +444,12 @@ def _test_release_pins() -> None:
     workflows = {
         "windows-build.yml": (ROOT / ".github/workflows/windows-build.yml").read_text(encoding="utf-8"),
         "release.yml": (ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8"),
-        "windows11-live-e2e.yml": (ROOT / ".github/workflows/windows11-live-e2e.yml").read_text(encoding="utf-8"),
+        "windows-live-e2e-core.yml": (ROOT / ".github/workflows/windows-live-e2e-core.yml").read_text(encoding="utf-8"),
     }
     for name, workflow in workflows.items():
         assert checkout in workflow, f"{name}: checkout pin drifted"
         assert setup_python in workflow, f"{name}: setup-python pin drifted"
-    for name in ("windows-build.yml", "windows11-live-e2e.yml"):
+    for name in ("windows-build.yml", "windows-live-e2e-core.yml"):
         assert upload_artifact in workflows[name], f"{name}: upload-artifact pin drifted"
 
 

@@ -271,3 +271,17 @@ python make_release_zip.py
 ## Performance hardening
 
 В v1.3.9-audit-hardening тяжёлые операции вынесены из стартового пути: DOCX/render/ICD/printer/template modules загружаются лениво, первичный DOCX кэшируется по `mtime/size`, поиск принтеров и проверка шаблонов выполняются без блокировки Tk-потока. Перед релизом дополнительно запускается `python performance_check.py`.
+
+## Live E2E на Windows 10 и Windows 11
+
+Физический GUI-контур разделён на две независимые пользовательские среды:
+
+- единая matrix `Windows 10 + 11 Live E2E Matrix` создаёт независимый job для `windows10-interactive`;
+- та же matrix создаёт независимый job для `windows11-interactive`.
+
+Matrix работает с `fail-fast: false` и `max-parallel: 2`: сбой одной ОС не отменяет вторую. Обе строки вызывают один общий fail-closed контур `.github/workflows/windows-live-e2e-core.yml`, поэтому набор проверок не расходится между версиями Windows. Он проверяет интерактивную разблокированную сессию, Word, принтер, физические клики мышью по реальному Tk/TkDND UI, все 255 сочетаний выбора выходных документов, реальную генерацию восьми DOCX, packaged EXE, desktop intake, сборку installer и install/uninstall smoke.
+
+Live-runner намеренно не устанавливается как Windows service: GUI-проверка должна выполняться в обычной пользовательской сессии. Общий bootstrap — `tools/install_windows_live_runner.ps1` с `-TargetOs windows10` или `-TargetOs windows11`. Для pinned Node 24 GitHub Actions требуется Actions Runner не ниже `2.327.1`.
+
+Windows 10 contour допускает клиентские x64 builds `19041..21999`; Windows 11 — build `22000+`. Запуск разрешён только из `main`. Плановые проверки включаются независимо repository variables `WINDOWS10_LIVE_E2E_ENABLED=true` и `WINDOWS11_LIVE_E2E_ENABLED=true`, чтобы отсутствие одной физической машины не блокировало вторую.
+

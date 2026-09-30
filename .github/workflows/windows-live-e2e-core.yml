@@ -1,47 +1,61 @@
-name: Windows 11 Live E2E
+name: Windows Live E2E Core
 
 on:
-  workflow_dispatch:
-  schedule:
-    - cron: '17 2 * * 1-5'
+  workflow_call:
+    inputs:
+      target_os:
+        description: Expected client Windows generation
+        required: true
+        type: string
+      runner_label:
+        description: Dedicated interactive self-hosted runner label
+        required: true
+        type: string
 
 permissions:
   contents: read
 
-concurrency:
-  group: diary-filler-windows11-live-e2e
-  cancel-in-progress: false
-
 jobs:
   live-e2e:
-    # Scheduled runs stay cleanly skipped until the real workstation is registered
-    # and the repository variable WINDOWS11_LIVE_E2E_ENABLED is set to true.
-    if: github.event_name == 'workflow_dispatch' || vars.WINDOWS11_LIVE_E2E_ENABLED == 'true'
-    # A real persistent workstation runner. Never replace this with windows-latest:
-    # the purpose of this contour is interactive-user/Desktop/Word/printer evidence.
-    runs-on: [self-hosted, Windows, X64, diary-filler-live-e2e, windows11-interactive]
+    # This reusable job is intentionally self-hosted. The thin Windows 10/11
+    # callers gate execution to main and select a dedicated interactive runner.
+    runs-on:
+      - self-hosted
+      - Windows
+      - X64
+      - diary-filler-live-e2e
+      - ${{ inputs.runner_label }}
     timeout-minutes: 120
 
     steps:
+      - name: Refuse untrusted live E2E target
+        shell: pwsh
+        run: |
+          if ("${{ github.repository }}" -ne "mailsvb2-bot/diary-filler") {
+            throw "Unexpected repository identity."
+          }
+          if ("${{ github.ref }}" -ne "refs/heads/main") {
+            throw "Live E2E may execute only from refs/heads/main."
+          }
+          $target = "${{ inputs.target_os }}"
+          $label = "${{ inputs.runner_label }}"
+          $allowed = @{
+            "windows10" = "windows10-interactive"
+            "windows11" = "windows11-interactive"
+          }
+          if (-not $allowed.ContainsKey($target) -or $allowed[$target] -ne $label) {
+            throw "Untrusted target/runner-label pair: $target / $label"
+          }
+
       - name: Checkout exact trusted revision
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           fetch-depth: 0
           clean: true
 
-      - name: Refuse untrusted branch execution
+      - name: Prove interactive Windows workstation
         shell: pwsh
-        run: |
-          if ("${{ github.event_name }}" -eq "schedule" -and "${{ github.ref }}" -ne "refs/heads/main") {
-            throw "Scheduled live E2E may execute only from main."
-          }
-          if ("${{ github.event_name }}" -eq "workflow_dispatch" -and "${{ github.repository }}" -ne "mailsvb2-bot/diary-filler") {
-            throw "Unexpected repository identity."
-          }
-
-      - name: Prove interactive Windows 11 workstation
-        shell: pwsh
-        run: ./tools/windows11_live_e2e_preflight.ps1 -JsonOut live-e2e-artifacts/preflight.json
+        run: ./tools/windows_live_e2e_preflight.ps1 -TargetOs "${{ inputs.target_os }}" -JsonOut live-e2e-artifacts/preflight.json
 
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
@@ -148,10 +162,10 @@ jobs:
       - name: Run real Tk GUI wiring smoke
         run: python gui_runtime_check.py
 
-      - name: Run physical-input Windows 11 live GUI E2E
+      - name: Run physical-input Windows live GUI E2E
         env:
           LIVE_E2E_ARTIFACT_DIR: live-e2e-artifacts
-        run: python tests/windows11_live_gui_e2e.py
+        run: python tests/windows_live_gui_e2e.py
 
       - name: Build EXE
         shell: cmd
@@ -172,7 +186,7 @@ jobs:
             "$env:ProgramFiles\Inno Setup 6\ISCC.exe"
           ) | Where-Object { $_ -and (Test-Path $_) }
           if (-not $paths) {
-            throw "Inno Setup 6 is a permanent live-runner prerequisite; install it on the dedicated Windows 11 test workstation."
+            throw "Inno Setup 6 is a permanent live-runner prerequisite; install it on the dedicated Windows test workstation."
           }
 
       - name: Build Windows installer
@@ -206,7 +220,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
-          name: MedicalDiaryAutofill-Windows11-Live-E2E-${{ github.run_id }}
+          name: MedicalDiaryAutofill-${{ inputs.target_os }}-Live-E2E-${{ github.run_id }}
           path: |
             live-e2e-artifacts/
             generation_finalize_profile.json
