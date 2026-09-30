@@ -86,6 +86,7 @@ def main() -> None:
             "- diary-filler-live-e2e",
             r"- ${{ inputs.runner_label }}",
             "timeout-minutes: 120",
+            "shell: powershell",
             r'if ("${{ github.ref }}" -ne "refs/heads/main")',
             '"windows10" = "windows10-interactive"',
             '"windows11" = "windows11-interactive"',
@@ -115,7 +116,7 @@ def main() -> None:
         ),
         "shared physical live core",
     )
-    for forbidden in ("pull_request:", "runs-on: windows-latest", "continue-on-error:"):
+    for forbidden in ("pull_request:", "runs-on: windows-latest", "continue-on-error:", "shell: pwsh"):
         if forbidden in core:
             fail(f"shared live workflow contains forbidden construct: {forbidden}")
 
@@ -127,6 +128,7 @@ def main() -> None:
             "$build -lt 14393 -or $build -ge 22000",
             'elseif ($TargetOs -eq "windows11")',
             "$build -lt 22000",
+            "$PSVersionTable.PSVersion.Major -lt 5",
             "Win32_OperatingSystem",
             "ProductType",
             "SessionId",
@@ -151,6 +153,7 @@ def main() -> None:
         installer,
         (
             '[ValidateSet("windows10", "windows11")]',
+            '$PSVersionTable.PSVersion.Major -lt 5',
             '[version]"2.327.1"',
             "actions-runner-win-x64",
             "ExpectedSha256",
