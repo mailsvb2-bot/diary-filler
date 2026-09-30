@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "dbf026558f6e3e32e6a53fb03e5c1e6748be60bb",
-  "reason": "Add and harden a fail-closed persistent Windows 11 interactive live E2E contour and upgrade pinned GitHub Actions to current Node 24 runtimes; physical Windows input, eight-output production generation, preflight and hosted-CI anti-degradation remain intact; document generation mechanics are unchanged.",
+  "reason": "Keep the Windows 11 live E2E contour fail-closed while upgrading all pinned GitHub Actions to current Node 24 runtimes and synchronizing the release safety pin contract; document generation mechanics are unchanged.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -24,6 +24,7 @@
     "tests/windows11_live_gui_e2e.py": "822c9b9128693e34eeb6cfb8966564df220c16f7",
     "tools/ci_gate_lock.py": "e19fb28b9d197b633196977851c6171861d94de7",
     "tools/install_windows11_live_runner.ps1": "a1709fbd497d3c009974adbd2a4397cc04b835cb",
-    "tools/windows11_live_e2e_preflight.ps1": "830adf78e6bb099167f1cead70ea9136a25c2af8"
+    "tools/windows11_live_e2e_preflight.ps1": "830adf78e6bb099167f1cead70ea9136a25c2af8",
+    "safety_integrity_check.py": "933428d4c8c939eb06e4e7beefae23b73c3761aa"
   }
 }
