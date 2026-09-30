@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "dbf026558f6e3e32e6a53fb03e5c1e6748be60bb",
-  "reason": "Add and harden a fail-closed persistent Windows 11 interactive live E2E contour with physical Windows input, real eight-output production generation, PowerShell/desktop/Word/printer/Inno preflight, safe schedule gating, and hosted-CI anti-degradation contract; document generation mechanics are unchanged.",
+  "reason": "Keep the Windows 11 live E2E contour fail-closed while upgrading all pinned GitHub Actions to current Node 24 runtimes and synchronizing the release safety pin contract; document generation mechanics are unchanged.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -16,14 +16,15 @@
     "windows11_live_e2e_contract"
   ],
   "approved_blobs": {
-    ".github/workflows/release.yml": "51baba807aede06544be2c74ec96172c622bdfeb",
-    ".github/workflows/windows-build.yml": "c920acf9da61cece7fc02f182419338b4bfc2d73",
-    ".github/workflows/windows11-live-e2e.yml": "3d2f0c8c21d686f0e81ebe5060b16e6131465240",
+    ".github/workflows/release.yml": "33fd3637e75f73302ad74904da7dc8750cd2174d",
+    ".github/workflows/windows-build.yml": "d3dabd8e6d2cd4d50472bd2787cc2d6391e5f142",
+    ".github/workflows/windows11-live-e2e.yml": "d1b6ea65c130549e96dd57d7a1f29079e8070d00",
     "tests/regression_surface_inventory.py": "8c3a51753ad408ab5dddc6aa5efa0e97c1259f45",
     "tests/windows11_live_e2e_contract.py": "31981d3ed4214d8b17d00d0a64ce8f78db6991a2",
     "tests/windows11_live_gui_e2e.py": "822c9b9128693e34eeb6cfb8966564df220c16f7",
     "tools/ci_gate_lock.py": "e19fb28b9d197b633196977851c6171861d94de7",
     "tools/install_windows11_live_runner.ps1": "a1709fbd497d3c009974adbd2a4397cc04b835cb",
-    "tools/windows11_live_e2e_preflight.ps1": "830adf78e6bb099167f1cead70ea9136a25c2af8"
+    "tools/windows11_live_e2e_preflight.ps1": "830adf78e6bb099167f1cead70ea9136a25c2af8",
+    "safety_integrity_check.py": "933428d4c8c939eb06e4e7beefae23b73c3761aa"
   }
 }
