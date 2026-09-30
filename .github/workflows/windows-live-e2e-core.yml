@@ -55,7 +55,7 @@ jobs:
 
       - name: Prove interactive Windows workstation
         shell: pwsh
-        run: ./tools/windows11_live_e2e_preflight.ps1 -TargetOs "${{ inputs.target_os }}" -JsonOut live-e2e-artifacts/preflight.json
+        run: ./tools/windows_live_e2e_preflight.ps1 -TargetOs "${{ inputs.target_os }}" -JsonOut live-e2e-artifacts/preflight.json
 
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
@@ -165,7 +165,7 @@ jobs:
       - name: Run physical-input Windows live GUI E2E
         env:
           LIVE_E2E_ARTIFACT_DIR: live-e2e-artifacts
-        run: python tests/windows11_live_gui_e2e.py
+        run: python tests/windows_live_gui_e2e.py
 
       - name: Build EXE
         shell: cmd
