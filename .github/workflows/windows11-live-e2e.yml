@@ -14,6 +14,9 @@ concurrency:
 
 jobs:
   live-e2e:
+    # Scheduled runs stay cleanly skipped until the real workstation is registered
+    # and the repository variable WINDOWS11_LIVE_E2E_ENABLED is set to true.
+    if: github.event_name == 'workflow_dispatch' || vars.WINDOWS11_LIVE_E2E_ENABLED == 'true'
     # A real persistent workstation runner. Never replace this with windows-latest:
     # the purpose of this contour is interactive-user/Desktop/Word/printer evidence.
     runs-on: [self-hosted, Windows, X64, diary-filler-live-e2e, windows11-interactive]
