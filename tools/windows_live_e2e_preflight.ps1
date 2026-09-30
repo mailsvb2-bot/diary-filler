@@ -14,8 +14,8 @@ function Fail([string]$Message) {
     throw "WINDOWS LIVE E2E PREFLIGHT FAILED: $Message"
 }
 
-if (-not $IsWindows) { Fail "runner is not Windows" }
-if ($PSVersionTable.PSVersion.Major -lt 7) { Fail "PowerShell 7+ (pwsh) is required" }
+if ($env:OS -ne "Windows_NT") { Fail "runner is not Windows" }
+if ($PSVersionTable.PSVersion.Major -lt 5) { Fail "Windows PowerShell 5.1+ is required" }
 if (-not [Environment]::Is64BitOperatingSystem) { Fail "Windows is not x64" }
 
 $os = Get-CimInstance Win32_OperatingSystem
@@ -25,10 +25,10 @@ if ([int]$os.ProductType -ne 1) {
 
 $build = [int]$os.BuildNumber
 if ($TargetOs -eq "windows10") {
-    # 19041 is the Windows 10 2004 generation. Accept newer Windows 10 client
-    # builds, including 21H2/22H2/LTSC variants, but fail closed before Win11.
-    if ($build -lt 19041 -or $build -ge 22000) {
-        Fail "Windows 10 client build 19041..21999 is required for the windows10 contour; detected build $build"
+    # Accept the complete Windows 10 generation from Anniversary Update / 1607
+    # (build 14393) through the final pre-Windows-11 client builds.
+    if ($build -lt 14393 -or $build -ge 22000) {
+        Fail "Windows 10 client build 14393..21999 is required for the windows10 contour; detected build $build"
     }
 } elseif ($TargetOs -eq "windows11") {
     if ($build -lt 22000) {

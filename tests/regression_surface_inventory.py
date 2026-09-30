@@ -56,6 +56,7 @@ MUST_BE_LOCKED = (
     "tools/windows_live_e2e_preflight.ps1",
     "tools/windows11_live_e2e_preflight.ps1",
     "tools/install_windows_live_runner.ps1",
+    "tools/install_windows_live_runner.cmd",
     "tools/install_windows11_live_runner.ps1",
     "tools/document_mechanics_guard.py",
     "tools/main_branch_policy.py",

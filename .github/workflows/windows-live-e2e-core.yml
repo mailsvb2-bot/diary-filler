@@ -29,7 +29,7 @@ jobs:
 
     steps:
       - name: Refuse untrusted live E2E target
-        shell: pwsh
+        shell: powershell
         run: |
           if ("${{ github.repository }}" -ne "mailsvb2-bot/diary-filler") {
             throw "Unexpected repository identity."
@@ -54,7 +54,7 @@ jobs:
           clean: true
 
       - name: Prove interactive Windows workstation
-        shell: pwsh
+        shell: powershell
         run: ./tools/windows_live_e2e_preflight.ps1 -TargetOs "${{ inputs.target_os }}" -JsonOut live-e2e-artifacts/preflight.json
 
       - name: Set up Python
@@ -175,11 +175,11 @@ jobs:
         run: python verify_built_exe.py
 
       - name: Run packaged desktop intake auto-launch E2E
-        shell: pwsh
+        shell: powershell
         run: ./tools/windows_desktop_intake_e2e.ps1 -AppPath ./dist/MedicalDiaryAutofill.exe
 
       - name: Require preinstalled Inno Setup 6
-        shell: pwsh
+        shell: powershell
         run: |
           $paths = @(
             "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe",
@@ -194,12 +194,12 @@ jobs:
         run: BUILD_WINDOWS_INSTALLER.bat
 
       - name: Smoke installed and uninstalled application
-        shell: pwsh
+        shell: powershell
         run: ./tools/windows_installer_smoke.ps1 -InstallerPath ./dist/MedicalDiaryAutofill-Setup-1.4.25.exe
 
       - name: Capture desktop evidence on failure
         if: failure()
-        shell: pwsh
+        shell: powershell
         run: |
           New-Item -ItemType Directory -Force -Path live-e2e-artifacts | Out-Null
           try {

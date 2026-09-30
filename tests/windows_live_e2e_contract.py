@@ -8,6 +8,7 @@ MATRIX = ROOT / ".github" / "workflows" / "windows-live-e2e.yml"
 CORE = ROOT / ".github" / "workflows" / "windows-live-e2e-core.yml"
 PREFLIGHT = ROOT / "tools" / "windows_live_e2e_preflight.ps1"
 INSTALLER = ROOT / "tools" / "install_windows_live_runner.ps1"
+CMD_INSTALLER = ROOT / "tools" / "install_windows_live_runner.cmd"
 DRIVER = ROOT / "tests" / "windows_live_gui_e2e.py"
 WIN11_PREFLIGHT_COMPAT = ROOT / "tools" / "windows11_live_e2e_preflight.ps1"
 WIN11_INSTALLER_COMPAT = ROOT / "tools" / "install_windows11_live_runner.ps1"
@@ -26,7 +27,7 @@ def require_all(text: str, snippets: tuple[str, ...], label: str) -> None:
 
 def main() -> None:
     for path in (
-        MATRIX, CORE, PREFLIGHT, INSTALLER, DRIVER,
+        MATRIX, CORE, PREFLIGHT, INSTALLER, CMD_INSTALLER, DRIVER,
         WIN11_PREFLIGHT_COMPAT, WIN11_INSTALLER_COMPAT, WIN11_DRIVER_COMPAT,
     ):
         if not path.is_file():
@@ -36,6 +37,7 @@ def main() -> None:
     core = CORE.read_text(encoding="utf-8")
     preflight = PREFLIGHT.read_text(encoding="utf-8")
     installer = INSTALLER.read_text(encoding="utf-8")
+    cmd_installer = CMD_INSTALLER.read_text(encoding="utf-8")
     driver = DRIVER.read_text(encoding="utf-8")
 
     require_all(
@@ -84,6 +86,7 @@ def main() -> None:
             "- diary-filler-live-e2e",
             r"- ${{ inputs.runner_label }}",
             "timeout-minutes: 120",
+            "shell: powershell",
             r'if ("${{ github.ref }}" -ne "refs/heads/main")',
             '"windows10" = "windows10-interactive"',
             '"windows11" = "windows11-interactive"',
@@ -113,7 +116,7 @@ def main() -> None:
         ),
         "shared physical live core",
     )
-    for forbidden in ("pull_request:", "runs-on: windows-latest", "continue-on-error:"):
+    for forbidden in ("pull_request:", "runs-on: windows-latest", "continue-on-error:", "shell: pwsh"):
         if forbidden in core:
             fail(f"shared live workflow contains forbidden construct: {forbidden}")
 
@@ -122,9 +125,10 @@ def main() -> None:
         (
             '[ValidateSet("windows10", "windows11")]',
             'if ($TargetOs -eq "windows10")',
-            "$build -lt 19041 -or $build -ge 22000",
+            "$build -lt 14393 -or $build -ge 22000",
             'elseif ($TargetOs -eq "windows11")',
             "$build -lt 22000",
+            "$PSVersionTable.PSVersion.Major -lt 5",
             "Win32_OperatingSystem",
             "ProductType",
             "SessionId",
@@ -149,6 +153,7 @@ def main() -> None:
         installer,
         (
             '[ValidateSet("windows10", "windows11")]',
+            '$PSVersionTable.PSVersion.Major -lt 5',
             '[version]"2.327.1"',
             "actions-runner-win-x64",
             "ExpectedSha256",
@@ -161,6 +166,28 @@ def main() -> None:
             "Runner must remain signed in and unlocked",
         ),
         "shared runner bootstrap",
+    )
+
+    require_all(
+        cmd_installer,
+        (
+            "@echo off",
+            "setlocal EnableExtensions DisableDelayedExpansion",
+            "windows10",
+            "windows11",
+            "where powershell.exe",
+            "Invoke-WebRequest",
+            "SecurityProtocol",
+            "Tls12",
+            "install_windows_live_runner.ps1",
+            "Paste GitHub runner registration token and press Enter:",
+            '-RunnerVersion "2.337.0"',
+            '-ExpectedSha256 "1150692afa94e71f872017e254ea55b6eece1eece3fe7e3a6d4c93d0a1b85cfc"',
+            '-TargetOs "%TARGET_OS%"',
+            "powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File",
+            "set \"RUNNER_TOKEN=\"",
+        ),
+        "CMD runner bootstrap",
     )
 
     require_all(

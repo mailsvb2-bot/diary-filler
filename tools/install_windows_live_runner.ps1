@@ -27,11 +27,9 @@ function Fail([string]$Message) {
     throw "LIVE RUNNER INSTALL FAILED: $Message"
 }
 
-if (-not $IsWindows) { Fail "Windows is required" }
+if ($env:OS -ne "Windows_NT") { Fail "Windows is required" }
 if (-not [Environment]::Is64BitOperatingSystem) { Fail "x64 Windows is required" }
-if (-not (Get-Command pwsh.exe -ErrorAction SilentlyContinue)) {
-    Fail "PowerShell 7+ (pwsh.exe) must be installed before registering the interactive runner"
-}
+if ($PSVersionTable.PSVersion.Major -lt 5) { Fail "Windows PowerShell 5.1+ is required" }
 
 try {
     $parsedRunnerVersion = [version]$RunnerVersion
@@ -48,8 +46,8 @@ if ([int]$os.ProductType -ne 1) {
 }
 $build = [int]$os.BuildNumber
 if ($TargetOs -eq "windows10") {
-    if ($build -lt 19041 -or $build -ge 22000) {
-        Fail "Windows 10 client build 19041..21999 is required for the windows10 runner; detected build $build"
+    if ($build -lt 14393 -or $build -ge 22000) {
+        Fail "Windows 10 client build 14393..21999 is required for the windows10 runner; detected build $build"
     }
     $targetLabel = "windows10-interactive"
 } elseif ($TargetOs -eq "windows11") {
