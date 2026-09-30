@@ -26,6 +26,9 @@ function Fail([string]$Message) {
 
 if (-not $IsWindows) { Fail "Windows is required" }
 if (-not [Environment]::Is64BitOperatingSystem) { Fail "x64 Windows is required" }
+if (-not (Get-Command pwsh.exe -ErrorAction SilentlyContinue)) {
+    Fail "PowerShell 7+ (pwsh.exe) must be installed before registering the interactive runner"
+}
 
 $os = Get-CimInstance Win32_OperatingSystem
 if ([int]$os.ProductType -ne 1 -or [int]$os.BuildNumber -lt 22000) {
