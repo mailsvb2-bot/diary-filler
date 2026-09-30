@@ -20,6 +20,7 @@ from tools.regression_lock_check import _is_critical
 MUST_BE_LOCKED = (
     ".github/workflows/windows-build.yml",
     ".github/workflows/release.yml",
+    ".github/workflows/windows11-live-e2e.yml",
     "installer/MedicalDiaryAutofill.iss",
     "main.py",
     "startup.py",
@@ -47,6 +48,10 @@ MUST_BE_LOCKED = (
     "tests/golden_docx_manifest.json",
     "tests/desktop_intake_contract_check.py",
     "tests/intake_lifecycle_regression.py",
+    "tests/windows11_live_e2e_contract.py",
+    "tests/windows11_live_gui_e2e.py",
+    "tools/windows11_live_e2e_preflight.ps1",
+    "tools/install_windows11_live_runner.ps1",
     "tools/document_mechanics_guard.py",
     "tools/main_branch_policy.py",
     "tools/full_patient_replay_check.py",
