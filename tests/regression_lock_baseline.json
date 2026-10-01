@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "b7aa58974054482a4c9924f55832af5172643acd",
-  "baseline_note": "Post-merge no-regression baseline for PR #285 completing My Patients: discharged-folder exclusion, inclusive sick-leave day-1 scheduling with the latest Wednesday inside days 7..15, clickable patient folders, root-folder controls, and exact VK button wording. Candidate head 3e11d7e01ac383f7361437c8a1f90a000f45e47a passed Windows EXE Build run 36922078183 end-to-end; merge b7aa58974054482a4c9924f55832af5172643acd passed post-merge main run 36923009352 end-to-end.",
+  "baseline_ref": "a29b59ab2ca1592c4074861f44716bb6d0103526",
+  "baseline_note": "Post-merge no-regression baseline for PR #287: prevent desktop-intake watcher races during first-run patient-folder onboarding, provide native Windows tray minimize/restore/close for the patient summary, and keep the patient-root control visibly in the main header. Candidate head b5356f0cf203ea4d6dd299c626f59670d2ba97e1 passed Windows EXE Build run 36928282556 end-to-end; merge a29b59ab2ca1592c4074861f44716bb6d0103526 passed post-merge main run 36928985474 end-to-end.",
   "required_approval_evidence": [
     "ci_gate_lock",
     "patient_registry_regression"
