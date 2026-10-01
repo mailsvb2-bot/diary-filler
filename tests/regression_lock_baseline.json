@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "5695ea4810eb022ddd28ddb5576ae5bcca7e621a",
-  "baseline_note": "User-requested no-regression freeze of the complete current production state before the patient dashboard / sick-leave VK work. main 5695ea4810eb022ddd28ddb5576ae5bcca7e621a is the immutable starting point: all existing production behavior and tests must remain green; critical-surface drift is forbidden without exact blob approval and the full regression evidence set.",
+  "baseline_ref": "e0a358bc97d5aa5a77d941d52a5084d849daaa20",
+  "baseline_note": "Post-merge no-regression baseline for PR #283 (My Patients dashboard, independent sick-leave chronology, Wednesday VK scheduling and Windows logon summary). Functional candidate head 6196fbbe2b420380df843ebd222eda5e892a8118 passed Windows EXE Build run 36913862515 end-to-end: regression locks, document mechanics guard, privacy, release gate, patient/golden replay, 255 output combinations, GUI, packaged EXE, desktop intake E2E, installer and uninstall smoke. Merge e0a358bc97d5aa5a77d941d52a5084d849daaa20 contains the same tested production blobs.",
   "required_approval_evidence": [
     "ci_gate_lock",
     "patient_registry_regression"
