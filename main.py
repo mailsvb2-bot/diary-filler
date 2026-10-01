@@ -45,6 +45,7 @@ from startup import (
 SELF_CHECK_ARGUMENT = "--self-check"
 UNINSTALL_INTAKE_ARGUMENT = "--uninstall-intake-agent"
 PATIENT_SUMMARY_ARGUMENT = "--patient-summary"
+PATIENT_SUMMARY_TRAY_ARGUMENT = "--patient-summary-tray"
 
 
 def __getattr__(name: str):
@@ -62,12 +63,11 @@ def _installation_onboarding_marker_path() -> Path:
 
 
 def _first_launch_onboarding(app, *, configure_patient_registry: bool = True) -> None:
-    """Heal mandatory intake and perform normal visible first-run onboarding.
+    """Heal mandatory intake and perform visible first-run onboarding.
 
-    A watcher-launched GUI may carry an explicit --intake-primary event. In that
-    case the unrelated patient-registry folder question is deferred until the
-    next normal/manual launch so closing the chooser can never appear to have
-    caused the pending primary document to load.
+    The visible-GUI heartbeat is claimed before this function is called, so even
+    a watcher-launched GUI can safely ask for the patient-registry root without
+    allowing a second watcher launch to race the modal folder chooser.
     """
     if os.name != "nt" or os.environ.get("CI", "").strip():
         return
@@ -124,10 +124,9 @@ def _first_launch_onboarding(app, *, configure_patient_registry: bool = True) ->
         except Exception:
             onboarding_complete = False
 
-    # Patient overview has its own explicitly selected root. Ask only from a
-    # normal/manual GUI launch. A watcher-launched GUI must first handle the
-    # exact intake event that launched it, without interleaving an unrelated
-    # folder chooser immediately before that document is applied.
+    # Patient overview has its own explicitly selected root. This is mandatory
+    # first-run onboarding for every visible GUI, including watcher-launched
+    # sessions. The early GUI heartbeat prevents the old duplicate-launch race.
     if configure_patient_registry:
         try:
             if not app._patient_registry_root():
@@ -455,14 +454,14 @@ def _activate_root_for_intake(root) -> None:
         pass
 
 
-def _run_patient_summary_mode() -> None:
-    """Open only the daily patient summary at Windows sign-in."""
+def _run_patient_summary_mode(*, start_in_tray: bool = False) -> None:
+    """Open the independent daily patient summary host."""
     from app import CombinedMedicalDiaryApp
 
     root = _create_root()
     root.withdraw()
     app = CombinedMedicalDiaryApp(root)
-    app.show_my_patients(startup_mode=True)
+    app.show_my_patients(startup_mode=True, start_in_tray=start_in_tray)
     try:
         if root.winfo_exists():
             root.mainloop()
@@ -483,6 +482,10 @@ def main() -> None:
 
         if SELF_CHECK_ARGUMENT in sys.argv[1:]:
             _self_check_run()
+            return
+
+        if PATIENT_SUMMARY_TRAY_ARGUMENT in sys.argv[1:]:
+            _run_patient_summary_mode(start_in_tray=True)
             return
 
         if PATIENT_SUMMARY_ARGUMENT in sys.argv[1:]:
@@ -510,10 +513,7 @@ def main() -> None:
         from app import CombinedMedicalDiaryApp
 
         app = CombinedMedicalDiaryApp(root)
-        _first_launch_onboarding(
-            app,
-            configure_patient_registry=not bool(intake_primary),
-        )
+        _first_launch_onboarding(app)
 
         if intake_primary:
             # The intake path can open modal questions while applying the primary.
