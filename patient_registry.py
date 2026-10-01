@@ -139,7 +139,47 @@ def _admission_date_from_primary_first_line(path: Path) -> date | None:
     return _date_value(re.sub(r"\s+", "", match.group(1)))
 
 
-def _sick_leave_state(data) -> tuple[bool, date | None, str]:
+def _sick_leave_state_from_primary_text(path: Path) -> tuple[str, str]:
+    """Recover the LN decision/date directly from a real primary Word source.
+
+    Word tables can split a label and its value into adjacent cells. The generic
+    inline parser intentionally processes each extracted line independently, so
+    «Больничный лист» in one cell and «с 25.09.2026» in the next cell may not
+    become one PatientData field. For the patient registry we have a narrower
+    contract and can safely inspect the full primary text around an explicit LN
+    label.
+    """
+    try:
+        from medical_docx_reader import extract_docx_text
+
+        text = " ".join(str(extract_docx_text(path) or "").split())
+    except Exception:
+        return "", ""
+    if not text:
+        return "", ""
+
+    label = r"(?:больничн(?:ый|ого)\s+лист|лист\s+нетрудоспособности|лн)"
+    prefix = rf"(?:нужен\s+ли\s+|нужен\s+)?{label}"
+    if re.search(
+        rf"(?i)\b{prefix}\b\s*[:;,.—–-]?\s*(?:нет\b|не\s+нуж(?:ен|на|но)\b|не\s+требуется\b)",
+        text,
+    ):
+        return "нет", ""
+
+    date_token = r"(\d{6,8}|\d{1,2}\s*[./-]\s*\d{1,2}\s*[./-]\s*\d{2,4})"
+    positive = re.search(
+        rf"(?i)\b{prefix}\b\s*[:;,.—–-]?\s*(?:да\b\s*[,;:-]?\s*)?(?:с|от)\s+{date_token}",
+        text,
+    )
+    if positive:
+        return "да", re.sub(r"\s+", "", positive.group(1))
+
+    if re.search(rf"(?i)\b{prefix}\b\s*[:;,.—–-]?\s*да\b", text):
+        return "да", ""
+    return "", ""
+
+
+def _sick_leave_state(data, primary_path: Path | None = None) -> tuple[bool, date | None, str]:
     explicit_decision = normalize_yes_no(getattr(data, "expert_sick_leave_needed", ""))
     explicit_from = str(getattr(data, "expert_sick_leave_from", "") or "").strip()
     rendered_decision, rendered_from = parse_sick_leave_value(
@@ -147,6 +187,16 @@ def _sick_leave_state(data) -> tuple[bool, date | None, str]:
     )
     decision = explicit_decision or rendered_decision
     raw_from = explicit_from or rendered_from
+
+    # Do not override an explicit negative decision. Otherwise recover a missing
+    # decision/date from the actual primary Word text, including split table cells.
+    if decision != "нет" and primary_path is not None and (not decision or not raw_from):
+        fallback_decision, fallback_from = _sick_leave_state_from_primary_text(primary_path)
+        if not decision:
+            decision = fallback_decision
+        if decision == "да" and not raw_from and fallback_decision == "да":
+            raw_from = fallback_from
+
     parsed_from = _date_value(raw_from) if raw_from else None
 
     if decision == "нет":
@@ -227,7 +277,7 @@ def scan_patient_registry(
             continue
 
         fio = " ".join(str(getattr(parsed_data, "fio", "") or "").split()) or patient_folder.name
-        sick_needed, sick_from, warning = _sick_leave_state(parsed_data)
+        sick_needed, sick_from, warning = _sick_leave_state(parsed_data, chosen)
         patients.append(
             PatientRegistryEntry(
                 fio=fio,
