@@ -119,6 +119,29 @@ def _assert_discharge_stays_admission_based() -> None:
     assert "Срок лечения с 01.09.2026" not in rendered
 
 
+def _assert_desktop_wiring_contract() -> None:
+    main_source = Path("main.py").read_text(encoding="utf-8")
+    mixin_source = Path("patient_registry_mixin.py").read_text(encoding="utf-8")
+    window_source = Path("window_mixin.py").read_text(encoding="utf-8")
+    settings_source = Path("settings_mixin.py").read_text(encoding="utf-8")
+
+    for snippet in (
+        'PATIENT_SUMMARY_ARGUMENT = "--patient-summary"',
+        "app._ensure_patient_registry_folder(first_run=True)",
+        "remove_patient_summary_autostart()",
+    ):
+        assert snippet in main_source
+    for snippet in (
+        'title="Из какой папки анализировать пациентов?"',
+        "install_patient_summary_autostart()",
+        "show_my_patients(self, *, startup_mode: bool = False)",
+        "Подготовить ВК на",
+    ):
+        assert snippet in mixin_source
+    assert 'text="Мои пациенты", command=self.show_my_patients' in window_source
+    assert "DIR_PATIENT_REGISTRY" in settings_source
+
+
 def _assert_pre_admission_sick_leave_is_not_rejected() -> None:
     data = PatientData(
         fio="Маркер Иванов Тестовый",
@@ -150,6 +173,7 @@ def main() -> None:
     _assert_registry_scan_and_independent_timelines()
     _assert_vk_wednesday_schedule()
     _assert_discharge_stays_admission_based()
+    _assert_desktop_wiring_contract()
     _assert_pre_admission_sick_leave_is_not_rejected()
     print(
         "PATIENT REGISTRY REGRESSION OK: folder scan, sick-leave chronology, "
