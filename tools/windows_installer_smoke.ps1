@@ -7,6 +7,7 @@ $installer = (Resolve-Path $InstallerPath).Path
 $installDir = Join-Path $env:RUNNER_TEMP 'MedicalDiaryAutofill-Installer-Smoke'
 $runKeyPath = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run'
 $runValueName = 'MedicalDiaryAutofill Intake'
+$patientSummaryRunValueName = 'MedicalDiaryAutofill Patients'
 $startupScript = Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs\Startup\MedicalDiaryAutofill Intake.vbs'
 $runtimeDir = Join-Path $env:LOCALAPPDATA 'MedicalDiaryAutofill'
 $agentHeartbeat = Join-Path $runtimeDir 'desktop-intake-agent.heartbeat'
@@ -49,6 +50,7 @@ function Wait-ForAgentHeartbeat {
 try {
     Stop-AppProcesses
     Remove-ItemProperty -Path $runKeyPath -Name $runValueName -ErrorAction SilentlyContinue
+    Remove-ItemProperty -Path $runKeyPath -Name $patientSummaryRunValueName -ErrorAction SilentlyContinue
     Remove-Item -LiteralPath $startupScript -Force -ErrorAction SilentlyContinue
     Remove-Item -LiteralPath $agentHeartbeat -Force -ErrorAction SilentlyContinue
     if (Test-Path $installDir) {
@@ -234,6 +236,10 @@ d.save(p)
         throw 'Installer-started intake-agent process is not running before uninstall'
     }
 
+    # Simulate the entry created after the user configures «Мои пациенты».
+    # The uninstaller must own cleanup even if the GUI is no longer runnable.
+    Set-ItemProperty -Path $runKeyPath -Name $patientSummaryRunValueName -Value ('"' + $app + '" --patient-summary')
+
     $uninstall = Start-Process -FilePath $uninstaller.FullName -ArgumentList @(
         '/VERYSILENT',
         '/SUPPRESSMSGBOXES',
@@ -262,6 +268,12 @@ d.save(p)
     try {
         $leftoverRun = Get-ItemPropertyValue -Path $runKeyPath -Name $runValueName -ErrorAction Stop
         throw "HKCU Run watcher entry survived uninstall: $leftoverRun"
+    } catch [System.Management.Automation.PSArgumentException] {
+    } catch [System.Management.Automation.ItemNotFoundException] {
+    }
+    try {
+        $leftoverSummary = Get-ItemPropertyValue -Path $runKeyPath -Name $patientSummaryRunValueName -ErrorAction Stop
+        throw "HKCU Run patient summary entry survived uninstall: $leftoverSummary"
     } catch [System.Management.Automation.PSArgumentException] {
     } catch [System.Management.Automation.ItemNotFoundException] {
     }
