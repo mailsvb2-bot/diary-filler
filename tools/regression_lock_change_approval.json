@@ -17,6 +17,6 @@
   ],
   "approved_blobs": {
     "tools/install_windows_live_runner.ps1": "2227c4107c6522dbad3919e49102cc919c567465",
-    "tests/windows_live_e2e_contract.py": "e3ea373d0fae9831b22b7ff0d8df43214cac277a"
+    "tests/windows_live_e2e_contract.py": "d2c5fbc9d909e41d5452f4d779ff3d5231ef32f5"
   }
 }
