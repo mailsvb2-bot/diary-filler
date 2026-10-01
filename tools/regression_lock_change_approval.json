@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "c065984fc39f92f89a743c8be6d85b5e33249572",
-  "reason": "Fix the Windows 10 1607 runner bootstrap so its internal GitHub runner archive download explicitly negotiates TLS 1.2 instead of inheriting the legacy Windows PowerShell/.NET HTTPS default that failed with 'Could not create SSL/TLS secure channel'.",
+  "reason": "Move the Windows self-hosted runner to the short ASCII root path recommended by GitHub, preflight api.github.com connectivity, and print sanitized config/_diag diagnostics when registration fails on Windows 10 1607 instead of returning an opaque config.cmd exit code.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -16,7 +16,7 @@
     "windows_live_e2e_contract"
   ],
   "approved_blobs": {
-    "tools/install_windows_live_runner.ps1": "c02cb6abf2541446af9261ed5b9c2862e40b58a6",
-    "tests/windows_live_e2e_contract.py": "95bfffc7a54dd8d1043147cc7a0d090f1ab894a0"
+    "tools/install_windows_live_runner.ps1": "2227c4107c6522dbad3919e49102cc919c567465",
+    "tests/windows_live_e2e_contract.py": "e3ea373d0fae9831b22b7ff0d8df43214cac277a"
   }
 }
