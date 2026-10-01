@@ -30,7 +30,7 @@ def _assert_sick_leave_parser() -> None:
 def _assert_primary_text_sick_leave_label() -> None:
     data = MedicalTextParser().parse_text(
         "01.09.2026 Первичный осмотр\n"
-        "Ф.И.О: Иванов Иван Иванович\n"
+        "Ф.И.О: Маркер Иванов Тестовый\n"
         "Год рождения: 1980\n"
         "Нужен больничный лист: да, с 20.08.2026\n"
         "Диагноз: F20.0"
@@ -51,9 +51,9 @@ def _assert_registry_scan_and_independent_timelines() -> None:
     with TemporaryDirectory(prefix="patient-registry-") as temp:
         root = Path(temp)
         fixtures = {
-            "Иванов": ("Иванов первичный.docx", "Иванов Иван Иванович", "01.09.2026", "да, с 20.08.2026"),
-            "Петров": ("Петров первичка.docx", "Петров Пётр Петрович", "15.09.2026", "нет"),
-            "Будущий": ("Будущий первичный.docx", "Будущий Б.Б.", "10.10.2026", "да, с 01.10.2026"),
+            "Иванов": ("Иванов первичный.docx", "Маркер Иванов Тестовый", "01.09.2026", "да, с 20.08.2026"),
+            "Петров": ("Петров первичка.docx", "Маркер Петров Тестовый", "15.09.2026", "нет"),
+            "Будущий": ("Будущий первичный.docx", "Маркер Будущий Тестовый", "10.10.2026", "да, с 01.10.2026"),
         }
         by_path = {}
         for folder_name, (filename, fio, admission, sick_leave) in fixtures.items():
@@ -76,7 +76,7 @@ def _assert_registry_scan_and_independent_timelines() -> None:
         assert len(snapshot.patients) == 2
         assert len(snapshot.sick_leave_patients) == 1
 
-        ivanov = next(item for item in snapshot.patients if item.fio.startswith("Иванов"))
+        ivanov = next(item for item in snapshot.patients if "Иванов" in item.fio)
         assert ivanov.admission_date == date(2026, 9, 1)
         assert ivanov.sick_leave_from == date(2026, 8, 20)
         assert sick_leave_days_on(ivanov, date(2026, 10, 1)) == 43
@@ -121,7 +121,7 @@ def _assert_discharge_stays_admission_based() -> None:
 
 def _assert_pre_admission_sick_leave_is_not_rejected() -> None:
     data = PatientData(
-        fio="Иванов Иван Иванович",
+        fio="Маркер Иванов Тестовый",
         birth="01.01.1980",
         admission_date="10.09.2026",
         discharge_date="20.09.2026",
