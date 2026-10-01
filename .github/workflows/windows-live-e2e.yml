@@ -78,8 +78,27 @@ jobs:
               output.write("has_targets=" + ("true" if selected else "false") + "\n")
           PY
 
+  no-live-evidence:
+    name: NO PHYSICAL LIVE E2E EVIDENCE / targets disabled
+    needs: plan
+    if: github.ref == 'refs/heads/main' && needs.plan.outputs.has_targets != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mark scheduled run as non-evidence
+        shell: bash
+        run: |
+          echo "::warning title=NO PHYSICAL LIVE E2E EVIDENCE::No physical Windows live targets were enabled for this run."
+          {
+            echo "## NO PHYSICAL LIVE E2E EVIDENCE"
+            echo
+            echo "No Windows 10 or Windows 11 physical live target was enabled."
+            echo "This workflow run is scheduler/planning evidence only and MUST NOT be cited as a physical E2E pass."
+            echo
+            echo "Enable WINDOWS10_LIVE_E2E_ENABLED and/or WINDOWS11_LIVE_E2E_ENABLED after the corresponding self-hosted runner is registered and online."
+          } >> "$GITHUB_STEP_SUMMARY"
+
   live-e2e:
-    name: Live E2E / ${{ matrix.artifact_suffix }}
+    name: PHYSICAL Live E2E / ${{ matrix.artifact_suffix }}
     needs: plan
     if: github.ref == 'refs/heads/main' && needs.plan.outputs.has_targets == 'true'
     strategy:
