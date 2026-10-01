@@ -697,7 +697,7 @@ def assert_watcher_launch_defers_patient_registry_onboarding() -> None:
 def assert_visible_gui_claim_precedes_onboarding() -> None:
     source = Path("main.py").read_text(encoding="utf-8")
     claim = source.index("claim_desktop_gui_session()")
-    onboarding = source.index("_first_launch_onboarding(")
+    onboarding = source.rindex("_first_launch_onboarding(")
     assert claim < onboarding, "visible GUI heartbeat must be claimed before first-run modal onboarding"
 
     startup_source = Path("startup.py").read_text(encoding="utf-8")
