@@ -12,6 +12,7 @@ from patient_registry import (
     PatientSummaryTray,
     hospitalization_days_on,
     install_patient_summary_autostart,
+    launch_patient_summary_tray_process,
     next_sick_leave_vk_date,
     open_patient_folder,
     scan_patient_registry,
@@ -237,7 +238,7 @@ class PatientRegistryMixin:
         if self.output_vars["sick_leave_vk"].get():
             self.create_selected_outputs(print_after=False)
 
-    def show_my_patients(self, *, startup_mode: bool = False) -> None:
+    def show_my_patients(self, *, startup_mode: bool = False, start_in_tray: bool = False) -> None:
         # A logon summary must never block Windows with a first-run folder dialog.
         # Folder onboarding belongs to the normal visible application start.
         if startup_mode and not self._patient_registry_root():
@@ -282,7 +283,8 @@ class PatientRegistryMixin:
                         pass
 
         def restore_from_tray() -> None:
-            tray.stop()
+            # Keep the tray icon alive while the summary is open. The user can
+            # close this independent summary only via its own X or tray menu.
             try:
                 win.deiconify()
                 win.lift()
@@ -291,6 +293,16 @@ class PatientRegistryMixin:
                 pass
 
         def minimize_to_tray() -> None:
+            if not startup_mode:
+                # A summary opened from the main GUI must survive that GUI being
+                # closed. Move it into its own detached summary process before
+                # removing this in-process child window.
+                if launch_patient_summary_tray_process():
+                    try:
+                        win.destroy()
+                    except Exception:
+                        pass
+                    return
             if tray.start():
                 try:
                     win.withdraw()
@@ -583,7 +595,10 @@ class PatientRegistryMixin:
 
         date_entry.bind("<Return>", lambda _event: refresh())
         refresh()
-        win.lift()
+        if start_in_tray:
+            win.after(150, minimize_to_tray)
+        else:
+            win.lift()
         try:
             win.focus_force()
         except Exception:
