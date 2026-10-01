@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "a29b59ab2ca1592c4074861f44716bb6d0103526",
-  "reason": "User-requested fixes: every sick-leave data popup exposes the canonical sick-leave opening date; patient-summary tray is moved to an independent detached process so it survives closing the main application and is closed only from its own window or tray menu; mandatory patient-root onboarding is restored for every visible first launch while retaining the early GUI-heartbeat race fix.",
+  "reason": "User-requested fixes: every sick-leave data popup exposes the canonical sick-leave opening date; patient-summary tray is moved to an independent detached process so it survives closing the main application and is closed only from its own window or tray menu; mandatory patient-root onboarding is restored for every visible first launch while retaining the early GUI-heartbeat race fix. Exact document-mechanics approval is included for the three popup/orchestration files.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -23,6 +23,7 @@
     "patient_registry.py": "0b97b0f67df92730eb9ed12cd8b8db7e31cf3748",
     "patient_registry_mixin.py": "b24c99e23589dfd0718542d5b96c03157e70ed24",
     "tests/intake_lifecycle_regression.py": "aad413654d02b91bcd4c45c7272b311287fcff8e",
-    "tests/patient_registry_regression.py": "c96847181afe50559a18e8b24403475eb8cc5c4f"
+    "tests/patient_registry_regression.py": "c96847181afe50559a18e8b24403475eb8cc5c4f",
+    "tools/document_mechanics_change_approval.json": "1873dc0853c32721ecbacd74da6cf99954fd8ecb"
   }
 }
