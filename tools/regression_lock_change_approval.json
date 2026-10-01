@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "a29b59ab2ca1592c4074861f44716bb6d0103526",
-  "reason": "User-requested fixes: every sick-leave data popup exposes the canonical sick-leave opening date; patient-summary tray is moved to an independent detached process so it survives closing the main application; mandatory patient-root onboarding is restored; real primary Word documents using 'Больничный лист с <дата>' (including split table cells) are ingested into the patient summary; first-line admission-date fallback and explicit skipped-folder diagnostics are added. Exact document-mechanics approval covers the popup/source parsing files.",
+  "reason": "User-requested fixes: every sick-leave data popup exposes the canonical sick-leave opening date; the patient-summary tray runs in an independent detached process and survives closing the main application; mandatory patient-root onboarding is restored; real primary Word sources with a sick-leave label followed by an opening date, including split table cells, are ingested into the patient summary; first-line admission fallback and skipped-folder diagnostics are added. Exact document-mechanics approval covers the popup and source parsing files.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
