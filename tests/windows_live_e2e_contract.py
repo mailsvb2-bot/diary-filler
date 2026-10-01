@@ -156,6 +156,8 @@ def main() -> None:
             '$PSVersionTable.PSVersion.Major -lt 5',
             '[version]"2.327.1"',
             "actions-runner-win-x64",
+            "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12",
+            "GitHub runner download failed over TLS 1.2",
             "ExpectedSha256",
             "Get-FileHash -Algorithm SHA256",
             '"windows10-interactive"',
@@ -189,6 +191,12 @@ def main() -> None:
         ),
         "CMD runner bootstrap",
     )
+
+
+    tls_marker = "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12"
+    download_marker = "Invoke-WebRequest -UseBasicParsing -Uri $asset -OutFile $zip"
+    if installer.index(tls_marker) > installer.index(download_marker):
+        fail("runner bootstrap must enable TLS 1.2 before downloading the GitHub runner")
 
     require_all(
         driver,
