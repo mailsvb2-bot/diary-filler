@@ -154,14 +154,17 @@ def _assert_desktop_wiring_contract() -> None:
 
     for snippet in (
         'PATIENT_SUMMARY_ARGUMENT = "--patient-summary"',
+        'PATIENT_SUMMARY_TRAY_ARGUMENT = "--patient-summary-tray"',
         "app._ensure_patient_registry_folder(first_run=True)",
+        "_run_patient_summary_mode(start_in_tray=True)",
         "remove_patient_summary_autostart()",
     ):
         assert snippet in main_source
+    assert "configure_patient_registry=not bool(intake_primary)" not in main_source
     for snippet in (
         'title="Из какой папки анализировать пациентов?"',
         "install_patient_summary_autostart()",
-        "show_my_patients(self, *, startup_mode: bool = False)",
+        "show_my_patients(self, *, startup_mode: bool = False, start_in_tray: bool = False)",
         "Подготовить ВК по больничному на",
         "Открыть папку пациентов",
         "Сменить путь",
@@ -169,6 +172,7 @@ def _assert_desktop_wiring_contract() -> None:
         'text="Свернуть в трей"',
         "minimize_to_tray",
         "PatientSummaryTray",
+        "launch_patient_summary_tray_process",
         "open_patient_folder",
     ):
         assert snippet in mixin_source
@@ -178,6 +182,9 @@ def _assert_desktop_wiring_contract() -> None:
     registry_source = Path("patient_registry.py").read_text(encoding="utf-8")
     for snippet in (
         "class PatientSummaryTray",
+        "PATIENT_SUMMARY_TRAY_ARGUMENT",
+        "launch_patient_summary_tray_process",
+        "DETACHED_PROCESS",
         "Shell_NotifyIcon",
         "NIM_ADD",
         "NIM_DELETE",
@@ -186,6 +193,35 @@ def _assert_desktop_wiring_contract() -> None:
     ):
         assert snippet in registry_source
     assert "DIR_PATIENT_REGISTRY" in settings_source
+
+
+def _function_source(path: str, function_name: str) -> str:
+    source = Path(path).read_text(encoding="utf-8")
+    marker_text = f"    def {function_name}("
+    start = source.index(marker_text)
+    next_def = source.find("\n    def ", start + len(marker_text))
+    return source[start:] if next_def < 0 else source[start:next_def]
+
+
+def _assert_sick_leave_popup_date_contract() -> None:
+    popup_functions = [
+        ("dialog_expert.py", "_prompt_sick_leave_start_date_if_needed"),
+        ("dialog_expert.py", "_prompt_shared_clinical_options_if_needed"),
+        ("dialog_expert.py", "_prompt_expert_anamnesis_details"),
+        ("dialog_expert.py", "_prompt_discharge_sick_leave_number"),
+        ("dialog_expert.py", "_prompt_discharge_output_requirements"),
+        ("dialog_document_details.py", "_prompt_sick_leave_vk_details"),
+    ]
+    for path, function_name in popup_functions:
+        block = _function_source(path, function_name)
+        assert "С какого числа больничный лист" in block, (path, function_name)
+
+    expert_source = Path("dialog_expert.py").read_text(encoding="utf-8")
+    assert "def _store_sick_leave_start_date_value" in expert_source
+    assert 'self.data.sick_leave = f"нужен с {normalized}"' in expert_source
+
+    orchestrator_source = Path("actions_creation_orchestrator.py").read_text(encoding="utf-8")
+    assert "self.expert_sick_leave_from_var.get().strip()" in orchestrator_source
 
 
 def _assert_pre_admission_sick_leave_is_not_rejected() -> None:
@@ -220,11 +256,12 @@ def main() -> None:
     _assert_vk_wednesday_schedule()
     _assert_discharge_stays_admission_based()
     _assert_desktop_wiring_contract()
+    _assert_sick_leave_popup_date_contract()
     _assert_pre_admission_sick_leave_is_not_rejected()
     print(
         "PATIENT REGISTRY REGRESSION OK: folder scan, discharged-folder exclusion, "
-        "sick-leave chronology, 7..15-day Wednesday VK schedule and "
-        "admission-based discharge duration are locked"
+        "sick-leave chronology, all sick-leave popup opening dates, persistent tray, "
+        "7..15-day Wednesday VK schedule and admission-based discharge duration are locked"
     )
 
 
