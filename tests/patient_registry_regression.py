@@ -53,6 +53,7 @@ def _assert_registry_scan_and_independent_timelines() -> None:
         fixtures = {
             "Иванов": ("Иванов первичный.docx", "Маркер Иванов Тестовый", "01.09.2026", "да, с 20.08.2026"),
             "Петров": ("Петров первичка.docx", "Маркер Петров Тестовый", "15.09.2026", "нет"),
+            "Сидоров": ("Сидоров первичный.docx", "Маркер Сидоров Тестовый", "20.09.2026", ""),
             "Будущий": ("Будущий первичный.docx", "Маркер Будущий Тестовый", "10.10.2026", "да, с 01.10.2026"),
         }
         by_path = {}
@@ -73,7 +74,7 @@ def _assert_registry_scan_and_independent_timelines() -> None:
             return by_path[path]
 
         snapshot = scan_patient_registry(root, as_of=date(2026, 10, 1), parser=parser)
-        assert len(snapshot.patients) == 2
+        assert len(snapshot.patients) == 3
         assert len(snapshot.sick_leave_patients) == 1
 
         ivanov = next(item for item in snapshot.patients if "Иванов" in item.fio)
