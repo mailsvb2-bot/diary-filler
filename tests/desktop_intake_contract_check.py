@@ -665,7 +665,7 @@ def _assert_stale_disabled_intake_self_heals() -> None:
         "startup": startup._desktop_install_agent_autostart,
         "run_key": startup._desktop_install_agent_run_key,
         "start": startup._desktop_start_agent_process,
-        "heartbeat": startup._desktop_schedule_heartbeat,
+        "claim": startup.claim_desktop_gui_session,
     }
     with tempfile.TemporaryDirectory() as tmp:
         try:
@@ -674,10 +674,10 @@ def _assert_stale_disabled_intake_self_heals() -> None:
             startup._desktop_install_agent_autostart = lambda: calls.append("startup") or True  # type: ignore[assignment]
             startup._desktop_install_agent_run_key = lambda: calls.append("run_key") or True  # type: ignore[assignment]
             startup._desktop_start_agent_process = lambda: calls.append("start") or True  # type: ignore[assignment]
-            startup._desktop_schedule_heartbeat = lambda app: calls.append("heartbeat")  # type: ignore[assignment]
+            startup.claim_desktop_gui_session = lambda: calls.append("claim")  # type: ignore[assignment]
             app = RuntimeApp()
             startup.start_desktop_intake_runtime(app)
-            assert {"touch", "startup", "run_key", "start", "heartbeat"} <= set(calls), calls
+            assert {"touch", "startup", "run_key", "start", "claim"} <= set(calls), calls
             assert app.root.scheduled, "runtime health/poll callbacks were not scheduled"
         finally:
             startup._desktop_touch_gui_heartbeat = originals["touch"]  # type: ignore[assignment]
@@ -685,7 +685,7 @@ def _assert_stale_disabled_intake_self_heals() -> None:
             startup._desktop_install_agent_autostart = originals["startup"]  # type: ignore[assignment]
             startup._desktop_install_agent_run_key = originals["run_key"]  # type: ignore[assignment]
             startup._desktop_start_agent_process = originals["start"]  # type: ignore[assignment]
-            startup._desktop_schedule_heartbeat = originals["heartbeat"]  # type: ignore[assignment]
+            startup.claim_desktop_gui_session = originals["claim"]  # type: ignore[assignment]
 
 
 def main() -> None:
