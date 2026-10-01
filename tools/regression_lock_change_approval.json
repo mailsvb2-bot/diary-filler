@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "a29b59ab2ca1592c4074861f44716bb6d0103526",
-  "reason": "User-requested fixes: every sick-leave data popup exposes the canonical sick-leave opening date; patient-summary tray is moved to an independent detached process so it survives closing the main application and is closed only from its own window or tray menu; mandatory patient-root onboarding is restored for every visible first launch while retaining the early GUI-heartbeat race fix. Exact document-mechanics approval is included for the three popup/orchestration files.",
+  "reason": "User-requested fixes: every sick-leave data popup exposes the canonical sick-leave opening date; patient-summary tray is moved to an independent detached process so it survives closing the main application; mandatory patient-root onboarding is restored; real primary Word documents using 'Больничный лист с <дата>' (including split table cells) are ingested into the patient summary; first-line admission-date fallback and explicit skipped-folder diagnostics are added. Exact document-mechanics approval covers the popup/source parsing files.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -20,10 +20,11 @@
     "dialog_document_details.py": "2ddac00e9accdb697812def4db99e7a4e3ef7992",
     "dialog_expert.py": "239742a3e2272cb1ccd9b45740d5e3c3f0a0b372",
     "main.py": "8d340a70c78fb5f775671f98385bc4cd1acbba7a",
-    "patient_registry.py": "0b97b0f67df92730eb9ed12cd8b8db7e31cf3748",
-    "patient_registry_mixin.py": "b24c99e23589dfd0718542d5b96c03157e70ed24",
+    "medical_models.py": "8a71ac8fba4315677d1f2c0b12205d3125e4d022",
+    "patient_registry.py": "899616c54233d77067550d75ee5a654083916487",
+    "patient_registry_mixin.py": "4273f00ed2e33c636f5ccb3136049121c89cb542",
     "tests/intake_lifecycle_regression.py": "aad413654d02b91bcd4c45c7272b311287fcff8e",
-    "tests/patient_registry_regression.py": "c96847181afe50559a18e8b24403475eb8cc5c4f",
-    "tools/document_mechanics_change_approval.json": "1873dc0853c32721ecbacd74da6cf99954fd8ecb"
+    "tests/patient_registry_regression.py": "b25da9a4a7b4cb8109b944dc6b2f83cc2324d7b5",
+    "tools/document_mechanics_change_approval.json": "5616115f0f955c0c83cc40ec9cfa9fae1f012b62"
   }
 }
