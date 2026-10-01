@@ -6,6 +6,7 @@ from pathlib import Path
 import os
 import re
 import subprocess
+import threading
 
 from medical_formatting import parse_date
 from medical_models import normalize_yes_no, parse_sick_leave_value
@@ -269,6 +270,179 @@ def open_patient_folder(path: str | Path) -> bool:
         return True
     except (AttributeError, OSError, subprocess.SubprocessError):
         return False
+
+
+class PatientSummaryTray:
+    """Small native Windows notification-area controller for the patient summary.
+
+    Tk owns all actual windows and must stay on its main thread. The Win32 tray
+    icon therefore runs a tiny message loop on a daemon thread and communicates
+    only through thread-safe Events. The Tk window polls those Events and decides
+    whether to restore or close itself.
+    """
+
+    _TRAY_MESSAGE = 0x0400 + 73  # WM_USER + private app offset
+    _CMD_OPEN = 1001
+    _CMD_CLOSE = 1002
+
+    def __init__(self, title: str = "Мои пациенты") -> None:
+        self.title = str(title or "Мои пациенты")[:127]
+        self._restore_requested = threading.Event()
+        self._close_requested = threading.Event()
+        self._ready = threading.Event()
+        self._stop_requested = threading.Event()
+        self._thread: threading.Thread | None = None
+        self._hwnd: int | None = None
+        self._started_ok = False
+
+    def start(self) -> bool:
+        if os.name != "nt":
+            return False
+        if self._thread is not None and self._thread.is_alive():
+            return self._started_ok
+        self._restore_requested.clear()
+        self._close_requested.clear()
+        self._ready.clear()
+        self._stop_requested.clear()
+        self._started_ok = False
+        self._thread = threading.Thread(
+            target=self._run_windows_tray,
+            name="MedicalDiaryAutofillPatientTray",
+            daemon=True,
+        )
+        self._thread.start()
+        self._ready.wait(timeout=2.0)
+        return self._started_ok
+
+    def stop(self) -> None:
+        self._stop_requested.set()
+        hwnd = self._hwnd
+        if hwnd:
+            try:
+                import win32con
+                import win32gui
+
+                win32gui.PostMessage(hwnd, win32con.WM_CLOSE, 0, 0)
+            except Exception:
+                pass
+        thread = self._thread
+        if thread is not None and thread.is_alive() and thread is not threading.current_thread():
+            thread.join(timeout=1.0)
+        self._thread = None
+        self._hwnd = None
+
+    def consume_restore_request(self) -> bool:
+        requested = self._restore_requested.is_set()
+        if requested:
+            self._restore_requested.clear()
+        return requested
+
+    def consume_close_request(self) -> bool:
+        requested = self._close_requested.is_set()
+        if requested:
+            self._close_requested.clear()
+        return requested
+
+    def _run_windows_tray(self) -> None:
+        try:
+            import win32api
+            import win32con
+            import win32gui
+
+            class_name = f"MedicalDiaryAutofillPatientTray_{os.getpid()}_{id(self)}"
+            hinstance = win32api.GetModuleHandle(None)
+            if self._stop_requested.is_set():
+                self._ready.set()
+                return
+
+            def window_proc(hwnd, msg, wparam, lparam):
+                if msg == self._TRAY_MESSAGE:
+                    if lparam in (win32con.WM_LBUTTONUP, win32con.WM_LBUTTONDBLCLK):
+                        self._restore_requested.set()
+                        return 0
+                    if lparam == win32con.WM_RBUTTONUP:
+                        menu = win32gui.CreatePopupMenu()
+                        try:
+                            win32gui.AppendMenu(menu, win32con.MF_STRING, self._CMD_OPEN, "Открыть сводку")
+                            win32gui.AppendMenu(menu, win32con.MF_SEPARATOR, 0, "")
+                            win32gui.AppendMenu(menu, win32con.MF_STRING, self._CMD_CLOSE, "Закрыть сводку")
+                            x, y = win32gui.GetCursorPos()
+                            win32gui.SetForegroundWindow(hwnd)
+                            command = win32gui.TrackPopupMenu(
+                                menu,
+                                win32con.TPM_LEFTALIGN | win32con.TPM_RETURNCMD | win32con.TPM_NONOTIFY,
+                                x,
+                                y,
+                                0,
+                                hwnd,
+                                None,
+                            )
+                            if command == self._CMD_OPEN:
+                                self._restore_requested.set()
+                            elif command == self._CMD_CLOSE:
+                                self._close_requested.set()
+                        finally:
+                            win32gui.DestroyMenu(menu)
+                        return 0
+                if msg == win32con.WM_CLOSE:
+                    win32gui.DestroyWindow(hwnd)
+                    return 0
+                if msg == win32con.WM_DESTROY:
+                    win32gui.PostQuitMessage(0)
+                    return 0
+                return win32gui.DefWindowProc(hwnd, msg, wparam, lparam)
+
+            wnd_class = win32gui.WNDCLASS()
+            wnd_class.hInstance = hinstance
+            wnd_class.lpszClassName = class_name
+            wnd_class.lpfnWndProc = window_proc
+            win32gui.RegisterClass(wnd_class)
+            hwnd = win32gui.CreateWindow(
+                class_name,
+                class_name,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                hinstance,
+                None,
+            )
+            self._hwnd = hwnd
+            if self._stop_requested.is_set():
+                win32gui.DestroyWindow(hwnd)
+                self._ready.set()
+                return
+            icon = win32gui.LoadIcon(0, win32con.IDI_APPLICATION)
+            notify_data = (
+                hwnd,
+                0,
+                win32gui.NIF_ICON | win32gui.NIF_MESSAGE | win32gui.NIF_TIP,
+                self._TRAY_MESSAGE,
+                icon,
+                self.title,
+            )
+            win32gui.Shell_NotifyIcon(win32gui.NIM_ADD, notify_data)
+            self._started_ok = True
+            self._ready.set()
+            try:
+                win32gui.PumpMessages()
+            finally:
+                try:
+                    win32gui.Shell_NotifyIcon(win32gui.NIM_DELETE, (hwnd, 0))
+                except Exception:
+                    pass
+                try:
+                    win32gui.UnregisterClass(class_name, hinstance)
+                except Exception:
+                    pass
+        except Exception:
+            self._started_ok = False
+            self._ready.set()
+        finally:
+            self._hwnd = None
 
 
 def install_patient_summary_autostart() -> bool:

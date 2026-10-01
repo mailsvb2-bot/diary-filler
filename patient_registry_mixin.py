@@ -9,6 +9,7 @@ from app_config import *
 from medical_formatting import parse_date
 from patient_registry import (
     PatientRegistryEntry,
+    PatientSummaryTray,
     hospitalization_days_on,
     install_patient_summary_autostart,
     next_sick_leave_vk_date,
@@ -267,7 +268,10 @@ class PatientRegistryMixin:
             except Exception:
                 pass
 
+        tray = PatientSummaryTray("Мои пациенты")
+
         def close_window() -> None:
+            tray.stop()
             try:
                 win.destroy()
             finally:
@@ -277,7 +281,43 @@ class PatientRegistryMixin:
                     except Exception:
                         pass
 
+        def restore_from_tray() -> None:
+            tray.stop()
+            try:
+                win.deiconify()
+                win.lift()
+                win.focus_force()
+            except Exception:
+                pass
+
+        def minimize_to_tray() -> None:
+            if tray.start():
+                try:
+                    win.withdraw()
+                except Exception:
+                    tray.stop()
+                    win.iconify()
+            else:
+                # Development/non-Windows fallback: never make the summary
+                # unreachable merely because a native tray is unavailable.
+                win.iconify()
+
+        def poll_tray_requests() -> None:
+            try:
+                if not win.winfo_exists():
+                    tray.stop()
+                    return
+                if tray.consume_close_request():
+                    close_window()
+                    return
+                if tray.consume_restore_request():
+                    restore_from_tray()
+                win.after(200, poll_tray_requests)
+            except Exception:
+                tray.stop()
+
         win.protocol("WM_DELETE_WINDOW", close_window)
+        win.after(200, poll_tray_requests)
 
         top = tk.Frame(win, bg=DEEP)
         top.pack(fill="x", padx=16, pady=(14, 8))
@@ -516,8 +556,8 @@ class PatientRegistryMixin:
 
         tk.Button(
             footer,
-            text="Свернуть",
-            command=win.iconify,
+            text="Свернуть в трей",
+            command=minimize_to_tray,
             bg=DEEP,
             fg=MUTED,
             activebackground=BG_2,

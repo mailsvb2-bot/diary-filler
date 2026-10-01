@@ -34,6 +34,7 @@ from startup import (
     DESKTOP_INTAKE_PRIMARY_ARGUMENT,
     _create_root,
     _desktop_agent_is_active,
+    claim_desktop_gui_session,
     _startup_log_path,
     _write_startup_error,
     desktop_intake_root_path,
@@ -60,8 +61,14 @@ def _installation_onboarding_marker_path() -> Path:
     return Path(sys.executable).resolve().parent / "onboarding-required.flag"
 
 
-def _first_launch_onboarding(app) -> None:
-    """Heal the mandatory intake workflow and ask only for staff data."""
+def _first_launch_onboarding(app, *, configure_patient_registry: bool = True) -> None:
+    """Heal mandatory intake and perform normal visible first-run onboarding.
+
+    A watcher-launched GUI may carry an explicit --intake-primary event. In that
+    case the unrelated patient-registry folder question is deferred until the
+    next normal/manual launch so closing the chooser can never appear to have
+    caused the pending primary document to load.
+    """
     if os.name != "nt" or os.environ.get("CI", "").strip():
         return
 
@@ -117,18 +124,19 @@ def _first_launch_onboarding(app) -> None:
         except Exception:
             onboarding_complete = False
 
-    # Patient overview has its own explicitly selected root. Ask once on the
-    # first normal GUI start (and after upgrades where it was never configured).
-    # Cancelling does not block the existing medical-document workflow; the
-    # onboarding marker remains so the question can be offered again.
-    try:
-        if not app._patient_registry_root():
-            if not app._ensure_patient_registry_folder(first_run=True):
-                onboarding_complete = False
-        else:
-            app._ensure_patient_registry_folder(first_run=True)
-    except Exception:
-        onboarding_complete = False
+    # Patient overview has its own explicitly selected root. Ask only from a
+    # normal/manual GUI launch. A watcher-launched GUI must first handle the
+    # exact intake event that launched it, without interleaving an unrelated
+    # folder chooser immediately before that document is applied.
+    if configure_patient_registry:
+        try:
+            if not app._patient_registry_root():
+                if not app._ensure_patient_registry_folder(first_run=True):
+                    onboarding_complete = False
+            else:
+                app._ensure_patient_registry_folder(first_run=True)
+        except Exception:
+            onboarding_complete = False
 
     if force_after_install and onboarding_complete:
         try:
@@ -489,16 +497,24 @@ def main() -> None:
                 raise SystemExit(exit_code)
             return
 
+        intake_primary = _intake_primary_argument(sys.argv[1:]) or None
         root = _create_root()
+        # Claim the visible-GUI heartbeat before imports and modal onboarding.
+        # Otherwise the hidden intake watcher can race a long folder chooser and
+        # launch a second GUI with an unrelated Word file.
+        claim_desktop_gui_session()
+
         # Import the large GUI/document graph only for a real visible session.
         # The persistent --intake-agent stays lightweight and no longer pays the
         # import cost of parsers/renderers/templates at logon.
         from app import CombinedMedicalDiaryApp
 
         app = CombinedMedicalDiaryApp(root)
-        _first_launch_onboarding(app)
+        _first_launch_onboarding(
+            app,
+            configure_patient_registry=not bool(intake_primary),
+        )
 
-        intake_primary = _intake_primary_argument(sys.argv[1:]) or None
         if intake_primary:
             # The intake path can open modal questions while applying the primary.
             # Raise the frameless Tk root first so the user never gets a running
