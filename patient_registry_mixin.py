@@ -126,6 +126,14 @@ class PatientRegistryMixin:
             self.create_selected_outputs(print_after=False)
 
     def show_my_patients(self, *, startup_mode: bool = False) -> None:
+        # A logon summary must never block Windows with a first-run folder dialog.
+        # Folder onboarding belongs to the normal visible application start.
+        if startup_mode and not self._patient_registry_root():
+            try:
+                self.root.destroy()
+            except Exception:
+                pass
+            return
         if not self._ensure_patient_registry_folder(first_run=False):
             if startup_mode:
                 try:
