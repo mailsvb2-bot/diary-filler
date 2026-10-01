@@ -45,12 +45,13 @@ def parse_sick_leave_value(value: str) -> tuple[str, str]:
     normalized = text.lower().replace("ё", "е")
     if re.search(r"\bне\s+(?:нужен|нужна|нужно|требуется)\b", normalized):
         return "нет", ""
-    match = re.search(
-        r"\b(?:нужен|нужна|нужно)\b(?:\s+с\s+([0-9]{4,8}|[0-9]{1,2}(?:[./-][0-9]{1,2}(?:[./-][0-9]{2,4})?)?)(?=$|[\s,.;]))?",
+    date_token = r"([0-9]{4,8}|[0-9]{1,2}(?:[./-][0-9]{1,2}(?:[./-][0-9]{2,4})?)?)"
+    positive = re.search(
+        rf"\b(?:да|нужен|нужна|нужно)\b(?:\s*[,;:-]?\s*с\s+{date_token}(?=$|[\s,.;]))?",
         normalized,
     )
-    if match:
-        return "да", (match.group(1) or "")
+    if positive:
+        return "да", (positive.group(1) or "")
     return "", ""
 
 
