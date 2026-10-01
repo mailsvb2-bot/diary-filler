@@ -1,13 +1,10 @@
 {
   "schema_version": 1,
-  "base_sha": "5695ea4810eb022ddd28ddb5576ae5bcca7e621a",
-  "reason": "Explicit user-requested document mechanics change: allow sick leave before admission and recognize the sick-leave field used by primary documents, with patient-registry regression coverage and unchanged admission-based discharge treatment duration.",
+  "base_sha": "a9d9c8dd3c13defd8c18d53fb79ade757a0f4e8c",
+  "reason": "Explicit user-requested document mechanics change: every sick-leave data popup must expose and persist the single canonical 'С какого числа больничный лист' date, including the sick-leave VK and discharge flows, without changing admission-based treatment duration.",
   "approved_blobs": {
-    "app.py": "23f911f1e9d28293cee60b4d2b475666d16845b2",
-    "app_config.py": "d99c22a829680e88ffe301441c968ec9879e44c2",
-    "dialog_expert.py": "61605782be743fcfc6d8907b733886ad55c8adc2",
-    "medical_models.py": "a3b4b177af62d3df558a0773bc5e64dd714adfb5",
-    "medical_parser.py": "f3f554855a57168877f786099b54a007ef76b4ed",
-    "medical_service.py": "c3fc2351ce89e98cc3b8544fc979e628304e0675"
+    "actions_creation_orchestrator.py": "865a5e521d18d1b54d6c0a50546382d63837cd90",
+    "dialog_document_details.py": "2ddac00e9accdb697812def4db99e7a4e3ef7992",
+    "dialog_expert.py": "239742a3e2272cb1ccd9b45740d5e3c3f0a0b372"
   }
 }
