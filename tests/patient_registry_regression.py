@@ -4,6 +4,11 @@ from datetime import date
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
+import sys
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 from medical_expert import build_expert_anamnesis
 from medical_formatting import treatment_period_text
