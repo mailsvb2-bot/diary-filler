@@ -17,7 +17,7 @@
   ],
   "approved_blobs": {
     "actions_creation_orchestrator.py": "865a5e521d18d1b54d6c0a50546382d63837cd90",
-    "dialog_document_details.py": "2ddac00e9accdb697812def4db99e7a4e3ef7992",
+    "dialog_document_details.py": "e90a2f85e614b906123851717e0c85a1153e4196",
     "dialog_expert.py": "239742a3e2272cb1ccd9b45740d5e3c3f0a0b372",
     "main.py": "8d340a70c78fb5f775671f98385bc4cd1acbba7a",
     "medical_models.py": "8a71ac8fba4315677d1f2c0b12205d3125e4d022",
@@ -25,6 +25,6 @@
     "patient_registry_mixin.py": "4273f00ed2e33c636f5ccb3136049121c89cb542",
     "tests/intake_lifecycle_regression.py": "aad413654d02b91bcd4c45c7272b311287fcff8e",
     "tests/patient_registry_regression.py": "b25da9a4a7b4cb8109b944dc6b2f83cc2324d7b5",
-    "tools/document_mechanics_change_approval.json": "5616115f0f955c0c83cc40ec9cfa9fae1f012b62"
+    "tools/document_mechanics_change_approval.json": "4ba53596e9516e1012004072d1c8d5fdd5be5ee2"
   }
 }
