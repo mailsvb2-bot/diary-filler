@@ -7,6 +7,8 @@ from types import SimpleNamespace
 
 from medical_expert import build_expert_anamnesis
 from medical_models import PatientData, parse_sick_leave_value
+from medical_parser import MedicalTextParser
+from medical_service import MedicalDocumentService
 from patient_registry import (
     first_sick_leave_vk_date,
     hospitalization_days_on,
@@ -22,6 +24,18 @@ def _assert_sick_leave_parser() -> None:
     assert parse_sick_leave_value("Да с 01092026") == ("да", "01092026")
     assert parse_sick_leave_value("нет") == ("нет", "")
     assert parse_sick_leave_value("не нужен") == ("нет", "")
+
+
+def _assert_primary_text_sick_leave_label() -> None:
+    data = MedicalTextParser().parse_text(
+        "01.09.2026 Первичный осмотр\n"
+        "Ф.И.О: Иванов Иван Иванович\n"
+        "Год рождения: 1980\n"
+        "Нужен больничный лист: да, с 20.08.2026\n"
+        "Диагноз: F20.0"
+    )
+    assert data.sick_leave == "да, с 20.08.2026"
+    assert parse_sick_leave_value(data.sick_leave) == ("да", "20.08.2026")
 
 
 def _assert_primary_filename_contract() -> None:
@@ -100,17 +114,32 @@ def _assert_discharge_stays_admission_based() -> None:
 
 
 def _assert_pre_admission_sick_leave_is_not_rejected() -> None:
-    service_source = Path("medical_service.py").read_text(encoding="utf-8")
-    dialog_source = Path("dialog_expert.py").read_text(encoding="utf-8")
-    forbidden_service = (
-        'data.admission_date, data.expert_sick_leave_from, "Дата начала больничного"'
+    data = PatientData(
+        fio="Иванов Иван Иванович",
+        birth="01.01.1980",
+        admission_date="10.09.2026",
+        discharge_date="20.09.2026",
+        case_number="1",
+        diagnosis="F20.0",
+        treatment_plan="Терапия",
+        expert_work_status="нет",
+        expert_sick_leave_needed="да",
+        expert_sick_leave_from="01.09.2026",
+        psych_account_status="нет",
+        epi_present="нет",
+        admission_occurrence="первично",
     )
-    assert forbidden_service not in service_source
+    MedicalDocumentService()._validate_and_normalize_selected_data(data, ["discharge"])
+    assert data.expert_sick_leave_from == "01.09.2026"
+    assert data.sick_leave == "нужен с 01.09.2026"
+
+    dialog_source = Path("dialog_expert.py").read_text(encoding="utf-8")
     assert "Дата начала больничного не может быть раньше даты госпитализации." not in dialog_source
 
 
 def main() -> None:
     _assert_sick_leave_parser()
+    _assert_primary_text_sick_leave_label()
     _assert_primary_filename_contract()
     _assert_registry_scan_and_independent_timelines()
     _assert_vk_wednesday_schedule()
