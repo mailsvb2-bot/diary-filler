@@ -17,7 +17,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 TARGET_VERSION = "1.4.25"
 TARGET_VERSION_LABEL = "v1.4.25-sick-vk-diagnosis"
-MAX_PYTHON_FILES = 126
+# Two cohesive patient-registry modules are intentional production architecture:
+# one pure scanner/model and one GUI integration layer. The budget remains exact
+# so unrelated future modules cannot accumulate silently.
+MAX_PYTHON_FILES = 128
+REQUIRED_PATIENT_REGISTRY_RUNTIME_FILES = {"patient_registry.py", "patient_registry_mixin.py"}
 MAX_TINY_PYTHON_FILES = 25
 # Release/CI probes are executable quality gates, not runtime architecture.
 # Keep the explicit runtime budget intact instead of "fixing" the gate by
@@ -215,6 +219,10 @@ def _assert_architecture_hygiene() -> None:
             f"Too many runtime Python files after dust collapse: "
             f"{len(runtime_py_files)} > {MAX_PYTHON_FILES}"
         )
+    runtime_names = {path.name for path in runtime_py_files}
+    missing_registry = sorted(REQUIRED_PATIENT_REGISTRY_RUNTIME_FILES - runtime_names)
+    if missing_registry:
+        _fail("Patient registry architecture incomplete: " + ", ".join(missing_registry))
 
     tiny_files = []
     for path in py_files:
