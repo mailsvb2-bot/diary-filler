@@ -347,6 +347,7 @@ class DialogDocumentDetailsMixin:
         ) == "нет"
         rows = [
             ("Номер истории болезни", self._case_number_popup_default()),
+            ("С какого числа больничный лист", self._sick_leave_start_date_popup_default()),
             ("Дата / дата проведения ВК", date_default),
             ("Номер протокола", self.sick_leave_vk_protocol_number_var.get().strip()),
             ("Дата протокола", protocol_date_default),
@@ -363,19 +364,25 @@ class DialogDocumentDetailsMixin:
             width=64,
             # Первая дата автоматически дублируется в «От» и в
             # «Дата проведения комиссии», но оба поля можно изменить вручную.
-            linked_groups=[(1, [3, 4])],
+            linked_groups=[(2, [4, 5])],
         )
         if values is None:
             return False
         if not self._store_case_number_value(values[0].strip()):
             messagebox.showwarning("Не заполнено поле", "Укажите номер истории болезни.")
             return False
-        sick_vk_date = self._normalize_required_date_for_ui(values[1].strip(), "Дата ВК больничного")
-        sick_vk_protocol_date = self._normalize_required_date_for_ui(values[3].strip(), "Дата протокола ВК больничного")
-        sick_vk_commission_date = self._normalize_required_date_for_ui(values[4].strip(), "Дата проведения комиссии")
+        if not self._store_sick_leave_start_date_value(values[1].strip()):
+            messagebox.showwarning(
+                "Некорректная дата",
+                "Укажите, с какого числа больничный лист.",
+            )
+            return False
+        sick_vk_date = self._normalize_required_date_for_ui(values[2].strip(), "Дата ВК больничного")
+        sick_vk_protocol_date = self._normalize_required_date_for_ui(values[4].strip(), "Дата протокола ВК больничного")
+        sick_vk_commission_date = self._normalize_required_date_for_ui(values[5].strip(), "Дата проведения комиссии")
         if sick_vk_date is None or sick_vk_protocol_date is None or sick_vk_commission_date is None:
             return False
-        protocol_number = values[2].strip()
+        protocol_number = values[3].strip()
         if not protocol_number:
             messagebox.showwarning("Не заполнено поле", "Укажите номер протокола ВК больничного.")
             return False
@@ -388,8 +395,8 @@ class DialogDocumentDetailsMixin:
             self.sick_leave_vk_position_var.set("")
             self.sick_leave_vk_work_position_var.set("")
         else:
-            work_org = values[5].strip()
-            position = values[6].strip()
+            work_org = values[6].strip()
+            position = values[7].strip()
             if not work_org or not position:
                 messagebox.showwarning("Не заполнено поле", "Укажите место работы и должность.")
                 return False
