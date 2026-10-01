@@ -86,7 +86,18 @@ $zip = Join-Path $env:TEMP "actions-runner-win-x64-$RunnerVersion.zip"
 $asset = "https://github.com/actions/runner/releases/download/v$RunnerVersion/actions-runner-win-x64-$RunnerVersion.zip"
 
 Write-Host "Downloading official GitHub Actions runner v$RunnerVersion..."
-Invoke-WebRequest -UseBasicParsing -Uri $asset -OutFile $zip
+# Windows 10 1607 / Windows PowerShell 5.1 may otherwise negotiate the
+# framework's legacy HTTPS default. GitHub requires TLS 1.2+.
+try {
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+} catch {
+    Fail "TLS 1.2 could not be enabled in Windows PowerShell: $($_.Exception.Message)"
+}
+try {
+    Invoke-WebRequest -UseBasicParsing -Uri $asset -OutFile $zip
+} catch {
+    Fail "GitHub runner download failed over TLS 1.2. Ensure Windows root certificates and TLS 1.2 support are current. Underlying error: $($_.Exception.Message)"
+}
 $actual = (Get-FileHash -Algorithm SHA256 -LiteralPath $zip).Hash
 if ($actual.ToLowerInvariant() -ne $ExpectedSha256.ToLowerInvariant()) {
     Remove-Item -LiteralPath $zip -Force -ErrorAction SilentlyContinue
