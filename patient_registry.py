@@ -255,3 +255,23 @@ def install_patient_summary_autostart() -> bool:
         return True
     except (OSError, ImportError):
         return False
+
+def remove_patient_summary_autostart() -> None:
+    """Remove the per-user logon summary registration during uninstall."""
+    if os.name != "nt":
+        return
+    try:
+        import winreg
+
+        with winreg.OpenKey(
+            winreg.HKEY_CURRENT_USER,
+            PATIENT_SUMMARY_RUN_KEY,
+            0,
+            winreg.KEY_SET_VALUE,
+        ) as key:
+            try:
+                winreg.DeleteValue(key, PATIENT_SUMMARY_RUN_VALUE_NAME)
+            except FileNotFoundError:
+                pass
+    except (OSError, ImportError):
+        pass
