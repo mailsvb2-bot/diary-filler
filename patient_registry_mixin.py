@@ -50,9 +50,11 @@ class PatientRegistryMixin:
 
     def _ensure_patient_registry_folder(self, *, first_run: bool = False) -> bool:
         current = self._patient_registry_root()
-        if current:
+        if current and Path(current).expanduser().is_dir():
             install_patient_summary_autostart()
             return True
+        # Empty, moved or deleted roots are not a valid completed onboarding.
+        # Ask again instead of silently keeping a stale saved string.
         return self._prompt_patient_registry_folder(first_run=first_run)
 
     def _registry_query_date(self, raw: str) -> date | None:
