@@ -5,7 +5,11 @@ import ast
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-MAX_RUNTIME_PYTHON_FILES = 126
+# The patient registry is intentionally split into one pure model/scanner and
+# one Tk integration layer. Keep the budget exact: further root-module growth
+# must be reviewed instead of silently expanding.
+MAX_RUNTIME_PYTHON_FILES = 128
+REQUIRED_PATIENT_REGISTRY_RUNTIME_FILES = {"patient_registry.py", "patient_registry_mixin.py"}
 RELEASE_ONLY_ENTRYPOINTS = {"gui_runtime_check.py", "verify_built_exe.py"}
 
 
@@ -25,6 +29,10 @@ def assert_runtime_budget() -> None:
     runtime = [path for path in root_python if path.name not in RELEASE_ONLY_ENTRYPOINTS]
     if len(runtime) > MAX_RUNTIME_PYTHON_FILES:
         fail(f"runtime Python budget increased: {len(runtime)} > {MAX_RUNTIME_PYTHON_FILES}")
+    runtime_names = {path.name for path in runtime}
+    missing_registry = sorted(REQUIRED_PATIENT_REGISTRY_RUNTIME_FILES - runtime_names)
+    if missing_registry:
+        fail("patient registry architecture is incomplete: " + ", ".join(missing_registry))
 
 
 def assert_behavior_contracts() -> None:
@@ -119,6 +127,7 @@ def assert_installer_contract() -> None:
         'Name: "{userdesktop}\\Выписанные пациенты"; Flags: uninsneveruninstall',
         "[Registry]",
         'ValueName: "MedicalDiaryAutofill Intake"',
+        "'MedicalDiaryAutofill Patients'",
         'Parameters: "--intake-agent"; Flags: runhidden nowait',
         "[InstallDelete]",
         "desktop-intake-agent-handoff.json",
@@ -159,6 +168,7 @@ def assert_installer_contract() -> None:
         "Uninstaller removed a user-owned file from Desktop\\Выписанные пациенты",
         "MedicalDiaryAutofill process survived uninstall",
         "HKCU Run watcher entry survived uninstall",
+        "HKCU Run patient summary entry survived uninstall",
         "Startup watcher script survived uninstall",
     ):
         if marker not in installer_smoke:
