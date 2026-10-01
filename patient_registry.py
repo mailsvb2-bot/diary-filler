@@ -290,6 +290,7 @@ class PatientSummaryTray:
         self._restore_requested = threading.Event()
         self._close_requested = threading.Event()
         self._ready = threading.Event()
+        self._stop_requested = threading.Event()
         self._thread: threading.Thread | None = None
         self._hwnd: int | None = None
         self._started_ok = False
@@ -302,6 +303,7 @@ class PatientSummaryTray:
         self._restore_requested.clear()
         self._close_requested.clear()
         self._ready.clear()
+        self._stop_requested.clear()
         self._started_ok = False
         self._thread = threading.Thread(
             target=self._run_windows_tray,
@@ -313,6 +315,7 @@ class PatientSummaryTray:
         return self._started_ok
 
     def stop(self) -> None:
+        self._stop_requested.set()
         hwnd = self._hwnd
         if hwnd:
             try:
@@ -348,6 +351,9 @@ class PatientSummaryTray:
 
             class_name = f"MedicalDiaryAutofillPatientTray_{os.getpid()}_{id(self)}"
             hinstance = win32api.GetModuleHandle(None)
+            if self._stop_requested.is_set():
+                self._ready.set()
+                return
 
             def window_proc(hwnd, msg, wparam, lparam):
                 if msg == self._TRAY_MESSAGE:
@@ -405,6 +411,10 @@ class PatientSummaryTray:
                 None,
             )
             self._hwnd = hwnd
+            if self._stop_requested.is_set():
+                win32gui.DestroyWindow(hwnd)
+                self._ready.set()
+                return
             icon = win32gui.LoadIcon(0, win32con.IDI_APPLICATION)
             notify_data = (
                 hwnd,
