@@ -6,6 +6,8 @@ from tempfile import TemporaryDirectory
 from types import SimpleNamespace
 import sys
 
+from docx import Document
+
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
@@ -29,6 +31,9 @@ from patient_registry import (
 def _assert_sick_leave_parser() -> None:
     assert parse_sick_leave_value("да, с 01.09.2026") == ("да", "01.09.2026")
     assert parse_sick_leave_value("Да с 01092026") == ("да", "01092026")
+    assert parse_sick_leave_value("с 01.09.2026") == ("да", "01.09.2026")
+    assert parse_sick_leave_value("с 01.09.2026 числа") == ("да", "01.09.2026")
+    assert parse_sick_leave_value("от 01092026") == ("да", "01092026")
     assert parse_sick_leave_value("нет") == ("нет", "")
     assert parse_sick_leave_value("не нужен") == ("нет", "")
 
@@ -55,6 +60,36 @@ def _assert_primary_filename_contract() -> None:
     assert is_discharge_patient_filename("Петров (выписной).doc")
     assert not is_discharge_patient_filename("Иванов первичный.docx")
     assert not is_discharge_patient_filename("Выписной.txt")
+
+
+def _assert_real_docx_registry_ingestion() -> None:
+    """Exercise the exact Word -> parser -> registry path used by «Мои пациенты»."""
+    with TemporaryDirectory(prefix="patient-registry-real-docx-") as temp:
+        root = Path(temp)
+        folder = root / "Иванов"
+        folder.mkdir()
+        primary = folder / "Иванов первичный.docx"
+
+        doc = Document()
+        # Real ward format: admission date may be the first line by itself.
+        doc.add_paragraph("01.10.2026")
+        doc.add_paragraph("Ф.И.О.: Маркер Иванов Тестовый")
+        doc.add_paragraph("Год рождения: 1980")
+        # Real user format: no separate «да», the date itself means the LN is open.
+        doc.add_paragraph("Больничный лист с 25.09.2026 числа")
+        doc.add_paragraph("Диагноз: F20.0")
+        doc.save(primary)
+
+        snapshot = scan_patient_registry(root, as_of=date(2026, 10, 2))
+        assert len(snapshot.patients) == 1, snapshot.issues
+        assert len(snapshot.sick_leave_patients) == 1, snapshot.issues
+
+        patient = snapshot.patients[0]
+        assert patient.fio == "Маркер Иванов Тестовый"
+        assert patient.admission_date == date(2026, 10, 1)
+        assert patient.sick_leave_needed is True
+        assert patient.sick_leave_from == date(2026, 9, 25)
+        assert not patient.warning
 
 
 def _assert_registry_scan_and_independent_timelines() -> None:
@@ -252,6 +287,7 @@ def main() -> None:
     _assert_sick_leave_parser()
     _assert_primary_text_sick_leave_label()
     _assert_primary_filename_contract()
+    _assert_real_docx_registry_ingestion()
     _assert_registry_scan_and_independent_timelines()
     _assert_vk_wednesday_schedule()
     _assert_discharge_stays_admission_based()
@@ -260,7 +296,7 @@ def main() -> None:
     _assert_pre_admission_sick_leave_is_not_rejected()
     print(
         "PATIENT REGISTRY REGRESSION OK: folder scan, discharged-folder exclusion, "
-        "sick-leave chronology, all sick-leave popup opening dates, persistent tray, "
+        "real DOCX ingestion, sick-leave chronology, all sick-leave popup opening dates, persistent tray, "
         "7..15-day Wednesday VK schedule and admission-based discharge duration are locked"
     )
 
