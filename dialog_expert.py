@@ -644,9 +644,9 @@ class DialogExpertMixin:
                 return
             self._sync_shared_work_details(org, position)
             self.expert_sick_leave_needed_var.set("да")
-            sick_from = self._normalize_date_for_ui(sick_from)
-            self.expert_sick_leave_from_var.set(sick_from)
-            self._update_expert_sick_leave_display()
+            if not self._store_sick_leave_start_date_value(sick_from):
+                error_label.config(text="укажите корректную дату начала больничного.")
+                return
             result = True
             win.destroy()
 
@@ -688,12 +688,21 @@ class DialogExpertMixin:
         """Запросить номер больничного листа для выписного эпикриза."""
         values = self._prompt_fields(
             title="Больничный лист для выписного эпикриза",
-            rows=[("Номер больничного листа", self.expert_sick_leave_number_var.get().strip())],
+            rows=[
+                ("С какого числа больничный лист", self._sick_leave_start_date_popup_default()),
+                ("Номер больничного листа", self.expert_sick_leave_number_var.get().strip()),
+            ],
             width=52,
         )
         if values is None:
             return False
-        number = values[0].strip()
+        if not self._store_sick_leave_start_date_value(values[0].strip()):
+            messagebox.showwarning(
+                "Некорректная дата",
+                "Укажите, с какого числа больничный лист.",
+            )
+            return False
+        number = values[1].strip()
         if not number:
             messagebox.showwarning("Не заполнено поле", "Укажите номер больничного листа.")
             return False
@@ -1051,6 +1060,8 @@ class DialogExpertMixin:
             detail_fields.append("discharge_date")
 
         if self._should_prompt_discharge_sick_leave_number():
+            detail_rows.append(("С какого числа больничный лист", self._sick_leave_start_date_popup_default()))
+            detail_fields.append("sick_leave_from")
             detail_rows.append(("Номер больничного листа", self.expert_sick_leave_number_var.get().strip()))
             detail_fields.append("sick_leave_number")
 
@@ -1116,6 +1127,13 @@ class DialogExpertMixin:
                     messagebox.showwarning(
                         "Некорректная дата выписки",
                         "Дата выписки должна быть корректной, не раньше даты поступления и в формате ДД.ММ.ГГГГ, ДДММГГГГ, ДДММГГ или коротко ДМГГ, например 20.04.2026, 200426 или 1126.",
+                    )
+                    return False
+            elif field == "sick_leave_from":
+                if not self._store_sick_leave_start_date_value(value):
+                    messagebox.showwarning(
+                        "Некорректная дата",
+                        "Укажите, с какого числа больничный лист.",
                     )
                     return False
             elif field == "sick_leave_number":
