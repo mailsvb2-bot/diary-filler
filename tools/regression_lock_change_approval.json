@@ -27,7 +27,7 @@
     "patient_registry_mixin.py": "d1da1ed53497c3de6dc3b3bcb6bdddbd29323891",
     "release_check.py": "f113a577075af20228d4db4b8e379333c2c6c319",
     "settings_mixin.py": "02e31f41600be0c0146c0e564d9aa00509fcfbdc",
-    "tests/patient_registry_regression.py": "d8dccce2b8882c2408d7abb58e58352247234508",
+    "tests/patient_registry_regression.py": "6d39d4726526d7c0b2f3716824baf6946893af2b",
     "tests/regression_surface_inventory.py": "1c1f99019ff8a071da18698bddeb0fc776b32c62",
     "tools/ci_gate_lock.py": "40668544c260019cf3b920b5c0e44f4aa965fdeb",
     "window_mixin.py": "511829b1936a125eaea084325feadd9ef2478e22"
