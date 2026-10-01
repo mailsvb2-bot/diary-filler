@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "a29b59ab2ca1592c4074861f44716bb6d0103526",
-  "reason": "User-requested fixes: every sick-leave data popup exposes the canonical sick-leave opening date; the patient-summary tray runs in an independent detached process and survives closing the main application; mandatory patient-root onboarding is restored; real primary Word sources with a sick-leave label followed by an opening date, including split table cells, are ingested into the patient summary; first-line admission fallback and skipped-folder diagnostics are added. Exact document-mechanics approval covers the popup and source parsing files.",
+  "reason": "User-requested fixes: every sick-leave data popup exposes the canonical sick-leave opening date; the patient-summary tray runs in an independent detached process and survives closing the main application; mandatory patient-root onboarding is restored; real primary Word sources with a sick-leave label followed by an opening date, including split table cells, are ingested into the patient summary; first-line admission fallback and skipped-folder diagnostics are added. Production audit is updated to lock the new single-popup sick-leave date contract. Exact document-mechanics approval covers the popup and source parsing files.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -25,6 +25,7 @@
     "patient_registry_mixin.py": "4273f00ed2e33c636f5ccb3136049121c89cb542",
     "tests/intake_lifecycle_regression.py": "aad413654d02b91bcd4c45c7272b311287fcff8e",
     "tests/patient_registry_regression.py": "b25da9a4a7b4cb8109b944dc6b2f83cc2324d7b5",
-    "tools/document_mechanics_change_approval.json": "4ba53596e9516e1012004072d1c8d5fdd5be5ee2"
+    "tools/document_mechanics_change_approval.json": "4ba53596e9516e1012004072d1c8d5fdd5be5ee2",
+    "prod_audit.py": "f74e58286872f6cd41ea34f87f38ddfdeea6ab18"
   }
 }
