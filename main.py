@@ -62,7 +62,7 @@ def _installation_onboarding_marker_path() -> Path:
     return Path(sys.executable).resolve().parent / "onboarding-required.flag"
 
 
-def _first_launch_onboarding(app, *, configure_patient_registry: bool = True) -> None:
+def _first_launch_onboarding(app) -> None:
     """Heal mandatory intake and perform visible first-run onboarding.
 
     The visible-GUI heartbeat is claimed before this function is called, so even
@@ -127,15 +127,14 @@ def _first_launch_onboarding(app, *, configure_patient_registry: bool = True) ->
     # Patient overview has its own explicitly selected root. This is mandatory
     # first-run onboarding for every visible GUI, including watcher-launched
     # sessions. The early GUI heartbeat prevents the old duplicate-launch race.
-    if configure_patient_registry:
-        try:
-            if not app._patient_registry_root():
-                if not app._ensure_patient_registry_folder(first_run=True):
-                    onboarding_complete = False
-            else:
-                app._ensure_patient_registry_folder(first_run=True)
-        except Exception:
-            onboarding_complete = False
+    try:
+        if not app._patient_registry_root():
+            if not app._ensure_patient_registry_folder(first_run=True):
+                onboarding_complete = False
+        else:
+            app._ensure_patient_registry_folder(first_run=True)
+    except Exception:
+        onboarding_complete = False
 
     if force_after_install and onboarding_complete:
         try:
