@@ -22,6 +22,7 @@
     "startup.py": "2d37b18c487f5966d31a30e4c259e26566168e5f",
     "tests/intake_lifecycle_regression.py": "d6a3d82919f41382dd197da8694d5bb1d8fe30bf",
     "tests/patient_registry_regression.py": "8111a458ddf686b0295b892d4841ce9decbb76b6",
-    "window_mixin.py": "f7ecaeef7d597bf7366828584d711da15bdabd2d"
+    "window_mixin.py": "f7ecaeef7d597bf7366828584d711da15bdabd2d",
+    "tests/desktop_intake_contract_check.py": "ab8f098b4d4bf9ff05a3e9b4be2dc3e3da3660db"
   }
 }
