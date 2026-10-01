@@ -36,6 +36,7 @@
     "installer/MedicalDiaryAutofill.iss": "a053b9e4c8f125eee911f490e0079447597eb318",
     "tools/windows_installer_smoke.ps1": "6355628cd023f91b1b44c8ba408fec782727c15e",
     "prod_audit.py": "afea15bde3e202efd9ebfa94b314a6a5c1e3bed3",
-    "tests/intake_lifecycle_regression.py": "fd0b80d90a1a0257d8191af6bb2d49cde4831ee1"
+    "tests/intake_lifecycle_regression.py": "fd0b80d90a1a0257d8191af6bb2d49cde4831ee1",
+    "tools/windows_desktop_intake_e2e.ps1": "80c7cadbdaf5f3b3cbe0fdcaa087d421f565b388"
   }
 }
