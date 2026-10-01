@@ -42,6 +42,7 @@ from startup import (
 
 SELF_CHECK_ARGUMENT = "--self-check"
 UNINSTALL_INTAKE_ARGUMENT = "--uninstall-intake-agent"
+PATIENT_SUMMARY_ARGUMENT = "--patient-summary"
 
 
 def __getattr__(name: str):
@@ -114,6 +115,19 @@ def _first_launch_onboarding(app) -> None:
                 onboarding_complete = False
         except Exception:
             onboarding_complete = False
+
+    # Patient overview has its own explicitly selected root. Ask once on the
+    # first normal GUI start (and after upgrades where it was never configured).
+    # Cancelling does not block the existing medical-document workflow; the
+    # onboarding marker remains so the question can be offered again.
+    try:
+        if not app._patient_registry_root():
+            if not app._ensure_patient_registry_folder(first_run=True):
+                onboarding_complete = False
+        else:
+            app._ensure_patient_registry_folder(first_run=True)
+    except Exception:
+        onboarding_complete = False
 
     if force_after_install and onboarding_complete:
         try:
@@ -335,6 +349,11 @@ def _intake_uninstall_retire_agent() -> None:
         except OSError:
             pass
     _desktop_remove_agent_run_key()
+    try:
+        from patient_registry import remove_patient_summary_autostart
+        remove_patient_summary_autostart()
+    except Exception:
+        pass
 
     # The watcher polls its handoff every two seconds. Give a running old agent
     # a bounded opportunity to observe the retirement marker before setup removes
@@ -427,6 +446,21 @@ def _activate_root_for_intake(root) -> None:
         pass
 
 
+def _run_patient_summary_mode() -> None:
+    """Open only the daily patient summary at Windows sign-in."""
+    from app import CombinedMedicalDiaryApp
+
+    root = _create_root()
+    root.withdraw()
+    app = CombinedMedicalDiaryApp(root)
+    app.show_my_patients(startup_mode=True)
+    try:
+        if root.winfo_exists():
+            root.mainloop()
+    except tk.TclError:
+        pass
+
+
 def main() -> None:
     probe_mode = os.environ.get("MEDICAL_AUTOFILL_STARTUP_PROBE", "").strip() == "1"
     try:
@@ -440,6 +474,10 @@ def main() -> None:
 
         if SELF_CHECK_ARGUMENT in sys.argv[1:]:
             _self_check_run()
+            return
+
+        if PATIENT_SUMMARY_ARGUMENT in sys.argv[1:]:
+            _run_patient_summary_mode()
             return
 
         # The watcher is only another startup mode of the same EXE. It never
