@@ -3,7 +3,8 @@
   "baseline_ref": "5695ea4810eb022ddd28ddb5576ae5bcca7e621a",
   "baseline_note": "User-requested no-regression freeze of the complete current production state before the patient dashboard / sick-leave VK work. main 5695ea4810eb022ddd28ddb5576ae5bcca7e621a is the immutable starting point: all existing production behavior and tests must remain green; critical-surface drift is forbidden without exact blob approval and the full regression evidence set.",
   "required_approval_evidence": [
-    "ci_gate_lock"
+    "ci_gate_lock",
+    "patient_registry_regression"
   ],
   "excluded_paths": []
 }
