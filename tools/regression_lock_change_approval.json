@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "b7aa58974054482a4c9924f55832af5172643acd",
+  "reason": "Adversarial re-audit found the patient summary only iconified to the taskbar instead of the requested Windows notification tray. This candidate adds a native pywin32 tray controller, safe fallback behavior, tray restore/close wiring, and locks it in patient registry regression.",
+  "required_evidence": [
+    "document_mechanics_guard",
+    "full_patient_replay",
+    "golden_docx",
+    "staff_profile_regression",
+    "gender_generation_matrix",
+    "desktop_intake_contract",
+    "intake_lifecycle_regression",
+    "packaged_desktop_intake_e2e",
+    "installer_uninstall_smoke",
+    "ci_gate_lock",
+    "patient_registry_regression"
+  ],
+  "approved_blobs": {
+    "patient_registry.py": "d0131ad7243206f785e9e993efe4fd34532b8be3",
+    "patient_registry_mixin.py": "2d240d5f04b9cfbe14972b569ecc179788ac1642",
+    "tests/patient_registry_regression.py": "a663b2966db04f5415c6855218cbe4a226b45de4"
+  }
+}
