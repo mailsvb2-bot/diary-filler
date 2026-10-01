@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "c065984fc39f92f89a743c8be6d85b5e33249572",
-  "baseline_note": "Windows 10 1607+ CMD/live-runner compatibility baseline. PR #276 merged as c065984fc39f92f89a743c8be6d85b5e33249572 after full PR Windows CI success (run 36788117941); post-merge main run 36788616485 then passed the complete production contour including regression/CI/live-matrix contracts, document mechanics, golden DOCX/full patient replay, clinical/user matrices, 255-selection matrix, Tk GUI, EXE/TkDND, packaged desktop-intake E2E, installer build/install/uninstall, performance gates, and release artifacts. The live contour now supports Windows 10 client build 14393..21999 using built-in Windows PowerShell 5.1 without curl.exe or pwsh, while Windows 11 remains build 22000+.",
+  "baseline_ref": "41595ed0c0e17e06aeb1099c46582182a143496e",
+  "baseline_note": "Windows live-runner registration diagnostics baseline. PR #279 merged as 41595ed0c0e17e06aeb1099c46582182a143496e after PR Windows CI success (run 36855652288); post-merge main run 36856152915 then passed the complete Windows production contour. The bootstrap now uses a short ASCII runner root, preflights api.github.com over TLS 1.2, sanitizes configuration output, and prints recent _diag logs on config failure while preserving the Win10/Win11 fail-closed live E2E contracts.",
   "required_approval_evidence": [
     "ci_gate_lock"
   ],
