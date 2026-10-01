@@ -14,6 +14,7 @@ import sys
 import time
 import traceback
 from pathlib import Path
+import tkinter as tk
 from tkinter import messagebox
 
 from app_config import (
