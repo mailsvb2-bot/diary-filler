@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
@@ -18,6 +18,7 @@ from medical_service import MedicalDocumentService
 from patient_registry import (
     first_sick_leave_vk_date,
     hospitalization_days_on,
+    is_discharge_patient_filename,
     is_primary_patient_filename,
     next_sick_leave_vk_date,
     scan_patient_registry,
@@ -50,6 +51,10 @@ def _assert_primary_filename_contract() -> None:
     assert is_primary_patient_filename("Сидоров (первичный).docm")
     assert not is_primary_patient_filename("Иванов выписной.docx")
     assert not is_primary_patient_filename("первичный.txt")
+    assert is_discharge_patient_filename("Иванов Выписной.docx")
+    assert is_discharge_patient_filename("Петров (выписной).doc")
+    assert not is_discharge_patient_filename("Иванов первичный.docx")
+    assert not is_discharge_patient_filename("Выписной.txt")
 
 
 def _assert_registry_scan_and_independent_timelines() -> None:
@@ -60,6 +65,7 @@ def _assert_registry_scan_and_independent_timelines() -> None:
             "Петров": ("Петров первичка.docx", "Маркер Петров Тестовый", "15.09.2026", "нет"),
             "Сидоров": ("Сидоров первичный.docx", "Маркер Сидоров Тестовый", "20.09.2026", ""),
             "Будущий": ("Будущий первичный.docx", "Маркер Будущий Тестовый", "10.10.2026", "да, с 01.10.2026"),
+            "Выписан": ("Выписан первичный.docx", "Маркер Выписан Тестовый", "05.09.2026", "да, с 05.09.2026"),
         }
         by_path = {}
         for folder_name, (filename, fio, admission, sick_leave) in fixtures.items():
@@ -74,6 +80,8 @@ def _assert_registry_scan_and_independent_timelines() -> None:
                 expert_sick_leave_needed="",
                 expert_sick_leave_from="",
             )
+            if folder_name == "Выписан":
+                (folder / "Выписан Выписной.docx").touch()
 
         def parser(path: Path):
             return by_path[path]
@@ -90,26 +98,39 @@ def _assert_registry_scan_and_independent_timelines() -> None:
 
 
 def _assert_vk_wednesday_schedule() -> None:
+    # Day one is exactly the date from «Нужен больничный лист с ...».
+    # For every possible weekday, the first VK must be a Wednesday inside the
+    # inclusive 7..15-day window, choosing the latest Wednesday that does not
+    # exceed day 15.
+    anchor = date(2026, 9, 1)
+    for offset in range(7):
+        sick_from = anchor + timedelta(days=offset)
+        first = first_sick_leave_vk_date(sick_from)
+        inclusive_day = (first - sick_from).days + 1
+        assert first.weekday() == 2
+        assert 7 <= inclusive_day <= 15
+        assert first + timedelta(days=7) > sick_from + timedelta(days=14)
+
     sick_from = date(2026, 9, 1)
     first = first_sick_leave_vk_date(sick_from)
-    assert first == date(2026, 9, 16)
-    assert first.weekday() == 2
+    assert first == date(2026, 9, 9)
+    assert (first - sick_from).days + 1 == 9
 
-    assert next_sick_leave_vk_date(sick_from, date(2026, 9, 1)) == date(2026, 9, 16)
-    assert next_sick_leave_vk_date(sick_from, date(2026, 9, 16)) == date(2026, 9, 16)
-    second = next_sick_leave_vk_date(sick_from, date(2026, 9, 17))
-    assert second == date(2026, 9, 30)
+    assert next_sick_leave_vk_date(sick_from, date(2026, 9, 1)) == date(2026, 9, 9)
+    assert next_sick_leave_vk_date(sick_from, date(2026, 9, 9)) == date(2026, 9, 9)
+    second = next_sick_leave_vk_date(sick_from, date(2026, 9, 10))
+    assert second == date(2026, 9, 23)
     assert second.weekday() == 2
+    assert (second - first).days + 1 == 15
 
     third = next_sick_leave_vk_date(sick_from, date(2026, 10, 1))
-    assert third == date(2026, 10, 14)
+    assert third == date(2026, 10, 7)
     assert third.weekday() == 2
 
     # The VK document itself describes hospitalization days, not sick-leave days.
-    assert treatment_period_text("01.09.2026", "16.09.2026") == (
-        "Находится на лечении с 01.09.2026 (16 дней)"
+    assert treatment_period_text("01.09.2026", "09.09.2026") == (
+        "Находится на лечении с 01.09.2026 (9 дней)"
     )
-
 
 def _assert_discharge_stays_admission_based() -> None:
     data = PatientData(
@@ -141,10 +162,15 @@ def _assert_desktop_wiring_contract() -> None:
         'title="Из какой папки анализировать пациентов?"',
         "install_patient_summary_autostart()",
         "show_my_patients(self, *, startup_mode: bool = False)",
-        "Подготовить ВК на",
+        "Подготовить ВК по больничному на",
+        "Открыть папку пациентов",
+        "Сменить путь",
+        'text="× Закрыть"',
+        "open_patient_folder",
     ):
         assert snippet in mixin_source
     assert 'text="Мои пациенты", command=self.show_my_patients' in window_source
+    assert 'text="Папка пациентов", command=self.show_patient_registry_folder_settings' in window_source
     assert "DIR_PATIENT_REGISTRY" in settings_source
 
 
@@ -182,8 +208,9 @@ def main() -> None:
     _assert_desktop_wiring_contract()
     _assert_pre_admission_sick_leave_is_not_rejected()
     print(
-        "PATIENT REGISTRY REGRESSION OK: folder scan, sick-leave chronology, "
-        "Wednesday VK schedule and admission-based discharge duration are locked"
+        "PATIENT REGISTRY REGRESSION OK: folder scan, discharged-folder exclusion, "
+        "sick-leave chronology, 7..15-day Wednesday VK schedule and "
+        "admission-based discharge duration are locked"
     )
 
 
