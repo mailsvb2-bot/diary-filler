@@ -86,6 +86,7 @@ class DialogExpertMixin:
         if not parsed:
             return False
         normalized = parsed.strftime("%d.%m.%Y")
+        self.expert_sick_leave_needed_var.set("да")
         self.expert_sick_leave_from_var.set(normalized)
         if hasattr(self, "data"):
             self.data.expert_sick_leave_needed = "да"
