@@ -636,6 +636,80 @@ def assert_install_marker_forces_folder_and_staff_onboarding() -> None:
         assert not marker.exists(), "completed onboarding marker was not consumed"
 
 
+def assert_watcher_launch_defers_patient_registry_onboarding() -> None:
+    """A watcher-launched primary must never be preceded by the registry chooser."""
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        intake = root / startup.DESKTOP_INTAKE_FOLDER_NAME
+        intake.mkdir()
+        marker = root / "onboarding-required.flag"
+        marker.write_text("1", encoding="ascii")
+
+        class AppStub:
+            root = None
+            _desktop_intake_enabled_for_session = True
+
+            def __init__(self) -> None:
+                self.preference = True
+                self.patient_registry_prompts = 0
+                self.staff_prompts = 0
+
+            def _desktop_intake_preference(self):
+                return self.preference
+
+            def _set_desktop_intake_preference(self, enabled):
+                self.preference = bool(enabled)
+                return True
+
+            def _staff_profile_is_configured(self):
+                return True
+
+            def _prompt_staff_profile(self, *, first_run=False):
+                assert first_run is True
+                self.staff_prompts += 1
+                return True
+
+            def _patient_registry_root(self):
+                return ""
+
+            def _ensure_patient_registry_folder(self, *, first_run=False):
+                self.patient_registry_prompts += 1
+                raise AssertionError("watcher-launched GUI must defer patient registry onboarding")
+
+        app = AppStub()
+        original_os = app_main.os
+        original_marker = app_main._installation_onboarding_marker_path
+        original_root = app_main.desktop_intake_root_path
+        try:
+            app_main.os = SimpleNamespace(name="nt", environ={})  # type: ignore[assignment]
+            app_main._installation_onboarding_marker_path = lambda: marker  # type: ignore[assignment]
+            app_main.desktop_intake_root_path = lambda: intake  # type: ignore[assignment]
+            app_main._first_launch_onboarding(app, configure_patient_registry=False)
+        finally:
+            app_main.desktop_intake_root_path = original_root  # type: ignore[assignment]
+            app_main._installation_onboarding_marker_path = original_marker  # type: ignore[assignment]
+            app_main.os = original_os  # type: ignore[assignment]
+
+        assert app.patient_registry_prompts == 0
+        assert app.staff_prompts == 1
+
+
+def assert_visible_gui_claim_precedes_onboarding() -> None:
+    source = Path("main.py").read_text(encoding="utf-8")
+    claim = source.index("claim_desktop_gui_session()")
+    onboarding = source.index("_first_launch_onboarding(")
+    assert claim < onboarding, "visible GUI heartbeat must be claimed before first-run modal onboarding"
+
+    startup_source = Path("startup.py").read_text(encoding="utf-8")
+    for snippet in (
+        "def claim_desktop_gui_session()",
+        "MedicalDiaryAutofillVisibleGuiHeartbeat",
+        "_desktop_touch_gui_heartbeat()",
+        "daemon=True",
+    ):
+        assert snippet in startup_source
+
+
 def assert_legacy_disabled_preference_heals_and_preserves_user_folder() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
@@ -703,9 +777,11 @@ def main() -> None:
     assert_unrecognized_word_arrival_gets_one_visible_explanation()
     assert_pyinstaller_children_are_independent_and_gui_is_visible()
     assert_install_marker_forces_folder_and_staff_onboarding()
+    assert_watcher_launch_defers_patient_registry_onboarding()
+    assert_visible_gui_claim_precedes_onboarding()
     assert_legacy_disabled_preference_heals_and_preserves_user_folder()
     print(
-        "INTAKE LIFECYCLE REGRESSION OK: self-heal + Desktop rebind + event-driven intake + in-place watcher replacement + queued-arrival handoff + duplicate-launch suppression + failed-launch retry + rejected-primary propagation + visible unrecognized-file feedback + independent PyInstaller child runtime + mandatory install intake"
+        "INTAKE LIFECYCLE REGRESSION OK: self-heal + Desktop rebind + event-driven intake + in-place watcher replacement + queued-arrival handoff + duplicate-launch suppression + failed-launch retry + rejected-primary propagation + visible unrecognized-file feedback + independent PyInstaller child runtime + mandatory install intake + pre-onboarding GUI heartbeat claim + watcher-launch onboarding isolation"
     )
 
 
