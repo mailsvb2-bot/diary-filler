@@ -27,6 +27,6 @@
     "tests/patient_registry_regression.py": "b25da9a4a7b4cb8109b944dc6b2f83cc2324d7b5",
     "tools/document_mechanics_change_approval.json": "4ba53596e9516e1012004072d1c8d5fdd5be5ee2",
     "prod_audit.py": "f74e58286872f6cd41ea34f87f38ddfdeea6ab18",
-    "smoke_combined_part01_setup_contracts.py": "54b90ab8a6a812da527d477b5f5def3bc750a7cd"
+    "smoke_combined_part01_setup_contracts.py": "23a01b1de4927237209eafcb63205ae75fbc8a09"
   }
 }
