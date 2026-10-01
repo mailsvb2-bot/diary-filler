@@ -12,8 +12,9 @@ from diary_template_selection import DiaryTemplateMixin
 from dnd_mixin import DragDropMixin
 from actions_mixin import ActionsMixin
 from app_initialization import AppInitializationMixin
+from patient_registry_mixin import PatientRegistryMixin
 
 
-class CombinedMedicalDiaryApp(AppInitializationMixin, SettingsMixin, WindowMixin, LayoutMixin, DialogsMixin, WidgetsMixin, FilesMixin, DiaryTemplateMixin, DragDropMixin, ActionsMixin):
+class CombinedMedicalDiaryApp(AppInitializationMixin, SettingsMixin, PatientRegistryMixin, WindowMixin, LayoutMixin, DialogsMixin, WidgetsMixin, FilesMixin, DiaryTemplateMixin, DragDropMixin, ActionsMixin):
     def __init__(self, root: tk.Tk):
         self._initialize_app(root)
