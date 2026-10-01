@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "e0a358bc97d5aa5a77d941d52a5084d849daaa20",
-  "baseline_note": "Post-merge no-regression baseline for PR #283 (My Patients dashboard, independent sick-leave chronology, Wednesday VK scheduling and Windows logon summary). Functional candidate head 6196fbbe2b420380df843ebd222eda5e892a8118 passed Windows EXE Build run 36913862515 end-to-end: regression locks, document mechanics guard, privacy, release gate, patient/golden replay, 255 output combinations, GUI, packaged EXE, desktop intake E2E, installer and uninstall smoke. Merge e0a358bc97d5aa5a77d941d52a5084d849daaa20 contains the same tested production blobs.",
+  "baseline_ref": "b7aa58974054482a4c9924f55832af5172643acd",
+  "baseline_note": "Post-merge no-regression baseline for PR #285 completing My Patients: discharged-folder exclusion, inclusive sick-leave day-1 scheduling with the latest Wednesday inside days 7..15, clickable patient folders, root-folder controls, and exact VK button wording. Candidate head 3e11d7e01ac383f7361437c8a1f90a000f45e47a passed Windows EXE Build run 36922078183 end-to-end; merge b7aa58974054482a4c9924f55832af5172643acd passed post-merge main run 36923009352 end-to-end.",
   "required_approval_evidence": [
     "ci_gate_lock",
     "patient_registry_regression"
