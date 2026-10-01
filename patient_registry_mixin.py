@@ -12,6 +12,7 @@ from patient_registry import (
     hospitalization_days_on,
     install_patient_summary_autostart,
     next_sick_leave_vk_date,
+    open_patient_folder,
     scan_patient_registry,
     sick_leave_days_on,
 )
@@ -55,6 +56,116 @@ class PatientRegistryMixin:
     def _registry_query_date(self, raw: str) -> date | None:
         parsed = parse_date(str(raw or "").strip())
         return parsed.date() if parsed else None
+
+    def _open_patient_registry_path(
+        self,
+        path: str | Path | None = None,
+        *,
+        parent: tk.Misc | None = None,
+    ) -> bool:
+        target = Path(path or self._patient_registry_root()).expanduser()
+        if open_patient_folder(target):
+            return True
+        messagebox.showerror(
+            "Папка пациентов",
+            "Не удалось открыть папку. Проверьте, что она существует и доступна.",
+            parent=parent or self.root,
+        )
+        return False
+
+    def show_patient_registry_folder_settings(self) -> None:
+        """Open/change the root folder used by «Мои пациенты»."""
+        if not self._patient_registry_root():
+            if not self._prompt_patient_registry_folder(first_run=False):
+                return
+
+        win = tk.Toplevel(self.root)
+        win.title("Папка пациентов")
+        win.configure(bg=DEEP)
+        win.resizable(False, False)
+        win.transient(self.root)
+
+        body = tk.Frame(win, bg=DEEP)
+        body.pack(fill="both", expand=True, padx=16, pady=14)
+        tk.Label(
+            body,
+            text="Папка пациентов",
+            bg=DEEP,
+            fg=TEXT,
+            font=self._font(13, "bold"),
+        ).pack(anchor="w")
+        path_var = tk.StringVar(value=self._patient_registry_root())
+        tk.Label(
+            body,
+            textvariable=path_var,
+            bg=DEEP,
+            fg=MUTED,
+            justify="left",
+            anchor="w",
+            wraplength=620,
+            font=self._font(9),
+        ).pack(fill="x", pady=(8, 12))
+
+        buttons = tk.Frame(body, bg=DEEP)
+        buttons.pack(fill="x")
+
+        def change_path() -> None:
+            if self._prompt_patient_registry_folder(first_run=False):
+                path_var.set(self._patient_registry_root())
+
+        tk.Button(
+            buttons,
+            text="Открыть папку",
+            command=lambda: self._open_patient_registry_path(parent=win),
+            bg=PANEL_3,
+            fg=TEXT,
+            activebackground=BORDER,
+            activeforeground=TEXT,
+            relief="flat",
+            padx=10,
+            pady=5,
+            cursor="hand2",
+            font=self._font(9, "bold"),
+        ).pack(side="left")
+        tk.Button(
+            buttons,
+            text="Сменить путь",
+            command=change_path,
+            bg=PANEL_3,
+            fg=TEXT,
+            activebackground=BORDER,
+            activeforeground=TEXT,
+            relief="flat",
+            padx=10,
+            pady=5,
+            cursor="hand2",
+            font=self._font(9, "bold"),
+        ).pack(side="left", padx=(8, 0))
+        tk.Button(
+            buttons,
+            text="× Закрыть",
+            command=win.destroy,
+            bg=DEEP,
+            fg=MUTED,
+            activebackground=BG_2,
+            activeforeground=TEXT,
+            relief="flat",
+            padx=10,
+            pady=5,
+            cursor="hand2",
+            font=self._font(9),
+        ).pack(side="right")
+
+        win.bind("<Escape>", lambda _event: win.destroy())
+        win.protocol("WM_DELETE_WINDOW", win.destroy)
+        win.update_idletasks()
+        try:
+            x = self.root.winfo_rootx() + max(0, (self.root.winfo_width() - win.winfo_width()) // 2)
+            y = self.root.winfo_rooty() + max(0, (self.root.winfo_height() - win.winfo_height()) // 2)
+            win.geometry(f"+{x}+{y}")
+        except Exception:
+            pass
+        win.lift()
 
     def _prepare_registry_sick_leave_vk(
         self,
@@ -145,10 +256,10 @@ class PatientRegistryMixin:
         win = tk.Toplevel(self.root)
         win.title("Мои пациенты")
         win.configure(bg=DEEP)
-        width = 840 if not startup_mode else 760
-        height = 620 if not startup_mode else 540
+        width = 900 if not startup_mode else 840
+        height = 620 if not startup_mode else 560
         win.geometry(f"{width}x{height}")
-        win.minsize(680, 420)
+        win.minsize(720, 440)
         if startup_mode:
             try:
                 win.attributes("-topmost", True)
@@ -236,15 +347,17 @@ class PatientRegistryMixin:
             row.grid_columnconfigure(0, weight=1)
 
             title = f"{entry.fio} — поступление {entry.admission_date.strftime('%d.%m.%Y')}"
-            tk.Label(
+            title_label = tk.Label(
                 row,
                 text=title,
                 bg=PANEL,
-                fg=TEXT,
+                fg=ACCENT,
                 anchor="w",
                 justify="left",
+                cursor="hand2",
                 font=self._font(10, "bold"),
-            ).grid(row=0, column=0, sticky="ew")
+            )
+            title_label.grid(row=0, column=0, sticky="ew")
 
             details = "Без больничного листа на выбранную дату."
             next_vk = None
@@ -270,21 +383,31 @@ class PatientRegistryMixin:
                         f"на день ВК: госпитализация {hospital_at_vk} дн., ЛН {sick_at_vk} дн."
                     )
 
-            tk.Label(
+            details_label = tk.Label(
                 row,
                 text=details,
                 bg=PANEL,
                 fg=MUTED,
                 anchor="w",
                 justify="left",
-                wraplength=590,
+                wraplength=620,
+                cursor="hand2",
                 font=self._font(9),
-            ).grid(row=1, column=0, sticky="ew", pady=(3, 0))
+            )
+            details_label.grid(row=1, column=0, sticky="ew", pady=(3, 0))
+
+            open_folder = lambda _event=None, folder=entry.folder: self._open_patient_registry_path(
+                folder,
+                parent=win,
+            )
+            row.bind("<Button-1>", open_folder)
+            title_label.bind("<Button-1>", open_folder)
+            details_label.bind("<Button-1>", open_folder)
 
             if next_vk is not None:
                 tk.Button(
                     row,
-                    text=f"Подготовить ВК на {next_vk.strftime('%d.%m.%Y')}",
+                    text=f"Подготовить ВК по больничному на {next_vk.strftime('%d.%m.%Y')}",
                     command=lambda item=entry, vk=next_vk: self._prepare_registry_sick_leave_vk(
                         item,
                         vk,
@@ -367,8 +490,8 @@ class PatientRegistryMixin:
 
         tk.Button(
             footer,
-            text="Сменить папку пациентов",
-            command=lambda: (self._prompt_patient_registry_folder(first_run=False) and refresh()),
+            text="Открыть папку пациентов",
+            command=lambda: self._open_patient_registry_path(parent=win),
             bg=DEEP,
             fg=MUTED,
             activebackground=BG_2,
@@ -380,7 +503,33 @@ class PatientRegistryMixin:
 
         tk.Button(
             footer,
-            text="Закрыть",
+            text="Сменить путь",
+            command=lambda: (self._prompt_patient_registry_folder(first_run=False) and refresh()),
+            bg=DEEP,
+            fg=MUTED,
+            activebackground=BG_2,
+            activeforeground=ACCENT,
+            relief="flat",
+            cursor="hand2",
+            font=self._font(9),
+        ).pack(side="left", padx=(10, 0))
+
+        tk.Button(
+            footer,
+            text="Свернуть",
+            command=win.iconify,
+            bg=DEEP,
+            fg=MUTED,
+            activebackground=BG_2,
+            activeforeground=ACCENT,
+            relief="flat",
+            cursor="hand2",
+            font=self._font(9),
+        ).pack(side="right", padx=(0, 10))
+
+        tk.Button(
+            footer,
+            text="× Закрыть",
             command=close_window,
             bg=PANEL_3,
             fg=TEXT,
