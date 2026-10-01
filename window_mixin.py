@@ -341,24 +341,17 @@ class WindowMixin:
             relief="flat", bd=0, padx=self._px(8, 5),
             font=self._font(9 if self._compact_ui else 10), cursor="hand2",
         )
-        patient_root_button.grid(
-            row=1,
-            column=0,
-            columnspan=3,
-            sticky="e",
-            padx=(0, self._px(8, 4)),
-            pady=(self._px(3, 2), 0),
-        )
+        patient_root_button.grid(row=0, column=2, padx=(0, self._px(4, 3)))
         staff_button = tk.Button(
             controls, text="Сотрудники", command=lambda: self._prompt_staff_profile(first_run=False),
             bg=DEEP, fg=MUTED, activebackground=BG_2, activeforeground=ACCENT,
             relief="flat", bd=0, padx=self._px(8, 5),
             font=self._font(9 if self._compact_ui else 10), cursor="hand2",
         )
-        staff_button.grid(row=0, column=2, padx=(0, self._px(8, 4)))
-        self._window_control_button(controls, "−", self._minimize_window).grid(row=0, column=3)
-        self._window_control_button(controls, "□", self._toggle_maximize).grid(row=0, column=4)
-        self._window_control_button(controls, "×", self._request_close, danger=True).grid(row=0, column=5)
+        staff_button.grid(row=0, column=3, padx=(0, self._px(8, 4)))
+        self._window_control_button(controls, "−", self._minimize_window).grid(row=0, column=4)
+        self._window_control_button(controls, "□", self._toggle_maximize).grid(row=0, column=5)
+        self._window_control_button(controls, "×", self._request_close, danger=True).grid(row=0, column=6)
 
     def _header_icon_button(self, parent, text: str, command) -> tk.Button:
         return tk.Button(
