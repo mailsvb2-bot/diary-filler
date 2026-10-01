@@ -174,6 +174,7 @@ def _assert_desktop_wiring_contract() -> None:
         assert snippet in mixin_source
     assert 'text="Мои пациенты", command=self.show_my_patients' in window_source
     assert 'text="Папка пациентов", command=self.show_patient_registry_folder_settings' in window_source
+    assert 'patient_root_button.grid(row=0, column=2' in window_source
     registry_source = Path("patient_registry.py").read_text(encoding="utf-8")
     for snippet in (
         "class PatientSummaryTray",
