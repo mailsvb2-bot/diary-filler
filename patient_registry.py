@@ -16,6 +16,7 @@ PATIENT_SUMMARY_RUN_VALUE_NAME = "MedicalDiaryAutofill Patients"
 PATIENT_SUMMARY_RUN_KEY = r"Software\Microsoft\Windows\CurrentVersion\Run"
 SUPPORTED_WORD_SUFFIXES = {".doc", ".docx", ".docm"}
 _PRIMARY_NAME_RE = re.compile(r"(?iu)(?:^|[\s._()\-])(?:первичный|первичка)(?:$|[\s._()\-])")
+_DISCHARGE_NAME_RE = re.compile(r"(?iu)(?:^|[\s._()\-])выписной(?:$|[\s._()\-])")
 
 
 @dataclass(frozen=True)
@@ -80,6 +81,24 @@ def primary_candidates(folder: str | Path) -> list[Path]:
     return sorted(result, key=lambda p: (rank.get(p.suffix.lower(), 9), p.name.casefold()))
 
 
+def is_discharge_patient_filename(path: str | Path) -> bool:
+    candidate = Path(path)
+    if candidate.suffix.lower() not in SUPPORTED_WORD_SUFFIXES:
+        return False
+    stem = _normalize_primary_stem(candidate.stem)
+    return bool(_DISCHARGE_NAME_RE.search(stem))
+
+
+def has_discharge_patient_document(folder: str | Path) -> bool:
+    root = Path(folder)
+    if not root.is_dir():
+        return False
+    return any(
+        path.is_file() and is_discharge_patient_filename(path)
+        for path in root.iterdir()
+    )
+
+
 def _date_value(value: str) -> date | None:
     parsed = parse_date(str(value or "").strip())
     return parsed.date() if parsed else None
@@ -128,6 +147,12 @@ def scan_patient_registry(
     issues: list[PatientRegistryIssue] = []
 
     for patient_folder in sorted((p for p in directory.iterdir() if p.is_dir()), key=lambda p: p.name.casefold()):
+        # The selected root represents the current ward census. A stray folder
+        # that already contains a Word document named "... Выписной" is treated
+        # as discharged and must not be counted in the current patient summary.
+        if has_discharge_patient_document(patient_folder):
+            continue
+
         candidates = primary_candidates(patient_folder)
         if not candidates:
             continue
@@ -189,22 +214,24 @@ def inclusive_days(start: date, finish: date) -> int:
 
 
 def first_sick_leave_vk_date(sick_leave_from: date) -> date:
-    """Return the Wednesday nearest to the 15th inclusive sick-leave day.
+    """Return the latest Wednesday within sick-leave days 7..15 inclusive.
 
-    Day one is the sick-leave opening date, so the 15th day is start + 14 days.
-    The clinical workflow fixes commissions to Wednesdays; therefore the
-    calendar chooses the nearest Wednesday to that 15-day milestone. Future
-    commissions repeat every two Wednesdays (14 calendar days).
+    The sick-leave opening date is day one. A commission must therefore never
+    be scheduled before inclusive day 7 and never after inclusive day 15.
+    Because the clinical workflow fixes commissions to Wednesdays, choose the
+    latest Wednesday inside that safe window. The window is nine days wide, so
+    it always contains at least one Wednesday.
     """
-    milestone = sick_leave_from + timedelta(days=14)
-    days_back = (milestone.weekday() - 2) % 7
-    previous_wednesday = milestone - timedelta(days=days_back)
-    next_wednesday = previous_wednesday + timedelta(days=7)
-    if previous_wednesday < sick_leave_from:
-        return next_wednesday
-    if (milestone - previous_wednesday) <= (next_wednesday - milestone):
-        return previous_wednesday
-    return next_wednesday
+    earliest = sick_leave_from + timedelta(days=6)
+    latest = sick_leave_from + timedelta(days=14)
+    days_back = (latest.weekday() - 2) % 7
+    candidate = latest - timedelta(days=days_back)
+    if candidate < earliest:
+        candidate += timedelta(days=7)
+    if not (earliest <= candidate <= latest):
+        raise AssertionError("VK Wednesday must stay inside inclusive sick-leave days 7..15")
+    return candidate
+
 
 def next_sick_leave_vk_date(sick_leave_from: date, as_of: date) -> date:
     first = first_sick_leave_vk_date(sick_leave_from)
@@ -223,6 +250,25 @@ def sick_leave_days_on(entry: PatientRegistryEntry, value: date) -> int | None:
 
 def hospitalization_days_on(entry: PatientRegistryEntry, value: date) -> int:
     return inclusive_days(entry.admission_date, value)
+
+
+def open_patient_folder(path: str | Path) -> bool:
+    """Open a patient's directory in the platform file manager."""
+    folder = Path(path).expanduser()
+    if not folder.exists() or not folder.is_dir():
+        return False
+    try:
+        if os.name == "nt":
+            startfile = getattr(os, "startfile")
+            startfile(str(folder))
+        else:
+            import sys
+
+            command = ["open", str(folder)] if sys.platform == "darwin" else ["xdg-open", str(folder)]
+            subprocess.Popen(command)
+        return True
+    except (AttributeError, OSError, subprocess.SubprocessError):
+        return False
 
 
 def install_patient_summary_autostart() -> bool:
