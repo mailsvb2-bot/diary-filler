@@ -1,0 +1,126 @@
+from __future__ import annotations
+
+from datetime import date
+from pathlib import Path
+from tempfile import TemporaryDirectory
+from types import SimpleNamespace
+
+from medical_expert import build_expert_anamnesis
+from medical_models import PatientData, parse_sick_leave_value
+from patient_registry import (
+    first_sick_leave_vk_date,
+    hospitalization_days_on,
+    is_primary_patient_filename,
+    next_sick_leave_vk_date,
+    scan_patient_registry,
+    sick_leave_days_on,
+)
+
+
+def _assert_sick_leave_parser() -> None:
+    assert parse_sick_leave_value("да, с 01.09.2026") == ("да", "01.09.2026")
+    assert parse_sick_leave_value("Да с 01092026") == ("да", "01092026")
+    assert parse_sick_leave_value("нет") == ("нет", "")
+    assert parse_sick_leave_value("не нужен") == ("нет", "")
+
+
+def _assert_primary_filename_contract() -> None:
+    assert is_primary_patient_filename("Иванов первичный.docx")
+    assert is_primary_patient_filename("Петров первичка.doc")
+    assert is_primary_patient_filename("Сидоров (первичный).docm")
+    assert not is_primary_patient_filename("Иванов выписной.docx")
+    assert not is_primary_patient_filename("первичный.txt")
+
+
+def _assert_registry_scan_and_independent_timelines() -> None:
+    with TemporaryDirectory(prefix="patient-registry-") as temp:
+        root = Path(temp)
+        fixtures = {
+            "Иванов": ("Иванов первичный.docx", "Иванов Иван Иванович", "01.09.2026", "да, с 20.08.2026"),
+            "Петров": ("Петров первичка.docx", "Петров Пётр Петрович", "15.09.2026", "нет"),
+            "Будущий": ("Будущий первичный.docx", "Будущий Б.Б.", "10.10.2026", "да, с 01.10.2026"),
+        }
+        by_path = {}
+        for folder_name, (filename, fio, admission, sick_leave) in fixtures.items():
+            folder = root / folder_name
+            folder.mkdir()
+            path = folder / filename
+            path.touch()
+            by_path[path] = SimpleNamespace(
+                fio=fio,
+                admission_date=admission,
+                sick_leave=sick_leave,
+                expert_sick_leave_needed="",
+                expert_sick_leave_from="",
+            )
+
+        def parser(path: Path):
+            return by_path[path]
+
+        snapshot = scan_patient_registry(root, as_of=date(2026, 10, 1), parser=parser)
+        assert len(snapshot.patients) == 2
+        assert len(snapshot.sick_leave_patients) == 1
+
+        ivanov = next(item for item in snapshot.patients if item.fio.startswith("Иванов"))
+        assert ivanov.admission_date == date(2026, 9, 1)
+        assert ivanov.sick_leave_from == date(2026, 8, 20)
+        assert sick_leave_days_on(ivanov, date(2026, 10, 1)) == 43
+        assert hospitalization_days_on(ivanov, date(2026, 10, 1)) == 31
+
+
+def _assert_vk_wednesday_schedule() -> None:
+    sick_from = date(2026, 9, 1)
+    first = first_sick_leave_vk_date(sick_from)
+    assert first == date(2026, 9, 16)
+    assert first.weekday() == 2
+
+    assert next_sick_leave_vk_date(sick_from, date(2026, 9, 1)) == date(2026, 9, 16)
+    assert next_sick_leave_vk_date(sick_from, date(2026, 9, 16)) == date(2026, 9, 16)
+    second = next_sick_leave_vk_date(sick_from, date(2026, 9, 17))
+    assert second == date(2026, 9, 30)
+    assert second.weekday() == 2
+
+    third = next_sick_leave_vk_date(sick_from, date(2026, 10, 1))
+    assert third == date(2026, 10, 14)
+    assert third.weekday() == 2
+
+
+def _assert_discharge_stays_admission_based() -> None:
+    data = PatientData(
+        admission_date="10.09.2026",
+        discharge_date="20.09.2026",
+        expert_work_status="нет",
+        expert_sick_leave_needed="да",
+        expert_sick_leave_from="01.09.2026",
+        expert_sick_leave_number="123456",
+    )
+    rendered = build_expert_anamnesis(data)
+    assert "Срок лечения с 10.09.2026 по 20.09.2026, 11 дней." in rendered
+    assert "Срок лечения с 01.09.2026" not in rendered
+
+
+def _assert_pre_admission_sick_leave_is_not_rejected() -> None:
+    service_source = Path("medical_service.py").read_text(encoding="utf-8")
+    dialog_source = Path("dialog_expert.py").read_text(encoding="utf-8")
+    forbidden_service = (
+        'data.admission_date, data.expert_sick_leave_from, "Дата начала больничного"'
+    )
+    assert forbidden_service not in service_source
+    assert "Дата начала больничного не может быть раньше даты госпитализации." not in dialog_source
+
+
+def main() -> None:
+    _assert_sick_leave_parser()
+    _assert_primary_filename_contract()
+    _assert_registry_scan_and_independent_timelines()
+    _assert_vk_wednesday_schedule()
+    _assert_discharge_stays_admission_based()
+    _assert_pre_admission_sick_leave_is_not_rejected()
+    print(
+        "PATIENT REGISTRY REGRESSION OK: folder scan, sick-leave chronology, "
+        "Wednesday VK schedule and admission-based discharge duration are locked"
+    )
+
+
+if __name__ == "__main__":
+    main()
