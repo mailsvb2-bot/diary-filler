@@ -189,20 +189,22 @@ def inclusive_days(start: date, finish: date) -> int:
 
 
 def first_sick_leave_vk_date(sick_leave_from: date) -> date:
-    """Latest Wednesday inside the first 15-calendar-day window.
+    """Return the Wednesday nearest to the 15th inclusive sick-leave day.
 
-    The opening day is day 1. The first 15-day boundary is start + 14 days.
-    Because this workflow always holds VK on Wednesdays, the commission is the
-    Wednesday on or before that boundary. Later commissions are every second
-    Wednesday, which keeps each inclusive commission window within 15 days.
+    Day one is the sick-leave opening date, so the 15th day is start + 14 days.
+    The clinical workflow fixes commissions to Wednesdays; therefore the
+    calendar chooses the nearest Wednesday to that 15-day milestone. Future
+    commissions repeat every two Wednesdays (14 calendar days).
     """
-    deadline = sick_leave_from + timedelta(days=14)
-    days_back_to_wednesday = (deadline.weekday() - 2) % 7
-    candidate = deadline - timedelta(days=days_back_to_wednesday)
-    if candidate < sick_leave_from:
-        candidate += timedelta(days=7)
-    return candidate
-
+    milestone = sick_leave_from + timedelta(days=14)
+    days_back = (milestone.weekday() - 2) % 7
+    previous_wednesday = milestone - timedelta(days=days_back)
+    next_wednesday = previous_wednesday + timedelta(days=7)
+    if previous_wednesday < sick_leave_from:
+        return next_wednesday
+    if (milestone - previous_wednesday) <= (next_wednesday - milestone):
+        return previous_wednesday
+    return next_wednesday
 
 def next_sick_leave_vk_date(sick_leave_from: date, as_of: date) -> date:
     first = first_sick_leave_vk_date(sick_leave_from)
