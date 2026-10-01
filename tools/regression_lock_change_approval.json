@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "5695ea4810eb022ddd28ddb5576ae5bcca7e621a",
+  "reason": "Add the user-requested My Patients registry, sick-leave Wednesday VK scheduling, daily Windows logon summary, and independent pre-admission sick-leave chronology while preserving the frozen production baseline.",
+  "required_evidence": [
+    "document_mechanics_guard",
+    "full_patient_replay",
+    "golden_docx",
+    "staff_profile_regression",
+    "gender_generation_matrix",
+    "desktop_intake_contract",
+    "intake_lifecycle_regression",
+    "packaged_desktop_intake_e2e",
+    "installer_uninstall_smoke",
+    "ci_gate_lock",
+    "patient_registry_regression"
+  ],
+  "approved_blobs": {
+    "app.py": "23f911f1e9d28293cee60b4d2b475666d16845b2",
+    "app_config.py": "d99c22a829680e88ffe301441c968ec9879e44c2",
+    "dialog_expert.py": "61605782be743fcfc6d8907b733886ad55c8adc2",
+    "main.py": "89bbc88326c3c85d5a160dceeb844793301994b9",
+    "medical_models.py": "a3b4b177af62d3df558a0773bc5e64dd714adfb5",
+    "medical_parser.py": "f3f554855a57168877f786099b54a007ef76b4ed",
+    "medical_service.py": "c3fc2351ce89e98cc3b8544fc979e628304e0675",
+    "patient_registry.py": "3bb14c1c8d364653b37ec447e0968d20f89b87fc",
+    "patient_registry_mixin.py": "d1da1ed53497c3de6dc3b3bcb6bdddbd29323891",
+    "release_check.py": "f113a577075af20228d4db4b8e379333c2c6c319",
+    "settings_mixin.py": "02e31f41600be0c0146c0e564d9aa00509fcfbdc",
+    "tests/patient_registry_regression.py": "d8dccce2b8882c2408d7abb58e58352247234508",
+    "tests/regression_surface_inventory.py": "1c1f99019ff8a071da18698bddeb0fc776b32c62",
+    "tools/ci_gate_lock.py": "40668544c260019cf3b920b5c0e44f4aa965fdeb",
+    "window_mixin.py": "511829b1936a125eaea084325feadd9ef2478e22"
+  }
+}
