@@ -154,7 +154,7 @@ assert 'self._sick_leave_need_field(card' not in window_source
 assert '_file_row(files, 0, "Файл ЭПИ"' not in window_source
 assert '("Работает? да/нет"' not in main_source
 assert '("Нужен больничный лист? да/нет"' not in main_source
-assert '("С какого числа больничный"' in main_source
+assert '("С какого числа больничный лист"' in main_source
 assert '("Где работает / организация"' in main_source
 assert '("Должность"' in main_source
 assert "Ничего не запоминаем между разными popup-окнами" in main_source
