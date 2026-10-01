@@ -31,6 +31,9 @@
     "tests/regression_surface_inventory.py": "1c1f99019ff8a071da18698bddeb0fc776b32c62",
     "tools/ci_gate_lock.py": "40668544c260019cf3b920b5c0e44f4aa965fdeb",
     "window_mixin.py": "511829b1936a125eaea084325feadd9ef2478e22",
-    "tools/document_mechanics_change_approval.json": "04e40fe83b87732957ae8633c8cd3e99236975bb"
+    "tools/document_mechanics_change_approval.json": "04e40fe83b87732957ae8633c8cd3e99236975bb",
+    "tools/production_safety_gate.py": "ac11077aaf6a037c2ce204344cf8eaa058d6e426",
+    "installer/MedicalDiaryAutofill.iss": "a053b9e4c8f125eee911f490e0079447597eb318",
+    "tools/windows_installer_smoke.ps1": "6355628cd023f91b1b44c8ba408fec782727c15e"
   }
 }
