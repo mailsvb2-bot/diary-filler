@@ -510,14 +510,25 @@ class PatientRegistryMixin:
                 f"По больничному листу: {len(snapshot.sick_leave_patients)}."
             )
             if not snapshot.patients:
+                empty_text = "Пациенты с распознанным первичным документом на эту дату не найдены."
+                if snapshot.issues:
+                    empty_text += " Ниже показано, почему отдельные папки не попали в список."
+                else:
+                    empty_text += (
+                        " Проверьте выбранную папку и наличие файлов вида "
+                        "«Фамилия первичный/первичка.docx» в её подпапках."
+                    )
                 tk.Label(
                     rows,
-                    text="Пациенты с распознанным первичным документом на эту дату не найдены.",
+                    text=empty_text,
                     bg=PANEL,
                     fg=MUTED,
+                    justify="left",
+                    anchor="w",
+                    wraplength=760,
                     font=self._font(10),
                     pady=16,
-                ).pack(fill="x")
+                ).pack(fill="x", padx=10)
             else:
                 for entry in snapshot.patients:
                     add_patient_row(entry, query_date)
@@ -528,9 +539,29 @@ class PatientRegistryMixin:
                     text=f"Не удалось полностью проанализировать папок: {len(snapshot.issues)}.",
                     bg=PANEL,
                     fg=WARN,
-                    font=self._font(9),
-                    pady=8,
+                    font=self._font(9, "bold"),
+                    pady=6,
                 ).pack(fill="x", padx=10)
+                for issue in snapshot.issues[:10]:
+                    tk.Label(
+                        rows,
+                        text=f"• {issue.folder.name}: {issue.message}",
+                        bg=PANEL,
+                        fg=WARN,
+                        justify="left",
+                        anchor="w",
+                        wraplength=760,
+                        font=self._font(9),
+                    ).pack(fill="x", padx=18, pady=(0, 3))
+                if len(snapshot.issues) > 10:
+                    tk.Label(
+                        rows,
+                        text=f"… и ещё {len(snapshot.issues) - 10}.",
+                        bg=PANEL,
+                        fg=WARN,
+                        anchor="w",
+                        font=self._font(9),
+                    ).pack(fill="x", padx=18, pady=(0, 4))
 
         tk.Button(
             top,
