@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "a29b59ab2ca1592c4074861f44716bb6d0103526",
+  "reason": "User-requested fixes: every sick-leave data popup exposes the canonical sick-leave opening date; patient-summary tray is moved to an independent detached process so it survives closing the main application and is closed only from its own window or tray menu; mandatory patient-root onboarding is restored for every visible first launch while retaining the early GUI-heartbeat race fix.",
+  "required_evidence": [
+    "document_mechanics_guard",
+    "full_patient_replay",
+    "golden_docx",
+    "staff_profile_regression",
+    "gender_generation_matrix",
+    "desktop_intake_contract",
+    "intake_lifecycle_regression",
+    "packaged_desktop_intake_e2e",
+    "installer_uninstall_smoke",
+    "ci_gate_lock",
+    "patient_registry_regression"
+  ],
+  "approved_blobs": {
+    "actions_creation_orchestrator.py": "865a5e521d18d1b54d6c0a50546382d63837cd90",
+    "dialog_document_details.py": "2ddac00e9accdb697812def4db99e7a4e3ef7992",
+    "dialog_expert.py": "239742a3e2272cb1ccd9b45740d5e3c3f0a0b372",
+    "main.py": "8d340a70c78fb5f775671f98385bc4cd1acbba7a",
+    "patient_registry.py": "0b97b0f67df92730eb9ed12cd8b8db7e31cf3748",
+    "patient_registry_mixin.py": "b24c99e23589dfd0718542d5b96c03157e70ed24",
+    "tests/intake_lifecycle_regression.py": "aad413654d02b91bcd4c45c7272b311287fcff8e",
+    "tests/patient_registry_regression.py": "c96847181afe50559a18e8b24403475eb8cc5c4f"
+  }
+}
