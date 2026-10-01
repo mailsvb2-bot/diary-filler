@@ -6,6 +6,7 @@ from tempfile import TemporaryDirectory
 from types import SimpleNamespace
 
 from medical_expert import build_expert_anamnesis
+from medical_formatting import treatment_period_text
 from medical_models import PatientData, parse_sick_leave_value
 from medical_parser import MedicalTextParser
 from medical_service import MedicalDocumentService
@@ -97,6 +98,11 @@ def _assert_vk_wednesday_schedule() -> None:
     third = next_sick_leave_vk_date(sick_from, date(2026, 10, 1))
     assert third == date(2026, 10, 14)
     assert third.weekday() == 2
+
+    # The VK document itself describes hospitalization days, not sick-leave days.
+    assert treatment_period_text("01.09.2026", "16.09.2026") == (
+        "Находится на лечении с 01.09.2026 (16 дней)"
+    )
 
 
 def _assert_discharge_stays_admission_based() -> None:
