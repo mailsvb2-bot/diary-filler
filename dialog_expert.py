@@ -253,6 +253,8 @@ class DialogExpertMixin:
             rows.append((label, sick))
             fields.append("sick_leave")
             choices[label] = ("нет", "да")
+            rows.append(("С какого числа больничный лист", self._sick_leave_start_date_popup_default()))
+            fields.append("sick_leave_from")
 
         if selected & disability_docs:
             disability = self._normalize_yes_no(self.disability_needed_var.get())
@@ -282,12 +284,14 @@ class DialogExpertMixin:
             if values is None:
                 return False
             for field, raw in zip(fields, values):
-                if field == "psych_account":
+                if field == "sick_leave_from":
+                    value = raw.strip()
+                elif field == "psych_account":
                     normalized_psych = " ".join(raw.strip().lower().replace("ё", "е").split())
                     value = {"состоит": "да", "не состоит": "нет"}.get(normalized_psych, "")
                 else:
                     value = self._normalize_yes_no(raw)
-                if not value:
+                if field != "sick_leave_from" and not value:
                     messagebox.showwarning("Не выбран вариант", "Для каждого вопроса выберите один из вариантов.")
                     return False
                 if field == "psych_account":
@@ -302,6 +306,15 @@ class DialogExpertMixin:
                     self.expert_work_status_var.set(value)
                 elif field == "sick_leave":
                     self.expert_sick_leave_needed_var.set(value)
+                elif field == "sick_leave_from":
+                    if self._normalize_yes_no(self.expert_sick_leave_needed_var.get()) == "нет":
+                        self.expert_sick_leave_from_var.set("")
+                    elif not self._store_sick_leave_start_date_value(value):
+                        messagebox.showwarning(
+                            "Некорректная дата",
+                            "Укажите, с какого числа больничный лист, например 12.09.2026 или 120926.",
+                        )
+                        return False
                 elif field == "disability":
                     self.disability_needed_var.set(value)
                     if hasattr(self, "data"):
@@ -579,7 +592,7 @@ class DialogExpertMixin:
 
         rows = [
             ("Номер истории болезни", self._case_number_popup_default()),
-            ("С какого числа больничный", self.expert_sick_leave_from_var.get().strip() or default_from),
+            ("С какого числа больничный лист", self.expert_sick_leave_from_var.get().strip() or default_from),
             ("Где работает / организация", self.expert_work_org_var.get().strip() or default_org),
             ("Должность", self.expert_position_var.get().strip() or default_position),
         ]
