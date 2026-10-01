@@ -314,6 +314,10 @@ class PatientRegistryMixin:
             else:
                 # Development/non-Windows fallback: never make the summary
                 # unreachable merely because a native tray is unavailable.
+                try:
+                    win.deiconify()
+                except Exception:
+                    pass
                 win.iconify()
 
         def poll_tray_requests() -> None:
@@ -598,10 +602,16 @@ class PatientRegistryMixin:
         date_entry.bind("<Return>", lambda _event: refresh())
         refresh()
         if start_in_tray:
-            win.after(150, minimize_to_tray)
+            # Detached tray hosts must not flash a visible summary window before
+            # the notification-area icon is ready.
+            try:
+                win.withdraw()
+            except Exception:
+                pass
+            win.after(50, minimize_to_tray)
         else:
             win.lift()
-        try:
-            win.focus_force()
-        except Exception:
-            pass
+            try:
+                win.focus_force()
+            except Exception:
+                pass
