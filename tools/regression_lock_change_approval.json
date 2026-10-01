@@ -21,7 +21,7 @@
     "patient_registry_mixin.py": "2d240d5f04b9cfbe14972b569ecc179788ac1642",
     "startup.py": "2d37b18c487f5966d31a30e4c259e26566168e5f",
     "tests/intake_lifecycle_regression.py": "d6a3d82919f41382dd197da8694d5bb1d8fe30bf",
-    "tests/patient_registry_regression.py": "a663b2966db04f5415c6855218cbe4a226b45de4",
+    "tests/patient_registry_regression.py": "8111a458ddf686b0295b892d4841ce9decbb76b6",
     "window_mixin.py": "f7ecaeef7d597bf7366828584d711da15bdabd2d"
   }
 }
