@@ -13,6 +13,7 @@ from medical_models import normalize_yes_no, parse_sick_leave_value
 
 
 PATIENT_SUMMARY_ARGUMENT = "--patient-summary"
+PATIENT_SUMMARY_TRAY_ARGUMENT = "--patient-summary-tray"
 PATIENT_SUMMARY_RUN_VALUE_NAME = "MedicalDiaryAutofill Patients"
 PATIENT_SUMMARY_RUN_KEY = r"Software\Microsoft\Windows\CurrentVersion\Run"
 SUPPORTED_WORD_SUFFIXES = {".doc", ".docx", ".docm"}
@@ -443,6 +444,33 @@ class PatientSummaryTray:
             self._ready.set()
         finally:
             self._hwnd = None
+
+
+def launch_patient_summary_tray_process() -> bool:
+    """Launch an independent patient-summary host that survives the main GUI.
+
+    A summary opened from the main application is otherwise only a Tk child of
+    that process, so closing the main application necessarily removes its tray
+    icon. The detached host owns the summary/tray lifecycle independently.
+    """
+    if os.name != "nt":
+        return False
+    try:
+        from startup import _desktop_runtime_command
+
+        command = _desktop_runtime_command(PATIENT_SUMMARY_TRAY_ARGUMENT)
+        creationflags = (
+            getattr(subprocess, "DETACHED_PROCESS", 0)
+            | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+        )
+        subprocess.Popen(
+            command,
+            close_fds=True,
+            creationflags=creationflags,
+        )
+        return True
+    except (OSError, ValueError, subprocess.SubprocessError):
+        return False
 
 
 def install_patient_summary_autostart() -> bool:
