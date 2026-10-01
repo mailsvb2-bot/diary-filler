@@ -30,6 +30,7 @@
     "tests/patient_registry_regression.py": "6f80d0e9eb6ed46b304e83c5fa11cf849bd0e94a",
     "tests/regression_surface_inventory.py": "1c1f99019ff8a071da18698bddeb0fc776b32c62",
     "tools/ci_gate_lock.py": "40668544c260019cf3b920b5c0e44f4aa965fdeb",
-    "window_mixin.py": "511829b1936a125eaea084325feadd9ef2478e22"
+    "window_mixin.py": "511829b1936a125eaea084325feadd9ef2478e22",
+    "tools/document_mechanics_change_approval.json": "04e40fe83b87732957ae8633c8cd3e99236975bb"
   }
 }
