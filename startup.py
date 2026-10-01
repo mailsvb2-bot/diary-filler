@@ -8,6 +8,7 @@ import re
 import shutil
 import subprocess
 import sys
+import threading
 import time
 import traceback
 from dataclasses import dataclass
@@ -915,6 +916,39 @@ def _desktop_touch_gui_heartbeat() -> None:
                 pass
 
 
+_DESKTOP_VISIBLE_GUI_HEARTBEAT_THREAD_STARTED = False
+
+
+def claim_desktop_gui_session() -> None:
+    """Claim the visible-GUI lease before any first-run modal onboarding.
+
+    The hidden intake watcher uses the heartbeat to decide whether it may launch
+    another visible GUI for a newly-arrived Word file. First-run folder/staff
+    dialogs can stay open much longer than the heartbeat timeout, so the lease
+    must be maintained independently of Tk's event loop. Otherwise a watcher
+    event can race onboarding and make an unrelated primary document appear
+    immediately after the user closes the folder chooser.
+    """
+    if os.name != "nt":
+        return
+    global _DESKTOP_VISIBLE_GUI_HEARTBEAT_THREAD_STARTED
+    _desktop_touch_gui_heartbeat()
+    if _DESKTOP_VISIBLE_GUI_HEARTBEAT_THREAD_STARTED:
+        return
+    _DESKTOP_VISIBLE_GUI_HEARTBEAT_THREAD_STARTED = True
+
+    def heartbeat_loop() -> None:
+        while True:
+            _desktop_touch_gui_heartbeat()
+            time.sleep(max(0.5, _DESKTOP_INTAKE_HEARTBEAT_MS / 1000.0))
+
+    threading.Thread(
+        target=heartbeat_loop,
+        name="MedicalDiaryAutofillVisibleGuiHeartbeat",
+        daemon=True,
+    ).start()
+
+
 def _desktop_gui_is_active() -> bool:
     try:
         value = float(_desktop_gui_heartbeat_path().read_text(encoding="ascii").strip())
@@ -1570,7 +1604,7 @@ def start_desktop_intake_runtime(app, *, initial_primary: str | Path | None = No
         if launch_observed is not None
         else {key: signature for key, (_path, signature) in current_snapshot.items()}
     )
-    _desktop_schedule_heartbeat(app)
+    claim_desktop_gui_session()
     app.root.after(1200, lambda: _desktop_schedule_agent_health(app))
 
     if initial_primary:
