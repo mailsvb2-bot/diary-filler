@@ -106,6 +106,39 @@ def _date_value(value: str) -> date | None:
     return parsed.date() if parsed else None
 
 
+def _admission_date_from_primary_first_line(path: Path) -> date | None:
+    """Registry-specific fallback for real primary files.
+
+    In the ward folder contract the primary/первичка file itself identifies the
+    document kind, and doctors commonly put the admission date as the first
+    non-empty Word line without repeating «Первичный осмотр» on that line.
+    The generic medical parser is intentionally stricter to avoid confusing a
+    birth date with admission in arbitrary documents. Here it is safe to accept
+    only a date at the *start of the first non-empty line* of an already
+    filename-validated primary document.
+    """
+    try:
+        from medical_docx_reader import extract_docx_text
+
+        text = extract_docx_text(path)
+    except Exception:
+        return None
+
+    first_line = next((line.strip() for line in str(text or "").splitlines() if line.strip()), "")
+    if not first_line:
+        return None
+    lowered = first_line.lower().replace("ё", "е")
+    if any(marker in lowered for marker in ("дата рождения", "год рождения", "г.р", "возраст")):
+        return None
+    match = re.match(
+        r"^\s*(\d{1,2}\s*[./-]\s*\d{1,2}\s*[./-]\s*\d{2,4}|\d{6,8})(?=$|\s|[,;])",
+        first_line,
+    )
+    if not match:
+        return None
+    return _date_value(re.sub(r"\s+", "", match.group(1)))
+
+
 def _sick_leave_state(data) -> tuple[bool, date | None, str]:
     explicit_decision = normalize_yes_no(getattr(data, "expert_sick_leave_needed", ""))
     explicit_from = str(getattr(data, "expert_sick_leave_from", "") or "").strip()
@@ -181,7 +214,14 @@ def scan_patient_registry(
 
         admission = _date_value(getattr(parsed_data, "admission_date", ""))
         if admission is None:
-            issues.append(PatientRegistryIssue(patient_folder, "Не распознана дата поступления."))
+            admission = _admission_date_from_primary_first_line(chosen)
+        if admission is None:
+            issues.append(
+                PatientRegistryIssue(
+                    patient_folder,
+                    "Не распознана дата поступления ни общим парсером, ни в первой строке первичного документа.",
+                )
+            )
             continue
         if admission > target_date:
             continue
