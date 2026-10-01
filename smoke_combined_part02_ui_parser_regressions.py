@@ -410,17 +410,24 @@ case_dialog_logic.sick_leave_vk_protocol_date_var = _FakeVar("")
 case_dialog_logic.sick_leave_vk_commission_date_var = _FakeVar("")
 case_dialog_logic.sick_leave_vk_work_org_var = _FakeVar("")
 case_dialog_logic.sick_leave_vk_position_var = _FakeVar("")
-case_dialog_logic._prompt_fields = lambda title, rows, width=64, linked_groups=None: sick_vk_rows.append((title, rows, linked_groups)) or ["100", "23062026", "13", "23062026", "23062026", "ООО Тест", "инженер"]
+case_dialog_logic.expert_sick_leave_needed_var = _FakeVar("да")
+case_dialog_logic.expert_sick_leave_from_var = _FakeVar("")
+case_dialog_logic.admission_date_var = _FakeVar("10.06.2026")
+case_dialog_logic.data.admission_date = "10.06.2026"
+case_dialog_logic._update_expert_sick_leave_display = lambda: None
+case_dialog_logic._prompt_fields = lambda title, rows, width=64, linked_groups=None: sick_vk_rows.append((title, rows, linked_groups)) or ["100", "23062026", "13", "23062026", "23062026", "12062026", "ООО Тест", "инженер"]
 case_dialog_logic._prompt_sick_leave_vk_details = _main_module.CombinedMedicalDiaryApp._prompt_sick_leave_vk_details.__get__(case_dialog_logic, _main_module.CombinedMedicalDiaryApp)
 assert case_dialog_logic._prompt_sick_leave_vk_details() is True
 assert [label for label, _default in sick_vk_rows[0][1]][1] == "Дата / дата проведения ВК"
 assert [label for label, _default in sick_vk_rows[0][1]][3] == "Дата протокола"
+assert [label for label, _default in sick_vk_rows[0][1]][5] == "С какого числа больничный лист"
 assert sick_vk_rows[0][1][1][1] == "", sick_vk_rows[0][1]
 assert sick_vk_rows[0][1][3][1] == "", sick_vk_rows[0][1]
 assert sick_vk_rows[0][1][4][1] == "", sick_vk_rows[0][1]
 assert sick_vk_rows[0][2] == [(1, [3, 4])]
 assert case_dialog_logic.sick_leave_vk_date_var.get() == "23.06.2026"
 assert case_dialog_logic.sick_leave_vk_protocol_date_var.get() == "23.06.2026"
+assert case_dialog_logic.expert_sick_leave_from_var.get() == "12.06.2026"
 
 # Linked-field mirroring must be behavioral, not merely a static popup option.
 # A manually edited protocol date stops following later changes to the main date.
@@ -584,6 +591,7 @@ def _clinical_prompt(title, rows, width=46, linked_groups=None, choice_options=N
             "По направлению из РВК": "да",
             "Работает ли пациент": "да",
             "Нужен ли больничный лист": "да",
+            "С какого числа больничный лист": "12062026",
             "Нужно ли оформление инвалидности": "нет",
             "Есть ли ЭПИ": "нет",
         }
@@ -595,7 +603,7 @@ def _clinical_prompt(title, rows, width=46, linked_groups=None, choice_options=N
     if title == "Место работы":
         return ["ООО Тест", "врач"]
     if title == "Больничный лист":
-        return ["12062026"]
+        raise AssertionError("opening date must be collected in the shared sick-leave popup")
     raise AssertionError((title, rows))
 clinical_logic._prompt_fields = _clinical_prompt
 assert clinical_logic._prompt_shared_clinical_options_if_needed(["primary", "commission"]) is True
@@ -608,7 +616,8 @@ assert clinical_logic.disability_needed_var.get() == "нет"
 assert clinical_logic.epi_present_var.get() == "нет"
 assert clinical_logic.epi_path_var.get() == ""
 assert clinical_logic.data.disability == "не нужно"
-assert [call[0] for call in clinical_prompts] == ["Дополнительные данные", "Учёт у психиатров", "Направление из РВК", "Место работы", "Больничный лист"]
+assert [call[0] for call in clinical_prompts] == ["Дополнительные данные", "Учёт у психиатров", "Направление из РВК", "Место работы"]
+assert "С какого числа больничный лист" in [label for label, _default in clinical_prompts[0][1]]
 assert clinical_logic.psych_account_status_var.get() == "да"
 assert clinical_logic.psych_account_since_year_var.get() == "2018"
 assert clinical_logic.rvk_referral_present_var.get() == "да"
@@ -652,8 +661,8 @@ assert clinical_logic.expert_sick_leave_from_var.get() == "12.06.2026"
 assert clinical_logic.disability_needed_var.get() == "да"
 assert clinical_logic.data.disability == "нужно"
 
-# A previously valid sick-leave date is only a default, not a lock. Reconfirming
-# «Да» must reopen the date question so the doctor can correct it.
+# A valid retained sick-leave date must not create a redundant second popup.
+# It remains editable in every containing sick-leave popup above.
 date_revision_logic = _main_module.CombinedMedicalDiaryApp.__new__(_main_module.CombinedMedicalDiaryApp)
 date_revision_logic.expert_sick_leave_needed_var = _FakeVar("да")
 date_revision_logic.expert_sick_leave_from_var = _FakeVar("12.06.2026")
@@ -662,15 +671,12 @@ date_revision_logic.data = PatientData(admission_date="10.06.2026")
 date_revision_logic._update_expert_sick_leave_display = lambda: None
 date_revision_logic._normalize_date_for_ui = _main_module.CombinedMedicalDiaryApp._normalize_date_for_ui.__get__(date_revision_logic, _main_module.CombinedMedicalDiaryApp)
 date_revision_prompts = []
-def _date_revision_prompt(title, rows, width=34, linked_groups=None, choice_options=None):
-    date_revision_prompts.append((title, list(rows)))
-    assert title == "Больничный лист"
-    assert rows == [("С какого числа", "12.06.2026")], rows
-    return ["13062026"]
-date_revision_logic._prompt_fields = _date_revision_prompt
+date_revision_logic._prompt_fields = lambda *args, **kwargs: (_ for _ in ()).throw(
+    AssertionError("valid date must not trigger a second sick-leave popup")
+)
 assert date_revision_logic._prompt_sick_leave_start_date_if_needed() is True
-assert date_revision_logic.expert_sick_leave_from_var.get() == "13.06.2026"
-assert len(date_revision_prompts) == 1
+assert date_revision_logic.expert_sick_leave_from_var.get() == "12.06.2026"
+assert date_revision_prompts == []
 
 # Discharge-only and commission-only generation must still ask the sick-leave
 # decision because both render an expert-anamnesis block. Disability stays out
@@ -704,10 +710,10 @@ for clinical_kind in ("discharge", "commission"):
     def _standalone_prompt(title, rows, width=46, linked_groups=None, choice_options=None):
         standalone_calls.append((title, list(rows), choice_options))
         assert title == "Дополнительные данные"
-        return ["не состоит", "нет", "нет", "нет"]
+        return ["не состоит", "нет", "нет", "", "нет"]
     standalone_logic._prompt_fields = _standalone_prompt
     assert standalone_logic._prompt_shared_clinical_options_if_needed([clinical_kind]) is True
-    assert [label for label, _ in standalone_calls[0][1]] == ["На учёте у психиатров", "Работает ли пациент", "Нужен ли больничный лист", "Есть ли ЭПИ"]
+    assert [label for label, _ in standalone_calls[0][1]] == ["На учёте у психиатров", "Работает ли пациент", "Нужен ли больничный лист", "С какого числа больничный лист", "Есть ли ЭПИ"]
     assert standalone_logic.expert_work_status_var.get() == "нет"
     assert "Нужно ли оформление инвалидности" not in [label for label, _ in standalone_calls[0][1]]
     assert standalone_logic.expert_sick_leave_needed_var.get() == "нет"
@@ -789,7 +795,11 @@ for vk_kind in ("vk_mse", "sick_leave_vk"):
     nonworking_vk.sick_leave_vk_protocol_number_var = _FakeVar("")
     nonworking_vk.sick_leave_vk_protocol_date_var = _FakeVar("")
     nonworking_vk.sick_leave_vk_commission_date_var = _FakeVar("")
-    nonworking_vk.data = PatientData(case_number="К-904", expert_work_status="нет")
+    nonworking_vk.expert_sick_leave_needed_var = _FakeVar("да")
+    nonworking_vk.expert_sick_leave_from_var = _FakeVar("")
+    nonworking_vk.admission_date_var = _FakeVar("10.06.2026")
+    nonworking_vk.data = PatientData(case_number="К-904", expert_work_status="нет", admission_date="10.06.2026")
+    nonworking_vk._update_expert_sick_leave_display = lambda: None
     nonworking_vk._remember_committee_dates = lambda **_kwargs: None
     captured_vk_rows = []
     def _nonworking_vk_prompt(title, rows, width=64, linked_groups=None, choice_options=None):
@@ -800,7 +810,7 @@ for vk_kind in ("vk_mse", "sick_leave_vk"):
         if title == "ВК на МСЭ":
             return ["К-904", "12062026", "17", "12062026"]
         if title == "ВК больничный":
-            return ["К-904", "12062026", "18", "12062026", "12062026"]
+            return ["К-904", "12062026", "18", "12062026", "12062026", "10062026"]
         raise AssertionError((title, rows))
     nonworking_vk._prompt_fields = _nonworking_vk_prompt
     if vk_kind == "vk_mse":
@@ -812,6 +822,7 @@ for vk_kind in ("vk_mse", "sick_leave_vk"):
         assert nonworking_vk.sick_leave_vk_work_org_var.get() == ""
         assert nonworking_vk.sick_leave_vk_position_var.get() == ""
         assert nonworking_vk.sick_leave_vk_work_position_var.get() == ""
+        assert nonworking_vk.expert_sick_leave_from_var.get() == "10.06.2026"
     assert nonworking_vk.expert_work_status_var.get() == "нет"
     assert len(captured_vk_rows) == 1
 
