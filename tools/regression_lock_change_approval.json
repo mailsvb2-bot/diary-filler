@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "41595ed0c0e17e06aeb1099c46582182a143496e",
+  "reason": "Make scheduled Windows live E2E runs truthful when no physical Win10/Win11 targets are enabled: add an explicit NO PHYSICAL LIVE E2E EVIDENCE job and lock that distinction in the live E2E contract so a scheduler-only success cannot be mistaken for physical E2E evidence.",
+  "required_evidence": [
+    "ci_gate_lock",
+    "windows_live_e2e_contract",
+    "document_mechanics_guard",
+    "full_patient_replay",
+    "golden_docx",
+    "installer_uninstall_smoke"
+  ],
+  "approved_blobs": {
+    ".github/workflows/windows-live-e2e.yml": "c9531915d2147f4ec039148d173d959239ad6a32",
+    "tests/windows_live_e2e_contract.py": "b8a188914bca149d83f858cf24681608aaaf2fea"
+  }
+}
