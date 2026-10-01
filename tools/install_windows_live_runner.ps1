@@ -16,7 +16,7 @@ param(
     [string]$TargetOs = "windows11",
 
     [string]$RunnerName = "",
-    [string]$InstallRoot = "$env:LOCALAPPDATA\GitHubActionsRunner\diary-filler",
+    [string]$InstallRoot = "$env:SystemDrive\actions-runner\diary-filler",
     [string]$Labels = ""
 )
 
@@ -81,7 +81,11 @@ if ($repo -notmatch "^https://github\.com/[^/]+/[^/]+$") {
 }
 if ([string]::IsNullOrWhiteSpace($RegistrationToken)) { Fail "registration token is empty" }
 
-New-Item -ItemType Directory -Force -Path $InstallRoot | Out-Null
+try {
+    New-Item -ItemType Directory -Force -Path $InstallRoot | Out-Null
+} catch {
+    Fail "cannot create runner root '$InstallRoot'. Re-open cmd.exe as Administrator and retry. Underlying error: $($_.Exception.Message)"
+}
 $zip = Join-Path $env:TEMP "actions-runner-win-x64-$RunnerVersion.zip"
 $asset = "https://github.com/actions/runner/releases/download/v$RunnerVersion/actions-runner-win-x64-$RunnerVersion.zip"
 
@@ -98,6 +102,17 @@ try {
 } catch {
     Fail "GitHub runner download failed over TLS 1.2. Ensure Windows root certificates and TLS 1.2 support are current. Underlying error: $($_.Exception.Message)"
 }
+
+Write-Host "Checking GitHub API connectivity over TLS 1.2..."
+try {
+    $apiResponse = Invoke-WebRequest -UseBasicParsing -Uri "https://api.github.com/" -Headers @{ "User-Agent" = "diary-filler-live-runner-bootstrap" } -TimeoutSec 30
+    if ([int]$apiResponse.StatusCode -lt 200 -or [int]$apiResponse.StatusCode -ge 400) {
+        Fail "api.github.com returned HTTP $($apiResponse.StatusCode)"
+    }
+} catch {
+    Fail "GitHub API connectivity failed over TLS 1.2 before runner registration. Underlying error: $($_.Exception.Message)"
+}
+
 $actual = (Get-FileHash -Algorithm SHA256 -LiteralPath $zip).Hash
 if ($actual.ToLowerInvariant() -ne $ExpectedSha256.ToLowerInvariant()) {
     Remove-Item -LiteralPath $zip -Force -ErrorAction SilentlyContinue
@@ -111,12 +126,53 @@ if (Test-Path (Join-Path $InstallRoot ".runner")) {
 Expand-Archive -LiteralPath $zip -DestinationPath $InstallRoot -Force
 Remove-Item -LiteralPath $zip -Force -ErrorAction SilentlyContinue
 
+$configTranscript = Join-Path $env:TEMP "diary-filler-runner-config-$TargetOs.log"
+Remove-Item -LiteralPath $configTranscript -Force -ErrorAction SilentlyContinue
+
 Push-Location $InstallRoot
 try {
     # Deliberately do NOT use --runasservice. Windows services execute in
     # Session 0 and cannot provide trustworthy interactive GUI E2E evidence.
-    & .\config.cmd --unattended --url $repo --token $RegistrationToken --name $RunnerName --labels $Labels --work "_work" --replace
-    if ($LASTEXITCODE -ne 0) { Fail "config.cmd failed with exit code $LASTEXITCODE" }
+    $configArgs = @(
+        "--unattended",
+        "--url", $repo,
+        "--token", $RegistrationToken,
+        "--name", $RunnerName,
+        "--labels", $Labels,
+        "--work", "_work",
+        "--replace"
+    )
+    & .\config.cmd @configArgs 2>&1 | ForEach-Object {
+        $safeLine = ([string]$_).Replace($RegistrationToken, "***")
+        Write-Host $safeLine
+        Add-Content -LiteralPath $configTranscript -Value $safeLine -Encoding UTF8
+    }
+    $configExit = $LASTEXITCODE
+
+    if ($configExit -ne 0) {
+        Write-Host ""
+        Write-Host "---- GitHub runner configuration diagnostics ----"
+        Write-Host "Install root: $InstallRoot"
+        Write-Host "OS: $($os.Caption) build $build"
+        Write-Host "Config exit code: $configExit"
+        if (Test-Path (Join-Path $InstallRoot "_diag")) {
+            $diagFiles = @(Get-ChildItem -LiteralPath (Join-Path $InstallRoot "_diag") -Filter "Runner_*.log" -File -ErrorAction SilentlyContinue |
+                Sort-Object LastWriteTime -Descending |
+                Select-Object -First 3)
+            foreach ($diag in $diagFiles) {
+                Write-Host "--- $($diag.Name) (last 120 lines) ---"
+                Get-Content -LiteralPath $diag.FullName -Tail 120 -ErrorAction SilentlyContinue | ForEach-Object {
+                    Write-Host (([string]$_).Replace($RegistrationToken, "***"))
+                }
+            }
+            if ($diagFiles.Count -eq 0) {
+                Write-Host "No Runner_*.log files were created in _diag."
+            }
+        } else {
+            Write-Host "No _diag directory was created."
+        }
+        Fail "config.cmd failed with exit code $configExit; diagnostics were printed above and saved to $configTranscript"
+    }
 } finally {
     Pop-Location
 }
