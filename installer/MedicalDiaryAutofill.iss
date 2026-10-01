@@ -86,6 +86,14 @@ begin
     'Software\Microsoft\Windows\CurrentVersion\Run',
     'MedicalDiaryAutofill Intake'
   );
+  { The visible daily patient summary is registered by the app only after the
+    user explicitly selects the patient root. Uninstall must remove that
+    application-owned persistence too. }
+  RegDeleteValue(
+    HKCU,
+    'Software\Microsoft\Windows\CurrentVersion\Run',
+    'MedicalDiaryAutofill Patients'
+  );
   DeleteFile(ExpandConstant('{userstartup}\MedicalDiaryAutofill Intake.vbs'));
 
   { taskkill is best-effort: even "process not found" must not cancel uninstall. }

@@ -100,10 +100,8 @@ class DialogExpertMixin:
                 "Укажите дату начала больничного, например 12.09.2026 или 120926.",
             )
             return False
-        admission = parse_date(self._admission_date_popup_default())
-        if admission and parsed.date() < admission.date():
-            messagebox.showwarning("Некорректная дата", "Дата начала больничного не может быть раньше даты госпитализации.")
-            return False
+        # Больничный лист может быть открыт до госпитализации. Это отдельная
+        # временная шкала и она не ограничивается датой поступления.
         self.expert_sick_leave_from_var.set(parsed.strftime("%d.%m.%Y"))
         self._update_expert_sick_leave_display()
         return True

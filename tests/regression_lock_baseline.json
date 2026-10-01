@@ -1,9 +1,10 @@
 {
   "schema_version": 1,
-  "baseline_ref": "c360f46dbc795cce412083a84aafd17fb8a6149e",
-  "baseline_note": "Windows live E2E evidence-clarity baseline. PR #281 merged as c360f46dbc795cce412083a84aafd17fb8a6149e after full PR Windows CI success (run 36879460190); post-merge main run 36880258944 then passed the complete Windows production contour. Scheduled live workflows now explicitly distinguish scheduler/planning success from physical Win10/Win11 E2E evidence, while real physical matrix rows remain independent and fail-closed.",
+  "baseline_ref": "5695ea4810eb022ddd28ddb5576ae5bcca7e621a",
+  "baseline_note": "User-requested no-regression freeze of the complete current production state before the patient dashboard / sick-leave VK work. main 5695ea4810eb022ddd28ddb5576ae5bcca7e621a is the immutable starting point: all existing production behavior and tests must remain green; critical-surface drift is forbidden without exact blob approval and the full regression evidence set.",
   "required_approval_evidence": [
-    "ci_gate_lock"
+    "ci_gate_lock",
+    "patient_registry_regression"
   ],
   "excluded_paths": []
 }

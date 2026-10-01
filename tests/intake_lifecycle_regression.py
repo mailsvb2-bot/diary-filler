@@ -587,6 +587,7 @@ def assert_install_marker_forces_folder_and_staff_onboarding() -> None:
                 self.preference = True
                 self._desktop_intake_enabled_for_session = True
                 self.staff_prompts = 0
+                self.patient_registry_prompts = 0
 
             def _desktop_intake_preference(self):
                 return self.preference
@@ -601,6 +602,14 @@ def assert_install_marker_forces_folder_and_staff_onboarding() -> None:
             def _prompt_staff_profile(self, *, first_run=False):
                 assert first_run is True
                 self.staff_prompts += 1
+                return True
+
+            def _patient_registry_root(self):
+                return ""
+
+            def _ensure_patient_registry_folder(self, *, first_run=False):
+                assert first_run is True
+                self.patient_registry_prompts += 1
                 return True
 
         app = AppStub()
@@ -622,6 +631,7 @@ def assert_install_marker_forces_folder_and_staff_onboarding() -> None:
 
         assert asked == [], "mandatory intake must not ask an opt-out question"
         assert app.staff_prompts == 1, app.staff_prompts
+        assert app.patient_registry_prompts == 1, app.patient_registry_prompts
         assert app.preference is True and app._desktop_intake_enabled_for_session is True
         assert not marker.exists(), "completed onboarding marker was not consumed"
 
@@ -654,6 +664,13 @@ def assert_legacy_disabled_preference_heals_and_preserves_user_folder() -> None:
 
             def _prompt_staff_profile(self, *, first_run=False):
                 raise AssertionError("staff prompt must not run without install marker")
+
+            def _patient_registry_root(self):
+                return "configured"
+
+            def _ensure_patient_registry_folder(self, *, first_run=False):
+                assert first_run is True
+                return True
 
         app = AppStub()
         original_os = app_main.os

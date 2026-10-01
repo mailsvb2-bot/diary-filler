@@ -346,9 +346,8 @@ class MedicalDocumentService:
                 data.expert_sick_leave_from = self._normalize_required_date(
                     data.expert_sick_leave_from, "Дата начала больничного"
                 )
-                self._ensure_date_not_before_admission(
-                    data.admission_date, data.expert_sick_leave_from, "Дата начала больничного"
-                )
+                # Sick-leave chronology is independent from hospitalization:
+                # a valid certificate may start before admission.
                 data.sick_leave = f"нужен с {data.expert_sick_leave_from}"
             else:
                 data.expert_sick_leave_from = ""

@@ -81,6 +81,7 @@ REQUIRED_REPOSITORY_FILES = (
     "tests/intake_lifecycle_regression.py",
     "tests/diagnosis_override_regression.py",
     "tests/full_user_journey_regression.py",
+    "tests/patient_registry_regression.py",
     "tests/windows_e1_exhaustive_user_matrix.py",
     "tests/windows_live_e2e_contract.py",
     "tests/windows_live_gui_e2e.py",

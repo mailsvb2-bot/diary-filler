@@ -143,6 +143,9 @@ try {
 
     $settings = @{
         desktop_intake_enabled = $true
+        folders = @{
+            patient_registry_dir = $intakeRoot
+        }
         staff_profile = @{
             configured = $true
             doctor = 'Автоврач А.А.'
