@@ -1,10 +1,11 @@
 {
   "schema_version": 1,
   "base_sha": "a9d9c8dd3c13defd8c18d53fb79ade757a0f4e8c",
-  "reason": "Explicit user-requested document mechanics change: every sick-leave data popup must expose and persist the single canonical 'С какого числа больничный лист' date, including the sick-leave VK and discharge flows, without changing admission-based treatment duration.",
+  "reason": "Explicit user-requested document mechanics change: every sick-leave data popup must expose and persist the canonical 'С какого числа больничный лист' date, and real primary documents that write only 'Больничный лист с <дата>' must round-trip as an explicit positive sick-leave fact, without changing admission-based treatment duration.",
   "approved_blobs": {
     "actions_creation_orchestrator.py": "865a5e521d18d1b54d6c0a50546382d63837cd90",
     "dialog_document_details.py": "2ddac00e9accdb697812def4db99e7a4e3ef7992",
-    "dialog_expert.py": "239742a3e2272cb1ccd9b45740d5e3c3f0a0b372"
+    "dialog_expert.py": "239742a3e2272cb1ccd9b45740d5e3c3f0a0b372",
+    "medical_models.py": "8a71ac8fba4315677d1f2c0b12205d3125e4d022"
   }
 }
