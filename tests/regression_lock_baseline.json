@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "41595ed0c0e17e06aeb1099c46582182a143496e",
-  "baseline_note": "Windows live-runner registration diagnostics baseline. PR #279 merged as 41595ed0c0e17e06aeb1099c46582182a143496e after PR Windows CI success (run 36855652288); post-merge main run 36856152915 then passed the complete Windows production contour. The bootstrap now uses a short ASCII runner root, preflights api.github.com over TLS 1.2, sanitizes configuration output, and prints recent _diag logs on config failure while preserving the Win10/Win11 fail-closed live E2E contracts.",
+  "baseline_ref": "c360f46dbc795cce412083a84aafd17fb8a6149e",
+  "baseline_note": "Windows live E2E evidence-clarity baseline. PR #281 merged as c360f46dbc795cce412083a84aafd17fb8a6149e after full PR Windows CI success (run 36879460190); post-merge main run 36880258944 then passed the complete Windows production contour. Scheduled live workflows now explicitly distinguish scheduler/planning success from physical Win10/Win11 E2E evidence, while real physical matrix rows remain independent and fail-closed.",
   "required_approval_evidence": [
     "ci_gate_lock"
   ],
