@@ -66,30 +66,47 @@ def _assert_real_docx_registry_ingestion() -> None:
     """Exercise the exact Word -> parser -> registry path used by «Мои пациенты»."""
     with TemporaryDirectory(prefix="patient-registry-real-docx-") as temp:
         root = Path(temp)
-        folder = root / "Иванов"
-        folder.mkdir()
-        primary = folder / "Иванов первичный.docx"
 
-        doc = Document()
-        # Real ward format: admission date may be the first line by itself.
-        doc.add_paragraph("01.10.2026")
-        doc.add_paragraph("Ф.И.О.: Маркер Иванов Тестовый")
-        doc.add_paragraph("Год рождения: 1980")
-        # Real user format: no separate «да», the date itself means the LN is open.
-        doc.add_paragraph("Больничный лист с 25.09.2026 числа")
-        doc.add_paragraph("Диагноз: F20.0")
-        doc.save(primary)
+        paragraph_folder = root / "Иванов"
+        paragraph_folder.mkdir()
+        paragraph_primary = paragraph_folder / "Иванов первичный.docx"
+        paragraph_doc = Document()
+        paragraph_doc.add_paragraph("01.10.2026")
+        paragraph_doc.add_paragraph("Ф.И.О.: Маркер Иванов Тестовый")
+        paragraph_doc.add_paragraph("Год рождения: 1980")
+        paragraph_doc.add_paragraph("Больничный лист с 25.09.2026 числа")
+        paragraph_doc.add_paragraph("Диагноз: F20.0")
+        paragraph_doc.save(paragraph_primary)
+
+        table_folder = root / "Петров"
+        table_folder.mkdir()
+        table_primary = table_folder / "Петров первичка.docx"
+        table_doc = Document()
+        table_doc.add_paragraph("02.10.2026")
+        table_doc.add_paragraph("Ф.И.О.: Маркер Петров Тестовый")
+        table_doc.add_paragraph("Год рождения: 1975")
+        table = table_doc.add_table(rows=1, cols=2)
+        table.cell(0, 0).text = "Больничный лист"
+        table.cell(0, 1).text = "с 20.09.2026 числа"
+        table_doc.add_paragraph("Диагноз: F20.0")
+        table_doc.save(table_primary)
 
         snapshot = scan_patient_registry(root, as_of=date(2026, 10, 2))
-        assert len(snapshot.patients) == 1, snapshot.issues
-        assert len(snapshot.sick_leave_patients) == 1, snapshot.issues
+        assert len(snapshot.patients) == 2, snapshot.issues
+        assert len(snapshot.sick_leave_patients) == 2, snapshot.issues
 
-        patient = snapshot.patients[0]
-        assert patient.fio == "Маркер Иванов Тестовый"
-        assert patient.admission_date == date(2026, 10, 1)
-        assert patient.sick_leave_needed is True
-        assert patient.sick_leave_from == date(2026, 9, 25)
-        assert not patient.warning
+        by_fio = {patient.fio: patient for patient in snapshot.patients}
+        ivanov = by_fio["Маркер Иванов Тестовый"]
+        assert ivanov.admission_date == date(2026, 10, 1)
+        assert ivanov.sick_leave_needed is True
+        assert ivanov.sick_leave_from == date(2026, 9, 25)
+        assert not ivanov.warning
+
+        petrov = by_fio["Маркер Петров Тестовый"]
+        assert petrov.admission_date == date(2026, 10, 2)
+        assert petrov.sick_leave_needed is True
+        assert petrov.sick_leave_from == date(2026, 9, 20)
+        assert not petrov.warning
 
 
 def _assert_registry_scan_and_independent_timelines() -> None:
