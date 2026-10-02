@@ -397,7 +397,7 @@ def _support_sanitize_diagnostics(details: str) -> str:
         text = text.replace(raw.replace("/", "\\"), "<USER_PATH>")
 
     text = re.sub(
-        r"(?i)(--intake-primary(?:=|\s+))(?:(?:\"[^\"]*\")|(?:'[^']*')|(?:\S+))",
+        r"(?i)(--(?:intake-primary|open-primary)(?:=|\s+))(?:(?:\"[^\"]*\")|(?:'[^']*')|(?:\S+))",
         r"\1<REDACTED_PRIMARY>",
         text,
     )
