@@ -1,3 +1,13 @@
+# Current release evidence addendum — v1.4.26
+
+Текущий канонический post-merge baseline: `main` `2d246b0d1f85c65a6b62faabcf5e2621380bc0cd`. Обязательный Windows workflow run `37064785734` завершён со статусом SUCCESS.
+
+Этот run подтверждает не только статический release-gate, но и реальный Tk GUI wiring smoke, сборку и запуск packaged PyInstaller EXE, TkDND в packaged EXE, desktop-intake auto-launch E2E, сборку Windows installer и install/uninstall smoke. GitHub Release `v1.4.26` опубликован с installer, standalone EXE и production source archive.
+
+Поэтому нижележащие исторические формулировки ранних audit-итераций про отсутствие автоматизированного Tk GUI/EXE smoke следует читать как описание состояния на момент тех итераций, а не текущего v1.4.26. Непокрытыми автоматикой по-прежнему остаются физические проверки конкретных Windows 10/11 рабочих станций, Microsoft Word для legacy `.doc`, реального принтера, Defender/SmartScreen reputation, Authenticode credentials и корпуса 20–50 обезличенных реальных документов. Актуальный внешний gate находится в `LAUNCH_CHECKLIST.md`.
+
+---
+
 # Final user-flow gate addendum — v1.4.0-final-user-flow
 
 Автоматизированы два прежних P0-разрыва: настоящий Windows Tk user-interface wiring smoke и post-build запуск exact PyInstaller EXE с обязательной регистрацией TkDND. Официальная публикация отделена от обычного QA-artifact: `Signed Windows Release` требует Authenticode credentials, подписывает EXE, выполняет `signtool verify`, повторно запускает exact signed EXE и только после этого создаёт GitHub Release.

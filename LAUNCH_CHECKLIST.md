@@ -2,7 +2,7 @@
 
 Этот чеклист отделяет уже доказанные автоматикой release-gates от физических эксплуатационных проверок, которые GitHub Actions честно заменить не может.
 
-Последний подтверждённый post-merge functional baseline: `main` `b7aa58974054482a4c9924f55832af5172643acd`, Windows run `36923009352` — SUCCESS. Финализирующий metadata merge `470ead4ad970fc443a0eeb56a89274aefe9ab1b9` также прошёл полный Windows run `36924457442` — SUCCESS.
+Текущий подтверждённый baseline: `main` `2d246b0d1f85c65a6b62faabcf5e2621380bc0cd`, Windows run `37064785734` — SUCCESS. Это post-merge clean baseline v1.4.26 после PR #307. Публичный GitHub Release `v1.4.26` опубликован 02.10.2026 и содержит installer, standalone EXE и production source archive.
 
 ## P0 — автоматизированные release-блокеры
 
@@ -16,6 +16,7 @@
 - [x] Windows installer собирается автоматически.
 - [x] Установленная программа проходит install/uninstall smoke.
 - [x] Release artifacts загружаются: EXE, Windows installer и source archive.
+- [x] GitHub Release `v1.4.26` опубликован с тремя production-артефактами: installer, standalone EXE и source archive.
 - [x] Desktop intake принимает `.doc`, `.docx` и `.docm`; legacy `.doc` маршрутизируется через единый временный `.docx` и тот же канонический parser.
 
 ## P0 — физические проверки перед коммерческим запуском
@@ -43,7 +44,7 @@
 - [ ] Подготовлена короткая инструкция для пользователя: скачать installer/EXE, открыть, выбрать документы, сохранить/распечатать.
 - [ ] Подготовлен способ поддержки: куда прислать обезличенный пример, технический лог или скрин ошибки.
 - [ ] Подготовлена политика обработки данных: медицинские документы остаются у пользователя локально.
-- [ ] Подготовлен rollback: предыдущий стабильный installer/EXE и source-archive сохранены.
+- [x] Подготовлен rollback: предыдущий стабильный v1.4.25 сохранён в GitHub Releases как installer, standalone EXE и source archive.
 
 ## P2 — после первых пользователей
 
