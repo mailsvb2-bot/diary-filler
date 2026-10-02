@@ -255,6 +255,7 @@ except ValueError as exc:
 
 try:
     bad_sick_vk_data = service.parse_primary_document(nav)
+    bad_sick_vk_data.expert_sick_leave_from = "01.06.2026"
     bad_sick_vk_data.sick_leave_vk_date = "18.06.2026"
     bad_sick_vk_data.sick_leave_vk_protocol_number = ""
     bad_sick_vk_data.sick_leave_vk_protocol_date = "18.06.2026"
