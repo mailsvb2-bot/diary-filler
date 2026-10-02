@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "fd2048c69ceac9c6431377617736d18e03e66036",
-  "reason": "Prevent Explorer four-click intake from leaving the newly opened patient Word document open, while never closing the same document if it was already open before the click sequence.",
+  "reason": "Prevent Explorer four-click intake from leaving the newly opened patient Word document open, never close a pre-existing Word document, and isolate unrelated intake lifecycle timing tests from the click-observer daemon.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -17,6 +17,7 @@
   ],
   "approved_blobs": {
     "startup.py": "fc22214923c6f4e5fdf2e95f65addfd5d0d415c9",
-    "tests/patient_registry_regression.py": "40190ee622e8438853bf926531294bbc252b4bbe"
+    "tests/patient_registry_regression.py": "40190ee622e8438853bf926531294bbc252b4bbe",
+    "tests/intake_lifecycle_regression.py": "5839f7050941c1e0b2308520e8543650b0da0a7e"
   }
 }
