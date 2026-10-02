@@ -247,15 +247,23 @@ def parse_rvk_referral_text(text: str) -> tuple[str, str]:
 
 
 def parse_rvk_referral_value(value: str) -> tuple[str, str]:
-    """Parse one rendered RVK referral value into decision and area."""
+    """Parse an already-extracted RVK field value into decision and area."""
     text = " ".join(str(value or "").strip().split())
     if not text:
         return "", ""
     normalized = text.lower().replace("ё", "е")
-    if normalize_yes_no(normalized) == "нет" or normalized in {"не по направлению", "не направлялся"}:
+    exact = normalize_yes_no(normalized)
+    if exact:
+        return exact, ""
+    if normalized in {"не по направлению", "не направлялся"}:
         return "нет", ""
-    return parse_rvk_referral_text(text)
 
+    status, area = parse_rvk_referral_text(text)
+    if status:
+        return status, area
+
+    area = normalize_rvk_commissariat_text(text)
+    return ("да", area) if area else ("", "")
 
 def normalize_admission_occurrence(value: str) -> str:
     """Return the canonical episode occurrence selected by the doctor."""
