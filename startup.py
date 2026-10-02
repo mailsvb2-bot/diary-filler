@@ -66,6 +66,7 @@ def _create_root(*, require_dnd: bool = False):
 DESKTOP_INTAKE_FOLDER_NAME = "Выписанные пациенты"
 DESKTOP_INTAKE_AGENT_ARGUMENT = "--intake-agent"
 DESKTOP_INTAKE_PRIMARY_ARGUMENT = "--intake-primary"
+DESKTOP_DIRECT_PRIMARY_ARGUMENT = "--open-primary"
 _DESKTOP_INTAKE_SUPPORTED_EXTENSIONS = {".doc", ".docx", ".docm"}
 _DESKTOP_INTAKE_QUIET_SECONDS = 1.0
 _DESKTOP_INTAKE_GUI_POLL_MS = 750
@@ -82,6 +83,8 @@ _DESKTOP_INTAKE_RUN_VALUE_NAME = "MedicalDiaryAutofill Intake"
 _DESKTOP_INTAKE_RUN_KEY = r"Software\Microsoft\Windows\CurrentVersion\Run"
 _DESKTOP_INTAKE_MAX_LOG_BYTES = 128 * 1024
 _DESKTOP_INTAKE_HANDOFF_SCHEMA = 1
+_DESKTOP_DIRECT_PRIMARY_REQUEST_NAME = "desktop-open-primary-request.json"
+_DESKTOP_EXPLORER_POLL_SECONDS = 0.015
 
 _DESKTOP_INTAKE_STRONG_PRIMARY_MARKERS = (
     # Compatibility name: this is now the strong medical-source marker set.
@@ -178,6 +181,197 @@ def _desktop_runtime_dir() -> Path:
 
 def _desktop_normalized_text(value: str) -> str:
     return " ".join(str(value or "").lower().replace("ё", "е").split())
+
+
+@dataclass
+class DesktopExplorerQuadClickDetector:
+    """Pure click-sequence state used by the Windows Explorer bridge."""
+
+    max_gap_seconds: float
+    path_key: str = ""
+    count: int = 0
+    last_click_at: float = 0.0
+
+    def observe(self, path: str | Path, when: float) -> bool:
+        key = os.path.normcase(str(Path(path).expanduser()))
+        stamp = float(when)
+        if (
+            not key
+            or key != self.path_key
+            or self.last_click_at <= 0.0
+            or stamp - self.last_click_at > self.max_gap_seconds
+        ):
+            self.path_key = key
+            self.count = 1
+        else:
+            self.count += 1
+        self.last_click_at = stamp
+        if self.count < 4:
+            return False
+        self.count = 0
+        self.last_click_at = 0.0
+        return True
+
+
+def _desktop_patient_registry_root_from_settings() -> Path | None:
+    """Read only the saved technical registry root; never inspect patient files here."""
+    base = os.environ.get("APPDATA", "").strip()
+    settings = (Path(base) if base else Path.home()) / "MedicalDiaryAutofill" / "settings.json"
+    try:
+        payload = json.loads(settings.read_text(encoding="utf-8"))
+        folders = payload.get("folders") if isinstance(payload, dict) else None
+        raw = folders.get("patient_registry_dir") if isinstance(folders, dict) else ""
+        root = Path(str(raw or "")).expanduser()
+        return root if root.is_dir() else None
+    except Exception:
+        return None
+
+
+def _desktop_is_registry_word_file(path: str | Path) -> bool:
+    candidate = Path(path).expanduser()
+    if (
+        not candidate.is_file()
+        or candidate.name.startswith("~$")
+        or candidate.suffix.lower() not in _DESKTOP_INTAKE_SUPPORTED_EXTENSIONS
+    ):
+        return False
+    root = _desktop_patient_registry_root_from_settings()
+    if root is None:
+        return False
+    try:
+        candidate.resolve().relative_to(root.resolve())
+        return True
+    except (OSError, ValueError):
+        return False
+
+
+def _desktop_direct_primary_request_path() -> Path:
+    return _desktop_runtime_dir() / _DESKTOP_DIRECT_PRIMARY_REQUEST_NAME
+
+
+def _desktop_write_direct_primary_request(path: str | Path) -> bool:
+    candidate = Path(path).expanduser()
+    if not _desktop_is_registry_word_file(candidate):
+        return False
+    request = _desktop_direct_primary_request_path()
+    tmp = request.with_suffix(".tmp")
+    payload = {
+        "schema": 1,
+        "path": str(candidate.resolve()),
+        "created_at": time.time(),
+    }
+    try:
+        tmp.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+        os.replace(tmp, request)
+        return True
+    except OSError:
+        try:
+            tmp.unlink(missing_ok=True)
+        except OSError:
+            pass
+        return False
+
+
+def _desktop_take_direct_primary_request() -> Path | None:
+    request = _desktop_direct_primary_request_path()
+    claimed = request.with_name(f"{request.stem}.{os.getpid()}.claim{request.suffix}")
+    try:
+        os.replace(request, claimed)
+    except FileNotFoundError:
+        return None
+    except OSError:
+        return None
+    try:
+        payload = json.loads(claimed.read_text(encoding="utf-8"))
+        if not isinstance(payload, dict) or payload.get("schema") != 1:
+            return None
+        candidate = Path(str(payload.get("path") or "")).expanduser()
+        return candidate if _desktop_is_registry_word_file(candidate) else None
+    except Exception:
+        return None
+    finally:
+        try:
+            claimed.unlink(missing_ok=True)
+        except OSError:
+            pass
+
+
+def _desktop_explorer_selected_word_file() -> Path | None:
+    """Return Explorer's one selected registry Word file for the foreground window."""
+    if os.name != "nt":
+        return None
+    try:
+        import win32com.client
+        import win32gui
+
+        hwnd = int(win32gui.GetForegroundWindow() or 0)
+        if not hwnd:
+            return None
+        if win32gui.GetClassName(hwnd) not in {"CabinetWClass", "ExploreWClass"}:
+            return None
+        shell = win32com.client.Dispatch("Shell.Application")
+        for window in shell.Windows():
+            try:
+                if int(window.HWND) != hwnd:
+                    continue
+                selected = window.Document.SelectedItems()
+                if int(selected.Count) != 1:
+                    return None
+                candidate = Path(str(selected.Item(0).Path))
+                return candidate if _desktop_is_registry_word_file(candidate) else None
+            except Exception:
+                continue
+    except Exception:
+        return None
+    return None
+
+
+def _desktop_submit_direct_primary(path: Path) -> bool:
+    if not _desktop_is_registry_word_file(path):
+        return False
+    if _desktop_gui_is_active() and _desktop_write_direct_primary_request(path):
+        return True
+    try:
+        _desktop_visible_popen(
+            [*_desktop_launch_command(), DESKTOP_DIRECT_PRIMARY_ARGUMENT, str(path.resolve())]
+        )
+        return True
+    except OSError:
+        return False
+
+
+def _desktop_explorer_quad_click_loop() -> None:
+    """Keep normal Word double-click behavior; four rapid clicks also hand off to the app."""
+    if os.name != "nt":
+        return
+    try:
+        import pythoncom
+        import win32api
+
+        pythoncom.CoInitialize()
+        double_click_seconds = max(0.2, float(ctypes.windll.user32.GetDoubleClickTime()) / 1000.0)
+        detector = DesktopExplorerQuadClickDetector(max_gap_seconds=double_click_seconds * 1.35)
+        was_down = False
+        while True:
+            is_down = bool(win32api.GetAsyncKeyState(0x01) & 0x8000)
+            if is_down and not was_down:
+                # Explorer updates selection on mouse-down. A tiny delay makes the
+                # first click on a previously unselected file observable.
+                time.sleep(0.025)
+                candidate = _desktop_explorer_selected_word_file()
+                if candidate is not None and detector.observe(candidate, time.monotonic()):
+                    _desktop_submit_direct_primary(candidate)
+            was_down = is_down
+            time.sleep(_DESKTOP_EXPLORER_POLL_SECONDS)
+    except Exception as exc:
+        _desktop_agent_log(f"Explorer four-click bridge stopped after {type(exc).__name__}")
+    finally:
+        try:
+            import pythoncom
+
+            pythoncom.CoUninitialize()
+        except Exception:
+            pass
 
 
 def desktop_intake_primary_score(text: str) -> int:
@@ -1333,6 +1527,11 @@ def run_desktop_intake_agent() -> int:
         }
         _desktop_touch_agent_heartbeat()
         _desktop_agent_log("agent started")
+        threading.Thread(
+            target=_desktop_explorer_quad_click_loop,
+            name="MedicalDiaryAutofillExplorerFourClick",
+            daemon=True,
+        ).start()
         pending_launch: tuple[str, str] | None = None
         pending_launch_started = 0.0
         last_launch_failure = 0.0
@@ -1432,6 +1631,35 @@ def _desktop_show_intake_warning(app, text: str) -> None:
         pass
 
 
+def _desktop_apply_direct_primary(app, source_path: str | Path) -> bool:
+    """Apply an existing registry Word file without moving or renaming it."""
+    source = Path(source_path).expanduser()
+    if not _desktop_is_registry_word_file(source):
+        return False
+    try:
+        applied = app._apply_primary_document_path(
+            str(source.resolve()),
+            prompt_for_referral=True,
+        )
+        if applied is False:
+            return False
+        try:
+            app.root.deiconify()
+            app.root.lift()
+            app.root.focus_force()
+        except Exception:
+            pass
+        return True
+    except Exception as exc:
+        _desktop_agent_log(f"direct primary handoff failed after {type(exc).__name__}")
+        _desktop_show_intake_error(
+            app,
+            "Не удалось открыть выбранный Word-файл в программе.\n\n"
+            f"Тип ошибки: {type(exc).__name__}",
+        )
+        return False
+
+
 def _desktop_process_primary(app, source_path: str | Path) -> bool:
     source = Path(source_path)
     if not source.is_file():
@@ -1523,6 +1751,13 @@ def _desktop_poll_intake(app, intake_root: Path) -> None:
     try:
         if not app.root.winfo_exists():
             return
+        direct_request = _desktop_take_direct_primary_request()
+        if direct_request is not None and not getattr(app, "_desktop_intake_processing", False):
+            app._desktop_intake_processing = True
+            try:
+                _desktop_apply_direct_primary(app, direct_request)
+            finally:
+                app._desktop_intake_processing = False
         intake_root, rebound = _desktop_rebind_intake_root(intake_root)
         current = _desktop_candidate_snapshot(intake_root)
         if rebound:
@@ -1562,7 +1797,12 @@ def _desktop_poll_intake(app, intake_root: Path) -> None:
             pass
 
 
-def start_desktop_intake_runtime(app, *, initial_primary: str | Path | None = None) -> None:
+def start_desktop_intake_runtime(
+    app,
+    *,
+    initial_primary: str | Path | None = None,
+    initial_direct_primary: str | Path | None = None,
+) -> None:
     """Enable the optional patient-folder workflow without risking core startup.
 
     The convenience layer is fail-open by design.  A locked/redirected Desktop,
@@ -1607,7 +1847,17 @@ def start_desktop_intake_runtime(app, *, initial_primary: str | Path | None = No
     claim_desktop_gui_session()
     app.root.after(1200, lambda: _desktop_schedule_agent_health(app))
 
-    if initial_primary:
+    if initial_direct_primary:
+        app._desktop_intake_processing = True
+
+        def process_direct_initial() -> None:
+            try:
+                _desktop_apply_direct_primary(app, initial_direct_primary)
+            finally:
+                app._desktop_intake_processing = False
+
+        app.root.after(80, process_direct_initial)
+    elif initial_primary:
         app._desktop_intake_processing = True
 
         def process_initial() -> None:
