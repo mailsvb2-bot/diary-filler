@@ -761,6 +761,7 @@ service_sick_vk = PatientData(
     treatment_plan="терапия",
     expert_work_status="нет",
     expert_sick_leave_needed="нет",
+    expert_sick_leave_from="01.06.2026",
     sick_leave="не нужен",
     psych_account_status="нет",
     epi_present="нет",
@@ -771,7 +772,8 @@ service_sick_vk = PatientData(
 )
 MedicalDocumentService()._validate_and_normalize_selected_data(service_sick_vk, ["sick_leave_vk"])
 assert service_sick_vk.expert_sick_leave_needed == "да"
-assert service_sick_vk.sick_leave == "нужен"
+assert service_sick_vk.sick_leave == "нужен с 01.06.2026"
+assert service_sick_vk.expert_sick_leave_from == "01.06.2026"
 
 # Combined expert + VK flows must preserve an explicit «не работает» decision.
 # The specialized VK dialogs still collect their dates/protocols, but must not
