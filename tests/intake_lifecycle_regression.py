@@ -35,6 +35,7 @@ def assert_agent_recreates_deleted_intake_root() -> None:
         original_scan = startup.desktop_intake_scan_wake_candidates
         original_sleep = startup.time.sleep
         original_log = startup._desktop_agent_log
+        original_quad_loop = startup._desktop_explorer_quad_click_loop
         scans: list[bool] = []
         root_path_calls = 0
 
@@ -61,12 +62,14 @@ def assert_agent_recreates_deleted_intake_root() -> None:
             startup.desktop_intake_scan_wake_candidates = scan  # type: ignore[assignment]
             startup.time.sleep = lambda _seconds: None  # type: ignore[assignment]
             startup._desktop_agent_log = lambda _message: None  # type: ignore[assignment]
+            startup._desktop_explorer_quad_click_loop = lambda: None  # type: ignore[assignment]
 
             assert startup.run_desktop_intake_agent() == 0
             assert root_path_calls >= 2, root_path_calls
             assert scans == [True, True], scans
             assert root.is_dir(), "watcher did not recreate deleted intake root"
         finally:
+            startup._desktop_explorer_quad_click_loop = original_quad_loop  # type: ignore[assignment]
             startup._desktop_agent_log = original_log  # type: ignore[assignment]
             startup.time.sleep = original_sleep  # type: ignore[assignment]
             startup.desktop_intake_scan_wake_candidates = original_scan  # type: ignore[assignment]
@@ -100,6 +103,7 @@ def assert_agent_rebinds_when_desktop_moves() -> None:
         original_scan = startup.desktop_intake_scan_wake_candidates
         original_sleep = startup.time.sleep
         original_log = startup._desktop_agent_log
+        original_quad_loop = startup._desktop_explorer_quad_click_loop
 
         def scan(candidate_root: str | Path) -> list[Path]:
             scans.append(Path(candidate_root))
@@ -119,11 +123,13 @@ def assert_agent_rebinds_when_desktop_moves() -> None:
             startup.desktop_intake_scan_wake_candidates = scan  # type: ignore[assignment]
             startup.time.sleep = lambda _seconds: None  # type: ignore[assignment]
             startup._desktop_agent_log = lambda _message: None  # type: ignore[assignment]
+            startup._desktop_explorer_quad_click_loop = lambda: None  # type: ignore[assignment]
 
             assert startup.run_desktop_intake_agent() == 0
             assert scans == [first, second], scans
             assert first.is_dir(), "old Desktop intentionally remains present in this regression"
         finally:
+            startup._desktop_explorer_quad_click_loop = original_quad_loop  # type: ignore[assignment]
             startup._desktop_agent_log = original_log  # type: ignore[assignment]
             startup.time.sleep = original_sleep  # type: ignore[assignment]
             startup.desktop_intake_scan_wake_candidates = original_scan  # type: ignore[assignment]
@@ -319,6 +325,7 @@ def assert_agent_suppresses_duplicate_gui_launch_until_heartbeat() -> None:
         original_sleep = startup.time.sleep
         original_monotonic = startup.time.monotonic
         original_log = startup._desktop_agent_log
+        original_quad_loop = startup._desktop_explorer_quad_click_loop
         launch_handoffs: list[dict[str, str]] = []
 
         def snapshot(_root):
@@ -348,9 +355,11 @@ def assert_agent_suppresses_duplicate_gui_launch_until_heartbeat() -> None:
             startup.time.monotonic = lambda: now["value"]  # type: ignore[assignment]
             startup.time.sleep = sleep  # type: ignore[assignment]
             startup._desktop_agent_log = lambda _message: None  # type: ignore[assignment]
+            startup._desktop_explorer_quad_click_loop = lambda: None  # type: ignore[assignment]
 
             assert startup.run_desktop_intake_agent() == 0
         finally:
+            startup._desktop_explorer_quad_click_loop = original_quad_loop  # type: ignore[assignment]
             startup._desktop_agent_log = original_log  # type: ignore[assignment]
             startup.time.sleep = original_sleep  # type: ignore[assignment]
             startup.time.monotonic = original_monotonic  # type: ignore[assignment]
@@ -397,6 +406,7 @@ def assert_agent_retries_failed_visible_launch() -> None:
         original_sleep = startup.time.sleep
         original_monotonic = startup.time.monotonic
         original_log = startup._desktop_agent_log
+        original_quad_loop = startup._desktop_explorer_quad_click_loop
 
         def snapshot(_root):
             return snapshots.pop(0) if snapshots else {"k": (candidate, "sig")}
@@ -427,9 +437,11 @@ def assert_agent_retries_failed_visible_launch() -> None:
             startup.time.monotonic = lambda: now["value"]  # type: ignore[assignment]
             startup.time.sleep = sleep  # type: ignore[assignment]
             startup._desktop_agent_log = lambda _message: None  # type: ignore[assignment]
+            startup._desktop_explorer_quad_click_loop = lambda: None  # type: ignore[assignment]
 
             assert startup.run_desktop_intake_agent() == 0
         finally:
+            startup._desktop_explorer_quad_click_loop = original_quad_loop  # type: ignore[assignment]
             startup._desktop_agent_log = original_log  # type: ignore[assignment]
             startup.time.sleep = original_sleep  # type: ignore[assignment]
             startup.time.monotonic = original_monotonic  # type: ignore[assignment]
