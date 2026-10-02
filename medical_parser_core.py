@@ -13,7 +13,7 @@ from medical_docx_reader import (
     _is_birth_or_demographic_context,
     _is_primary_title_context,
 )
-from medical_models import PatientData, parse_admission_occurrence_value, parse_sick_leave_value, strip_admission_occurrence_prefix
+from medical_models import PatientData, parse_admission_occurrence_value, parse_rvk_referral_text, parse_sick_leave_value, strip_admission_occurrence_prefix
 from medical_parser_sanitize import sanitize_diagnosis
 from medical_treatment_detection import has_treatment_section_marker
 from medical_text_utils import (
@@ -132,6 +132,11 @@ class MedicalParserCoreMixin:
 
         data.admission_occurrence = parse_admission_occurrence_value(data.admission)
         data.admission = strip_admission_occurrence_prefix(data.admission)
+
+        rvk_status, rvk_area = parse_rvk_referral_text(text)
+        if rvk_status:
+            data.rvk_referral_present = rvk_status
+            data.rvk_referral_commissariat = rvk_area if rvk_status == "да" else ""
 
         for field_name, aliases in self.BLOCK_ALIASES.items():
             value = self._extract_block(text, aliases)
