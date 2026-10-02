@@ -183,6 +183,20 @@ class MedicalDocumentService:
             raise ValueError(f"{label} не может быть позже даты выписки.")
 
     @staticmethod
+    def _ensure_date_not_before_reference(
+        reference_date: str,
+        value: str,
+        label: str,
+        reference_label: str,
+    ) -> None:
+        if not reference_date or not value:
+            return
+        reference = parse_date(reference_date)
+        parsed = parse_date(value)
+        if reference and parsed and parsed.date() < reference.date():
+            raise ValueError(f"{label} не может быть раньше {reference_label}.")
+
+    @staticmethod
     def _require_core_text(value: str, label: str) -> str:
         normalized = str(value or "").strip()
         if not normalized:
@@ -307,7 +321,7 @@ class MedicalDocumentService:
                 data.work_org = ""
                 data.position = ""
 
-        sick_leave_docs = {"discharge", "commission"}
+        sick_leave_docs = {"discharge", "commission", "sick_leave_vk"}
         disability_docs = {"primary", "admission_doctor_referral"}
 
         # A selected specialized form is itself a positive routing decision.
@@ -320,7 +334,10 @@ class MedicalDocumentService:
             # Keep the service boundary consistent with the UI preflight too,
             # including direct/programmatic callers that bypass dialogs.
             data.expert_sick_leave_needed = "да"
-            data.sick_leave = "нужен"
+            # Preserve a rendered opening date such as «нужен с 01.09.2026».
+            # Direct service callers may provide only that round-trip field.
+            if not data.sick_leave.strip():
+                data.sick_leave = "нужен"
 
         if "vk_mse" in selected_set:
             mse_decision = normalize_yes_no(data.disability_needed)
@@ -470,6 +487,12 @@ class MedicalDocumentService:
                 (data.sick_leave_vk_protocol_date, "Дата протокола ВК больничного"),
                 (data.sick_leave_vk_commission_date, "Дата проведения комиссии ВК больничного"),
             ):
+                self._ensure_date_not_before_reference(
+                    data.expert_sick_leave_from,
+                    value,
+                    label,
+                    "даты начала больничного",
+                )
                 self._ensure_date_not_after_discharge(data.discharge_date, value, label)
             (
                 data.sick_leave_vk_work_org,
