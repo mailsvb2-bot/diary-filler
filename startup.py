@@ -380,6 +380,42 @@ def _desktop_word_document_is_open(path: str | Path) -> bool:
     return False
 
 
+def _desktop_begin_quad_click_word_snapshot(
+    path: str | Path,
+) -> tuple[threading.Event, dict[str, bool | None]]:
+    """Snapshot pre-existing Word state without blocking Explorer click counting."""
+    completed = threading.Event()
+    state: dict[str, bool | None] = {"was_open": None}
+
+    def worker() -> None:
+        try:
+            state["was_open"] = _desktop_word_document_is_open(path)
+        finally:
+            completed.set()
+
+    threading.Thread(
+        target=worker,
+        name="MedicalDiaryAutofillQuadClickWordSnapshot",
+        daemon=True,
+    ).start()
+    return completed, state
+
+
+def _desktop_finish_quad_click_word_cleanup(
+    path: str | Path,
+    snapshot_completed: threading.Event,
+    snapshot_state: Mapping[str, bool | None],
+    *,
+    snapshot_timeout_seconds: float = 3.0,
+) -> bool:
+    """Close only a Word document proven not to have been open before the clicks."""
+    if not snapshot_completed.wait(max(0.25, float(snapshot_timeout_seconds))):
+        return False
+    if snapshot_state.get("was_open") is not False:
+        return False
+    return _desktop_close_quad_click_word_document(path)
+
+
 def _desktop_close_quad_click_word_document(
     path: str | Path,
     *,
@@ -456,7 +492,8 @@ def _desktop_explorer_quad_click_loop() -> None:
         double_click_seconds = max(0.2, float(ctypes.windll.user32.GetDoubleClickTime()) / 1000.0)
         detector = DesktopExplorerQuadClickDetector(max_gap_seconds=double_click_seconds * 1.35)
         was_down = False
-        sequence_word_was_open = False
+        sequence_snapshot_completed: threading.Event | None = None
+        sequence_snapshot_state: dict[str, bool | None] | None = None
         while True:
             is_down = bool(win32api.GetAsyncKeyState(0x01) & 0x8000)
             if is_down and not was_down:
@@ -467,19 +504,31 @@ def _desktop_explorer_quad_click_loop() -> None:
                 if candidate is not None:
                     triggered = detector.observe(candidate, time.monotonic())
                     if not triggered and detector.count == 1:
-                        # Snapshot before Explorer can execute the normal
-                        # double-click. Never close a document the user already
-                        # had open before this four-click sequence began.
-                        sequence_word_was_open = _desktop_word_document_is_open(candidate)
+                        # Never block the 15 ms click-observer loop on Word COM.
+                        # The previous synchronous GetActiveObject/Documents walk
+                        # could consume the interval containing clicks 2/3 and
+                        # make a real four-click sequence disappear.
+                        sequence_snapshot_completed, sequence_snapshot_state = (
+                            _desktop_begin_quad_click_word_snapshot(candidate)
+                        )
                     if triggered:
-                        if _desktop_submit_direct_primary(candidate) and not sequence_word_was_open:
-                            threading.Thread(
-                                target=_desktop_close_quad_click_word_document,
-                                args=(candidate,),
-                                name="MedicalDiaryAutofillQuadClickWordCleanup",
-                                daemon=True,
-                            ).start()
-                        sequence_word_was_open = False
+                        if _desktop_submit_direct_primary(candidate):
+                            if (
+                                sequence_snapshot_completed is not None
+                                and sequence_snapshot_state is not None
+                            ):
+                                threading.Thread(
+                                    target=_desktop_finish_quad_click_word_cleanup,
+                                    args=(
+                                        candidate,
+                                        sequence_snapshot_completed,
+                                        sequence_snapshot_state,
+                                    ),
+                                    name="MedicalDiaryAutofillQuadClickWordCleanup",
+                                    daemon=True,
+                                ).start()
+                        sequence_snapshot_completed = None
+                        sequence_snapshot_state = None
             was_down = is_down
             time.sleep(_DESKTOP_EXPLORER_POLL_SECONDS)
     except Exception as exc:

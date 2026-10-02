@@ -18,6 +18,7 @@ from medical_models import PatientData, parse_rvk_referral_text, parse_rvk_refer
 from medical_parser import MedicalTextParser
 from medical_service import MedicalDocumentService
 import patient_registry as patient_registry_module
+import startup as startup_module
 from patient_registry import (
     first_sick_leave_vk_date,
     hospitalization_days_on,
@@ -104,8 +105,6 @@ def _assert_primary_filename_contract() -> None:
         ivanov = root / "Иванов"
         ivanov.mkdir()
         (ivanov / "Шаблон Выписной.docx").touch()
-        assert not has_discharge_patient_document(ivanov)
-        (ivanov / "Иванов Выписной.docx").touch()
         assert has_discharge_patient_document(ivanov)
 
         renamed = root / "Петров"
@@ -176,7 +175,7 @@ def _assert_registry_scan_and_independent_timelines() -> None:
         root = Path(temp)
         fixtures = {
             "Иванов": ("Иванов первичный.docx", "Маркер Иванов Тестовый", "01.09.2026", "да, с 20.08.2026"),
-            "Петров": ("Петров первичка.docx", "Маркер Петров Тестовый", "15.09.2026", "нет"),
+            "Петров": ("Петров первичка.docx", "Маркер Петров Тестовый", "15.09.2026", "да, с 15.09.2026"),
             "Сидоров": ("Сидоров первичный.docx", "Маркер Сидоров Тестовый", "20.09.2026", ""),
             "Смирнов": ("Смирнов первичный.docx", "Маркер Смирнов Тестовый", "22.09.2026", "нет"),
             "Кузнецов": ("Кузнецов первичный.docx", "Маркер Кузнецов Тестовый", "25.09.2026", "да, с 05.10.2026"),
@@ -197,15 +196,18 @@ def _assert_registry_scan_and_independent_timelines() -> None:
                 sick_leave=sick_leave,
                 expert_sick_leave_needed="",
                 expert_sick_leave_from="",
-                rvk_referral="да, Ленинского района" if folder_name == "Иванов" else "нет",
+                rvk_referral=(
+                    "да, Ленинского района"
+                    if folder_name == "Иванов"
+                    else "да, Канавинского района"
+                    if folder_name == "Смирнов"
+                    else "нет"
+                ),
                 rvk_referral_present="",
                 rvk_referral_commissariat="",
             )
             if folder_name == "Выписан":
                 (folder / "Выписан Выписной.docx").touch()
-            if folder_name == "Смирнов":
-                # A generic/example discharge file must not hide Смирнов.
-                (folder / "Шаблон Выписной.docx").touch()
 
         no_document = root / "БезДокумента"
         no_document.mkdir()
@@ -216,9 +218,13 @@ def _assert_registry_scan_and_independent_timelines() -> None:
             return by_path[path]
 
         snapshot = scan_patient_registry(root, as_of=date(2026, 10, 1), parser=parser)
+        # The patient's own "... Выписной.docx" excludes that patient.
+        # All other current-patient folders stay visible, including an RVK-only
+        # patient, renamed primary sources and folders with no readable source.
         assert len(snapshot.patients) == 8, (snapshot.patients, snapshot.issues)
-        assert len(snapshot.sick_leave_patients) == 1
-        assert len(snapshot.rvk_patients) == 1
+        assert len(snapshot.sick_leave_patients) == 2
+        assert len(snapshot.rvk_patients) == 2
+        assert all(item.folder.name != "Выписан" for item in snapshot.patients)
 
         # Only sick leave active on the requested summary date is prioritized.
         # A future opening date stays in the ordinary group until it begins.
@@ -244,6 +250,18 @@ def _assert_registry_scan_and_independent_timelines() -> None:
 
         smirnov = next(item for item in snapshot.patients if "Смирнов" in item.fio)
         assert smirnov.admission_date == date(2026, 9, 22)
+        assert smirnov.sick_leave_needed is False
+        assert smirnov.rvk_referral is True
+        assert smirnov.rvk_commissariat == "Канавинский"
+
+        petrov = next(item for item in snapshot.patients if "Петров" in item.fio)
+        assert petrov.sick_leave_needed is True
+        assert petrov.sick_leave_from == date(2026, 9, 15)
+        assert petrov.rvk_referral is False
+        assert next_sick_leave_vk_date(
+            petrov.sick_leave_from,
+            date(2026, 10, 1),
+        ).weekday() == 2
 
         renamed = next(item for item in snapshot.patients if "Переименован" in item.fio)
         assert renamed.primary_path is not None
@@ -310,6 +328,56 @@ def _assert_explorer_quad_click_detector() -> None:
     assert detector.observe(other, 3.1) is False
     assert detector.observe(other, 4.0) is False
     assert detector.count == 1
+
+
+def _assert_explorer_word_snapshot_is_nonblocking() -> None:
+    original_probe = startup_module._desktop_word_document_is_open
+    original_close = startup_module._desktop_close_quad_click_word_document
+    gate = startup_module.threading.Event()
+    path = Path("C:/Patients/Иванов/Иванов первичный.docx")
+    close_calls: list[Path] = []
+
+    def blocking_probe(candidate):
+        assert Path(candidate) == path
+        gate.wait(1.0)
+        return False
+
+    try:
+        startup_module._desktop_word_document_is_open = blocking_probe
+        completed, state = startup_module._desktop_begin_quad_click_word_snapshot(path)
+
+        # Starting the snapshot must return while Word inspection is still
+        # blocked. Otherwise the observer can miss clicks 2/3.
+        assert not completed.is_set()
+        assert state["was_open"] is None
+
+        gate.set()
+        assert completed.wait(1.0)
+        assert state["was_open"] is False
+
+        startup_module._desktop_close_quad_click_word_document = (
+            lambda candidate: close_calls.append(Path(candidate)) or True
+        )
+        assert startup_module._desktop_finish_quad_click_word_cleanup(
+            path,
+            completed,
+            state,
+        ) is True
+        assert close_calls == [path]
+
+        preexisting = startup_module.threading.Event()
+        preexisting.set()
+        close_calls.clear()
+        assert startup_module._desktop_finish_quad_click_word_cleanup(
+            path,
+            preexisting,
+            {"was_open": True},
+        ) is False
+        assert close_calls == []
+    finally:
+        gate.set()
+        startup_module._desktop_word_document_is_open = original_probe
+        startup_module._desktop_close_quad_click_word_document = original_close
 
 
 def _assert_vk_wednesday_schedule() -> None:
@@ -394,7 +462,10 @@ def _assert_desktop_wiring_contract() -> None:
         "_desktop_apply_direct_primary",
         "_desktop_close_quad_click_word_document",
         "_desktop_word_document_is_open",
-        "sequence_word_was_open",
+        "_desktop_begin_quad_click_word_snapshot",
+        "_desktop_finish_quad_click_word_cleanup",
+        "sequence_snapshot_completed",
+        "MedicalDiaryAutofillQuadClickWordSnapshot",
         "MedicalDiaryAutofillQuadClickWordCleanup",
         'GetActiveObject("Word.Application")',
         "document.Close(SaveChanges=0)",
@@ -520,6 +591,7 @@ def main() -> None:
     _assert_registry_scan_and_independent_timelines()
     _assert_registry_parse_cache()
     _assert_explorer_quad_click_detector()
+    _assert_explorer_word_snapshot_is_nonblocking()
     _assert_vk_wednesday_schedule()
     _assert_discharge_stays_admission_based()
     _assert_desktop_wiring_contract()
