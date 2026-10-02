@@ -1033,7 +1033,7 @@ def _assert_shared_clinical_popup_contract() -> None:
         (window, 'self._diary_compact_row(files, 0)', "Block 02 no longer starts with Dates/Texts row"),
         (expert, 'sick_leave_docs = {"discharge", "commission"}', "shared popup must scope sick-leave decision to discharge/commission documents"),
         (expert, 'disability_docs = {"primary", "admission_doctor_referral"}', "shared popup disability scope drifted from templates with explicit disability rows"),
-        (service, 'sick_leave_docs = {"discharge", "commission"}', "service boundary must scope sick-leave validation to discharge/commission documents"),
+        (service, 'sick_leave_docs = {"discharge", "commission", "sick_leave_vk"}', "service boundary must validate the sick-leave opening date for discharge, commission and sick-leave VK"),
         (service, 'disability_docs = {"primary", "admission_doctor_referral"}', "service boundary disability scope drifted from explicit template rows"),
         (service, 'parse_sick_leave_value(data.sick_leave)', "service boundary cannot round-trip rendered sick-leave values"),
         (service, 'data.expert_sick_leave_from = rendered_sick_from', "rendered sick-leave start date is not restored at service boundary"),
