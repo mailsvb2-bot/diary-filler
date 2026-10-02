@@ -349,11 +349,11 @@ manual_data.disability = "нужно"
 manual_data.work_org = manual_data.expert_work_org
 manual_data.position = manual_data.expert_position
 manual_data.sick_leave = "нужен с 15.06.2026"
-assert build_expert_anamnesis(manual_data) == "Работает в ООО Завод, в должности инженер. Больничный лист. Срок лечения с 10.06.2026 по 20.06.2026, 11 дней. К труду с 21.06.2026."
+assert build_expert_anamnesis(manual_data) == "Работает в ООО Завод, в должности инженер. Больничный лист. Больничный лист открыт с 15.06.2026. Срок лечения с 10.06.2026 по 20.06.2026, 11 дней. К труду с 21.06.2026."
 assert build_expert_anamnesis(manual_data, include_sick_leave_number=False) == "Работает в ООО Завод, в должности инженер. Больничный лист нужен с 15.06.2026."
 assert build_expert_anamnesis(manual_data, include_sick_leave=False) == "Работает в ООО Завод, в должности инженер."
 manual_data.expert_sick_leave_number = "123456789"
-assert build_expert_anamnesis(manual_data) == "Работает в ООО Завод, в должности инженер. Больничный лист № 123456789. Срок лечения с 10.06.2026 по 20.06.2026, 11 дней. К труду с 21.06.2026."
+assert build_expert_anamnesis(manual_data) == "Работает в ООО Завод, в должности инженер. Больничный лист № 123456789. Больничный лист открыт с 15.06.2026. Срок лечения с 10.06.2026 по 20.06.2026, 11 дней. К труду с 21.06.2026."
 manual_data.expert_sick_leave_number = ""
 
 # --- Treatment section detection contract ---
