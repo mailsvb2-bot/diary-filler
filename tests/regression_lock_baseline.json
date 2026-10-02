@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "abfac2e21d765ed1e4d015ee8d29b72384aa47e3",
-  "baseline_note": "Clean post-merge baseline for canonical RVK referral/district parsing and RVK preparation from «Мои пациенты». PR #298 candidate run 37016240492 (#1397) and canonical merge run 37016925930 (#1398) were fully green. Cleanup PR #299 candidate run 37033283762 (#1400) and canonical merge abfac2e21d765ed1e4d015ee8d29b72384aa47e3 run 37033889902 (#1401) were also fully green, including regression/mechanics guards, release gate, patient replay/golden DOCX, clinical matrices, desktop intake/lifecycle, EXE, packaged intake E2E and installer smoke. Temporary mechanics approval is gone; this commit removes the now-stale regression approval only.",
+  "baseline_ref": "e451751cc0c61901ef40e895282b00e9d2f20c58",
+  "baseline_note": "Clean post-merge baseline for reliable Explorer four-click intake and exact My Patients census rules. PR #301 candidate run 37044703098 (#1406) and canonical merge e451751cc0c61901ef40e895282b00e9d2f20c58 run 37045324386 (#1407) passed end-to-end. Four-click Word pre-open inspection is asynchronous so the click observer is never blocked by Word COM. My Patients excludes any patient folder containing a Word file recognized as «Выписной» and independently preserves/labels active sick-leave/VK and RVK patients.",
   "required_approval_evidence": [
     "ci_gate_lock",
     "patient_registry_regression"
