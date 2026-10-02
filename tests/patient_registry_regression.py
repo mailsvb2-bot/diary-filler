@@ -198,7 +198,13 @@ def _assert_registry_scan_and_independent_timelines() -> None:
                 sick_leave=sick_leave,
                 expert_sick_leave_needed="",
                 expert_sick_leave_from="",
-                rvk_referral="да, Ленинского района" if folder_name == "Иванов" else "нет",
+                rvk_referral=(
+                    "да, Ленинского района"
+                    if folder_name == "Иванов"
+                    else "да, Канавинского района"
+                    if folder_name == "Смирнов"
+                    else "нет"
+                ),
                 rvk_referral_present="",
                 rvk_referral_commissariat="",
             )
@@ -217,9 +223,12 @@ def _assert_registry_scan_and_independent_timelines() -> None:
             return by_path[path]
 
         snapshot = scan_patient_registry(root, as_of=date(2026, 10, 1), parser=parser)
-        assert len(snapshot.patients) == 8, (snapshot.patients, snapshot.issues)
-        assert len(snapshot.sick_leave_patients) == 1
-        assert len(snapshot.rvk_patients) == 1
+        # Every selected-date patient subfolder stays visible. A prepared
+        # discharge document must not silently remove the patient from the
+        # current-patients folder census.
+        assert len(snapshot.patients) == 9, (snapshot.patients, snapshot.issues)
+        assert len(snapshot.sick_leave_patients) == 2
+        assert len(snapshot.rvk_patients) == 2
 
         # Only sick leave active on the requested summary date is prioritized.
         # A future opening date stays in the ordinary group until it begins.
