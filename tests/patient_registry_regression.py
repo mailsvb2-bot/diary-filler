@@ -54,6 +54,21 @@ def _assert_primary_text_sick_leave_label() -> None:
     assert parse_sick_leave_value(data.sick_leave) == ("да", "20.08.2026")
 
 
+def _assert_rvk_registry_text_parser() -> None:
+    parse_rvk = patient_registry_module._rvk_referral_state_from_text
+    assert parse_rvk("Направление от РВК да/нет: Ленинский") == ("да", "Ленинский")
+    assert parse_rvk("Направление от РВК: да, Ленинского района") == ("да", "Ленинский")
+    assert parse_rvk("Госпитализируется от РВК Канавинского района") == ("да", "Канавинский")
+    assert parse_rvk(
+        "Госпитализируется по направлению военного комиссариата Автозаводского района"
+    ) == ("да", "Автозаводский")
+    assert parse_rvk(
+        "По направлению из Сормовского и Московского военкомата"
+    ) == ("да", "Сормовский и Московский")
+    assert parse_rvk("Направление от РВК: нет") == ("нет", "")
+    assert parse_rvk("Не госпитализируется по направлению из РВК") == ("нет", "")
+
+
 def _assert_primary_filename_contract() -> None:
     assert is_primary_patient_filename("Иванов первичный.docx")
     assert is_primary_patient_filename("Петров первичка.doc")
@@ -95,6 +110,7 @@ def _assert_real_docx_registry_ingestion() -> None:
         paragraph_doc.add_paragraph("Ф.И.О.: Маркер Иванов Тестовый")
         paragraph_doc.add_paragraph("Год рождения: 1980")
         paragraph_doc.add_paragraph("Больничный лист с 25.09.2026 числа")
+        paragraph_doc.add_paragraph("Направление от РВК да/нет: Ленинского района")
         paragraph_doc.add_paragraph("Диагноз: F20.0")
         paragraph_doc.save(paragraph_primary)
 
@@ -108,24 +124,32 @@ def _assert_real_docx_registry_ingestion() -> None:
         table = table_doc.add_table(rows=1, cols=2)
         table.cell(0, 0).text = "Больничный лист"
         table.cell(0, 1).text = "с 20.09.2026 числа"
+        rvk_table = table_doc.add_table(rows=1, cols=2)
+        rvk_table.cell(0, 0).text = "Госпитализируется от РВК"
+        rvk_table.cell(0, 1).text = "Канавинского района"
         table_doc.add_paragraph("Диагноз: F20.0")
         table_doc.save(table_primary)
 
         snapshot = scan_patient_registry(root, as_of=date(2026, 10, 2))
         assert len(snapshot.patients) == 2, snapshot.issues
         assert len(snapshot.sick_leave_patients) == 2, snapshot.issues
+        assert len(snapshot.rvk_patients) == 2, snapshot.issues
 
         by_fio = {patient.fio: patient for patient in snapshot.patients}
         ivanov = by_fio["Маркер Иванов Тестовый"]
         assert ivanov.admission_date == date(2026, 10, 1)
         assert ivanov.sick_leave_needed is True
         assert ivanov.sick_leave_from == date(2026, 9, 25)
+        assert ivanov.rvk_referral is True
+        assert ivanov.rvk_commissariat == "Ленинский"
         assert not ivanov.warning
 
         petrov = by_fio["Маркер Петров Тестовый"]
         assert petrov.admission_date == date(2026, 10, 2)
         assert petrov.sick_leave_needed is True
         assert petrov.sick_leave_from == date(2026, 9, 20)
+        assert petrov.rvk_referral is True
+        assert petrov.rvk_commissariat == "Канавинский"
         assert not petrov.warning
 
 
@@ -155,6 +179,9 @@ def _assert_registry_scan_and_independent_timelines() -> None:
                 sick_leave=sick_leave,
                 expert_sick_leave_needed="",
                 expert_sick_leave_from="",
+                rvk_referral="да, Ленинского района" if folder_name == "Иванов" else "нет",
+                rvk_referral_present="",
+                rvk_referral_commissariat="",
             )
             if folder_name == "Выписан":
                 (folder / "Выписан Выписной.docx").touch()
@@ -173,6 +200,7 @@ def _assert_registry_scan_and_independent_timelines() -> None:
         snapshot = scan_patient_registry(root, as_of=date(2026, 10, 1), parser=parser)
         assert len(snapshot.patients) == 8, (snapshot.patients, snapshot.issues)
         assert len(snapshot.sick_leave_patients) == 1
+        assert len(snapshot.rvk_patients) == 1
 
         # Only sick leave active on the requested summary date is prioritized.
         # A future opening date stays in the ordinary group until it begins.
@@ -184,6 +212,8 @@ def _assert_registry_scan_and_independent_timelines() -> None:
         ivanov = next(item for item in snapshot.patients if "Иванов" in item.fio)
         assert ivanov.admission_date == date(2026, 9, 1)
         assert ivanov.sick_leave_from == date(2026, 8, 20)
+        assert ivanov.rvk_referral is True
+        assert ivanov.rvk_commissariat == "Ленинский"
         assert sick_leave_days_on(ivanov, date(2026, 10, 1)) == 43
         assert hospitalization_days_on(ivanov, date(2026, 10, 1)) == 31
 
@@ -358,6 +388,10 @@ def _assert_desktop_wiring_contract() -> None:
         "install_patient_summary_autostart()",
         "show_my_patients(self, *, startup_mode: bool = False, start_in_tray: bool = False)",
         "Подготовить ВК по больничному на",
+        "Подготовить акт для РВК",
+        "_prepare_registry_rvk_act",
+        "• РВК",
+        "len(snapshot.rvk_patients)",
         "Открыть папку пациентов",
         "Сменить путь",
         'text="× Закрыть"',
@@ -392,6 +426,10 @@ def _assert_desktop_wiring_contract() -> None:
         "_primary_file_signature",
         "patient_source_candidates",
         "primary_path: Path | None",
+        "rvk_referral: bool",
+        "rvk_commissariat: str",
+        "_rvk_referral_state_from_text",
+        "_rvk_referral_state",
     ):
         assert snippet in registry_source
     assert "DIR_PATIENT_REGISTRY" in settings_source
@@ -453,6 +491,7 @@ def _assert_pre_admission_sick_leave_is_not_rejected() -> None:
 def main() -> None:
     _assert_sick_leave_parser()
     _assert_primary_text_sick_leave_label()
+    _assert_rvk_registry_text_parser()
     _assert_primary_filename_contract()
     _assert_real_docx_registry_ingestion()
     _assert_registry_scan_and_independent_timelines()
@@ -466,6 +505,7 @@ def main() -> None:
     print(
         "PATIENT REGISTRY REGRESSION OK: folder scan, discharged-folder exclusion, "
         "real DOCX ingestion, renamed/no-document folder census, sick-leave-first ordering, sick-leave chronology, "
+        "RVK formulation/district detection and My Patients act wiring, "
         "all sick-leave popup opening dates, persistent tray, cached/asynchronous registry loading, "
         "Explorer four-click direct primary handoff, 7..15-day Wednesday VK schedule and "
         "admission-based discharge duration are locked"
