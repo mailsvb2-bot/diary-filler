@@ -546,7 +546,7 @@ class PatientRegistryMixin:
                 ordered_patients = sorted(
                     snapshot.patients,
                     key=lambda item: (
-                        0 if item.sick_leave_needed else 1,
+                        0 if item.is_on_sick_leave_on(query_date) else 1,
                         item.fio.casefold(),
                     ),
                 )
