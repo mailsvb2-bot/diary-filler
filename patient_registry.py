@@ -137,31 +137,14 @@ def is_discharge_patient_filename(path: str | Path) -> bool:
 
 
 def has_discharge_patient_document(folder: str | Path) -> bool:
-    """Return True only for a discharge file that belongs to this patient folder.
-
-    The user contract is «<Фамилия пациента> Выписной». A generic template,
-    copied example or another person's discharge must not hide the current
-    patient merely because its filename contains the word «Выписной».
-    """
+    """A discharge Word document in the patient folder removes them from the census."""
     root = Path(folder)
     if not root.is_dir():
         return False
-
-    folder_key = _normalize_primary_stem(root.name).casefold()
-    folder_tokens = [part for part in re.split(r"[\s._()\-]+", folder_key) if part]
-    surname = folder_tokens[0] if folder_tokens else ""
-    if not surname:
-        return False
-
-    for path in root.iterdir():
-        if not path.is_file() or not is_discharge_patient_filename(path):
-            continue
-        stem_key = _normalize_primary_stem(path.stem).casefold()
-        stem_tokens = [part for part in re.split(r"[\s._()\-]+", stem_key) if part]
-        first_token = stem_tokens[0] if stem_tokens else ""
-        if first_token == surname:
-            return True
-    return False
+    return any(
+        path.is_file() and is_discharge_patient_filename(path)
+        for path in root.iterdir()
+    )
 
 
 def _date_value(value: str) -> date | None:
