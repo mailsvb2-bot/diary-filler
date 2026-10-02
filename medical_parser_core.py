@@ -133,6 +133,11 @@ class MedicalParserCoreMixin:
         data.admission_occurrence = parse_admission_occurrence_value(data.admission)
         data.admission = strip_admission_occurrence_prefix(data.admission)
 
+        rvk_status, rvk_area = parse_rvk_referral_text(text)
+        if rvk_status:
+            data.rvk_referral_present = rvk_status
+            data.rvk_referral_commissariat = rvk_area if rvk_status == "да" else ""
+
         for field_name, aliases in self.BLOCK_ALIASES.items():
             value = self._extract_block(text, aliases)
             if value:
