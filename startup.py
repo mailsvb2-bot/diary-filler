@@ -342,6 +342,70 @@ def _desktop_submit_direct_primary(path: Path) -> bool:
         return False
 
 
+def _desktop_close_quad_click_word_document(
+    path: str | Path,
+    *,
+    timeout_seconds: float = 3.0,
+) -> bool:
+    """Close only the Word document that Explorer opened during a quad-click.
+
+    Explorer has already processed the first double-click by the time the fourth
+    click is observable.  We therefore attach to the *existing* Word instance,
+    wait briefly for that exact document path to appear, close only that
+    document, and leave every unrelated Word document untouched.
+    """
+    if os.name != "nt":
+        return False
+    target = os.path.normcase(os.path.abspath(str(Path(path).expanduser())))
+    if not target:
+        return False
+    try:
+        import pythoncom
+        import win32com.client
+    except Exception:
+        return False
+
+    deadline = time.monotonic() + max(0.25, float(timeout_seconds))
+    pythoncom.CoInitialize()
+    try:
+        while time.monotonic() < deadline:
+            try:
+                word = win32com.client.GetActiveObject("Word.Application")
+            except Exception:
+                time.sleep(0.05)
+                continue
+
+            try:
+                documents = word.Documents
+                for index in range(1, int(documents.Count) + 1):
+                    document = documents.Item(index)
+                    try:
+                        full_name = os.path.normcase(
+                            os.path.abspath(str(document.FullName))
+                        )
+                    except Exception:
+                        continue
+                    if full_name != target:
+                        continue
+
+                    document.Close(SaveChanges=0)
+                    try:
+                        if int(word.Documents.Count) == 0:
+                            word.Quit(SaveChanges=0)
+                    except Exception:
+                        pass
+                    return True
+            except Exception:
+                pass
+            time.sleep(0.05)
+    finally:
+        try:
+            pythoncom.CoUninitialize()
+        except Exception:
+            pass
+    return False
+
+
 def _desktop_explorer_quad_click_loop() -> None:
     """Keep normal Word double-click behavior; four rapid clicks also hand off to the app."""
     if os.name != "nt":
@@ -362,7 +426,13 @@ def _desktop_explorer_quad_click_loop() -> None:
                 time.sleep(0.025)
                 candidate = _desktop_explorer_selected_word_file()
                 if candidate is not None and detector.observe(candidate, time.monotonic()):
-                    _desktop_submit_direct_primary(candidate)
+                    if _desktop_submit_direct_primary(candidate):
+                        threading.Thread(
+                            target=_desktop_close_quad_click_word_document,
+                            args=(candidate,),
+                            name="MedicalDiaryAutofillQuadClickWordCleanup",
+                            daemon=True,
+                        ).start()
             was_down = is_down
             time.sleep(_DESKTOP_EXPLORER_POLL_SECONDS)
     except Exception as exc:
