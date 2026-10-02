@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "dd10320807d42bb2adb0707eacc80d54c0e3276b",
-  "reason": "User-requested fixes: preserve sick-leave opening date from popups into generated discharge and sick-leave VK documents while keeping treatment duration admission-based; keep patient folders visible when parsing/admission date recovery is incomplete; exclude only patient-owned discharge files; sort patients with sick leave active on the requested summary date first; lock generated-document round-trip and registry completeness.",
+  "reason": "User-requested fixes: preserve sick-leave opening date from popups into generated discharge and sick-leave VK documents while keeping treatment duration admission-based; keep patient folders visible when parsing/admission date recovery is incomplete; exclude only patient-owned discharge files; sort patients with sick leave active on the requested summary date first; lock generated-document round-trip and registry completeness; update production audit to require service-level sick-leave date validation for VK.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -25,6 +25,7 @@
     "smoke_combined_part03_medical_parser_manual.py": "c67b7390c3f710199e76e054aabf101c8611e971",
     "smoke_combined_part04_medical_generation.py": "9293ce64e1e8dceaa1d26fb6415eb2e12c3c4ad9",
     "tests/patient_registry_regression.py": "8933123c64c9a29378524ec29a1faf775f2c7c49",
-    "tools/document_mechanics_change_approval.json": "b578cdaa0daa62b2fdfe4a8d5f7643583380c70b"
+    "tools/document_mechanics_change_approval.json": "b578cdaa0daa62b2fdfe4a8d5f7643583380c70b",
+    "prod_audit.py": "86f0bf31fb32d404a1e421f724f10df72532ecaf"
   }
 }
