@@ -180,6 +180,14 @@ class PatientRegistryMixin:
         *,
         owner_window: tk.Toplevel | None = None,
     ) -> None:
+        if entry.primary_path is None:
+            messagebox.showwarning(
+                "ВК по больничному",
+                "В папке пациента не найден Word-документ, который можно открыть как источник. "
+                "Добавьте или выберите медицинский Word-документ пациента.",
+                parent=owner_window or self.root,
+            )
+            return
         if entry.sick_leave_from is None:
             messagebox.showwarning(
                 "ВК по больничному",
@@ -512,7 +520,7 @@ class PatientRegistryMixin:
                 f"По больничному листу: {len(snapshot.sick_leave_patients)}."
             )
             if not snapshot.patients:
-                empty_text = "Пациенты с первичным документом на эту дату не найдены."
+                empty_text = "Пациенты на эту дату не найдены."
                 if snapshot.issues:
                     empty_text += " Ниже показаны предупреждения по отдельным папкам."
                 else:
