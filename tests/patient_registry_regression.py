@@ -25,6 +25,7 @@ from patient_registry import (
     is_discharge_patient_filename,
     is_primary_patient_filename,
     next_sick_leave_vk_date,
+    patient_source_candidates,
     scan_patient_registry,
     sick_leave_days_on,
 )
@@ -63,6 +64,7 @@ def _assert_primary_filename_contract() -> None:
     assert is_discharge_patient_filename("Петров (выписной).doc")
     assert not is_discharge_patient_filename("Иванов первичный.docx")
     assert not is_discharge_patient_filename("Выписной.txt")
+    assert not is_primary_patient_filename("произвольное имя.docx")
 
     with TemporaryDirectory(prefix="patient-discharge-name-") as temp:
         root = Path(temp)
@@ -72,6 +74,12 @@ def _assert_primary_filename_contract() -> None:
         assert not has_discharge_patient_document(ivanov)
         (ivanov / "Иванов Выписной.docx").touch()
         assert has_discharge_patient_document(ivanov)
+
+        renamed = root / "Петров"
+        renamed.mkdir()
+        arbitrary = renamed / "медицинский источник.docx"
+        arbitrary.touch()
+        assert patient_source_candidates(renamed) == [arbitrary]
 
 
 def _assert_real_docx_registry_ingestion() -> None:
@@ -130,6 +138,7 @@ def _assert_registry_scan_and_independent_timelines() -> None:
             "Сидоров": ("Сидоров первичный.docx", "Маркер Сидоров Тестовый", "20.09.2026", ""),
             "Смирнов": ("Смирнов первичный.docx", "Маркер Смирнов Тестовый", "22.09.2026", "нет"),
             "Кузнецов": ("Кузнецов первичный.docx", "Маркер Кузнецов Тестовый", "25.09.2026", "да, с 05.10.2026"),
+            "Переименован": ("источник пациента.docx", "Маркер Переименован Тестовый", "27.09.2026", "нет"),
             "Ошибка": ("Ошибка первичный.docx", "", "", ""),
             "Будущий": ("Будущий первичный.docx", "Маркер Будущий Тестовый", "10.10.2026", "да, с 01.10.2026"),
             "Выписан": ("Выписан первичный.docx", "Маркер Выписан Тестовый", "05.09.2026", "да, с 05.09.2026"),
@@ -153,13 +162,16 @@ def _assert_registry_scan_and_independent_timelines() -> None:
                 # A generic/example discharge file must not hide Смирнов.
                 (folder / "Шаблон Выписной.docx").touch()
 
+        no_document = root / "БезДокумента"
+        no_document.mkdir()
+
         def parser(path: Path):
             if path.parent.name == "Ошибка":
                 raise ValueError("synthetic parser failure")
             return by_path[path]
 
         snapshot = scan_patient_registry(root, as_of=date(2026, 10, 1), parser=parser)
-        assert len(snapshot.patients) == 6, (snapshot.patients, snapshot.issues)
+        assert len(snapshot.patients) == 8, (snapshot.patients, snapshot.issues)
         assert len(snapshot.sick_leave_patients) == 1
 
         # Only sick leave active on the requested summary date is prioritized.
@@ -184,6 +196,16 @@ def _assert_registry_scan_and_independent_timelines() -> None:
 
         smirnov = next(item for item in snapshot.patients if "Смирнов" in item.fio)
         assert smirnov.admission_date == date(2026, 9, 22)
+
+        renamed = next(item for item in snapshot.patients if "Переименован" in item.fio)
+        assert renamed.primary_path is not None
+        assert renamed.primary_path.name == "источник пациента.docx"
+
+        missing_source = next(item for item in snapshot.patients if item.folder.name == "БезДокумента")
+        assert missing_source.fio == "БезДокумента"
+        assert missing_source.primary_path is None
+        assert missing_source.admission_date is None
+        assert "не найден Word-документ" in missing_source.warning
 
 
 def _assert_registry_parse_cache() -> None:
@@ -343,6 +365,7 @@ def _assert_desktop_wiring_contract() -> None:
         "MedicalDiaryAutofillPatientRegistryScan",
         "scan_results: queue.Queue",
         'summary_var.set("Анализирую папки пациентов…")',
+        "entry.primary_path is None",
     ):
         assert snippet in mixin_source
     assert 'text="Мои пациенты", command=self.show_my_patients' in window_source
@@ -361,6 +384,8 @@ def _assert_desktop_wiring_contract() -> None:
         "consume_close_request",
         "_PRIMARY_PARSE_CACHE",
         "_primary_file_signature",
+        "patient_source_candidates",
+        "primary_path: Path | None",
     ):
         assert snippet in registry_source
     assert "DIR_PATIENT_REGISTRY" in settings_source
@@ -434,7 +459,7 @@ def main() -> None:
     _assert_pre_admission_sick_leave_is_not_rejected()
     print(
         "PATIENT REGISTRY REGRESSION OK: folder scan, discharged-folder exclusion, "
-        "real DOCX ingestion, complete-folder census, sick-leave-first ordering, sick-leave chronology, "
+        "real DOCX ingestion, renamed/no-document folder census, sick-leave-first ordering, sick-leave chronology, "
         "all sick-leave popup opening dates, persistent tray, cached/asynchronous registry loading, "
         "Explorer four-click direct primary handoff, 7..15-day Wednesday VK schedule and "
         "admission-based discharge duration are locked"
