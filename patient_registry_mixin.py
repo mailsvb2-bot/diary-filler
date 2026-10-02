@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from datetime import date
 from pathlib import Path
+import queue
+import threading
 import tkinter as tk
 from tkinter import filedialog, messagebox
 
@@ -492,26 +494,16 @@ class PatientRegistryMixin:
                     font=self._font(9, "bold"),
                 ).grid(row=0, column=1, rowspan=2, sticky="e", padx=(12, 0))
 
-        def refresh() -> None:
-            query_date = self._registry_query_date(date_var.get())
-            if query_date is None:
-                messagebox.showwarning(
-                    "Мои пациенты",
-                    "Укажите дату в формате ДД.ММ.ГГГГ.",
-                    parent=win,
-                )
-                return
-            root_path = self._patient_registry_root()
-            if not root_path:
+        scan_results: queue.Queue = queue.Queue()
+        refresh_generation = 0
+
+        def render_snapshot(snapshot, query_date: date, generation: int) -> None:
+            if generation != refresh_generation:
                 return
             try:
-                snapshot = scan_patient_registry(root_path, as_of=query_date)
-            except Exception as exc:
-                messagebox.showerror(
-                    "Мои пациенты",
-                    f"Не удалось проанализировать папку пациентов: {exc}",
-                    parent=win,
-                )
+                if not win.winfo_exists():
+                    return
+            except Exception:
                 return
 
             clear_rows()
@@ -520,9 +512,9 @@ class PatientRegistryMixin:
                 f"По больничному листу: {len(snapshot.sick_leave_patients)}."
             )
             if not snapshot.patients:
-                empty_text = "Пациенты с распознанным первичным документом на эту дату не найдены."
+                empty_text = "Пациенты с первичным документом на эту дату не найдены."
                 if snapshot.issues:
-                    empty_text += " Ниже показано, почему отдельные папки не попали в список."
+                    empty_text += " Ниже показаны предупреждения по отдельным папкам."
                 else:
                     empty_text += (
                         " Проверьте выбранную папку и наличие файлов вида "
@@ -582,6 +574,73 @@ class PatientRegistryMixin:
                         anchor="w",
                         font=self._font(9),
                     ).pack(fill="x", padx=18, pady=(0, 4))
+
+        def poll_scan_results() -> None:
+            try:
+                while True:
+                    kind, generation, query_date, payload = scan_results.get_nowait()
+                    if generation != refresh_generation:
+                        continue
+                    if kind == "error":
+                        clear_rows()
+                        summary_var.set("")
+                        messagebox.showerror(
+                            "Мои пациенты",
+                            f"Не удалось проанализировать папку пациентов: {payload}",
+                            parent=win,
+                        )
+                    else:
+                        render_snapshot(payload, query_date, generation)
+            except queue.Empty:
+                pass
+            try:
+                if win.winfo_exists():
+                    win.after(60, poll_scan_results)
+            except Exception:
+                pass
+
+        def refresh() -> None:
+            nonlocal refresh_generation
+            query_date = self._registry_query_date(date_var.get())
+            if query_date is None:
+                messagebox.showwarning(
+                    "Мои пациенты",
+                    "Укажите дату в формате ДД.ММ.ГГГГ.",
+                    parent=win,
+                )
+                return
+            root_path = self._patient_registry_root()
+            if not root_path:
+                return
+
+            refresh_generation += 1
+            generation = refresh_generation
+            clear_rows()
+            summary_var.set("Анализирую папки пациентов…")
+            tk.Label(
+                rows,
+                text="Список загружается. Окно уже можно перемещать и сворачивать.",
+                bg=PANEL,
+                fg=MUTED,
+                justify="left",
+                anchor="w",
+                font=self._font(10),
+                pady=16,
+            ).pack(fill="x", padx=10)
+
+            def scan_worker() -> None:
+                try:
+                    snapshot = scan_patient_registry(root_path, as_of=query_date)
+                except Exception as exc:
+                    scan_results.put(("error", generation, query_date, str(exc)))
+                    return
+                scan_results.put(("ok", generation, query_date, snapshot))
+
+            threading.Thread(
+                target=scan_worker,
+                name="MedicalDiaryAutofillPatientRegistryScan",
+                daemon=True,
+            ).start()
 
         tk.Button(
             top,
@@ -651,6 +710,7 @@ class PatientRegistryMixin:
         ).pack(side="right")
 
         date_entry.bind("<Return>", lambda _event: refresh())
+        win.after(60, poll_scan_results)
         refresh()
         if start_in_tray:
             # Detached tray hosts must not flash a visible summary window before
