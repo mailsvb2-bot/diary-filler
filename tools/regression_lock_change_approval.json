@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "e451751cc0c61901ef40e895282b00e9d2f20c58",
+  "reason": "Second-pass correction after physical four-click failure: preserve the exact selected Explorer file and click location so clicks 3/4 continue after Word takes foreground, without allowing unrelated clicks elsewhere. Patient-registry runtime behavior is unchanged; its comment is aligned with the literal any-Vypisnoy exclusion contract.",
+  "required_evidence": [
+    "document_mechanics_guard",
+    "full_patient_replay",
+    "golden_docx",
+    "staff_profile_regression",
+    "gender_generation_matrix",
+    "desktop_intake_contract",
+    "intake_lifecycle_regression",
+    "packaged_desktop_intake_e2e",
+    "installer_uninstall_smoke",
+    "ci_gate_lock",
+    "patient_registry_regression"
+  ],
+  "approved_blobs": {
+    "startup.py": "3deba7b8f3e7072c70010e9a12d4b30e95efc9a4",
+    "tests/patient_registry_regression.py": "0609de734cef630d42ee0c301ded6f8b04fbdbce",
+    "patient_registry.py": "73d0eccfdec959c8a2e13fbfa72217e405e8d399"
+  }
+}
