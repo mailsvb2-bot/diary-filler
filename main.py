@@ -32,6 +32,7 @@ from app_config import (
 from startup import (
     DESKTOP_INTAKE_AGENT_ARGUMENT,
     DESKTOP_INTAKE_PRIMARY_ARGUMENT,
+    DESKTOP_DIRECT_PRIMARY_ARGUMENT,
     _create_root,
     _desktop_agent_is_active,
     claim_desktop_gui_session,
@@ -423,6 +424,16 @@ def _intake_primary_argument(argv: list[str]) -> str:
     return ""
 
 
+def _direct_primary_argument(argv: list[str]) -> str:
+    """Read the Explorer four-click hand-off without changing Word associations."""
+    for index, value in enumerate(argv):
+        if value == DESKTOP_DIRECT_PRIMARY_ARGUMENT and index + 1 < len(argv):
+            return argv[index + 1]
+        if value.startswith(DESKTOP_DIRECT_PRIMARY_ARGUMENT + "="):
+            return value.split("=", 1)[1]
+    return ""
+
+
 def _activate_root_for_intake(root) -> None:
     """Show watcher-started GUI before intake parsing or modal popups can run."""
     try:
@@ -500,6 +511,7 @@ def main() -> None:
             return
 
         intake_primary = _intake_primary_argument(sys.argv[1:]) or None
+        direct_primary = _direct_primary_argument(sys.argv[1:]) or None
         root = _create_root()
         # Claim the visible-GUI heartbeat before imports and modal onboarding.
         # Otherwise the hidden intake watcher can race a long folder chooser and
@@ -514,10 +526,9 @@ def main() -> None:
         app = CombinedMedicalDiaryApp(root)
         _first_launch_onboarding(app)
 
-        if intake_primary:
-            # The intake path can open modal questions while applying the primary.
-            # Raise the frameless Tk root first so the user never gets a running
-            # process with an invisible window or hidden modal dialog.
+        if intake_primary or direct_primary:
+            # Both watcher and Explorer hand-offs can open modal questions while
+            # applying the primary. Raise the root before that work starts.
             _activate_root_for_intake(root)
 
         # Hard boundary: the convenience layer ultimately hands the path to the
@@ -525,6 +536,7 @@ def main() -> None:
         start_desktop_intake_runtime(
             app,
             initial_primary=intake_primary,
+            initial_direct_primary=direct_primary,
         )
         root.mainloop()
     except Exception as exc:  # pragma: no cover - safety net for Windows double-click start
