@@ -20,6 +20,7 @@ from medical_service import MedicalDocumentService
 from patient_registry import (
     first_sick_leave_vk_date,
     hospitalization_days_on,
+    has_discharge_patient_document,
     is_discharge_patient_filename,
     is_primary_patient_filename,
     next_sick_leave_vk_date,
@@ -60,6 +61,15 @@ def _assert_primary_filename_contract() -> None:
     assert is_discharge_patient_filename("Петров (выписной).doc")
     assert not is_discharge_patient_filename("Иванов первичный.docx")
     assert not is_discharge_patient_filename("Выписной.txt")
+
+    with TemporaryDirectory(prefix="patient-discharge-name-") as temp:
+        root = Path(temp)
+        ivanov = root / "Иванов"
+        ivanov.mkdir()
+        (ivanov / "Шаблон Выписной.docx").touch()
+        assert not has_discharge_patient_document(ivanov)
+        (ivanov / "Иванов Выписной.docx").touch()
+        assert has_discharge_patient_document(ivanov)
 
 
 def _assert_real_docx_registry_ingestion() -> None:
@@ -116,6 +126,8 @@ def _assert_registry_scan_and_independent_timelines() -> None:
             "Иванов": ("Иванов первичный.docx", "Маркер Иванов Тестовый", "01.09.2026", "да, с 20.08.2026"),
             "Петров": ("Петров первичка.docx", "Маркер Петров Тестовый", "15.09.2026", "нет"),
             "Сидоров": ("Сидоров первичный.docx", "Маркер Сидоров Тестовый", "20.09.2026", ""),
+            "Смирнов": ("Смирнов первичный.docx", "Маркер Смирнов Тестовый", "22.09.2026", "нет"),
+            "Ошибка": ("Ошибка первичный.docx", "", "", ""),
             "Будущий": ("Будущий первичный.docx", "Маркер Будущий Тестовый", "10.10.2026", "да, с 01.10.2026"),
             "Выписан": ("Выписан первичный.docx", "Маркер Выписан Тестовый", "05.09.2026", "да, с 05.09.2026"),
         }
@@ -134,19 +146,37 @@ def _assert_registry_scan_and_independent_timelines() -> None:
             )
             if folder_name == "Выписан":
                 (folder / "Выписан Выписной.docx").touch()
+            if folder_name == "Смирнов":
+                # A generic/example discharge file must not hide Смирнов.
+                (folder / "Шаблон Выписной.docx").touch()
 
         def parser(path: Path):
+            if path.parent.name == "Ошибка":
+                raise ValueError("synthetic parser failure")
             return by_path[path]
 
         snapshot = scan_patient_registry(root, as_of=date(2026, 10, 1), parser=parser)
-        assert len(snapshot.patients) == 3
+        assert len(snapshot.patients) == 5, (snapshot.patients, snapshot.issues)
         assert len(snapshot.sick_leave_patients) == 1
+
+        # Sick-leave patients are operationally the first group in the summary.
+        assert snapshot.patients[0].fio == "Маркер Иванов Тестовый", snapshot.patients
 
         ivanov = next(item for item in snapshot.patients if "Иванов" in item.fio)
         assert ivanov.admission_date == date(2026, 9, 1)
         assert ivanov.sick_leave_from == date(2026, 8, 20)
         assert sick_leave_days_on(ivanov, date(2026, 10, 1)) == 43
         assert hospitalization_days_on(ivanov, date(2026, 10, 1)) == 31
+
+        unreadable = next(item for item in snapshot.patients if item.folder.name == "Ошибка")
+        assert unreadable.fio == "Ошибка"
+        assert unreadable.admission_date is None
+        assert hospitalization_days_on(unreadable, date(2026, 10, 1)) is None
+        assert "Первичный документ не разобран" in unreadable.warning
+        assert "Дата поступления не распознана" in unreadable.warning
+
+        smirnov = next(item for item in snapshot.patients if "Смирнов" in item.fio)
+        assert smirnov.admission_date == date(2026, 9, 22)
 
 
 def _assert_vk_wednesday_schedule() -> None:
@@ -194,6 +224,7 @@ def _assert_discharge_stays_admission_based() -> None:
         expert_sick_leave_number="123456",
     )
     rendered = build_expert_anamnesis(data)
+    assert "Больничный лист открыт с 01.09.2026." in rendered
     assert "Срок лечения с 10.09.2026 по 20.09.2026, 11 дней." in rendered
     assert "Срок лечения с 01.09.2026" not in rendered
 
@@ -226,6 +257,8 @@ def _assert_desktop_wiring_contract() -> None:
         "PatientSummaryTray",
         "launch_patient_summary_tray_process",
         "open_patient_folder",
+        "ordered_patients = sorted",
+        "0 if item.sick_leave_needed else 1",
     ):
         assert snippet in mixin_source
     assert 'text="Мои пациенты", command=self.show_my_patients' in window_source
@@ -313,7 +346,8 @@ def main() -> None:
     _assert_pre_admission_sick_leave_is_not_rejected()
     print(
         "PATIENT REGISTRY REGRESSION OK: folder scan, discharged-folder exclusion, "
-        "real DOCX ingestion, sick-leave chronology, all sick-leave popup opening dates, persistent tray, "
+        "real DOCX ingestion, complete-folder census, sick-leave-first ordering, sick-leave chronology, "
+        "all sick-leave popup opening dates, persistent tray, "
         "7..15-day Wednesday VK schedule and admission-based discharge duration are locked"
     )
 
