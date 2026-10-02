@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "fd2048c69ceac9c6431377617736d18e03e66036",
-  "baseline_note": "Clean post-merge baseline for the patient census, sick-leave opening-date output, responsive patient summary and Explorer four-click intake work. PR #291 head fe286b7a1bf1235019621c3787ef37e57a20de16 passed the complete Windows EXE/installer contour in run 37002477469. Metadata/provenance finalization PR #292 head 179d52735b8c9c78567dfb5fad4d8fffea3a40f2 passed run 37003338693, and canonical merge fd2048c69ceac9c6431377617736d18e03e66036 passed post-merge main run 37003906364 end-to-end, including provenance, regression/document gates, release gate, golden DOCX, user journeys, Windows E1, EXE, packaged intake E2E and installer smoke.",
+  "baseline_ref": "9a429caf292fd532564db740b6372778e2c5d2e0",
+  "baseline_note": "Clean post-merge baseline for Explorer four-click intake without leaving the newly opened Word document open. PR #294 head bec057ca5df2d9b26fb5c18c2d25af190f4fbc1 passed the complete Windows contour in run 37008315691 (#1383). Canonical merge 9a429caf292fd532564db740b6372778e2c5d2e0 then passed post-merge main run 37008891727 (#1384) end-to-end, including regression lock, release gate, full patient replay/golden DOCX, lifecycle, desktop intake, packaged intake E2E, EXE and installer smoke. The implementation closes only the exact Word document newly opened by Explorer during the recognized four-click sequence and preserves a matching document that was already open before that sequence.",
   "required_approval_evidence": [
     "ci_gate_lock",
     "patient_registry_regression"
