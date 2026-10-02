@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "dd10320807d42bb2adb0707eacc80d54c0e3276b",
-  "reason": "User-requested fixes: preserve sick-leave opening date from popups into generated discharge and sick-leave VK documents while keeping treatment duration admission-based; keep patient folders visible when parsing/admission date recovery is incomplete; exclude only patient-owned discharge files; sort patients with sick leave active on the requested summary date first; lock generated-document round-trip and registry completeness; update audit and all direct sick-leave VK service smoke scenarios for mandatory opening date.",
+  "reason": "User-requested fixes: preserve the sick-leave opening date from popup state in generated discharge and sick-leave VK documents; keep all patient folders visible when parser/admission recovery is incomplete; prioritize active sick-leave patients; make the patient registry open without blocking the Tk UI and reuse unchanged primary parses; add a Windows Explorer four-click bridge that leaves normal Word double-click behavior intact and hands an existing registry Word file directly to the canonical primary-document flow without moving it.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -16,18 +16,21 @@
     "patient_registry_regression"
   ],
   "approved_blobs": {
+    "main.py": "6271bd69ca6e512a48be4162152cdce57452ce2c",
     "medical_expert.py": "3e01f6e90984b660202ca418c748ba2df8ba2c43",
     "medical_parser_core.py": "f9ae6fd03a3173702abbeb5f11ff271947262049",
     "medical_renderer_special.py": "731384f143d8ac63a77147f1aaa5d81c3458dbe7",
     "medical_service.py": "8633d80dc1ab03287c7316168371ccf80fab4b7d",
-    "patient_registry.py": "23f0e442ade41c1b9e0850e4228c09e7788bb434",
-    "patient_registry_mixin.py": "86e6b761192f22f805f844b87729b96816d792ae",
-    "smoke_combined_part03_medical_parser_manual.py": "c67b7390c3f710199e76e054aabf101c8611e971",
-    "smoke_combined_part04_medical_generation.py": "fdaa8f9f933f5105a298f1ae761bc4282144b0df",
-    "tests/patient_registry_regression.py": "8933123c64c9a29378524ec29a1faf775f2c7c49",
-    "tools/document_mechanics_change_approval.json": "b578cdaa0daa62b2fdfe4a8d5f7643583380c70b",
+    "patient_registry.py": "c2fa9a6498399f4b3d69907dfd88c4f00d6fb55c",
+    "patient_registry_mixin.py": "404b77d8cc466dffb9a3fb0c59ee4e34f8ed0f5f",
     "prod_audit.py": "86f0bf31fb32d404a1e421f724f10df72532ecaf",
     "smoke_combined_part02_ui_parser_regressions.py": "40cde47194aad72fdbda157a43f1d5ea3a862935",
-    "smoke_combined_part06_diary_columns_settings.py": "100ed5f305777123a6ddd9704b448cae9a45dae9"
+    "smoke_combined_part03_medical_parser_manual.py": "c67b7390c3f710199e76e054aabf101c8611e971",
+    "smoke_combined_part04_medical_generation.py": "fdaa8f9f933f5105a298f1ae761bc4282144b0df",
+    "smoke_combined_part06_diary_columns_settings.py": "100ed5f305777123a6ddd9704b448cae9a45dae9",
+    "startup.py": "828d69995206901c89e92e921680c813b837a512",
+    "tests/golden_docx_manifest.json": "ed66925cea235be019a67332c526ae3a5e28c7af",
+    "tests/patient_registry_regression.py": "9b996969b43f065b7021502935e6b3e9d97d0fbd",
+    "tools/document_mechanics_change_approval.json": "b578cdaa0daa62b2fdfe4a8d5f7643583380c70b"
   }
 }
