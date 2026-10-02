@@ -30,7 +30,8 @@
     "smoke_combined_part06_diary_columns_settings.py": "100ed5f305777123a6ddd9704b448cae9a45dae9",
     "startup.py": "0accf58303f6ce611b33606c8178f6efe32ba4d2",
     "tests/golden_docx_manifest.json": "ed66925cea235be019a67332c526ae3a5e28c7af",
-    "tests/patient_registry_regression.py": "9040a0f19dd1a7c51e2e603fab0338d11504f83c",
-    "tools/document_mechanics_change_approval.json": "b578cdaa0daa62b2fdfe4a8d5f7643583380c70b"
+    "tests/patient_registry_regression.py": "db8b961fdd85042567f71406e2696b02b761305d",
+    "tools/document_mechanics_change_approval.json": "b578cdaa0daa62b2fdfe4a8d5f7643583380c70b",
+    "tools/privacy_diagnostics_check.py": "f39d4bb3f307227b2c7bcb81831e7bb78ed81439"
   }
 }
