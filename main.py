@@ -62,6 +62,34 @@ def _installation_onboarding_marker_path() -> Path:
     return Path(sys.executable).resolve().parent / "onboarding-required.flag"
 
 
+def _patient_registry_root_ready(app) -> bool:
+    try:
+        raw = str(app._patient_registry_root() or "").strip()
+        return bool(raw and Path(raw).expanduser().is_dir())
+    except Exception:
+        return False
+
+
+def _confirm_queued_intake_after_patient_onboarding(app, source_path: str | Path) -> bool:
+    """Keep first-run folder setup separate from an already queued watcher file."""
+    try:
+        name = Path(source_path).name
+    except Exception:
+        name = "Word-документ"
+    try:
+        return bool(
+            messagebox.askyesno(
+                "Обнаружен медицинский документ",
+                "Папка пациентов настроена. Отдельно фоновый агент уже обнаружил "
+                "Word-документ для автоматической загрузки.\n\n"
+                f"{name}\n\n"
+                "Загрузить этот документ сейчас в «Первичный осмотр»?",
+                parent=app.root,
+            )
+        )
+    except Exception:
+        return False
+
 def _first_launch_onboarding(app) -> None:
     """Heal mandatory intake and perform visible first-run onboarding.
 
@@ -512,13 +540,26 @@ def main() -> None:
         from app import CombinedMedicalDiaryApp
 
         app = CombinedMedicalDiaryApp(root)
+        patient_root_ready_before = _patient_registry_root_ready(app)
         _first_launch_onboarding(app)
+        patient_root_ready_after = _patient_registry_root_ready(app)
 
         if intake_primary:
             # The intake path can open modal questions while applying the primary.
             # Raise the frameless Tk root first so the user never gets a running
             # process with an invisible window or hidden modal dialog.
             _activate_root_for_intake(root)
+
+            # If the registry root was configured during this watcher-launched
+            # startup, closing the folder chooser must not look like it loaded
+            # an unrelated primary document. Confirm the already queued watcher
+            # event as a separate user action.
+            if not patient_root_ready_before:
+                if not patient_root_ready_after or not _confirm_queued_intake_after_patient_onboarding(
+                    app,
+                    intake_primary,
+                ):
+                    intake_primary = None
 
         # Hard boundary: the convenience layer ultimately hands the path to the
         # application's pre-existing _apply_primary_document_path(...) flow.
