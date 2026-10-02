@@ -295,6 +295,7 @@ def _normalize_rvk_commissariat_text(value: str) -> str:
     text = " ".join(str(value or "").strip().split())
     if not text:
         return ""
+    text = text.strip(" \t,.;:—–-()[]")
     text = re.sub(r"(?iu)^\s*да\s*/\s*нет\s*[:;,.—–-]?\s*", "", text)
     text = re.sub(r"(?iu)^\s*(?:да|есть|имеется)\b\s*[:;,.—–-]?\s*", "", text)
     text = re.sub(r"(?iu)^\s*(?:от|из)\s+", "", text)
