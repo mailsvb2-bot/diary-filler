@@ -1,6 +1,8 @@
 import copy
 from docx.shared import RGBColor
 
+from medical_models import parse_sick_leave_value
+
 from medical_docx_blocks import _word_automation_safe_to_quit
 
 # Word automation may call Quit() only while the instance is still provably
@@ -266,7 +268,12 @@ assert discharge_roundtrip.case_number == manual_data.case_number, discharge_rou
 assert discharge_roundtrip.diagnosis == manual_data.diagnosis, discharge_roundtrip.diagnosis
 assert discharge_roundtrip.treatment_plan == manual_data.treatment_plan, discharge_roundtrip.treatment_plan
 assert discharge_roundtrip.admission_occurrence == manual_data.admission_occurrence, discharge_roundtrip.admission_occurrence
-assert discharge_roundtrip.sick_leave == "нужен", discharge_roundtrip.sick_leave
+assert discharge_roundtrip.sick_leave == f"нужен с {manual_data.expert_sick_leave_from}", discharge_roundtrip.sick_leave
+assert discharge_roundtrip.expert_sick_leave_needed == "да", discharge_roundtrip.expert_sick_leave_needed
+assert discharge_roundtrip.expert_sick_leave_from == manual_data.expert_sick_leave_from, (
+    discharge_roundtrip.expert_sick_leave_from,
+    manual_data.expert_sick_leave_from,
+)
 assert "ЭПИ тестовая информация" in discharge_roundtrip.epi_text, discharge_roundtrip.epi_text
 
 # Both explicit expert-anamnesis decisions must be reversible. A treatment
@@ -318,6 +325,10 @@ assert sick_leave_vk_roundtrip.discharge_date == "", sick_leave_vk_roundtrip.dis
 assert sick_leave_vk_roundtrip.diagnosis == manual_data.diagnosis, sick_leave_vk_roundtrip.diagnosis
 assert sick_leave_vk_roundtrip.treatment_plan == manual_data.treatment_plan, sick_leave_vk_roundtrip.treatment_plan
 assert sick_leave_vk_roundtrip.has_treatment_section is True
+assert parse_sick_leave_value(sick_leave_vk_roundtrip.sick_leave) == (
+    "да",
+    manual_data.expert_sick_leave_from,
+), sick_leave_vk_roundtrip.sick_leave
 assert sick_leave_vk_roundtrip.sick_leave_vk_date == manual_data.sick_leave_vk_date, sick_leave_vk_roundtrip.sick_leave_vk_date
 assert sick_leave_vk_roundtrip.sick_leave_vk_protocol_number == manual_data.sick_leave_vk_protocol_number, sick_leave_vk_roundtrip.sick_leave_vk_protocol_number
 assert sick_leave_vk_roundtrip.sick_leave_vk_protocol_date == manual_data.sick_leave_vk_protocol_date, sick_leave_vk_roundtrip.sick_leave_vk_protocol_date
