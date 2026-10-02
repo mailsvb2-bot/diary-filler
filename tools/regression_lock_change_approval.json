@@ -23,7 +23,7 @@
     "patient_registry.py": "23f0e442ade41c1b9e0850e4228c09e7788bb434",
     "patient_registry_mixin.py": "86e6b761192f22f805f844b87729b96816d792ae",
     "smoke_combined_part03_medical_parser_manual.py": "c67b7390c3f710199e76e054aabf101c8611e971",
-    "smoke_combined_part04_medical_generation.py": "9293ce64e1e8dceaa1d26fb6415eb2e12c3c4ad9",
+    "smoke_combined_part04_medical_generation.py": "fdaa8f9f933f5105a298f1ae761bc4282144b0df",
     "tests/patient_registry_regression.py": "8933123c64c9a29378524ec29a1faf775f2c7c49",
     "tools/document_mechanics_change_approval.json": "b578cdaa0daa62b2fdfe4a8d5f7643583380c70b",
     "prod_audit.py": "86f0bf31fb32d404a1e421f724f10df72532ecaf",
