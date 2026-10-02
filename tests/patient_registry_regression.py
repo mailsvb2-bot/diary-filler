@@ -168,6 +168,28 @@ def _assert_dated_sick_leave_census_contract() -> None:
     assert not future.is_on_sick_leave_on(as_of)
     assert active.is_on_sick_leave_on(as_of)
 
+def _assert_candidate_fallback_and_missing_primary_diagnostics() -> None:
+    with TemporaryDirectory(prefix="patient-registry-candidate-fallback-") as temp:
+        root = Path(temp)
+        missing = root / "БезПервичного"
+        missing.mkdir()
+        multi = root / "Несколько"
+        multi.mkdir()
+        first = multi / "Несколько первичный.docx"
+        second = multi / "Несколько первичка.docm"
+        first.touch()
+        second.touch()
+        by_path = {
+            first: SimpleNamespace(fio="Маркер Первый Без Даты", admission_date="", sick_leave="нет", expert_sick_leave_needed="", expert_sick_leave_from=""),
+            second: SimpleNamespace(fio="Маркер Валидный Второй", admission_date="01.09.2026", sick_leave="нет", expert_sick_leave_needed="", expert_sick_leave_from=""),
+        }
+        snapshot = scan_patient_registry(root, as_of=date(2026, 10, 1), parser=lambda path: by_path[path])
+        assert len(snapshot.patients) == 1, snapshot.issues
+        assert snapshot.patients[0].primary_path == second
+        assert snapshot.patients[0].fio == "Маркер Валидный Второй"
+        missing_issue = next(issue for issue in snapshot.issues if issue.folder == missing)
+        assert "первичный/первичка" in missing_issue.message
+
 def _assert_vk_wednesday_schedule() -> None:
     # Day one is exactly the date from «Нужен больничный лист с ...».
     # For every possible weekday, the first VK must be a Wednesday inside the
@@ -326,6 +348,7 @@ def main() -> None:
     _assert_real_docx_registry_ingestion()
     _assert_registry_scan_and_independent_timelines()
     _assert_dated_sick_leave_census_contract()
+    _assert_candidate_fallback_and_missing_primary_diagnostics()
     _assert_vk_wednesday_schedule()
     _assert_discharge_stays_admission_based()
     _assert_desktop_wiring_contract()
