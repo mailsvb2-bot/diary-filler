@@ -191,6 +191,8 @@ class DesktopExplorerQuadClickDetector:
     path_key: str = ""
     count: int = 0
     last_click_at: float = 0.0
+    anchor_x: int | None = None
+    anchor_y: int | None = None
 
     def observe(self, path: str | Path, when: float) -> bool:
         key = os.path.normcase(str(Path(path).expanduser()))
@@ -203,6 +205,8 @@ class DesktopExplorerQuadClickDetector:
         ):
             self.path_key = key
             self.count = 1
+            self.anchor_x = None
+            self.anchor_y = None
         else:
             self.count += 1
         self.last_click_at = stamp
@@ -210,7 +214,36 @@ class DesktopExplorerQuadClickDetector:
             return False
         self.count = 0
         self.last_click_at = 0.0
+        self.anchor_x = None
+        self.anchor_y = None
         return True
+
+    def remember_pointer(self, point: tuple[int, int]) -> None:
+        self.anchor_x = int(point[0])
+        self.anchor_y = int(point[1])
+
+    def can_continue_after_focus_loss(
+        self,
+        when: float,
+        point: tuple[int, int],
+        *,
+        max_dx: int,
+        max_dy: int,
+    ) -> bool:
+        """Allow the same rapid click sequence to survive Explorer -> Word focus change."""
+        if (
+            self.count <= 0
+            or not self.path_key
+            or self.last_click_at <= 0.0
+            or float(when) - self.last_click_at > self.max_gap_seconds
+            or self.anchor_x is None
+            or self.anchor_y is None
+        ):
+            return False
+        return (
+            abs(int(point[0]) - self.anchor_x) <= max(1, int(max_dx))
+            and abs(int(point[1]) - self.anchor_y) <= max(1, int(max_dy))
+        )
 
 
 def _desktop_patient_registry_root_from_settings() -> Path | None:
@@ -489,7 +522,13 @@ def _desktop_explorer_quad_click_loop() -> None:
         import win32api
 
         pythoncom.CoInitialize()
-        double_click_seconds = max(0.2, float(ctypes.windll.user32.GetDoubleClickTime()) / 1000.0)
+        user32 = ctypes.windll.user32
+        double_click_seconds = max(0.2, float(user32.GetDoubleClickTime()) / 1000.0)
+        # Keep the continuation area aligned with the user's Windows double-click
+        # rectangle. This lets clicks 3/4 survive Explorer -> Word focus transfer
+        # without treating arbitrary clicks elsewhere as part of the sequence.
+        continuation_dx = max(4, int(user32.GetSystemMetrics(36)))  # SM_CXDOUBLECLK
+        continuation_dy = max(4, int(user32.GetSystemMetrics(37)))  # SM_CYDOUBLECLK
         detector = DesktopExplorerQuadClickDetector(max_gap_seconds=double_click_seconds * 1.35)
         was_down = False
         sequence_snapshot_completed: threading.Event | None = None
@@ -500,14 +539,28 @@ def _desktop_explorer_quad_click_loop() -> None:
                 # Explorer updates selection on mouse-down. A tiny delay makes the
                 # first click on a previously unselected file observable.
                 time.sleep(0.025)
+                now = time.monotonic()
+                point = tuple(int(value) for value in win32api.GetCursorPos())
                 candidate = _desktop_explorer_selected_word_file()
+                if (
+                    candidate is None
+                    and detector.can_continue_after_focus_loss(
+                        now,
+                        point,
+                        max_dx=continuation_dx,
+                        max_dy=continuation_dy,
+                    )
+                ):
+                    # Explorer may have already launched Word after click two.
+                    # Continue counting only the same rapid sequence at the same
+                    # pointer location, using the exact file captured from Explorer.
+                    candidate = Path(detector.path_key)
+
                 if candidate is not None:
-                    triggered = detector.observe(candidate, time.monotonic())
+                    triggered = detector.observe(candidate, now)
                     if not triggered and detector.count == 1:
+                        detector.remember_pointer(point)
                         # Never block the 15 ms click-observer loop on Word COM.
-                        # The previous synchronous GetActiveObject/Documents walk
-                        # could consume the interval containing clicks 2/3 and
-                        # make a real four-click sequence disappear.
                         sequence_snapshot_completed, sequence_snapshot_state = (
                             _desktop_begin_quad_click_word_snapshot(candidate)
                         )
