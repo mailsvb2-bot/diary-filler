@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "a29b59ab2ca1592c4074861f44716bb6d0103526",
-  "baseline_note": "Post-merge no-regression baseline for PR #287: prevent desktop-intake watcher races during first-run patient-folder onboarding, provide native Windows tray minimize/restore/close for the patient summary, and keep the patient-root control visibly in the main header. Candidate head b5356f0cf203ea4d6dd299c626f59670d2ba97e1 passed Windows EXE Build run 36928282556 end-to-end; merge a29b59ab2ca1592c4074861f44716bb6d0103526 passed post-merge main run 36928985474 end-to-end.",
+  "baseline_ref": "dd10320807d42bb2adb0707eacc80d54c0e3276b",
+  "baseline_note": "Post-merge no-regression baseline for PR #289: sick-leave opening date is present in every relevant popup, the patient-summary tray survives closing the main app, mandatory patient-root onboarding is restored, and real primary Word files with 'Больничный лист с <дата>' (including split table cells) populate the patient registry. Candidate head d8b8f2db86adcbb20b81af9c353f88add95e0916 passed Windows EXE Build run 36963991342 end-to-end; merge dd10320807d42bb2adb0707eacc80d54c0e3276b passed post-merge main run 36964394522 end-to-end.",
   "required_approval_evidence": [
     "ci_gate_lock",
     "patient_registry_regression"
