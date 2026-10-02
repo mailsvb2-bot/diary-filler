@@ -127,6 +127,7 @@ def _assert_registry_scan_and_independent_timelines() -> None:
             "Петров": ("Петров первичка.docx", "Маркер Петров Тестовый", "15.09.2026", "нет"),
             "Сидоров": ("Сидоров первичный.docx", "Маркер Сидоров Тестовый", "20.09.2026", ""),
             "Смирнов": ("Смирнов первичный.docx", "Маркер Смирнов Тестовый", "22.09.2026", "нет"),
+            "Кузнецов": ("Кузнецов первичный.docx", "Маркер Кузнецов Тестовый", "25.09.2026", "да, с 05.10.2026"),
             "Ошибка": ("Ошибка первичный.docx", "", "", ""),
             "Будущий": ("Будущий первичный.docx", "Маркер Будущий Тестовый", "10.10.2026", "да, с 01.10.2026"),
             "Выписан": ("Выписан первичный.docx", "Маркер Выписан Тестовый", "05.09.2026", "да, с 05.09.2026"),
@@ -156,11 +157,15 @@ def _assert_registry_scan_and_independent_timelines() -> None:
             return by_path[path]
 
         snapshot = scan_patient_registry(root, as_of=date(2026, 10, 1), parser=parser)
-        assert len(snapshot.patients) == 5, (snapshot.patients, snapshot.issues)
+        assert len(snapshot.patients) == 6, (snapshot.patients, snapshot.issues)
         assert len(snapshot.sick_leave_patients) == 1
 
-        # Sick-leave patients are operationally the first group in the summary.
+        # Only sick leave active on the requested summary date is prioritized.
+        # A future opening date stays in the ordinary group until it begins.
         assert snapshot.patients[0].fio == "Маркер Иванов Тестовый", snapshot.patients
+        future_sick = next(item for item in snapshot.patients if "Кузнецов" in item.fio)
+        assert future_sick.is_on_sick_leave_on(date(2026, 10, 1)) is False
+        assert snapshot.patients.index(future_sick) > 0
 
         ivanov = next(item for item in snapshot.patients if "Иванов" in item.fio)
         assert ivanov.admission_date == date(2026, 9, 1)
@@ -258,7 +263,7 @@ def _assert_desktop_wiring_contract() -> None:
         "launch_patient_summary_tray_process",
         "open_patient_folder",
         "ordered_patients = sorted",
-        "0 if item.sick_leave_needed else 1",
+        "0 if item.is_on_sick_leave_on(query_date) else 1",
     ):
         assert snippet in mixin_source
     assert 'text="Мои пациенты", command=self.show_my_patients' in window_source
