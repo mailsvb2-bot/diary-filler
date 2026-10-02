@@ -652,6 +652,7 @@ class ActionsCreationOrchestratorMixin:
                 return
         if "sick_leave_vk" in selected_medical:
             sick_leave_vk_complete = all([
+                self.expert_sick_leave_from_var.get().strip(),
                 self.sick_leave_vk_date_var.get().strip(),
                 self.sick_leave_vk_protocol_number_var.get().strip(),
                 self.sick_leave_vk_protocol_date_var.get().strip(),

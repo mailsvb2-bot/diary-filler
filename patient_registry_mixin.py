@@ -12,6 +12,7 @@ from patient_registry import (
     PatientSummaryTray,
     hospitalization_days_on,
     install_patient_summary_autostart,
+    launch_patient_summary_tray_process,
     next_sick_leave_vk_date,
     open_patient_folder,
     scan_patient_registry,
@@ -49,9 +50,11 @@ class PatientRegistryMixin:
 
     def _ensure_patient_registry_folder(self, *, first_run: bool = False) -> bool:
         current = self._patient_registry_root()
-        if current:
+        if current and Path(current).expanduser().is_dir():
             install_patient_summary_autostart()
             return True
+        # Empty, moved or deleted roots are not a valid completed onboarding.
+        # Ask again instead of silently keeping a stale saved string.
         return self._prompt_patient_registry_folder(first_run=first_run)
 
     def _registry_query_date(self, raw: str) -> date | None:
@@ -237,7 +240,7 @@ class PatientRegistryMixin:
         if self.output_vars["sick_leave_vk"].get():
             self.create_selected_outputs(print_after=False)
 
-    def show_my_patients(self, *, startup_mode: bool = False) -> None:
+    def show_my_patients(self, *, startup_mode: bool = False, start_in_tray: bool = False) -> None:
         # A logon summary must never block Windows with a first-run folder dialog.
         # Folder onboarding belongs to the normal visible application start.
         if startup_mode and not self._patient_registry_root():
@@ -282,7 +285,8 @@ class PatientRegistryMixin:
                         pass
 
         def restore_from_tray() -> None:
-            tray.stop()
+            # Keep the tray icon alive while the summary is open. The user can
+            # close this independent summary only via its own X or tray menu.
             try:
                 win.deiconify()
                 win.lift()
@@ -291,6 +295,16 @@ class PatientRegistryMixin:
                 pass
 
         def minimize_to_tray() -> None:
+            if not startup_mode:
+                # A summary opened from the main GUI must survive that GUI being
+                # closed. Move it into its own detached summary process before
+                # removing this in-process child window.
+                if launch_patient_summary_tray_process():
+                    try:
+                        win.destroy()
+                    except Exception:
+                        pass
+                    return
             if tray.start():
                 try:
                     win.withdraw()
@@ -300,6 +314,10 @@ class PatientRegistryMixin:
             else:
                 # Development/non-Windows fallback: never make the summary
                 # unreachable merely because a native tray is unavailable.
+                try:
+                    win.deiconify()
+                except Exception:
+                    pass
                 win.iconify()
 
         def poll_tray_requests() -> None:
@@ -492,14 +510,25 @@ class PatientRegistryMixin:
                 f"По больничному листу: {len(snapshot.sick_leave_patients)}."
             )
             if not snapshot.patients:
+                empty_text = "Пациенты с распознанным первичным документом на эту дату не найдены."
+                if snapshot.issues:
+                    empty_text += " Ниже показано, почему отдельные папки не попали в список."
+                else:
+                    empty_text += (
+                        " Проверьте выбранную папку и наличие файлов вида "
+                        "«Фамилия первичный/первичка.docx» в её подпапках."
+                    )
                 tk.Label(
                     rows,
-                    text="Пациенты с распознанным первичным документом на эту дату не найдены.",
+                    text=empty_text,
                     bg=PANEL,
                     fg=MUTED,
+                    justify="left",
+                    anchor="w",
+                    wraplength=760,
                     font=self._font(10),
                     pady=16,
-                ).pack(fill="x")
+                ).pack(fill="x", padx=10)
             else:
                 for entry in snapshot.patients:
                     add_patient_row(entry, query_date)
@@ -510,9 +539,29 @@ class PatientRegistryMixin:
                     text=f"Не удалось полностью проанализировать папок: {len(snapshot.issues)}.",
                     bg=PANEL,
                     fg=WARN,
-                    font=self._font(9),
-                    pady=8,
+                    font=self._font(9, "bold"),
+                    pady=6,
                 ).pack(fill="x", padx=10)
+                for issue in snapshot.issues[:10]:
+                    tk.Label(
+                        rows,
+                        text=f"• {issue.folder.name}: {issue.message}",
+                        bg=PANEL,
+                        fg=WARN,
+                        justify="left",
+                        anchor="w",
+                        wraplength=760,
+                        font=self._font(9),
+                    ).pack(fill="x", padx=18, pady=(0, 3))
+                if len(snapshot.issues) > 10:
+                    tk.Label(
+                        rows,
+                        text=f"… и ещё {len(snapshot.issues) - 10}.",
+                        bg=PANEL,
+                        fg=WARN,
+                        anchor="w",
+                        font=self._font(9),
+                    ).pack(fill="x", padx=18, pady=(0, 4))
 
         tk.Button(
             top,
@@ -583,8 +632,17 @@ class PatientRegistryMixin:
 
         date_entry.bind("<Return>", lambda _event: refresh())
         refresh()
-        win.lift()
-        try:
-            win.focus_force()
-        except Exception:
-            pass
+        if start_in_tray:
+            # Detached tray hosts must not flash a visible summary window before
+            # the notification-area icon is ready.
+            try:
+                win.withdraw()
+            except Exception:
+                pass
+            win.after(50, minimize_to_tray)
+        else:
+            win.lift()
+            try:
+                win.focus_force()
+            except Exception:
+                pass

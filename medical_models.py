@@ -46,8 +46,21 @@ def parse_sick_leave_value(value: str) -> tuple[str, str]:
     if re.search(r"\bне\s+(?:нужен|нужна|нужно|требуется)\b", normalized):
         return "нет", ""
     date_token = r"([0-9]{4,8}|[0-9]{1,2}(?:[./-][0-9]{1,2}(?:[./-][0-9]{2,4})?)?)"
+
+    # Real primary documents often use the field label itself as the positive
+    # decision and write only the value tail: «Больничный лист с 01.10.2026»
+    # or «Нужен больничный лист с 01.10.2026». The inline parser correctly
+    # extracts «с 01.10.2026», so treat an explicit opening-date tail as a
+    # positive sick-leave fact instead of requiring an extra «да/нужен».
+    opened_directly = re.search(
+        rf"^(?:с|от)\s+{date_token}(?=$|[\s,.;])",
+        normalized,
+    )
+    if opened_directly:
+        return "да", opened_directly.group(1)
+
     positive = re.search(
-        rf"\b(?:да|нужен|нужна|нужно)\b(?:\s*[,;:-]?\s*с\s+{date_token}(?=$|[\s,.;]))?",
+        rf"\b(?:да|нужен|нужна|нужно|открыт|открыта)\b(?:\s*[,;:-]?\s*с\s+{date_token}(?=$|[\s,.;]))?",
         normalized,
     )
     if positive:

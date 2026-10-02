@@ -1019,9 +1019,13 @@ def _assert_shared_clinical_popup_contract() -> None:
         (expert, 'label = "Нужно ли оформление инвалидности"', "disability popup question is missing"),
         (expert, 'label = "Есть ли ЭПИ"', "EPI popup question is missing"),
         (expert, 'rows.append((label, sick))', "sick-leave popup does not allow revising a prior answer"),
+        (expert, 'rows.append(("С какого числа больничный лист", self._sick_leave_start_date_popup_default()))', "shared sick-leave popup does not expose the opening date"),
+        (expert, 'fields.append("sick_leave_from")', "shared sick-leave popup does not bind the opening date"),
+        (expert, 'elif field == "sick_leave_from":', "shared sick-leave popup does not process the opening date"),
+        (expert, 'rows=[("С какого числа больничный лист", self._sick_leave_start_date_popup_default())]', "fallback sick-leave popup lost the canonical opening-date label"),
+        (expert, 'def _store_sick_leave_start_date_value', "sick-leave opening date lost its single canonical store path"),
         (expert, 'rows.append((label, disability))', "disability popup does not allow revising a prior answer"),
         (expert, 'rows.append((label, epi))', "EPI popup does not allow revising a prior answer"),
-        (expert, 'rows=[("С какого числа", default)]', "positive sick-leave choice does not ask start date"),
         (expert, 'self.choose_epi()', "positive EPI choice does not open file selection"),
         (flow, '_prompt_shared_clinical_options_if_needed(selected_medical)', "generation bypasses shared clinical preflight"),
         (medical_flow, 'data.disability = "нужно"', "disability decision is not copied into patient snapshot"),
@@ -1040,9 +1044,9 @@ def _assert_shared_clinical_popup_contract() -> None:
             _fail(message)
     if 'self._sick_leave_need_field(card' in window:
         _fail("Main patient card reintroduced a second sick-leave source of truth")
-    sick_date_section = expert.split("def _prompt_sick_leave_start_date_if_needed", 1)[1].split("def _prompt_shared_clinical_options_if_needed", 1)[0]
-    if "if current and parse_date(current):" in sick_date_section:
-        _fail("valid retained sick-leave date became non-editable again")
+    shared_sick_section = expert.split("def _prompt_shared_clinical_options_if_needed", 1)[1].split("def _expert_details_missing", 1)[0]
+    if "С какого числа больничный лист" not in shared_sick_section:
+        _fail("retained sick-leave opening date is not editable in the shared popup")
     if 'Файл ЭПИ' in window:
         _fail("Block 02 reintroduced persistent EPI selection instead of contextual popup")
 

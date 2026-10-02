@@ -147,12 +147,14 @@ assert 'text="Распознать"' in main_source
 assert 'label = "Нужен ли больничный лист"' in main_source
 assert 'label = "Нужно ли оформление инвалидности"' in main_source
 assert 'label = "Есть ли ЭПИ"' in main_source
-assert 'rows=[("С какого числа", default)]' in main_source
+assert 'rows=[("С какого числа больничный лист", self._sick_leave_start_date_popup_default())]' in main_source
+assert 'rows.append(("С какого числа больничный лист", self._sick_leave_start_date_popup_default()))' in main_source
+assert 'def _store_sick_leave_start_date_value' in main_source
 assert 'self._sick_leave_need_field(card' not in window_source
 assert '_file_row(files, 0, "Файл ЭПИ"' not in window_source
 assert '("Работает? да/нет"' not in main_source
 assert '("Нужен больничный лист? да/нет"' not in main_source
-assert '("С какого числа больничный"' in main_source
+assert '("С какого числа больничный лист"' in main_source
 assert '("Где работает / организация"' in main_source
 assert '("Должность"' in main_source
 assert "Ничего не запоминаем между разными popup-окнами" in main_source

@@ -351,6 +351,7 @@ class DialogDocumentDetailsMixin:
             ("Номер протокола", self.sick_leave_vk_protocol_number_var.get().strip()),
             ("Дата протокола", protocol_date_default),
             ("Дата проведения комиссии", commission_date_default),
+            ("С какого числа больничный лист", self._sick_leave_start_date_popup_default()),
         ]
         if not nonworking:
             rows.extend([
@@ -376,6 +377,12 @@ class DialogDocumentDetailsMixin:
         if sick_vk_date is None or sick_vk_protocol_date is None or sick_vk_commission_date is None:
             return False
         protocol_number = values[2].strip()
+        if not self._store_sick_leave_start_date_value(values[5].strip()):
+            messagebox.showwarning(
+                "Некорректная дата",
+                "Укажите, с какого числа больничный лист.",
+            )
+            return False
         if not protocol_number:
             messagebox.showwarning("Не заполнено поле", "Укажите номер протокола ВК больничного.")
             return False
@@ -388,8 +395,8 @@ class DialogDocumentDetailsMixin:
             self.sick_leave_vk_position_var.set("")
             self.sick_leave_vk_work_position_var.set("")
         else:
-            work_org = values[5].strip()
-            position = values[6].strip()
+            work_org = values[6].strip()
+            position = values[7].strip()
             if not work_org or not position:
                 messagebox.showwarning("Не заполнено поле", "Укажите место работы и должность.")
                 return False

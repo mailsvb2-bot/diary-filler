@@ -13,6 +13,7 @@ from medical_models import normalize_yes_no, parse_sick_leave_value
 
 
 PATIENT_SUMMARY_ARGUMENT = "--patient-summary"
+PATIENT_SUMMARY_TRAY_ARGUMENT = "--patient-summary-tray"
 PATIENT_SUMMARY_RUN_VALUE_NAME = "MedicalDiaryAutofill Patients"
 PATIENT_SUMMARY_RUN_KEY = r"Software\Microsoft\Windows\CurrentVersion\Run"
 SUPPORTED_WORD_SUFFIXES = {".doc", ".docx", ".docm"}
@@ -105,7 +106,80 @@ def _date_value(value: str) -> date | None:
     return parsed.date() if parsed else None
 
 
-def _sick_leave_state(data) -> tuple[bool, date | None, str]:
+def _admission_date_from_primary_first_line(path: Path) -> date | None:
+    """Registry-specific fallback for real primary files.
+
+    In the ward folder contract the primary/первичка file itself identifies the
+    document kind, and doctors commonly put the admission date as the first
+    non-empty Word line without repeating «Первичный осмотр» on that line.
+    The generic medical parser is intentionally stricter to avoid confusing a
+    birth date with admission in arbitrary documents. Here it is safe to accept
+    only a date at the *start of the first non-empty line* of an already
+    filename-validated primary document.
+    """
+    try:
+        from medical_docx_reader import extract_docx_text
+
+        text = extract_docx_text(path)
+    except Exception:
+        return None
+
+    first_line = next((line.strip() for line in str(text or "").splitlines() if line.strip()), "")
+    if not first_line:
+        return None
+    lowered = first_line.lower().replace("ё", "е")
+    if any(marker in lowered for marker in ("дата рождения", "год рождения", "г.р", "возраст")):
+        return None
+    match = re.match(
+        r"^\s*(\d{1,2}\s*[./-]\s*\d{1,2}\s*[./-]\s*\d{2,4}|\d{6,8})(?=$|\s|[,;])",
+        first_line,
+    )
+    if not match:
+        return None
+    return _date_value(re.sub(r"\s+", "", match.group(1)))
+
+
+def _sick_leave_state_from_primary_text(path: Path) -> tuple[str, str]:
+    """Recover the LN decision/date directly from a real primary Word source.
+
+    Word tables can split a label and its value into adjacent cells. The generic
+    inline parser intentionally processes each extracted line independently, so
+    «Больничный лист» in one cell and «с 25.09.2026» in the next cell may not
+    become one PatientData field. For the patient registry we have a narrower
+    contract and can safely inspect the full primary text around an explicit LN
+    label.
+    """
+    try:
+        from medical_docx_reader import extract_docx_text
+
+        text = " ".join(str(extract_docx_text(path) or "").split())
+    except Exception:
+        return "", ""
+    if not text:
+        return "", ""
+
+    label = r"(?:больничн(?:ый|ого)\s+лист|лист\s+нетрудоспособности|лн)"
+    prefix = rf"(?:нужен\s+ли\s+|нужен\s+)?{label}"
+    if re.search(
+        rf"(?i)\b{prefix}\b\s*[:;,.—–-]?\s*(?:нет\b|не\s+нуж(?:ен|на|но)\b|не\s+требуется\b)",
+        text,
+    ):
+        return "нет", ""
+
+    date_token = r"(\d{6,8}|\d{1,2}\s*[./-]\s*\d{1,2}\s*[./-]\s*\d{2,4})"
+    positive = re.search(
+        rf"(?i)\b{prefix}\b\s*[:;,.—–-]?\s*(?:да\b\s*[,;:-]?\s*)?(?:с|от)\s+{date_token}",
+        text,
+    )
+    if positive:
+        return "да", re.sub(r"\s+", "", positive.group(1))
+
+    if re.search(rf"(?i)\b{prefix}\b\s*[:;,.—–-]?\s*да\b", text):
+        return "да", ""
+    return "", ""
+
+
+def _sick_leave_state(data, primary_path: Path | None = None) -> tuple[bool, date | None, str]:
     explicit_decision = normalize_yes_no(getattr(data, "expert_sick_leave_needed", ""))
     explicit_from = str(getattr(data, "expert_sick_leave_from", "") or "").strip()
     rendered_decision, rendered_from = parse_sick_leave_value(
@@ -113,6 +187,16 @@ def _sick_leave_state(data) -> tuple[bool, date | None, str]:
     )
     decision = explicit_decision or rendered_decision
     raw_from = explicit_from or rendered_from
+
+    # Do not override an explicit negative decision. Otherwise recover a missing
+    # decision/date from the actual primary Word text, including split table cells.
+    if decision != "нет" and primary_path is not None and (not decision or not raw_from):
+        fallback_decision, fallback_from = _sick_leave_state_from_primary_text(primary_path)
+        if not decision:
+            decision = fallback_decision
+        if decision == "да" and not raw_from and fallback_decision == "да":
+            raw_from = fallback_from
+
     parsed_from = _date_value(raw_from) if raw_from else None
 
     if decision == "нет":
@@ -180,13 +264,20 @@ def scan_patient_registry(
 
         admission = _date_value(getattr(parsed_data, "admission_date", ""))
         if admission is None:
-            issues.append(PatientRegistryIssue(patient_folder, "Не распознана дата поступления."))
+            admission = _admission_date_from_primary_first_line(chosen)
+        if admission is None:
+            issues.append(
+                PatientRegistryIssue(
+                    patient_folder,
+                    "Не распознана дата поступления ни общим парсером, ни в первой строке первичного документа.",
+                )
+            )
             continue
         if admission > target_date:
             continue
 
         fio = " ".join(str(getattr(parsed_data, "fio", "") or "").split()) or patient_folder.name
-        sick_needed, sick_from, warning = _sick_leave_state(parsed_data)
+        sick_needed, sick_from, warning = _sick_leave_state(parsed_data, chosen)
         patients.append(
             PatientRegistryEntry(
                 fio=fio,
@@ -443,6 +534,33 @@ class PatientSummaryTray:
             self._ready.set()
         finally:
             self._hwnd = None
+
+
+def launch_patient_summary_tray_process() -> bool:
+    """Launch an independent patient-summary host that survives the main GUI.
+
+    A summary opened from the main application is otherwise only a Tk child of
+    that process, so closing the main application necessarily removes its tray
+    icon. The detached host owns the summary/tray lifecycle independently.
+    """
+    if os.name != "nt":
+        return False
+    try:
+        from startup import _desktop_runtime_command
+
+        command = _desktop_runtime_command(PATIENT_SUMMARY_TRAY_ARGUMENT)
+        creationflags = (
+            getattr(subprocess, "DETACHED_PROCESS", 0)
+            | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+        )
+        subprocess.Popen(
+            command,
+            close_fds=True,
+            creationflags=creationflags,
+        )
+        return True
+    except (OSError, ValueError, subprocess.SubprocessError):
+        return False
 
 
 def install_patient_summary_autostart() -> bool:

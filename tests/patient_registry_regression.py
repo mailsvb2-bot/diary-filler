@@ -6,6 +6,8 @@ from tempfile import TemporaryDirectory
 from types import SimpleNamespace
 import sys
 
+from docx import Document
+
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
@@ -29,6 +31,9 @@ from patient_registry import (
 def _assert_sick_leave_parser() -> None:
     assert parse_sick_leave_value("да, с 01.09.2026") == ("да", "01.09.2026")
     assert parse_sick_leave_value("Да с 01092026") == ("да", "01092026")
+    assert parse_sick_leave_value("с 01.09.2026") == ("да", "01.09.2026")
+    assert parse_sick_leave_value("с 01.09.2026 числа") == ("да", "01.09.2026")
+    assert parse_sick_leave_value("от 01092026") == ("да", "01092026")
     assert parse_sick_leave_value("нет") == ("нет", "")
     assert parse_sick_leave_value("не нужен") == ("нет", "")
 
@@ -55,6 +60,53 @@ def _assert_primary_filename_contract() -> None:
     assert is_discharge_patient_filename("Петров (выписной).doc")
     assert not is_discharge_patient_filename("Иванов первичный.docx")
     assert not is_discharge_patient_filename("Выписной.txt")
+
+
+def _assert_real_docx_registry_ingestion() -> None:
+    """Exercise the exact Word -> parser -> registry path used by «Мои пациенты»."""
+    with TemporaryDirectory(prefix="patient-registry-real-docx-") as temp:
+        root = Path(temp)
+
+        paragraph_folder = root / "Иванов"
+        paragraph_folder.mkdir()
+        paragraph_primary = paragraph_folder / "Иванов первичный.docx"
+        paragraph_doc = Document()
+        paragraph_doc.add_paragraph("01.10.2026")
+        paragraph_doc.add_paragraph("Ф.И.О.: Маркер Иванов Тестовый")
+        paragraph_doc.add_paragraph("Год рождения: 1980")
+        paragraph_doc.add_paragraph("Больничный лист с 25.09.2026 числа")
+        paragraph_doc.add_paragraph("Диагноз: F20.0")
+        paragraph_doc.save(paragraph_primary)
+
+        table_folder = root / "Петров"
+        table_folder.mkdir()
+        table_primary = table_folder / "Петров первичка.docx"
+        table_doc = Document()
+        table_doc.add_paragraph("02.10.2026")
+        table_doc.add_paragraph("Ф.И.О.: Маркер Петров Тестовый")
+        table_doc.add_paragraph("Год рождения: 1975")
+        table = table_doc.add_table(rows=1, cols=2)
+        table.cell(0, 0).text = "Больничный лист"
+        table.cell(0, 1).text = "с 20.09.2026 числа"
+        table_doc.add_paragraph("Диагноз: F20.0")
+        table_doc.save(table_primary)
+
+        snapshot = scan_patient_registry(root, as_of=date(2026, 10, 2))
+        assert len(snapshot.patients) == 2, snapshot.issues
+        assert len(snapshot.sick_leave_patients) == 2, snapshot.issues
+
+        by_fio = {patient.fio: patient for patient in snapshot.patients}
+        ivanov = by_fio["Маркер Иванов Тестовый"]
+        assert ivanov.admission_date == date(2026, 10, 1)
+        assert ivanov.sick_leave_needed is True
+        assert ivanov.sick_leave_from == date(2026, 9, 25)
+        assert not ivanov.warning
+
+        petrov = by_fio["Маркер Петров Тестовый"]
+        assert petrov.admission_date == date(2026, 10, 2)
+        assert petrov.sick_leave_needed is True
+        assert petrov.sick_leave_from == date(2026, 9, 20)
+        assert not petrov.warning
 
 
 def _assert_registry_scan_and_independent_timelines() -> None:
@@ -154,14 +206,17 @@ def _assert_desktop_wiring_contract() -> None:
 
     for snippet in (
         'PATIENT_SUMMARY_ARGUMENT = "--patient-summary"',
+        'PATIENT_SUMMARY_TRAY_ARGUMENT = "--patient-summary-tray"',
         "app._ensure_patient_registry_folder(first_run=True)",
+        "_run_patient_summary_mode(start_in_tray=True)",
         "remove_patient_summary_autostart()",
     ):
         assert snippet in main_source
+    assert "configure_patient_registry=not bool(intake_primary)" not in main_source
     for snippet in (
         'title="Из какой папки анализировать пациентов?"',
         "install_patient_summary_autostart()",
-        "show_my_patients(self, *, startup_mode: bool = False)",
+        "show_my_patients(self, *, startup_mode: bool = False, start_in_tray: bool = False)",
         "Подготовить ВК по больничному на",
         "Открыть папку пациентов",
         "Сменить путь",
@@ -169,6 +224,7 @@ def _assert_desktop_wiring_contract() -> None:
         'text="Свернуть в трей"',
         "minimize_to_tray",
         "PatientSummaryTray",
+        "launch_patient_summary_tray_process",
         "open_patient_folder",
     ):
         assert snippet in mixin_source
@@ -178,6 +234,9 @@ def _assert_desktop_wiring_contract() -> None:
     registry_source = Path("patient_registry.py").read_text(encoding="utf-8")
     for snippet in (
         "class PatientSummaryTray",
+        "PATIENT_SUMMARY_TRAY_ARGUMENT",
+        "launch_patient_summary_tray_process",
+        "DETACHED_PROCESS",
         "Shell_NotifyIcon",
         "NIM_ADD",
         "NIM_DELETE",
@@ -186,6 +245,35 @@ def _assert_desktop_wiring_contract() -> None:
     ):
         assert snippet in registry_source
     assert "DIR_PATIENT_REGISTRY" in settings_source
+
+
+def _function_source(path: str, function_name: str) -> str:
+    source = Path(path).read_text(encoding="utf-8")
+    marker_text = f"    def {function_name}("
+    start = source.index(marker_text)
+    next_def = source.find("\n    def ", start + len(marker_text))
+    return source[start:] if next_def < 0 else source[start:next_def]
+
+
+def _assert_sick_leave_popup_date_contract() -> None:
+    popup_functions = [
+        ("dialog_expert.py", "_prompt_sick_leave_start_date_if_needed"),
+        ("dialog_expert.py", "_prompt_shared_clinical_options_if_needed"),
+        ("dialog_expert.py", "_prompt_expert_anamnesis_details"),
+        ("dialog_expert.py", "_prompt_discharge_sick_leave_number"),
+        ("dialog_expert.py", "_prompt_discharge_output_requirements"),
+        ("dialog_document_details.py", "_prompt_sick_leave_vk_details"),
+    ]
+    for path, function_name in popup_functions:
+        block = _function_source(path, function_name)
+        assert "С какого числа больничный лист" in block, (path, function_name)
+
+    expert_source = Path("dialog_expert.py").read_text(encoding="utf-8")
+    assert "def _store_sick_leave_start_date_value" in expert_source
+    assert 'self.data.sick_leave = f"нужен с {normalized}"' in expert_source
+
+    orchestrator_source = Path("actions_creation_orchestrator.py").read_text(encoding="utf-8")
+    assert "self.expert_sick_leave_from_var.get().strip()" in orchestrator_source
 
 
 def _assert_pre_admission_sick_leave_is_not_rejected() -> None:
@@ -216,15 +304,17 @@ def main() -> None:
     _assert_sick_leave_parser()
     _assert_primary_text_sick_leave_label()
     _assert_primary_filename_contract()
+    _assert_real_docx_registry_ingestion()
     _assert_registry_scan_and_independent_timelines()
     _assert_vk_wednesday_schedule()
     _assert_discharge_stays_admission_based()
     _assert_desktop_wiring_contract()
+    _assert_sick_leave_popup_date_contract()
     _assert_pre_admission_sick_leave_is_not_rejected()
     print(
         "PATIENT REGISTRY REGRESSION OK: folder scan, discharged-folder exclusion, "
-        "sick-leave chronology, 7..15-day Wednesday VK schedule and "
-        "admission-based discharge duration are locked"
+        "real DOCX ingestion, sick-leave chronology, all sick-leave popup opening dates, persistent tray, "
+        "7..15-day Wednesday VK schedule and admission-based discharge duration are locked"
     )
 
 
