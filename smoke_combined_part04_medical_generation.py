@@ -161,6 +161,24 @@ commission_text = extract_docx_text(commission_path)
 admission_doctor_text = extract_docx_text(admission_doctor_path)
 vk_mse_text = extract_docx_text(vk_mse_path)
 sick_leave_vk_text = extract_docx_text(sick_leave_vk_path)
+
+# The popup field «С какого числа больничный лист» is clinical source data,
+# not merely UI state. It must be visible in every generated form that speaks
+# about the sick leave, while hospitalization/treatment duration remains
+# admission-based.
+assert manual_data.expert_sick_leave_from
+assert (
+    f"Больничный лист открыт с {manual_data.expert_sick_leave_from}."
+    in discharge_text
+), discharge_text
+assert (
+    f"Больничный лист открыт с {manual_data.expert_sick_leave_from}."
+    in sick_leave_vk_text
+), sick_leave_vk_text
+assert (
+    f"Срок лечения с {manual_data.admission_date} по {manual_data.discharge_date}"
+    in discharge_text
+), discharge_text
 # These two blocks are canonical template text, not patient-editable source fields.
 # Historical production templates own the wording; generation must never erase
 # or replace it with parsed/UI values.
