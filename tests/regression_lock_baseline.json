@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "02a1bf34004bda29c587335eac7699bca3770ba5",
-  "baseline_note": "Clean post-merge baseline for canonical RVK referral/district parsing and RVK preparation from My Patients. PR #298 head 7e1415c82325fc9781b766f83d5813eb8d787223 passed the complete Windows contour in run 37016240492 (#1397). Canonical merge 02a1bf34004bda29c587335eac7699bca3770ba5 passed post-merge main run 37016925930 (#1398) end-to-end, including exact regression/mechanics guards, release gate with RVK field/full-text variants, patient replay/golden DOCX, user journeys, Windows E1, desktop intake/lifecycle, Tk GUI wiring, EXE, packaged intake E2E and installer smoke.",
+  "baseline_ref": "abfac2e21d765ed1e4d015ee8d29b72384aa47e3",
+  "baseline_note": "Clean post-merge baseline for canonical RVK referral/district parsing and RVK preparation from «Мои пациенты». PR #298 candidate run 37016240492 (#1397) and canonical merge run 37016925930 (#1398) were fully green. Cleanup PR #299 candidate run 37033283762 (#1400) and canonical merge abfac2e21d765ed1e4d015ee8d29b72384aa47e3 run 37033889902 (#1401) were also fully green, including regression/mechanics guards, release gate, patient replay/golden DOCX, clinical matrices, desktop intake/lifecycle, EXE, packaged intake E2E and installer smoke. Temporary mechanics approval is gone; this commit removes the now-stale regression approval only.",
   "required_approval_evidence": [
     "ci_gate_lock",
     "patient_registry_regression"
