@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "dd10320807d42bb2adb0707eacc80d54c0e3276b",
-  "baseline_note": "Post-merge no-regression baseline for PR #289: sick-leave opening date is present in every relevant popup, the patient-summary tray survives closing the main app, mandatory patient-root onboarding is restored, and real primary Word files with 'Больничный лист с <дата>' (including split table cells) populate the patient registry. Candidate head d8b8f2db86adcbb20b81af9c353f88add95e0916 passed Windows EXE Build run 36963991342 end-to-end; merge dd10320807d42bb2adb0707eacc80d54c0e3276b passed post-merge main run 36964394522 end-to-end.",
+  "baseline_ref": "a6b478ff2be8c51d2f045a46bfbc00dca07a5d7b",
+  "baseline_note": "Patient census, sick-leave opening-date output, responsive patient summary and Explorer four-click intake baseline. PR #291 head fe286b7a1bf1235019621c3787ef37e57a20de16 passed the complete Windows EXE/installer contour in run 37002477469. Merge a6b478ff2be8c51d2f045a46bfbc00dca07a5d7b has the same tested runtime tree; its first main push run stopped only at the repository's canonical merge-message provenance guard. This metadata-only finalization restores canonical PR provenance while removing the consumed document-mechanics approval.",
   "required_approval_evidence": [
     "ci_gate_lock",
     "patient_registry_regression"
