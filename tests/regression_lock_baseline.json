@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "b670555b163bc803f0674feffc00f6b8010bdda4",
-  "baseline_note": "Clean post-merge baseline for focus-safe Explorer four-click intake and verified My Patients rules. PR #303 candidate run 37053342993 (#1410) and canonical merge b670555b163bc803f0674feffc00f6b8010bdda4 run 37053904910 (#1411) were fully green. Four-click now survives Explorer-to-Word focus transfer only for the exact remembered registry file and within the Windows double-click pointer rectangle. My Patients behavior remains: any Word file recognized as «Выписной» excludes that patient; otherwise active sick-leave/VK and RVK patients are independently retained and actioned.",
+  "baseline_ref": "dbfbae68ad70e1e760757753d0037f7e6f94332b",
+  "baseline_note": "Tested post-merge baseline for release v1.4.26. PR #305 candidate run 37060874853 (#1425) and canonical merge dbfbae68ad70e1e760757753d0037f7e6f94332b run 37061529119 (#1426) passed the full Windows contour. Version 1.4.26 synchronizes package, EXE metadata, installer, CI/live-E2E and guarded release topology while retaining the already-tested RVK/My Patients and focus-safe Explorer four-click behavior.",
   "required_approval_evidence": [
     "ci_gate_lock",
     "patient_registry_regression"
