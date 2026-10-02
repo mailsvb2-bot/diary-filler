@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "9a429caf292fd532564db740b6372778e2c5d2e0",
-  "reason": "Align RVK handling with the full request: one canonical parser recognizes explicit RVK rows and equivalent hospitalization/referral phrases with district/case normalization; My Patients reuses the same parser and Act RVK flow.",
+  "baseline_ref": "02a1bf34004bda29c587335eac7699bca3770ba5",
+  "reason": "Finalize the fully tested canonical RVK state by deleting the consumed document-mechanics approval; runtime and regression behavior are unchanged.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -16,12 +16,6 @@
     "patient_registry_regression"
   ],
   "approved_blobs": {
-    "dialog_expert.py": "459a2c77947f2a602822356c17fe950f68f391d3",
-    "medical_models.py": "42179b1560f26ecfc0256ba7bf499a29ba70f860",
-    "medical_parser_core.py": "d22d251ccb4890a71db54cb4823553eafd09cefb",
-    "patient_registry.py": "c81667efb21a36fbfc616f509f1a7f3cb99b5bb4",
-    "patient_registry_mixin.py": "3c616edaf3dbd81b150aafb3482c107b5d952ffc",
-    "tests/patient_registry_regression.py": "2713ba303de2220247d184d2a326818c27c8d074",
-    "tools/document_mechanics_change_approval.json": "3414c06ab955c5536344b55a398e3b327e9184bf"
+    "tools/document_mechanics_change_approval.json": "<deleted>"
   }
 }
