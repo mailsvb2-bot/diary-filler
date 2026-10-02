@@ -11,7 +11,9 @@
     "desktop_intake_contract",
     "intake_lifecycle_regression",
     "packaged_desktop_intake_e2e",
-    "installer_uninstall_smoke"
+    "installer_uninstall_smoke",
+    "staff_profile_regression",
+    "gender_generation_matrix"
   ],
   "approved_blobs": {
     ".github/workflows/release.yml": "d7a2645f5f4138a0479cc47370dda23eab7958bd",
