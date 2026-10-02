@@ -18,10 +18,12 @@
   "approved_blobs": {
     ".github/workflows/release.yml": "d7a2645f5f4138a0479cc47370dda23eab7958bd",
     ".github/workflows/windows-build.yml": "4d292dc311928b45c44cbe968273c0f8ee0fef64",
+    ".github/workflows/windows-live-e2e-core.yml": "b0b1d54b7cc2fe2578b67e7dfbb259d6ea51eaed",
     "BUILD_WINDOWS_INSTALLER.bat": "29a6b493b93bbb54e29e01817b1841f3953a3097",
     "installer/MedicalDiaryAutofill.iss": "777981065b7abf0963bb57e4eb74b99c78fb6240",
     "pyproject.toml": "888e353c4697da496647d9f8c74f6f581b5c368a",
     "release_check.py": "9dddcfee4d8b4b5c0d656fdfdcb042af4ba1fd86",
+    "tools/ci_gate_lock.py": "1a6da08b13081af794331027836f3bf011b58432",
     "version_info.txt": "0003eda564932305799da54ed94fa28597a50dee"
   }
 }
