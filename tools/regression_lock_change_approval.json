@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "b670555b163bc803f0674feffc00f6b8010bdda4",
+  "reason": "Prepare release v1.4.26 by synchronizing package version, Windows EXE metadata, Inno Setup, Windows build artifact paths, guarded release workflow, release gate, and release notes. Runtime medical/document behavior is unchanged.",
+  "required_evidence": [
+    "ci_gate_lock",
+    "patient_registry_regression",
+    "document_mechanics_guard",
+    "full_patient_replay",
+    "golden_docx",
+    "desktop_intake_contract",
+    "intake_lifecycle_regression",
+    "packaged_desktop_intake_e2e",
+    "installer_uninstall_smoke",
+    "staff_profile_regression",
+    "gender_generation_matrix"
+  ],
+  "approved_blobs": {
+    ".github/workflows/release.yml": "d7a2645f5f4138a0479cc47370dda23eab7958bd",
+    ".github/workflows/windows-build.yml": "4d292dc311928b45c44cbe968273c0f8ee0fef64",
+    ".github/workflows/windows-live-e2e-core.yml": "b0b1d54b7cc2fe2578b67e7dfbb259d6ea51eaed",
+    "BUILD_WINDOWS_INSTALLER.bat": "29a6b493b93bbb54e29e01817b1841f3953a3097",
+    "installer/MedicalDiaryAutofill.iss": "777981065b7abf0963bb57e4eb74b99c78fb6240",
+    "prod_audit.py": "5ab8fe0d05e1855eb1765ecc690f0fe9090e0245",
+    "pyproject.toml": "888e353c4697da496647d9f8c74f6f581b5c368a",
+    "release_check.py": "9dddcfee4d8b4b5c0d656fdfdcb042af4ba1fd86",
+    "tests/windows_live_e2e_contract.py": "17be91ad912a752bf7312ca62564584de2714393",
+    "tools/ci_gate_lock.py": "1a6da08b13081af794331027836f3bf011b58432",
+    "version_info.txt": "0003eda564932305799da54ed94fa28597a50dee",
+    "app_config.py": "094545adc41766450c1b27319f80bd26db6a04fd",
+    "tools/document_mechanics_change_approval.json": "509b2f9b94af357c0e3948fbc76a8c912fecad2e"
+  }
+}

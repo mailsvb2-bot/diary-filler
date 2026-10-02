@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "base_sha": "8a658f4c409b5879e2231c17ce3e06a21578962f",
+  "reason": "Release v1.4.26 updates app_config.APP_VERSION only to keep visible application version synchronized with package, EXE and installer metadata; no document generation mechanics change.",
+  "approved_blobs": {
+    "app_config.py": "094545adc41766450c1b27319f80bd26db6a04fd"
+  }
+}
