@@ -147,11 +147,12 @@ class _DischargeDiaryHarness(DialogExpertMixin, ActionsMedicalFlowMixin, Actions
                 "На учёте у психиатров": "не состоит",
                 "Работает ли пациент": "нет",
                 "Нужен ли больничный лист": "да",
+                "С какого числа больничный лист": "01.09.2026",
                 "Есть ли ЭПИ": "нет",
             }
             return [answers[label] for label, _initial in rows]
         if title == "Больничный лист":
-            return ["01.09.2026"]
+            raise AssertionError("sick-leave opening date must stay in the shared popup")
         raise AssertionError((title, rows))
 
     def _normalize_date_for_ui(self, value: str) -> str:
