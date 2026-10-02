@@ -318,14 +318,41 @@ def _assert_explorer_quad_click_detector() -> None:
     other = Path("C:/Patients/Петров/Петров первичный.docx")
 
     assert detector.observe(first, 1.0) is False
+    detector.remember_pointer((100, 100))
     assert detector.observe(first, 1.2) is False
-    assert detector.observe(first, 1.4) is False
-    assert detector.observe(first, 1.6) is True
 
-    # A different file or a pause longer than the allowed gap must restart the
-    # sequence rather than accidentally opening an unrelated patient.
+    # After Explorer's ordinary double-click launches Word, Explorer may stop
+    # being foreground. The same rapid sequence at the same pointer location
+    # must still be allowed to reach clicks three and four.
+    assert detector.can_continue_after_focus_loss(
+        1.35,
+        (102, 99),
+        max_dx=4,
+        max_dy=4,
+    )
+    assert detector.observe(Path(detector.path_key), 1.35) is False
+    assert detector.can_continue_after_focus_loss(
+        1.5,
+        (101, 101),
+        max_dx=4,
+        max_dy=4,
+    )
+    assert detector.observe(Path(detector.path_key), 1.5) is True
+
+    # A click elsewhere on screen is never allowed to continue the remembered
+    # Explorer sequence.
     assert detector.observe(first, 3.0) is False
+    detector.remember_pointer((100, 100))
+    assert not detector.can_continue_after_focus_loss(
+        3.1,
+        (150, 150),
+        max_dx=4,
+        max_dy=4,
+    )
+
+    # A different file or a pause longer than the allowed gap restarts cleanly.
     assert detector.observe(other, 3.1) is False
+    detector.remember_pointer((150, 150))
     assert detector.observe(other, 4.0) is False
     assert detector.count == 1
 
@@ -455,6 +482,9 @@ def _assert_desktop_wiring_contract() -> None:
     for snippet in (
         'DESKTOP_DIRECT_PRIMARY_ARGUMENT = "--open-primary"',
         "class DesktopExplorerQuadClickDetector",
+        "can_continue_after_focus_loss",
+        "GetSystemMetrics(36)",
+        "GetSystemMetrics(37)",
         "_desktop_explorer_quad_click_loop",
         "_desktop_explorer_selected_word_file",
         "_desktop_write_direct_primary_request",
