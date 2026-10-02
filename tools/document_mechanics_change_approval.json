@@ -4,7 +4,7 @@
   "reason": "Explicit RVK mechanics correction: promote RVK referral/district recognition from the patient registry into the canonical medical parser and seed the existing popup from structured parser facts.",
   "approved_blobs": {
     "dialog_expert.py": "459a2c77947f2a602822356c17fe950f68f391d3",
-    "medical_models.py": "ca84e0c18933bd6c13aec2a3bc0f0b8c3c753bd2",
+    "medical_models.py": "42179b1560f26ecfc0256ba7bf499a29ba70f860",
     "medical_parser_core.py": "d22d251ccb4890a71db54cb4823553eafd09cefb"
   }
 }
