@@ -190,6 +190,51 @@ def _assert_candidate_fallback_and_missing_primary_diagnostics() -> None:
         missing_issue = next(issue for issue in snapshot.issues if issue.folder == missing)
         assert "первичный/первичка" in missing_issue.message
 
+def _base_sick_leave_vk_data() -> PatientData:
+    return PatientData(
+        fio="Маркер Иванов Тестовый",
+        birth="01.01.1980",
+        admission_date="01.09.2026",
+        case_number="1",
+        diagnosis="F20.0",
+        treatment_plan="Терапия",
+        expert_work_status="нет",
+        psych_account_status="нет",
+        epi_present="нет",
+        sick_leave_vk_date="09.09.2026",
+        sick_leave_vk_protocol_number="7",
+        sick_leave_vk_protocol_date="09.09.2026",
+        sick_leave_vk_commission_date="09.09.2026",
+    )
+
+
+def _assert_sick_leave_vk_service_boundary() -> None:
+    service = MedicalDocumentService()
+
+    missing_start = _base_sick_leave_vk_data()
+    try:
+        service._validate_and_normalize_selected_data(missing_start, ["sick_leave_vk"])
+    except ValueError as exc:
+        assert "Дата начала больничного" in str(exc)
+    else:
+        raise AssertionError("sick_leave_vk accepted a missing opening date")
+
+    roundtrip = _base_sick_leave_vk_data()
+    roundtrip.sick_leave = "нужен с 25.08.2026"
+    service._validate_and_normalize_selected_data(roundtrip, ["sick_leave_vk"])
+    assert roundtrip.expert_sick_leave_from == "25.08.2026"
+    assert roundtrip.sick_leave == "нужен с 25.08.2026"
+
+    before_opening = _base_sick_leave_vk_data()
+    before_opening.expert_sick_leave_from = "10.09.2026"
+    before_opening.sick_leave = "нужен с 10.09.2026"
+    try:
+        service._validate_and_normalize_selected_data(before_opening, ["sick_leave_vk"])
+    except ValueError as exc:
+        assert "раньше даты начала больничного" in str(exc)
+    else:
+        raise AssertionError("sick_leave_vk accepted a commission before LN opening")
+
 def _assert_vk_wednesday_schedule() -> None:
     # Day one is exactly the date from «Нужен больничный лист с ...».
     # For every possible weekday, the first VK must be a Wednesday inside the
@@ -349,6 +394,7 @@ def main() -> None:
     _assert_registry_scan_and_independent_timelines()
     _assert_dated_sick_leave_census_contract()
     _assert_candidate_fallback_and_missing_primary_diagnostics()
+    _assert_sick_leave_vk_service_boundary()
     _assert_vk_wednesday_schedule()
     _assert_discharge_stays_admission_based()
     _assert_desktop_wiring_contract()
