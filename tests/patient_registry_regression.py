@@ -17,6 +17,7 @@ from medical_formatting import treatment_period_text
 from medical_models import PatientData, parse_sick_leave_value
 from medical_parser import MedicalTextParser
 from medical_service import MedicalDocumentService
+import patient_registry as patient_registry_module
 from patient_registry import (
     first_sick_leave_vk_date,
     hospitalization_days_on,
@@ -27,6 +28,7 @@ from patient_registry import (
     scan_patient_registry,
     sick_leave_days_on,
 )
+from startup import DesktopExplorerQuadClickDetector
 
 
 def _assert_sick_leave_parser() -> None:
@@ -184,6 +186,62 @@ def _assert_registry_scan_and_independent_timelines() -> None:
         assert smirnov.admission_date == date(2026, 9, 22)
 
 
+def _assert_registry_parse_cache() -> None:
+    import medical_service
+
+    original_service = medical_service.MedicalDocumentService
+    patient_registry_module._PRIMARY_PARSE_CACHE.clear()
+
+    class FakeService:
+        calls = 0
+
+        def parse_primary_document(self, path):
+            type(self).calls += 1
+            return SimpleNamespace(
+                fio="Кеш Пациент Тестовый",
+                admission_date="01.10.2026",
+                sick_leave="нет",
+                expert_sick_leave_needed="нет",
+                expert_sick_leave_from="",
+            )
+
+    try:
+        medical_service.MedicalDocumentService = FakeService
+        with TemporaryDirectory(prefix="patient-registry-cache-") as temp:
+            primary = Path(temp) / "Кеш первичный.docx"
+            primary.write_bytes(b"first")
+            first = patient_registry_module._default_parser(primary)
+            second = patient_registry_module._default_parser(primary)
+            assert first is second
+            assert FakeService.calls == 1
+
+            primary.write_bytes(b"changed-content")
+            third = patient_registry_module._default_parser(primary)
+            assert third is not second
+            assert FakeService.calls == 2
+    finally:
+        medical_service.MedicalDocumentService = original_service
+        patient_registry_module._PRIMARY_PARSE_CACHE.clear()
+
+
+def _assert_explorer_quad_click_detector() -> None:
+    detector = DesktopExplorerQuadClickDetector(max_gap_seconds=0.5)
+    first = Path("C:/Patients/Иванов/Иванов первичный.docx")
+    other = Path("C:/Patients/Петров/Петров первичный.docx")
+
+    assert detector.observe(first, 1.0) is False
+    assert detector.observe(first, 1.2) is False
+    assert detector.observe(first, 1.4) is False
+    assert detector.observe(first, 1.6) is True
+
+    # A different file or a pause longer than the allowed gap must restart the
+    # sequence rather than accidentally opening an unrelated patient.
+    assert detector.observe(first, 3.0) is False
+    assert detector.observe(other, 3.1) is False
+    assert detector.observe(other, 4.0) is False
+    assert detector.count == 1
+
+
 def _assert_vk_wednesday_schedule() -> None:
     # Day one is exactly the date from «Нужен больничный лист с ...».
     # For every possible weekday, the first VK must be a Wednesday inside the
@@ -236,6 +294,7 @@ def _assert_discharge_stays_admission_based() -> None:
 
 def _assert_desktop_wiring_contract() -> None:
     main_source = Path("main.py").read_text(encoding="utf-8")
+    startup_source = Path("startup.py").read_text(encoding="utf-8")
     mixin_source = Path("patient_registry_mixin.py").read_text(encoding="utf-8")
     window_source = Path("window_mixin.py").read_text(encoding="utf-8")
     settings_source = Path("settings_mixin.py").read_text(encoding="utf-8")
@@ -249,6 +308,23 @@ def _assert_desktop_wiring_contract() -> None:
     ):
         assert snippet in main_source
     assert "configure_patient_registry=not bool(intake_primary)" not in main_source
+    for snippet in (
+        "DESKTOP_DIRECT_PRIMARY_ARGUMENT",
+        "_direct_primary_argument",
+        "initial_direct_primary=direct_primary",
+    ):
+        assert snippet in main_source
+    for snippet in (
+        'DESKTOP_DIRECT_PRIMARY_ARGUMENT = "--open-primary"',
+        "class DesktopExplorerQuadClickDetector",
+        "_desktop_explorer_quad_click_loop",
+        "_desktop_explorer_selected_word_file",
+        "_desktop_write_direct_primary_request",
+        "_desktop_take_direct_primary_request",
+        "_desktop_apply_direct_primary",
+        "patient_registry_dir",
+    ):
+        assert snippet in startup_source
     for snippet in (
         'title="Из какой папки анализировать пациентов?"',
         "install_patient_summary_autostart()",
@@ -264,6 +340,9 @@ def _assert_desktop_wiring_contract() -> None:
         "open_patient_folder",
         "ordered_patients = sorted",
         "0 if item.is_on_sick_leave_on(query_date) else 1",
+        "MedicalDiaryAutofillPatientRegistryScan",
+        "scan_results: queue.Queue",
+        'summary_var.set("Анализирую папки пациентов…")',
     ):
         assert snippet in mixin_source
     assert 'text="Мои пациенты", command=self.show_my_patients' in window_source
@@ -280,6 +359,8 @@ def _assert_desktop_wiring_contract() -> None:
         "NIM_DELETE",
         "consume_restore_request",
         "consume_close_request",
+        "_PRIMARY_PARSE_CACHE",
+        "_primary_file_signature",
     ):
         assert snippet in registry_source
     assert "DIR_PATIENT_REGISTRY" in settings_source
@@ -344,6 +425,8 @@ def main() -> None:
     _assert_primary_filename_contract()
     _assert_real_docx_registry_ingestion()
     _assert_registry_scan_and_independent_timelines()
+    _assert_registry_parse_cache()
+    _assert_explorer_quad_click_detector()
     _assert_vk_wednesday_schedule()
     _assert_discharge_stays_admission_based()
     _assert_desktop_wiring_contract()
@@ -352,8 +435,9 @@ def main() -> None:
     print(
         "PATIENT REGISTRY REGRESSION OK: folder scan, discharged-folder exclusion, "
         "real DOCX ingestion, complete-folder census, sick-leave-first ordering, sick-leave chronology, "
-        "all sick-leave popup opening dates, persistent tray, "
-        "7..15-day Wednesday VK schedule and admission-based discharge duration are locked"
+        "all sick-leave popup opening dates, persistent tray, cached/asynchronous registry loading, "
+        "Explorer four-click direct primary handoff, 7..15-day Wednesday VK schedule and "
+        "admission-based discharge duration are locked"
     )
 
 
