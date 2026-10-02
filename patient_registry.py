@@ -28,7 +28,7 @@ _PRIMARY_PARSE_CACHE_LOCK = threading.Lock()
 class PatientRegistryEntry:
     fio: str
     folder: Path
-    primary_path: Path
+    primary_path: Path | None
     admission_date: date | None
     sick_leave_needed: bool
     sick_leave_from: date | None
@@ -87,6 +87,33 @@ def primary_candidates(folder: str | Path) -> list[Path]:
         if path.is_file() and is_primary_patient_filename(path)
     ]
     return sorted(result, key=lambda p: (rank.get(p.suffix.lower(), 9), p.name.casefold()))
+
+
+def patient_source_candidates(folder: str | Path) -> list[Path]:
+    """Prefer explicit primary filenames, then fall back to other Word sources.
+
+    A patient folder is the census source of truth. Doctors may rename a primary
+    file or keep only another parseable medical document, so a strict filename
+    requirement must not make the whole patient disappear from «Мои пациенты».
+    """
+    root = Path(folder)
+    preferred = primary_candidates(root)
+    if preferred:
+        return preferred
+    if not root.is_dir():
+        return []
+    rank = {".docx": 0, ".docm": 1, ".doc": 2}
+    fallback = [
+        path
+        for path in root.iterdir()
+        if (
+            path.is_file()
+            and not path.name.startswith("~$")
+            and path.suffix.lower() in SUPPORTED_WORD_SUFFIXES
+            and not is_discharge_patient_filename(path)
+        )
+    ]
+    return sorted(fallback, key=lambda p: (rank.get(p.suffix.lower(), 9), p.name.casefold()))
 
 
 def is_discharge_patient_filename(path: str | Path) -> bool:
@@ -298,8 +325,21 @@ def scan_patient_registry(
         if has_discharge_patient_document(patient_folder):
             continue
 
-        candidates = primary_candidates(patient_folder)
+        candidates = patient_source_candidates(patient_folder)
         if not candidates:
+            warning = "В папке пациента не найден Word-документ для распознавания."
+            issues.append(PatientRegistryIssue(patient_folder, warning))
+            patients.append(
+                PatientRegistryEntry(
+                    fio=patient_folder.name,
+                    folder=patient_folder,
+                    primary_path=None,
+                    admission_date=None,
+                    sick_leave_needed=False,
+                    sick_leave_from=None,
+                    warning=warning,
+                )
+            )
             continue
 
         parsed_data = None
@@ -366,7 +406,7 @@ def scan_patient_registry(
             0 if item.is_on_sick_leave_on(target_date) else 1,
             item.fio.casefold(),
             item.admission_date or date.max,
-            item.primary_path.name.casefold(),
+            item.primary_path.name.casefold() if item.primary_path is not None else "",
         )
     )
     return PatientRegistrySnapshot(
