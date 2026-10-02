@@ -344,6 +344,10 @@ def _assert_desktop_wiring_contract() -> None:
         "_desktop_write_direct_primary_request",
         "_desktop_take_direct_primary_request",
         "_desktop_apply_direct_primary",
+        "_desktop_close_quad_click_word_document",
+        "MedicalDiaryAutofillQuadClickWordCleanup",
+        'GetActiveObject("Word.Application")',
+        "document.Close(SaveChanges=0)",
         "patient_registry_dir",
     ):
         assert snippet in startup_source
