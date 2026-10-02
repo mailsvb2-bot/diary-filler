@@ -307,7 +307,7 @@ class MedicalDocumentService:
                 data.work_org = ""
                 data.position = ""
 
-        sick_leave_docs = {"discharge", "commission"}
+        sick_leave_docs = {"discharge", "commission", "sick_leave_vk"}
         disability_docs = {"primary", "admission_doctor_referral"}
 
         # A selected specialized form is itself a positive routing decision.
@@ -320,7 +320,13 @@ class MedicalDocumentService:
             # Keep the service boundary consistent with the UI preflight too,
             # including direct/programmatic callers that bypass dialogs.
             data.expert_sick_leave_needed = "да"
-            data.sick_leave = "нужен"
+            # Keep any already-entered opening date. The common sick-leave
+            # validation below will normalize it and render the canonical value.
+            data.sick_leave = (
+                f"нужен с {data.expert_sick_leave_from}"
+                if data.expert_sick_leave_from.strip()
+                else "нужен"
+            )
 
         if "vk_mse" in selected_set:
             mse_decision = normalize_yes_no(data.disability_needed)
