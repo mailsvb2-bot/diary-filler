@@ -342,17 +342,55 @@ def _desktop_submit_direct_primary(path: Path) -> bool:
         return False
 
 
+def _desktop_word_document_is_open(path: str | Path) -> bool:
+    """Check the running Word instance without ever starting Word."""
+    if os.name != "nt":
+        return False
+    target = os.path.normcase(os.path.abspath(str(Path(path).expanduser())))
+    if not target:
+        return False
+    try:
+        import pythoncom
+        import win32com.client
+    except Exception:
+        return False
+
+    pythoncom.CoInitialize()
+    try:
+        try:
+            word = win32com.client.GetActiveObject("Word.Application")
+            documents = word.Documents
+            for index in range(1, int(documents.Count) + 1):
+                document = documents.Item(index)
+                try:
+                    full_name = os.path.normcase(
+                        os.path.abspath(str(document.FullName))
+                    )
+                except Exception:
+                    continue
+                if full_name == target:
+                    return True
+        except Exception:
+            return False
+    finally:
+        try:
+            pythoncom.CoUninitialize()
+        except Exception:
+            pass
+    return False
+
+
 def _desktop_close_quad_click_word_document(
     path: str | Path,
     *,
     timeout_seconds: float = 3.0,
 ) -> bool:
-    """Close only the Word document that Explorer opened during a quad-click.
+    """Close only the transient Word document launched by this quad-click.
 
-    Explorer has already processed the first double-click by the time the fourth
-    click is observable.  We therefore attach to the *existing* Word instance,
-    wait briefly for that exact document path to appear, close only that
-    document, and leave every unrelated Word document untouched.
+    Callers snapshot whether the target was already open at the start of the
+    click sequence.  This function therefore only has to attach to the existing
+    Word instance, wait for the exact path to appear, and close that document.
+    It never launches Word and never closes unrelated documents.
     """
     if os.name != "nt":
         return False
@@ -418,6 +456,7 @@ def _desktop_explorer_quad_click_loop() -> None:
         double_click_seconds = max(0.2, float(ctypes.windll.user32.GetDoubleClickTime()) / 1000.0)
         detector = DesktopExplorerQuadClickDetector(max_gap_seconds=double_click_seconds * 1.35)
         was_down = False
+        sequence_word_was_open = False
         while True:
             is_down = bool(win32api.GetAsyncKeyState(0x01) & 0x8000)
             if is_down and not was_down:
@@ -425,14 +464,22 @@ def _desktop_explorer_quad_click_loop() -> None:
                 # first click on a previously unselected file observable.
                 time.sleep(0.025)
                 candidate = _desktop_explorer_selected_word_file()
-                if candidate is not None and detector.observe(candidate, time.monotonic()):
-                    if _desktop_submit_direct_primary(candidate):
-                        threading.Thread(
-                            target=_desktop_close_quad_click_word_document,
-                            args=(candidate,),
-                            name="MedicalDiaryAutofillQuadClickWordCleanup",
-                            daemon=True,
-                        ).start()
+                if candidate is not None:
+                    triggered = detector.observe(candidate, time.monotonic())
+                    if not triggered and detector.count == 1:
+                        # Snapshot before Explorer can execute the normal
+                        # double-click. Never close a document the user already
+                        # had open before this four-click sequence began.
+                        sequence_word_was_open = _desktop_word_document_is_open(candidate)
+                    if triggered:
+                        if _desktop_submit_direct_primary(candidate) and not sequence_word_was_open:
+                            threading.Thread(
+                                target=_desktop_close_quad_click_word_document,
+                                args=(candidate,),
+                                name="MedicalDiaryAutofillQuadClickWordCleanup",
+                                daemon=True,
+                            ).start()
+                        sequence_word_was_open = False
             was_down = is_down
             time.sleep(_DESKTOP_EXPLORER_POLL_SECONDS)
     except Exception as exc:
