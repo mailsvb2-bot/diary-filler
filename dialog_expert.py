@@ -204,7 +204,12 @@ class DialogExpertMixin:
             if parsed_year and not self.psych_account_since_year_var.get().strip():
                 self.psych_account_since_year_var.set(parsed_year)
         if selected & rvk_referral_docs and not self._normalize_yes_no(self.rvk_referral_present_var.get()) and hasattr(self, "data"):
-            parsed_status, parsed_area = parse_rvk_referral_value(getattr(self.data, "rvk_referral", ""))
+            parsed_status = self._normalize_yes_no(getattr(self.data, "rvk_referral_present", ""))
+            parsed_area = (getattr(self.data, "rvk_referral_commissariat", "") or "").strip()
+            if not parsed_status:
+                parsed_status, fallback_area = parse_rvk_referral_value(getattr(self.data, "rvk_referral", ""))
+                if not parsed_area:
+                    parsed_area = fallback_area
             if parsed_status:
                 self.rvk_referral_present_var.set(parsed_status)
             if parsed_area and not self.rvk_referral_commissariat_var.get().strip():
