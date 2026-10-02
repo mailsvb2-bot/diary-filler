@@ -250,6 +250,66 @@ class PatientRegistryMixin:
         if self.output_vars["sick_leave_vk"].get():
             self.create_selected_outputs(print_after=False)
 
+    def _prepare_registry_rvk_act(
+        self,
+        entry: PatientRegistryEntry,
+        *,
+        owner_window: tk.Toplevel | None = None,
+    ) -> None:
+        if entry.primary_path is None:
+            messagebox.showwarning(
+                "Акт РВК",
+                "В папке пациента не найден Word-документ, который можно открыть как источник. "
+                "Добавьте или выберите медицинский Word-документ пациента.",
+                parent=owner_window or self.root,
+            )
+            return
+
+        area = entry.rvk_commissariat.strip()
+        area_text = area or "район не распознан — выберите его в следующем окне"
+        if not messagebox.askyesno(
+            "Подготовить акт для РВК",
+            f"{entry.fio}\nРВК: {area_text}\n\nПодготовить акт для РВК?",
+            parent=owner_window or self.root,
+        ):
+            return
+
+        try:
+            self.root.deiconify()
+            self.root.lift()
+        except Exception:
+            pass
+
+        if owner_window is not None:
+            try:
+                owner_window.destroy()
+            except Exception:
+                pass
+
+        if not self._apply_primary_document_path(
+            str(entry.primary_path),
+            prompt_for_referral=False,
+        ):
+            return
+
+        self.rvk_referral_present_var.set("да")
+        self.rvk_referral_commissariat_var.set(area)
+        self.rvk_military_commissariat_var.set(area)
+        self.data.rvk_referral_present = "да"
+        self.data.rvk_referral_commissariat = area
+        self.data.rvk_military_commissariat = area
+
+        for kind, var in self.output_vars.items():
+            var.set(kind == "rvk")
+        self._redraw_selection_controls()
+
+        # Reuse the canonical Act RVK popup/generator. The district recovered
+        # from the primary exam is prefilled; non-derivable requisites such as
+        # the medical conclusion number remain explicit doctor input.
+        self._on_output_toggle("rvk")
+        if self.output_vars["rvk"].get():
+            self.create_selected_outputs(print_after=False)
+
     def show_my_patients(self, *, startup_mode: bool = False, start_in_tray: bool = False) -> None:
         # A logon summary must never block Windows with a first-run folder dialog.
         # Folder onboarding belongs to the normal visible application start.
@@ -420,6 +480,8 @@ class PatientRegistryMixin:
                 else "дата не распознана"
             )
             title = f"{entry.fio} — поступление {admission_text}"
+            if entry.rvk_referral:
+                title += " • РВК"
             title_label = tk.Label(
                 row,
                 text=title,
@@ -461,6 +523,14 @@ class PatientRegistryMixin:
                         f"на день ВК: госпитализация {hospital_text}, ЛН {sick_at_vk} дн."
                     )
 
+            if entry.rvk_referral:
+                rvk_detail = (
+                    f"РВК: {entry.rvk_commissariat}."
+                    if entry.rvk_commissariat
+                    else "РВК: район не распознан."
+                )
+                details = f"{details} {rvk_detail}"
+
             details_label = tk.Label(
                 row,
                 text=details,
@@ -482,25 +552,46 @@ class PatientRegistryMixin:
             title_label.bind("<Button-1>", open_folder)
             details_label.bind("<Button-1>", open_folder)
 
-            if next_vk is not None:
-                tk.Button(
-                    row,
-                    text=f"Подготовить ВК по больничному на {next_vk.strftime('%d.%m.%Y')}",
-                    command=lambda item=entry, vk=next_vk: self._prepare_registry_sick_leave_vk(
-                        item,
-                        vk,
-                        owner_window=win,
-                    ),
-                    bg=PANEL_3,
-                    fg=TEXT,
-                    activebackground=BORDER,
-                    activeforeground=TEXT,
-                    relief="flat",
-                    padx=8,
-                    pady=5,
-                    cursor="hand2",
-                    font=self._font(9, "bold"),
-                ).grid(row=0, column=1, rowspan=2, sticky="e", padx=(12, 0))
+            if next_vk is not None or entry.rvk_referral:
+                actions = tk.Frame(row, bg=PANEL)
+                actions.grid(row=0, column=1, rowspan=2, sticky="e", padx=(12, 0))
+                if next_vk is not None:
+                    tk.Button(
+                        actions,
+                        text=f"Подготовить ВК по больничному на {next_vk.strftime('%d.%m.%Y')}",
+                        command=lambda item=entry, vk=next_vk: self._prepare_registry_sick_leave_vk(
+                            item,
+                            vk,
+                            owner_window=win,
+                        ),
+                        bg=PANEL_3,
+                        fg=TEXT,
+                        activebackground=BORDER,
+                        activeforeground=TEXT,
+                        relief="flat",
+                        padx=8,
+                        pady=5,
+                        cursor="hand2",
+                        font=self._font(9, "bold"),
+                    ).pack(fill="x")
+                if entry.rvk_referral:
+                    tk.Button(
+                        actions,
+                        text="Подготовить акт для РВК",
+                        command=lambda item=entry: self._prepare_registry_rvk_act(
+                            item,
+                            owner_window=win,
+                        ),
+                        bg=PANEL_3,
+                        fg=TEXT,
+                        activebackground=BORDER,
+                        activeforeground=TEXT,
+                        relief="flat",
+                        padx=8,
+                        pady=5,
+                        cursor="hand2",
+                        font=self._font(9, "bold"),
+                    ).pack(fill="x", pady=((6, 0) if next_vk is not None else 0))
 
         scan_results: queue.Queue = queue.Queue()
         refresh_generation = 0
@@ -517,7 +608,8 @@ class PatientRegistryMixin:
             clear_rows()
             summary_var.set(
                 f"На {query_date.strftime('%d.%m.%Y')} у вас {len(snapshot.patients)} пациентов. "
-                f"По больничному листу: {len(snapshot.sick_leave_patients)}."
+                f"По больничному листу: {len(snapshot.sick_leave_patients)}. "
+                f"РВК: {len(snapshot.rvk_patients)}."
             )
             if not snapshot.patients:
                 empty_text = "Пациенты на эту дату не найдены."
