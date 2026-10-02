@@ -1,6 +1,8 @@
 import copy
 from docx.shared import RGBColor
 
+from medical_models import parse_sick_leave_value
+
 from medical_docx_blocks import _word_automation_safe_to_quit
 
 # Word automation may call Quit() only while the instance is still provably
@@ -161,6 +163,24 @@ commission_text = extract_docx_text(commission_path)
 admission_doctor_text = extract_docx_text(admission_doctor_path)
 vk_mse_text = extract_docx_text(vk_mse_path)
 sick_leave_vk_text = extract_docx_text(sick_leave_vk_path)
+
+# The popup field «С какого числа больничный лист» is clinical source data,
+# not merely UI state. It must be visible in every generated form that speaks
+# about the sick leave, while hospitalization/treatment duration remains
+# admission-based.
+assert manual_data.expert_sick_leave_from
+assert (
+    f"Больничный лист открыт с {manual_data.expert_sick_leave_from}."
+    in discharge_text
+), discharge_text
+assert (
+    f"Больничный лист открыт с {manual_data.expert_sick_leave_from}."
+    in sick_leave_vk_text
+), sick_leave_vk_text
+assert (
+    f"Срок лечения с {manual_data.admission_date} по {manual_data.discharge_date}"
+    in discharge_text
+), discharge_text
 # These two blocks are canonical template text, not patient-editable source fields.
 # Historical production templates own the wording; generation must never erase
 # or replace it with parsed/UI values.
@@ -248,7 +268,12 @@ assert discharge_roundtrip.case_number == manual_data.case_number, discharge_rou
 assert discharge_roundtrip.diagnosis == manual_data.diagnosis, discharge_roundtrip.diagnosis
 assert discharge_roundtrip.treatment_plan == manual_data.treatment_plan, discharge_roundtrip.treatment_plan
 assert discharge_roundtrip.admission_occurrence == manual_data.admission_occurrence, discharge_roundtrip.admission_occurrence
-assert discharge_roundtrip.sick_leave == "нужен", discharge_roundtrip.sick_leave
+assert discharge_roundtrip.sick_leave == f"нужен с {manual_data.expert_sick_leave_from}", discharge_roundtrip.sick_leave
+assert discharge_roundtrip.expert_sick_leave_needed == "да", discharge_roundtrip.expert_sick_leave_needed
+assert discharge_roundtrip.expert_sick_leave_from == manual_data.expert_sick_leave_from, (
+    discharge_roundtrip.expert_sick_leave_from,
+    manual_data.expert_sick_leave_from,
+)
 assert "ЭПИ тестовая информация" in discharge_roundtrip.epi_text, discharge_roundtrip.epi_text
 
 # Both explicit expert-anamnesis decisions must be reversible. A treatment
@@ -300,6 +325,10 @@ assert sick_leave_vk_roundtrip.discharge_date == "", sick_leave_vk_roundtrip.dis
 assert sick_leave_vk_roundtrip.diagnosis == manual_data.diagnosis, sick_leave_vk_roundtrip.diagnosis
 assert sick_leave_vk_roundtrip.treatment_plan == manual_data.treatment_plan, sick_leave_vk_roundtrip.treatment_plan
 assert sick_leave_vk_roundtrip.has_treatment_section is True
+assert parse_sick_leave_value(sick_leave_vk_roundtrip.sick_leave) == (
+    "да",
+    manual_data.expert_sick_leave_from,
+), sick_leave_vk_roundtrip.sick_leave
 assert sick_leave_vk_roundtrip.sick_leave_vk_date == manual_data.sick_leave_vk_date, sick_leave_vk_roundtrip.sick_leave_vk_date
 assert sick_leave_vk_roundtrip.sick_leave_vk_protocol_number == manual_data.sick_leave_vk_protocol_number, sick_leave_vk_roundtrip.sick_leave_vk_protocol_number
 assert sick_leave_vk_roundtrip.sick_leave_vk_protocol_date == manual_data.sick_leave_vk_protocol_date, sick_leave_vk_roundtrip.sick_leave_vk_protocol_date
@@ -469,7 +498,7 @@ assert "Место работы: ООО РВК, программист" not in e
 assert "военного комиссариата Ленинского района" in combined_text
 assert "Направление от РВК: по направлению из РВК (Ленинского района)" in primary_text
 assert "Место работы, должность: ООО Тест, инженер" in combined_text
-assert "Экспертный анамнез: Работает в ООО Завод, в должности инженер. Больничный лист. Срок лечения с 10.06.2026 по 20.06.2026, 11 дней. К труду с 21.06.2026." in combined_text
+assert "Экспертный анамнез: Работает в ООО Завод, в должности инженер. Больничный лист. Больничный лист открыт с 15.06.2026. Срок лечения с 10.06.2026 по 20.06.2026, 11 дней. К труду с 21.06.2026." in combined_text
 assert "Экспертный анамнез: Работает в ООО Завод, в должности инженер. Больничный лист нужен с 15.06.2026." in combined_text
 assert "К труду с 21.06.2026" in discharge_text
 for path in created:

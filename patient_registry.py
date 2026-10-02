@@ -19,20 +19,26 @@ PATIENT_SUMMARY_RUN_KEY = r"Software\Microsoft\Windows\CurrentVersion\Run"
 SUPPORTED_WORD_SUFFIXES = {".doc", ".docx", ".docm"}
 _PRIMARY_NAME_RE = re.compile(r"(?iu)(?:^|[\s._()\-])(?:первичный|первичка)(?:$|[\s._()\-])")
 _DISCHARGE_NAME_RE = re.compile(r"(?iu)(?:^|[\s._()\-])выписной(?:$|[\s._()\-])")
+_PRIMARY_PARSE_CACHE_MAX = 512
+_PRIMARY_PARSE_CACHE: dict[str, tuple[tuple[int, int, int], object]] = {}
+_PRIMARY_PARSE_CACHE_LOCK = threading.Lock()
 
 
 @dataclass(frozen=True)
 class PatientRegistryEntry:
     fio: str
     folder: Path
-    primary_path: Path
-    admission_date: date
+    primary_path: Path | None
+    admission_date: date | None
     sick_leave_needed: bool
     sick_leave_from: date | None
     warning: str = ""
 
     def is_present_on(self, value: date) -> bool:
-        return self.admission_date <= value
+        # The selected root is the current ward census. If the date cannot be
+        # recovered from a real Word source, keep the patient visible with a
+        # warning instead of silently dropping the whole folder.
+        return self.admission_date is None or self.admission_date <= value
 
     def is_on_sick_leave_on(self, value: date) -> bool:
         if not self.sick_leave_needed:
@@ -83,6 +89,33 @@ def primary_candidates(folder: str | Path) -> list[Path]:
     return sorted(result, key=lambda p: (rank.get(p.suffix.lower(), 9), p.name.casefold()))
 
 
+def patient_source_candidates(folder: str | Path) -> list[Path]:
+    """Prefer explicit primary filenames, then fall back to other Word sources.
+
+    A patient folder is the census source of truth. Doctors may rename a primary
+    file or keep only another parseable medical document, so a strict filename
+    requirement must not make the whole patient disappear from «Мои пациенты».
+    """
+    root = Path(folder)
+    preferred = primary_candidates(root)
+    if preferred:
+        return preferred
+    if not root.is_dir():
+        return []
+    rank = {".docx": 0, ".docm": 1, ".doc": 2}
+    fallback = [
+        path
+        for path in root.iterdir()
+        if (
+            path.is_file()
+            and not path.name.startswith("~$")
+            and path.suffix.lower() in SUPPORTED_WORD_SUFFIXES
+            and not is_discharge_patient_filename(path)
+        )
+    ]
+    return sorted(fallback, key=lambda p: (rank.get(p.suffix.lower(), 9), p.name.casefold()))
+
+
 def is_discharge_patient_filename(path: str | Path) -> bool:
     candidate = Path(path)
     if candidate.suffix.lower() not in SUPPORTED_WORD_SUFFIXES:
@@ -92,13 +125,31 @@ def is_discharge_patient_filename(path: str | Path) -> bool:
 
 
 def has_discharge_patient_document(folder: str | Path) -> bool:
+    """Return True only for a discharge file that belongs to this patient folder.
+
+    The user contract is «<Фамилия пациента> Выписной». A generic template,
+    copied example or another person's discharge must not hide the current
+    patient merely because its filename contains the word «Выписной».
+    """
     root = Path(folder)
     if not root.is_dir():
         return False
-    return any(
-        path.is_file() and is_discharge_patient_filename(path)
-        for path in root.iterdir()
-    )
+
+    folder_key = _normalize_primary_stem(root.name).casefold()
+    folder_tokens = [part for part in re.split(r"[\s._()\-]+", folder_key) if part]
+    surname = folder_tokens[0] if folder_tokens else ""
+    if not surname:
+        return False
+
+    for path in root.iterdir():
+        if not path.is_file() or not is_discharge_patient_filename(path):
+            continue
+        stem_key = _normalize_primary_stem(path.stem).casefold()
+        stem_tokens = [part for part in re.split(r"[\s._()\-]+", stem_key) if part]
+        first_token = stem_tokens[0] if stem_tokens else ""
+        if first_token == surname:
+            return True
+    return False
 
 
 def _date_value(value: str) -> date | None:
@@ -210,10 +261,46 @@ def _sick_leave_state(data, primary_path: Path | None = None) -> tuple[bool, dat
     return False, None, ""
 
 
+def _primary_file_signature(path: Path) -> tuple[int, int, int]:
+    stat = path.stat()
+    return (
+        int(getattr(stat, "st_mtime_ns", int(stat.st_mtime * 1_000_000_000))),
+        int(getattr(stat, "st_ctime_ns", int(stat.st_ctime * 1_000_000_000))),
+        int(stat.st_size),
+    )
+
+
 def _default_parser(path: Path):
+    """Parse each unchanged primary only once per process.
+
+    «Мои пациенты» may contain dozens of Word files. Re-opening the window used
+    to rebuild the full parser/service graph for every patient every time. A
+    cheap filesystem signature keeps the second and subsequent scans fast while
+    invalidating immediately when Word changes the file.
+    """
     from medical_service import MedicalDocumentService
 
-    return MedicalDocumentService().parse_primary_document(path)
+    candidate = Path(path)
+    try:
+        key = os.path.normcase(str(candidate.resolve()))
+        signature = _primary_file_signature(candidate)
+    except OSError:
+        return MedicalDocumentService().parse_primary_document(candidate)
+
+    with _PRIMARY_PARSE_CACHE_LOCK:
+        cached = _PRIMARY_PARSE_CACHE.get(key)
+        if cached is not None and cached[0] == signature:
+            return cached[1]
+
+    data = MedicalDocumentService().parse_primary_document(candidate)
+    with _PRIMARY_PARSE_CACHE_LOCK:
+        _PRIMARY_PARSE_CACHE[key] = (signature, data)
+        if len(_PRIMARY_PARSE_CACHE) > _PRIMARY_PARSE_CACHE_MAX:
+            overflow = len(_PRIMARY_PARSE_CACHE) - _PRIMARY_PARSE_CACHE_MAX
+            for old_key in list(_PRIMARY_PARSE_CACHE)[:overflow]:
+                if old_key != key:
+                    _PRIMARY_PARSE_CACHE.pop(old_key, None)
+    return data
 
 
 def scan_patient_registry(
@@ -238,12 +325,25 @@ def scan_patient_registry(
         if has_discharge_patient_document(patient_folder):
             continue
 
-        candidates = primary_candidates(patient_folder)
+        candidates = patient_source_candidates(patient_folder)
         if not candidates:
+            warning = "В папке пациента не найден Word-документ для распознавания."
+            issues.append(PatientRegistryIssue(patient_folder, warning))
+            patients.append(
+                PatientRegistryEntry(
+                    fio=patient_folder.name,
+                    folder=patient_folder,
+                    primary_path=None,
+                    admission_date=None,
+                    sick_leave_needed=False,
+                    sick_leave_from=None,
+                    warning=warning,
+                )
+            )
             continue
 
         parsed_data = None
-        chosen = None
+        chosen = candidates[0]
         last_error = None
         for candidate in candidates:
             try:
@@ -253,31 +353,40 @@ def scan_patient_registry(
             except Exception as exc:
                 last_error = exc
 
-        if parsed_data is None or chosen is None:
+        warnings: list[str] = []
+        if parsed_data is None:
+            # Keep the folder in the census. Registry-specific fallbacks can
+            # still recover admission/LN facts directly from the Word source,
+            # while FIO safely falls back to the folder name.
+            warnings.append(
+                f"Первичный документ не разобран общим парсером ({type(last_error).__name__ if last_error else 'ошибка'})."
+            )
             issues.append(
                 PatientRegistryIssue(
                     patient_folder,
-                    f"Не удалось прочитать первичный документ ({type(last_error).__name__ if last_error else 'ошибка'}).",
+                    warnings[-1],
                 )
             )
-            continue
 
         admission = _date_value(getattr(parsed_data, "admission_date", ""))
         if admission is None:
             admission = _admission_date_from_primary_first_line(chosen)
         if admission is None:
+            warnings.append("Дата поступления не распознана.")
             issues.append(
                 PatientRegistryIssue(
                     patient_folder,
                     "Не распознана дата поступления ни общим парсером, ни в первой строке первичного документа.",
                 )
             )
-            continue
-        if admission > target_date:
+        elif admission > target_date:
             continue
 
         fio = " ".join(str(getattr(parsed_data, "fio", "") or "").split()) or patient_folder.name
-        sick_needed, sick_from, warning = _sick_leave_state(parsed_data, chosen)
+        sick_needed, sick_from, sick_warning = _sick_leave_state(parsed_data, chosen)
+        if sick_warning:
+            warnings.append(sick_warning)
+        warning = " ".join(dict.fromkeys(warnings))
         patients.append(
             PatientRegistryEntry(
                 fio=fio,
@@ -290,7 +399,16 @@ def scan_patient_registry(
             )
         )
 
-    patients.sort(key=lambda item: (item.fio.casefold(), item.admission_date, item.primary_path.name.casefold()))
+    # The operational view must put patients with an active/declared sick
+    # leave first. Within each group keep a stable alphabetical order.
+    patients.sort(
+        key=lambda item: (
+            0 if item.is_on_sick_leave_on(target_date) else 1,
+            item.fio.casefold(),
+            item.admission_date or date.max,
+            item.primary_path.name.casefold() if item.primary_path is not None else "",
+        )
+    )
     return PatientRegistrySnapshot(
         root=directory,
         as_of=target_date,
@@ -340,7 +458,9 @@ def sick_leave_days_on(entry: PatientRegistryEntry, value: date) -> int | None:
     return inclusive_days(entry.sick_leave_from, value)
 
 
-def hospitalization_days_on(entry: PatientRegistryEntry, value: date) -> int:
+def hospitalization_days_on(entry: PatientRegistryEntry, value: date) -> int | None:
+    if entry.admission_date is None:
+        return None
     return inclusive_days(entry.admission_date, value)
 
 

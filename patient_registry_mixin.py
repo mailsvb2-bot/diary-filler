@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from datetime import date
 from pathlib import Path
+import queue
+import threading
 import tkinter as tk
 from tkinter import filedialog, messagebox
 
@@ -178,6 +180,14 @@ class PatientRegistryMixin:
         *,
         owner_window: tk.Toplevel | None = None,
     ) -> None:
+        if entry.primary_path is None:
+            messagebox.showwarning(
+                "ВК по больничному",
+                "В папке пациента не найден Word-документ, который можно открыть как источник. "
+                "Добавьте или выберите медицинский Word-документ пациента.",
+                parent=owner_window or self.root,
+            )
+            return
         if entry.sick_leave_from is None:
             messagebox.showwarning(
                 "ВК по больничному",
@@ -404,7 +414,12 @@ class PatientRegistryMixin:
             row.pack(fill="x", padx=10, pady=6)
             row.grid_columnconfigure(0, weight=1)
 
-            title = f"{entry.fio} — поступление {entry.admission_date.strftime('%d.%m.%Y')}"
+            admission_text = (
+                entry.admission_date.strftime("%d.%m.%Y")
+                if entry.admission_date is not None
+                else "дата не распознана"
+            )
+            title = f"{entry.fio} — поступление {admission_text}"
             title_label = tk.Label(
                 row,
                 text=title,
@@ -434,11 +449,16 @@ class PatientRegistryMixin:
                     next_vk = next_sick_leave_vk_date(entry.sick_leave_from, query_date)
                     hospital_at_vk = hospitalization_days_on(entry, next_vk)
                     sick_at_vk = sick_leave_days_on(entry, next_vk) or 0
+                    hospital_text = (
+                        f"{hospital_at_vk} дн."
+                        if hospital_at_vk is not None
+                        else "дата поступления не распознана"
+                    )
                     details = (
                         f"ЛН с {entry.sick_leave_from.strftime('%d.%m.%Y')}; "
                         f"на выбранную дату {sick_days} дн. по ЛН; "
                         f"следующая ВК {next_vk.strftime('%d.%m.%Y')}; "
-                        f"на день ВК: госпитализация {hospital_at_vk} дн., ЛН {sick_at_vk} дн."
+                        f"на день ВК: госпитализация {hospital_text}, ЛН {sick_at_vk} дн."
                     )
 
             details_label = tk.Label(
@@ -482,26 +502,16 @@ class PatientRegistryMixin:
                     font=self._font(9, "bold"),
                 ).grid(row=0, column=1, rowspan=2, sticky="e", padx=(12, 0))
 
-        def refresh() -> None:
-            query_date = self._registry_query_date(date_var.get())
-            if query_date is None:
-                messagebox.showwarning(
-                    "Мои пациенты",
-                    "Укажите дату в формате ДД.ММ.ГГГГ.",
-                    parent=win,
-                )
-                return
-            root_path = self._patient_registry_root()
-            if not root_path:
+        scan_results: queue.Queue = queue.Queue()
+        refresh_generation = 0
+
+        def render_snapshot(snapshot, query_date: date, generation: int) -> None:
+            if generation != refresh_generation:
                 return
             try:
-                snapshot = scan_patient_registry(root_path, as_of=query_date)
-            except Exception as exc:
-                messagebox.showerror(
-                    "Мои пациенты",
-                    f"Не удалось проанализировать папку пациентов: {exc}",
-                    parent=win,
-                )
+                if not win.winfo_exists():
+                    return
+            except Exception:
                 return
 
             clear_rows()
@@ -510,9 +520,9 @@ class PatientRegistryMixin:
                 f"По больничному листу: {len(snapshot.sick_leave_patients)}."
             )
             if not snapshot.patients:
-                empty_text = "Пациенты с распознанным первичным документом на эту дату не найдены."
+                empty_text = "Пациенты на эту дату не найдены."
                 if snapshot.issues:
-                    empty_text += " Ниже показано, почему отдельные папки не попали в список."
+                    empty_text += " Ниже показаны предупреждения по отдельным папкам."
                 else:
                     empty_text += (
                         " Проверьте выбранную папку и наличие файлов вида "
@@ -530,7 +540,17 @@ class PatientRegistryMixin:
                     pady=16,
                 ).pack(fill="x", padx=10)
             else:
-                for entry in snapshot.patients:
+                # scan_patient_registry already guarantees this order, but keep
+                # the UI contract explicit: sick-leave patients are always shown
+                # first, followed by the rest of the ward census.
+                ordered_patients = sorted(
+                    snapshot.patients,
+                    key=lambda item: (
+                        0 if item.is_on_sick_leave_on(query_date) else 1,
+                        item.fio.casefold(),
+                    ),
+                )
+                for entry in ordered_patients:
                     add_patient_row(entry, query_date)
 
             if snapshot.issues:
@@ -562,6 +582,73 @@ class PatientRegistryMixin:
                         anchor="w",
                         font=self._font(9),
                     ).pack(fill="x", padx=18, pady=(0, 4))
+
+        def poll_scan_results() -> None:
+            try:
+                while True:
+                    kind, generation, query_date, payload = scan_results.get_nowait()
+                    if generation != refresh_generation:
+                        continue
+                    if kind == "error":
+                        clear_rows()
+                        summary_var.set("")
+                        messagebox.showerror(
+                            "Мои пациенты",
+                            f"Не удалось проанализировать папку пациентов: {payload}",
+                            parent=win,
+                        )
+                    else:
+                        render_snapshot(payload, query_date, generation)
+            except queue.Empty:
+                pass
+            try:
+                if win.winfo_exists():
+                    win.after(60, poll_scan_results)
+            except Exception:
+                pass
+
+        def refresh() -> None:
+            nonlocal refresh_generation
+            query_date = self._registry_query_date(date_var.get())
+            if query_date is None:
+                messagebox.showwarning(
+                    "Мои пациенты",
+                    "Укажите дату в формате ДД.ММ.ГГГГ.",
+                    parent=win,
+                )
+                return
+            root_path = self._patient_registry_root()
+            if not root_path:
+                return
+
+            refresh_generation += 1
+            generation = refresh_generation
+            clear_rows()
+            summary_var.set("Анализирую папки пациентов…")
+            tk.Label(
+                rows,
+                text="Список загружается. Окно уже можно перемещать и сворачивать.",
+                bg=PANEL,
+                fg=MUTED,
+                justify="left",
+                anchor="w",
+                font=self._font(10),
+                pady=16,
+            ).pack(fill="x", padx=10)
+
+            def scan_worker() -> None:
+                try:
+                    snapshot = scan_patient_registry(root_path, as_of=query_date)
+                except Exception as exc:
+                    scan_results.put(("error", generation, query_date, str(exc)))
+                    return
+                scan_results.put(("ok", generation, query_date, snapshot))
+
+            threading.Thread(
+                target=scan_worker,
+                name="MedicalDiaryAutofillPatientRegistryScan",
+                daemon=True,
+            ).start()
 
         tk.Button(
             top,
@@ -631,6 +718,7 @@ class PatientRegistryMixin:
         ).pack(side="right")
 
         date_entry.bind("<Return>", lambda _event: refresh())
+        win.after(60, poll_scan_results)
         refresh()
         if start_in_tray:
             # Detached tray hosts must not flash a visible summary window before

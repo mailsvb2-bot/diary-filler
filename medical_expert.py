@@ -81,18 +81,19 @@ def build_expert_anamnesis(
         if sick_needed == "да":
             number_part = f" № {sick_number}" if sick_number else ""
             if include_sick_leave_number and (sick_number or data.discharge_date):
-                # В выписном эпикризе не пишем "нужен с ...": нужен номер ЛН,
-                # срок лечения и дата выхода к труду.
+                # Выписной должен хранить два независимых факта:
+                # 1) когда открыт ЛН (из popup «С какого числа больничный лист»);
+                # 2) срок стационарного лечения — строго от даты поступления.
                 line = f"Больничный лист{number_part}."
-                start = normalize_text(data.admission_date or sick_from)
+                if sick_from:
+                    line += f" Больничный лист открыт с {sick_from}."
+                start = normalize_text(data.admission_date)
                 finish = normalize_text(data.discharge_date)
                 days = calculate_inclusive_treatment_days(start, finish) if start and finish else None
                 if start and finish and days:
                     line += f" Срок лечения с {start} по {finish}, {days} {russian_day_word(days)}."
                 elif start and finish:
                     line += f" Срок лечения с {start} по {finish}."
-                elif sick_from:
-                    line += f" Больничный лист открыт с {sick_from}."
                 return_to_work = return_to_work_date(finish) if include_return_to_work else ""
                 if return_to_work:
                     line += f" К труду с {return_to_work}."

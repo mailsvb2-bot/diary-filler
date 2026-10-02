@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "dd10320807d42bb2adb0707eacc80d54c0e3276b",
+  "reason": "User-requested fixes: preserve the sick-leave opening date from popup state in generated discharge and sick-leave VK documents; keep all patient folders visible when parser/admission recovery is incomplete; prioritize active sick-leave patients; make the patient registry open without blocking the Tk UI and reuse unchanged primary parses; add a Windows Explorer four-click bridge that leaves normal Word double-click behavior intact and hands an existing registry Word file directly to the canonical primary-document flow without moving it.",
+  "required_evidence": [
+    "document_mechanics_guard",
+    "full_patient_replay",
+    "golden_docx",
+    "staff_profile_regression",
+    "gender_generation_matrix",
+    "desktop_intake_contract",
+    "intake_lifecycle_regression",
+    "packaged_desktop_intake_e2e",
+    "installer_uninstall_smoke",
+    "ci_gate_lock",
+    "patient_registry_regression"
+  ],
+  "approved_blobs": {
+    "main.py": "189167ddb23d5b576a8404f4dabbd3a45271d1a0",
+    "medical_expert.py": "3e01f6e90984b660202ca418c748ba2df8ba2c43",
+    "medical_parser_core.py": "f9ae6fd03a3173702abbeb5f11ff271947262049",
+    "medical_renderer_special.py": "731384f143d8ac63a77147f1aaa5d81c3458dbe7",
+    "medical_service.py": "8633d80dc1ab03287c7316168371ccf80fab4b7d",
+    "patient_registry.py": "6a2d40819147d1531c2ec522b3483ec3f4bf1c73",
+    "patient_registry_mixin.py": "7c609669cde674c5514bd598d7e4d338be676f43",
+    "prod_audit.py": "86f0bf31fb32d404a1e421f724f10df72532ecaf",
+    "smoke_combined_part02_ui_parser_regressions.py": "40cde47194aad72fdbda157a43f1d5ea3a862935",
+    "smoke_combined_part03_medical_parser_manual.py": "c67b7390c3f710199e76e054aabf101c8611e971",
+    "smoke_combined_part04_medical_generation.py": "fdaa8f9f933f5105a298f1ae761bc4282144b0df",
+    "smoke_combined_part06_diary_columns_settings.py": "100ed5f305777123a6ddd9704b448cae9a45dae9",
+    "startup.py": "0accf58303f6ce611b33606c8178f6efe32ba4d2",
+    "tests/golden_docx_manifest.json": "ed66925cea235be019a67332c526ae3a5e28c7af",
+    "tests/patient_registry_regression.py": "db8b961fdd85042567f71406e2696b02b761305d",
+    "tools/document_mechanics_change_approval.json": "b578cdaa0daa62b2fdfe4a8d5f7643583380c70b",
+    "tools/privacy_diagnostics_check.py": "f39d4bb3f307227b2c7bcb81831e7bb78ed81439"
+  }
+}

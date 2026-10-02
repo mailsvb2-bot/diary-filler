@@ -199,12 +199,11 @@ class MedicalParserCoreMixin:
     def _repair_rendered_expert_sick_leave(data: PatientData, text: str) -> None:
         """Recover an explicit sick-leave decision from rendered expert anamnesis.
 
-        A discharge epicrisis intentionally renders positive sick leave as
-        «Больничный лист. Срок лечения ...» rather than «нужен с ...». The
-        generic inline parser therefore captures only the tail after the label
-        and cannot reconstruct the yes/no decision. We only repair lines that
-        explicitly belong to «Экспертный анамнез» and never infer from an
-        arbitrary treatment-period sentence elsewhere in the document.
+        Generated discharge documents carry the explicit opening date in the
+        expert anamnesis. Recover both the yes/no decision and that date so a
+        generated document can safely become the next universal source. We only
+        repair lines that explicitly belong to «Экспертный анамнез» and never
+        infer from an arbitrary treatment-period sentence elsewhere.
         """
         decision, _date = parse_sick_leave_value(data.sick_leave)
         if decision:
@@ -219,6 +218,8 @@ class MedicalParserCoreMixin:
 
             if re.search(r"(?i)\bв\s+выдаче\s+лн\s+не\s+нуждается\b", line):
                 data.sick_leave = "не нужен"
+                data.expert_sick_leave_needed = "нет"
+                data.expert_sick_leave_from = ""
                 return
 
             marker = re.search(
@@ -230,6 +231,8 @@ class MedicalParserCoreMixin:
 
             if re.search(r"(?i)\b(?:не\s+нуж(?:ен|на|но)|не\s+требуется)\b", line):
                 data.sick_leave = "не нужен"
+                data.expert_sick_leave_needed = "нет"
+                data.expert_sick_leave_from = ""
                 return
 
             opened = re.search(
@@ -237,12 +240,13 @@ class MedicalParserCoreMixin:
                 line,
             )
             if opened:
-                data.sick_leave = f"нужен с {opened.group(1)}"
+                opened_date = opened.group(1)
+                data.sick_leave = f"нужен с {opened_date}"
+                data.expert_sick_leave_needed = "да"
+                data.expert_sick_leave_from = opened_date
             else:
-                # The rendered discharge form uses exactly «Больничный лист.»
-                # before the treatment-period sentence. Presence of this marker
-                # inside expert anamnesis is itself the explicit positive fact.
                 data.sick_leave = "нужен"
+                data.expert_sick_leave_needed = "да"
 
             number = (marker.group(1) or "").strip()
             if number and not data.expert_sick_leave_number:

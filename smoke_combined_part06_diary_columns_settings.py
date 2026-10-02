@@ -255,6 +255,7 @@ except ValueError as exc:
 
 try:
     bad_sick_vk_data = service.parse_primary_document(nav)
+    bad_sick_vk_data.expert_sick_leave_from = "01.06.2026"
     bad_sick_vk_data.sick_leave_vk_date = "18.06.2026"
     bad_sick_vk_data.sick_leave_vk_protocol_number = ""
     bad_sick_vk_data.sick_leave_vk_protocol_date = "18.06.2026"
@@ -666,6 +667,7 @@ except ValueError as exc:
 
 late_sick_vk_data = service.parse_primary_document(nav)
 late_sick_vk_data.discharge_date = "11.06.2026"
+late_sick_vk_data.expert_sick_leave_from = "01.06.2026"
 late_sick_vk_data.sick_leave_vk_date = "12.06.2026"
 late_sick_vk_data.sick_leave_vk_protocol_number = "79-LATE"
 late_sick_vk_data.sick_leave_vk_protocol_date = "12.06.2026"
@@ -684,6 +686,7 @@ except ValueError as exc:
 stale_no_sick_vk = service.parse_primary_document(nav)
 stale_no_sick_vk.expert_work_status = "нет"
 stale_no_sick_vk.expert_sick_leave_needed = "нет"
+stale_no_sick_vk.expert_sick_leave_from = "10.06.2026"
 stale_no_sick_vk.sick_leave = "не нужен"
 stale_no_sick_vk.sick_leave_vk_date = "12.06.2026"
 stale_no_sick_vk.sick_leave_vk_protocol_number = "79-CURRENT"
@@ -698,7 +701,8 @@ stale_no_created, stale_no_used = service.create_documents(
 assert len(stale_no_created) == 1, stale_no_created
 assert stale_no_created[0].exists(), stale_no_created
 assert stale_no_used.expert_sick_leave_needed == "да", stale_no_used.expert_sick_leave_needed
-assert stale_no_used.sick_leave == "нужен", stale_no_used.sick_leave
+assert stale_no_used.sick_leave == "нужен с 10.06.2026", stale_no_used.sick_leave
+assert stale_no_used.expert_sick_leave_from == "10.06.2026"
 
 contradictory_mse = service.parse_primary_document(nav)
 contradictory_mse.disability_needed = "нет"
@@ -720,6 +724,7 @@ except ValueError as exc:
 implicit_sick_vk = service.parse_primary_document(nav)
 implicit_sick_vk.expert_work_status = "нет"
 implicit_sick_vk.expert_sick_leave_needed = ""
+implicit_sick_vk.expert_sick_leave_from = "10.06.2026"
 implicit_sick_vk.sick_leave = ""
 implicit_sick_vk.sick_leave_vk_date = "12.06.2026"
 implicit_sick_vk.sick_leave_vk_protocol_number = "81-IMPLICIT"
@@ -732,6 +737,8 @@ _implicit_created, implicit_used = service.create_documents(
     override_data=implicit_sick_vk,
 )
 assert implicit_used.expert_sick_leave_needed == "да", implicit_used.expert_sick_leave_needed
+assert implicit_used.expert_sick_leave_from == "10.06.2026"
+assert implicit_used.sick_leave == "нужен с 10.06.2026"
 
 implicit_mse = service.parse_primary_document(nav)
 implicit_mse.expert_work_status = "нет"
@@ -947,6 +954,7 @@ except ValueError as exc:
     assert "раньше года рождения" in str(exc), str(exc)
 
 bad_sick_vk_order_data = service.parse_primary_document(nav)
+bad_sick_vk_order_data.expert_sick_leave_from = "10.06.2026"
 bad_sick_vk_order_data.sick_leave_vk_date = "10.06.2026"
 bad_sick_vk_order_data.sick_leave_vk_protocol_number = "79"
 bad_sick_vk_order_data.sick_leave_vk_protocol_date = "10.06.2026"
