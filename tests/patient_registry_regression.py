@@ -254,6 +254,21 @@ def _assert_registry_scan_and_independent_timelines() -> None:
 
         smirnov = next(item for item in snapshot.patients if "Смирнов" in item.fio)
         assert smirnov.admission_date == date(2026, 9, 22)
+        assert smirnov.sick_leave_needed is False
+        assert smirnov.rvk_referral is True
+        assert smirnov.rvk_commissariat == "Канавинский"
+
+        prepared_discharge = next(
+            item for item in snapshot.patients if item.folder.name == "Выписан"
+        )
+        assert prepared_discharge.sick_leave_needed is True
+        assert prepared_discharge.is_on_sick_leave_on(date(2026, 10, 1)) is True
+        assert prepared_discharge.rvk_referral is False
+        assert prepared_discharge.sick_leave_from is not None
+        assert next_sick_leave_vk_date(
+            prepared_discharge.sick_leave_from,
+            date(2026, 10, 1),
+        ).weekday() == 2
 
         renamed = next(item for item in snapshot.patients if "Переименован" in item.fio)
         assert renamed.primary_path is not None
