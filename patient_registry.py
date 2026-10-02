@@ -32,6 +32,8 @@ class PatientRegistryEntry:
     admission_date: date | None
     sick_leave_needed: bool
     sick_leave_from: date | None
+    rvk_referral: bool = False
+    rvk_commissariat: str = ""
     warning: str = ""
 
     def is_present_on(self, value: date) -> bool:
@@ -62,6 +64,10 @@ class PatientRegistrySnapshot:
     @property
     def sick_leave_patients(self) -> tuple[PatientRegistryEntry, ...]:
         return tuple(item for item in self.patients if item.is_on_sick_leave_on(self.as_of))
+
+    @property
+    def rvk_patients(self) -> tuple[PatientRegistryEntry, ...]:
+        return tuple(item for item in self.patients if item.rvk_referral)
 
 
 def _normalize_primary_stem(value: str) -> str:
@@ -261,6 +267,190 @@ def _sick_leave_state(data, primary_path: Path | None = None) -> tuple[bool, dat
     return False, None, ""
 
 
+
+_RVK_DISTRICT_CANONICAL = {
+    "автозаводский": "Автозаводский",
+    "автозаводского": "Автозаводский",
+    "ленинский": "Ленинский",
+    "ленинского": "Ленинский",
+    "канавинский": "Канавинский",
+    "канавинского": "Канавинский",
+    "канвинский": "Канавинский",
+    "канвинского": "Канавинский",
+    "сормовский": "Сормовский",
+    "сормовского": "Сормовский",
+    "московский": "Московский",
+    "московского": "Московский",
+    "советский": "Советский",
+    "советского": "Советский",
+    "нижегородский": "Нижегородский",
+    "нижегородского": "Нижегородский",
+    "приокский": "Приокский",
+    "приокского": "Приокский",
+}
+
+
+def _normalize_rvk_commissariat_text(value: str) -> str:
+    """Normalize an RVK district/commissariat phrase for the existing Act popup."""
+    text = " ".join(str(value or "").strip().split())
+    if not text:
+        return ""
+    text = re.sub(r"(?iu)^\s*да\s*/\s*нет\s*[:;,.—–-]?\s*", "", text)
+    text = re.sub(r"(?iu)^\s*(?:да|есть|имеется)\b\s*[:;,.—–-]?\s*", "", text)
+    text = re.sub(r"(?iu)^\s*(?:от|из)\s+", "", text)
+    text = re.sub(
+        r"(?iu)^\s*(?:рвк|военн(?:ого|ый)\s+комиссариат(?:а)?|военкомат(?:а)?)\s*[:;,.—–-]?\s*",
+        "",
+        text,
+    )
+    text = text.strip(" \t,.;:—–-()[]")
+    text = re.sub(r"(?iu)\s+военкомат(?:а|у|е|ом)?\s*$", "", text).strip(" \t,.;:—–-()[]")
+    text = re.sub(r"(?iu)\s+район(?:а|ов|у|е|ом)?\s*$", "", text).strip(" \t,.;:—–-()[]")
+    if not text:
+        return ""
+
+    lowered = text.lower().replace("ё", "е")
+    if lowered in {"да", "нет", "да нет"}:
+        return ""
+    if re.search(
+        r"(?iu)\b(?:диагноз|жалоб|анамнез|больничн|должност|место\s+работы|"
+        r"ф\.?\s*и\.?\s*о\.?|год\s+рождения|дата\s+рождения|психическ\w+\s+статус)\b",
+        text,
+    ):
+        return ""
+
+    combined = {
+        "сормовский и московский": "Сормовский и Московский",
+        "сормовского и московского": "Сормовский и Московский",
+        "московский и сормовский": "Сормовский и Московский",
+        "московского и сормовского": "Сормовский и Московский",
+    }
+    if lowered in combined:
+        return combined[lowered]
+    if lowered in _RVK_DISTRICT_CANONICAL:
+        return _RVK_DISTRICT_CANONICAL[lowered]
+
+    parts = [
+        part.strip()
+        for part in re.split(r"(?iu)\s*(?:,|/|\\\\|\s+и\s+)\s*", text)
+        if part.strip()
+    ]
+    if len(parts) > 1:
+        canonical_parts = []
+        for part in parts:
+            normalized_part = _RVK_DISTRICT_CANONICAL.get(part.lower().replace("ё", "е"))
+            if not normalized_part:
+                canonical_parts = []
+                break
+            canonical_parts.append(normalized_part)
+        if canonical_parts:
+            return " и ".join(dict.fromkeys(canonical_parts))
+
+    return text
+
+
+def _rvk_referral_state_from_text(text: str) -> tuple[str, str]:
+    """Recover RVK yes/no and district from common primary-exam formulations."""
+    lines = [" ".join(line.split()) for line in str(text or "").splitlines() if line.strip()]
+    positive_without_area = False
+    context_re = re.compile(
+        r"(?iu)(?:"
+        r"направлен\w*.*(?:\bрвк\b|военком|военн\w*\s+комиссариат)|"
+        r"госпитализ\w*.*(?:\bрвк\b|военком|военн\w*\s+комиссариат)|"
+        r"(?:\bрвк\b|военком|военн\w*\s+комиссариат).*направлен\w*"
+        r")"
+    )
+    prefix_patterns = (
+        r"(?iu)^.*?направлен\w*\s+(?:(?:от|из)\s+)?(?:рвк|военн(?:ого|ый)\s+комиссариат(?:а)?|военкомат(?:а)?)\s*",
+        r"(?iu)^.*?госпитализ\w*\s+(?:по\s+направлени\w*\s+)?(?:(?:от|из)\s+)?(?:рвк|военн(?:ого|ый)\s+комиссариат(?:а)?|военкомат(?:а)?)\s*",
+        r"(?iu)^.*?по\s+направлени\w*\s+из\s+",
+    )
+
+    for index, line in enumerate(lines):
+        if not context_re.search(line):
+            continue
+
+        decision_text = re.sub(r"(?iu)\bда\s*/\s*нет\b", "", line)
+        if (
+            re.search(r"(?iu)\bбез\s+направлени\w*(?:\s+из|\s+от)?\s*(?:рвк|военком|военн\w*\s+комиссариат)", decision_text)
+            or re.search(r"(?iu)\bне\s+(?:направлен\w*|госпитализ\w*)\b", decision_text)
+            or re.search(r"(?iu)(?:\bрвк\b|военком|военн\w*\s+комиссариат).*?[:;,.—–-]?\s*\bнет\b", decision_text)
+        ):
+            return "нет", ""
+
+        tail = line
+        for pattern in prefix_patterns:
+            replaced = re.sub(pattern, "", tail)
+            if replaced != tail:
+                tail = replaced
+                break
+        area = _normalize_rvk_commissariat_text(tail)
+        if area:
+            return "да", area
+
+        # DOCX tables may place the label and district into adjacent cells/lines.
+        if index + 1 < len(lines):
+            next_area = _normalize_rvk_commissariat_text(lines[index + 1])
+            if next_area and not context_re.search(lines[index + 1]):
+                return "да", next_area
+        positive_without_area = True
+
+    return ("да", "") if positive_without_area else ("", "")
+
+
+def _rvk_referral_state(data, primary_path: Path | None = None) -> tuple[bool, str, str]:
+    explicit_decision = normalize_yes_no(getattr(data, "rvk_referral_present", ""))
+    explicit_area = _normalize_rvk_commissariat_text(
+        str(getattr(data, "rvk_referral_commissariat", "") or "")
+    )
+    raw_value = str(getattr(data, "rvk_referral", "") or "").strip()
+
+    decision = explicit_decision
+    area = explicit_area
+    if decision != "нет" and raw_value and (not decision or not area):
+        raw_decision, raw_area = _rvk_referral_state_from_text(raw_value)
+        if not raw_decision:
+            compact = re.sub(r"(?iu)^\s*да\s*/\s*нет\s*[:;,.—–-]?\s*", "", raw_value).strip()
+            exact = normalize_yes_no(compact)
+            if exact:
+                raw_decision = exact
+            elif re.match(r"(?iu)^\s*да\b", compact):
+                raw_decision = "да"
+                raw_area = _normalize_rvk_commissariat_text(
+                    re.sub(r"(?iu)^\s*да\b\s*[:;,.—–-]?\s*", "", compact)
+                )
+            else:
+                raw_area = _normalize_rvk_commissariat_text(compact)
+                if raw_area:
+                    raw_decision = "да"
+        if not decision:
+            decision = raw_decision
+        if decision == "да" and not area and raw_decision == "да":
+            area = raw_area
+
+    if decision != "нет" and primary_path is not None and (not decision or not area):
+        try:
+            from medical_docx_reader import extract_docx_text
+
+            fallback_decision, fallback_area = _rvk_referral_state_from_text(
+                str(extract_docx_text(primary_path) or "")
+            )
+        except Exception:
+            fallback_decision, fallback_area = "", ""
+        if not decision:
+            decision = fallback_decision
+        if decision == "да" and not area and fallback_decision == "да":
+            area = fallback_area
+
+    if decision == "нет":
+        return False, "", ""
+    if decision == "да":
+        if not area:
+            return True, "", "РВК отмечен, но район не распознан."
+        return True, area, ""
+    return False, "", ""
+
+
 def _primary_file_signature(path: Path) -> tuple[int, int, int]:
     stat = path.stat()
     return (
@@ -386,6 +576,9 @@ def scan_patient_registry(
         sick_needed, sick_from, sick_warning = _sick_leave_state(parsed_data, chosen)
         if sick_warning:
             warnings.append(sick_warning)
+        rvk_referral, rvk_commissariat, rvk_warning = _rvk_referral_state(parsed_data, chosen)
+        if rvk_warning:
+            warnings.append(rvk_warning)
         warning = " ".join(dict.fromkeys(warnings))
         patients.append(
             PatientRegistryEntry(
@@ -395,6 +588,8 @@ def scan_patient_registry(
                 admission_date=admission,
                 sick_leave_needed=sick_needed,
                 sick_leave_from=sick_from,
+                rvk_referral=rvk_referral,
+                rvk_commissariat=rvk_commissariat,
                 warning=warning,
             )
         )
