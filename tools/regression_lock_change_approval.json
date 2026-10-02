@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "9a429caf292fd532564db740b6372778e2c5d2e0",
-  "reason": "Add RVK referral/district detection to My Patients, including punctuation-safe yes/no parsing, show RVK-marked patients, and launch the existing canonical RVK act flow with the detected commissariat prefilled.",
+  "reason": "Align RVK handling with the full request: one canonical parser recognizes explicit RVK rows and equivalent hospitalization/referral phrases with district/case normalization; My Patients reuses the same parser and Act RVK flow.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -16,8 +16,11 @@
     "patient_registry_regression"
   ],
   "approved_blobs": {
-    "patient_registry.py": "5151cd3abfe5fcc980d1f7b21906beafd38906ff",
+    "dialog_expert.py": "459a2c77947f2a602822356c17fe950f68f391d3",
+    "medical_models.py": "ca84e0c18933bd6c13aec2a3bc0f0b8c3c753bd2",
+    "medical_parser_core.py": "d22d251ccb4890a71db54cb4823553eafd09cefb",
+    "patient_registry.py": "c81667efb21a36fbfc616f509f1a7f3cb99b5bb4",
     "patient_registry_mixin.py": "3c616edaf3dbd81b150aafb3482c107b5d952ffc",
-    "tests/patient_registry_regression.py": "50cf82459fc8fcb3257cbeb60562bb6475195152"
+    "tests/patient_registry_regression.py": "6e7eb1c512776e28db50f4d14f52634335d82347"
   }
 }
