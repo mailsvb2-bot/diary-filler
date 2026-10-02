@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "fd2048c69ceac9c6431377617736d18e03e66036",
+  "reason": "Prevent Explorer four-click intake from leaving the same patient Word document open while preserving all unrelated Word documents.",
+  "required_evidence": [
+    "document_mechanics_guard",
+    "full_patient_replay",
+    "golden_docx",
+    "staff_profile_regression",
+    "gender_generation_matrix",
+    "desktop_intake_contract",
+    "intake_lifecycle_regression",
+    "packaged_desktop_intake_e2e",
+    "installer_uninstall_smoke",
+    "ci_gate_lock",
+    "patient_registry_regression"
+  ],
+  "approved_blobs": {
+    "startup.py": "f0ec01ea2fa05d514108e1035901ab18daafe50f",
+    "tests/patient_registry_regression.py": "229aa9f220cac892225f01bab5089496cc8cb1f6"
+  }
+}
