@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "9a429caf292fd532564db740b6372778e2c5d2e0",
-  "baseline_note": "Clean post-merge baseline for Explorer four-click intake without leaving the newly opened Word document open. PR #294 head bec057ca5df2d9b26fb5c18c2d25af190f4fbc1 passed the complete Windows contour in run 37008315691 (#1383). Canonical merge 9a429caf292fd532564db740b6372778e2c5d2e0 then passed post-merge main run 37008891727 (#1384) end-to-end, including regression lock, release gate, full patient replay/golden DOCX, lifecycle, desktop intake, packaged intake E2E, EXE and installer smoke. The implementation closes only the exact Word document newly opened by Explorer during the recognized four-click sequence and preserves a matching document that was already open before that sequence.",
+  "baseline_ref": "d019c622cdd0eefd1e9f0b55a837b7e86932c5de",
+  "baseline_note": "Clean post-merge baseline for RVK patient detection and Act RVK preparation from «Мои пациенты». PR #296 head 6eb12525a1c9a20bcc32cc32ead07288cadb10bd passed the complete Windows contour in run 37012910045 (#1389). Canonical merge d019c622cdd0eefd1e9f0b55a837b7e86932c5de passed post-merge main run 37013599061 (#1390) end-to-end, including regression lock, release gate, real DOCX patient-registry RVK detection, full patient replay/golden DOCX, user journeys, Windows E1, lifecycle, desktop intake, Tk GUI wiring, EXE, packaged intake E2E and installer smoke.",
   "required_approval_evidence": [
     "ci_gate_lock",
     "patient_registry_regression"
