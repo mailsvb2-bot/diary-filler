@@ -335,6 +335,56 @@ def _assert_explorer_quad_click_detector() -> None:
     assert detector.count == 1
 
 
+def _assert_explorer_word_snapshot_is_nonblocking() -> None:
+    original_probe = startup_module._desktop_word_document_is_open
+    original_close = startup_module._desktop_close_quad_click_word_document
+    gate = startup_module.threading.Event()
+    path = Path("C:/Patients/Иванов/Иванов первичный.docx")
+    close_calls: list[Path] = []
+
+    def blocking_probe(candidate):
+        assert Path(candidate) == path
+        gate.wait(1.0)
+        return False
+
+    try:
+        startup_module._desktop_word_document_is_open = blocking_probe
+        completed, state = startup_module._desktop_begin_quad_click_word_snapshot(path)
+
+        # Starting the snapshot must return while Word inspection is still
+        # blocked. Otherwise the observer can miss clicks 2/3.
+        assert not completed.is_set()
+        assert state["was_open"] is None
+
+        gate.set()
+        assert completed.wait(1.0)
+        assert state["was_open"] is False
+
+        startup_module._desktop_close_quad_click_word_document = (
+            lambda candidate: close_calls.append(Path(candidate)) or True
+        )
+        assert startup_module._desktop_finish_quad_click_word_cleanup(
+            path,
+            completed,
+            state,
+        ) is True
+        assert close_calls == [path]
+
+        preexisting = startup_module.threading.Event()
+        preexisting.set()
+        close_calls.clear()
+        assert startup_module._desktop_finish_quad_click_word_cleanup(
+            path,
+            preexisting,
+            {"was_open": True},
+        ) is False
+        assert close_calls == []
+    finally:
+        gate.set()
+        startup_module._desktop_word_document_is_open = original_probe
+        startup_module._desktop_close_quad_click_word_document = original_close
+
+
 def _assert_vk_wednesday_schedule() -> None:
     # Day one is exactly the date from «Нужен больничный лист с ...».
     # For every possible weekday, the first VK must be a Wednesday inside the
@@ -417,7 +467,10 @@ def _assert_desktop_wiring_contract() -> None:
         "_desktop_apply_direct_primary",
         "_desktop_close_quad_click_word_document",
         "_desktop_word_document_is_open",
-        "sequence_word_was_open",
+        "_desktop_begin_quad_click_word_snapshot",
+        "_desktop_finish_quad_click_word_cleanup",
+        "sequence_snapshot_completed",
+        "MedicalDiaryAutofillQuadClickWordSnapshot",
         "MedicalDiaryAutofillQuadClickWordCleanup",
         'GetActiveObject("Word.Application")',
         "document.Close(SaveChanges=0)",
@@ -543,6 +596,7 @@ def main() -> None:
     _assert_registry_scan_and_independent_timelines()
     _assert_registry_parse_cache()
     _assert_explorer_quad_click_detector()
+    _assert_explorer_word_snapshot_is_nonblocking()
     _assert_vk_wednesday_schedule()
     _assert_discharge_stays_admission_based()
     _assert_desktop_wiring_contract()
