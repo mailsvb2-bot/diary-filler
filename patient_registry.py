@@ -106,7 +106,8 @@ def has_discharge_patient_document(folder: str | Path) -> bool:
         return False
 
     folder_key = _normalize_primary_stem(root.name).casefold()
-    surname = (folder_key.split() or [""])[0]
+    folder_tokens = [part for part in re.split(r"[\s._()\-]+", folder_key) if part]
+    surname = folder_tokens[0] if folder_tokens else ""
     if not surname:
         return False
 
@@ -114,8 +115,9 @@ def has_discharge_patient_document(folder: str | Path) -> bool:
         if not path.is_file() or not is_discharge_patient_filename(path):
             continue
         stem_key = _normalize_primary_stem(path.stem).casefold()
-        first_token = (stem_key.split() or [""])[0].strip("._()-")
-        if first_token == surname.strip("._()-"):
+        stem_tokens = [part for part in re.split(r"[\s._()\-]+", stem_key) if part]
+        first_token = stem_tokens[0] if stem_tokens else ""
+        if first_token == surname:
             return True
     return False
 
