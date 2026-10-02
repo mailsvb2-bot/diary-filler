@@ -79,7 +79,8 @@ class PatientRegistryMixin:
 
     def show_patient_registry_folder_settings(self) -> None:
         """Open/change the root folder used by «Мои пациенты»."""
-        if not self._patient_registry_root():
+        current = self._patient_registry_root()
+        if not current or not Path(current).expanduser().is_dir():
             if not self._prompt_patient_registry_folder(first_run=False):
                 return
 
@@ -241,9 +242,13 @@ class PatientRegistryMixin:
             self.create_selected_outputs(print_after=False)
 
     def show_my_patients(self, *, startup_mode: bool = False, start_in_tray: bool = False) -> None:
-        # A logon summary must never block Windows with a first-run folder dialog.
-        # Folder onboarding belongs to the normal visible application start.
-        if startup_mode and not self._patient_registry_root():
+        # A logon summary must never block Windows with a folder chooser. Missing
+        # and stale roots are repaired only from a normal/manual GUI launch.
+        current_root = self._patient_registry_root()
+        if startup_mode and (
+            not current_root
+            or not Path(current_root).expanduser().is_dir()
+        ):
             try:
                 self.root.destroy()
             except Exception:
