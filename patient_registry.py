@@ -354,8 +354,8 @@ def scan_patient_registry(
     issues: list[PatientRegistryIssue] = []
 
     for patient_folder in sorted((p for p in directory.iterdir() if p.is_dir()), key=lambda p: p.name.casefold()):
-        # A patient whose own discharge document already exists is no longer
-        # shown in «Мои пациенты». Generic/template discharge files do not count.
+        # User contract: if this patient folder contains any Word document
+        # recognized as «Выписной», do not show that patient in «Мои пациенты».
         if has_discharge_patient_document(patient_folder):
             continue
 
