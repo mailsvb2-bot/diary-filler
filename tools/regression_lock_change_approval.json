@@ -28,7 +28,7 @@
     "tools/document_mechanics_change_approval.json": "4ba53596e9516e1012004072d1c8d5fdd5be5ee2",
     "prod_audit.py": "f74e58286872f6cd41ea34f87f38ddfdeea6ab18",
     "smoke_combined_part01_setup_contracts.py": "23a01b1de4927237209eafcb63205ae75fbc8a09",
-    "smoke_combined_part02_ui_parser_regressions.py": "b4ebb61d1a876845a806d7ee1ab514013d6968ad",
+    "smoke_combined_part02_ui_parser_regressions.py": "a13369df0e3582a3416e2f488d2a9e9237f1a682",
     "smoke_combined_part04_medical_generation.py": "2589b129a39cfe6a168a8818a1df96275f3ab465"
   }
 }
