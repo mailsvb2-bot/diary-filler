@@ -206,6 +206,11 @@ class MedicalRendererSpecialMixin:
         editor.replace_all_matching_paragraphs(["Проживает", "Регистрация по адресу"], format_registration_text(data.registered))
         self._place_psych_account_after_registration(editor, data, ["Регистрация по адресу"], fallback_markers=["Ф.И.О", "Ф.И.О:"])
         editor.replace_all_matching_paragraphs(["Место работы"], f"Место работы, должность: {work_position}")
+        if data.expert_sick_leave_from:
+            editor.insert_before_first_matching_paragraph(
+                ["Находится на лечении"],
+                f"Больничный лист открыт с {data.expert_sick_leave_from}.",
+            )
         editor.replace_all_matching_paragraphs(["Находится на лечении"], treatment_line)
         editor.replace_all_matching_paragraphs(["Диагноз"], f"Диагноз: {sanitize_diagnosis(data.diagnosis)}")
 
