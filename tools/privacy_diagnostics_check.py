@@ -93,6 +93,7 @@ def main_check() -> None:
         private_path = Path(tmp) / fake_patient / "Первичный осмотр.docx"
         raw = (
             f'RuntimeError: failed for --intake-primary "{private_path}"\n'
+            f'RuntimeError: failed for --open-primary "{private_path}"\n'
             f'home={Path.home()}\\private\\thing\n'
         )
         safe = main._support_sanitize_diagnostics(raw)
@@ -100,8 +101,8 @@ def main_check() -> None:
             raise SystemExit("PRIVACY DIAGNOSTICS FAILED: patient path leaked")
         if str(Path.home()) in safe:
             raise SystemExit("PRIVACY DIAGNOSTICS FAILED: home path leaked")
-        if "<REDACTED_PRIMARY>" not in safe:
-            raise SystemExit("PRIVACY DIAGNOSTICS FAILED: intake path was not redacted")
+        if safe.count("<REDACTED_PRIMARY>") < 2:
+            raise SystemExit("PRIVACY DIAGNOSTICS FAILED: intake/direct primary paths were not redacted")
 
     exc = RuntimeError(f"synthetic error for {fake_patient}")
     code = main._support_error_code("startup", exc)
