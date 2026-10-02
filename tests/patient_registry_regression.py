@@ -18,6 +18,7 @@ from medical_models import PatientData, parse_sick_leave_value
 from medical_parser import MedicalTextParser
 from medical_service import MedicalDocumentService
 from patient_registry import (
+    PatientRegistryEntry,
     first_sick_leave_vk_date,
     hospitalization_days_on,
     is_discharge_patient_filename,
@@ -148,6 +149,24 @@ def _assert_registry_scan_and_independent_timelines() -> None:
         assert sick_leave_days_on(ivanov, date(2026, 10, 1)) == 43
         assert hospitalization_days_on(ivanov, date(2026, 10, 1)) == 31
 
+
+def _assert_dated_sick_leave_census_contract() -> None:
+    undated = PatientRegistryEntry(
+        fio="Маркер Без Даты", folder=Path("."), primary_path=Path("Маркер первичный.docx"),
+        admission_date=date(2026, 9, 1), sick_leave_needed=True, sick_leave_from=None,
+    )
+    future = PatientRegistryEntry(
+        fio="Маркер Будущий ЛН", folder=Path("."), primary_path=Path("Будущий первичный.docx"),
+        admission_date=date(2026, 9, 1), sick_leave_needed=True, sick_leave_from=date(2026, 10, 10),
+    )
+    active = PatientRegistryEntry(
+        fio="Маркер Активный ЛН", folder=Path("."), primary_path=Path("Активный первичный.docx"),
+        admission_date=date(2026, 9, 1), sick_leave_needed=True, sick_leave_from=date(2026, 9, 20),
+    )
+    as_of = date(2026, 10, 1)
+    assert not undated.is_on_sick_leave_on(as_of)
+    assert not future.is_on_sick_leave_on(as_of)
+    assert active.is_on_sick_leave_on(as_of)
 
 def _assert_vk_wednesday_schedule() -> None:
     # Day one is exactly the date from «Нужен больничный лист с ...».
@@ -306,6 +325,7 @@ def main() -> None:
     _assert_primary_filename_contract()
     _assert_real_docx_registry_ingestion()
     _assert_registry_scan_and_independent_timelines()
+    _assert_dated_sick_leave_census_contract()
     _assert_vk_wednesday_schedule()
     _assert_discharge_stays_admission_based()
     _assert_desktop_wiring_contract()
