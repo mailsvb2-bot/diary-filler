@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "e451751cc0c61901ef40e895282b00e9d2f20c58",
-  "baseline_note": "Clean post-merge baseline for reliable Explorer four-click intake and exact My Patients census rules. PR #301 candidate run 37044703098 (#1406) and canonical merge e451751cc0c61901ef40e895282b00e9d2f20c58 run 37045324386 (#1407) passed end-to-end. Four-click Word pre-open inspection is asynchronous so the click observer is never blocked by Word COM. My Patients excludes any patient folder containing a Word file recognized as «Выписной» and independently preserves/labels active sick-leave/VK and RVK patients.",
+  "baseline_ref": "b670555b163bc803f0674feffc00f6b8010bdda4",
+  "baseline_note": "Clean post-merge baseline for focus-safe Explorer four-click intake and verified My Patients rules. PR #303 candidate run 37053342993 (#1410) and canonical merge b670555b163bc803f0674feffc00f6b8010bdda4 run 37053904910 (#1411) were fully green. Four-click now survives Explorer-to-Word focus transfer only for the exact remembered registry file and within the Windows double-click pointer rectangle. My Patients behavior remains: any Word file recognized as «Выписной» excludes that patient; otherwise active sick-leave/VK and RVK patients are independently retained and actioned.",
   "required_approval_evidence": [
     "ci_gate_lock",
     "patient_registry_regression"
