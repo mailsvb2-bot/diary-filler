@@ -220,7 +220,7 @@ def _assert_registry_parse_cache() -> None:
         def parse_primary_document(self, path):
             type(self).calls += 1
             return SimpleNamespace(
-                fio="Кеш Пациент Тестовый",
+                fio="Маркер Кеш Тестовый",
                 admission_date="01.10.2026",
                 sick_leave="нет",
                 expert_sick_leave_needed="нет",
