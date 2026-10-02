@@ -21,8 +21,10 @@
     ".github/workflows/windows-live-e2e-core.yml": "b0b1d54b7cc2fe2578b67e7dfbb259d6ea51eaed",
     "BUILD_WINDOWS_INSTALLER.bat": "29a6b493b93bbb54e29e01817b1841f3953a3097",
     "installer/MedicalDiaryAutofill.iss": "777981065b7abf0963bb57e4eb74b99c78fb6240",
+    "prod_audit.py": "5ab8fe0d05e1855eb1765ecc690f0fe9090e0245",
     "pyproject.toml": "888e353c4697da496647d9f8c74f6f581b5c368a",
     "release_check.py": "9dddcfee4d8b4b5c0d656fdfdcb042af4ba1fd86",
+    "tests/windows_live_e2e_contract.py": "17be91ad912a752bf7312ca62564584de2714393",
     "tools/ci_gate_lock.py": "1a6da08b13081af794331027836f3bf011b58432",
     "version_info.txt": "0003eda564932305799da54ed94fa28597a50dee"
   }
