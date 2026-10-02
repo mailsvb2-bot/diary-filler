@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "a29b59ab2ca1592c4074861f44716bb6d0103526",
-  "reason": "User-requested fixes: every sick-leave data popup exposes the canonical sick-leave opening date; the patient-summary tray runs in an independent detached process and survives closing the main application; mandatory patient-root onboarding is restored; real primary Word sources with a sick-leave label followed by an opening date, including split table cells, are ingested into the patient summary; first-line admission fallback and skipped-folder diagnostics are added. Production audit, smoke/user-contract tests, and exhaustive Windows E1 fixture are updated to lock the single-popup sick-leave date behavior. Exact document-mechanics approval covers the popup and source parsing files.",
+  "reason": "User-requested fixes: every sick-leave data popup exposes the canonical sick-leave opening date; the patient-summary tray runs in an independent detached process and survives closing the main application; mandatory patient-root onboarding is restored; real primary Word sources with a sick-leave label followed by an opening date, including split table cells, are ingested into the patient summary; first-line admission fallback and skipped-folder diagnostics are added. Production audit, smoke/user-contract tests, exhaustive Windows E1, and verbal-diary fixtures are updated to lock the single-popup sick-leave date behavior. Exact document-mechanics approval covers the popup and source parsing files.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -30,6 +30,7 @@
     "smoke_combined_part01_setup_contracts.py": "23a01b1de4927237209eafcb63205ae75fbc8a09",
     "smoke_combined_part02_ui_parser_regressions.py": "a13369df0e3582a3416e2f488d2a9e9237f1a682",
     "smoke_combined_part04_medical_generation.py": "2589b129a39cfe6a168a8818a1df96275f3ab465",
-    "tests/windows_e1_exhaustive_user_matrix.py": "800d32efd25338a6404db21a33ec4b00b51d5c0b"
+    "tests/windows_e1_exhaustive_user_matrix.py": "800d32efd25338a6404db21a33ec4b00b51d5c0b",
+    "tests/verbal_diary_source_regression.py": "3688ca0e13a8aff0a14a5c6bf1875b9255d95fb0"
   }
 }
