@@ -559,14 +559,15 @@ def launch_patient_summary_tray_process() -> bool:
     if os.name != "nt":
         return False
     try:
-        from startup import _desktop_hidden_popen, _desktop_runtime_command
+        from startup import _desktop_runtime_command, _desktop_visible_popen
 
         command = _desktop_runtime_command(PATIENT_SUMMARY_TRAY_ARGUMENT)
-        # Reuse the same persistent-child launcher as the intake agent. In a
-        # one-file PyInstaller build it injects PYINSTALLER_RESET_ENVIRONMENT=1,
-        # so the tray host gets its own extraction runtime and cannot be broken
-        # when the parent EXE exits and removes its temporary _MEI directory.
-        _desktop_hidden_popen(command)
+        # The tray host is long-lived *and* must later show a Tk window. Reuse
+        # the GUI-capable child launcher: it injects
+        # PYINSTALLER_RESET_ENVIRONMENT=1 for a private one-file runtime, while
+        # deliberately avoiding DETACHED_PROCESS (which can make a GUI
+        # unreachable on older Windows builds).
+        _desktop_visible_popen(command)
         return True
     except (OSError, ValueError, subprocess.SubprocessError):
         return False
