@@ -82,22 +82,175 @@ def parse_psych_account_value(value: str) -> tuple[str, str]:
     return "", ""
 
 
+_RVK_DISTRICT_STEMS = (
+    ("автозаводск", "Автозаводский"),
+    ("ленинск", "Ленинский"),
+    ("канавинск", "Канавинский"),
+    ("канвинск", "Канавинский"),
+    ("сормовск", "Сормовский"),
+    ("московск", "Московский"),
+    ("советск", "Советский"),
+    ("нижегородск", "Нижегородский"),
+    ("приокск", "Приокский"),
+)
+
+_RVK_TOKEN_RE = re.compile(
+    r"(?iu)(?:\bрвк\b|военком\w*|военн\w*\s+комиссариат\w*)"
+)
+_RVK_ACTION_RE = re.compile(
+    r"(?iu)(?:направлен\w*|госпитализ\w*|поступ\w*|доставлен\w*)"
+)
+_RVK_EXPLICIT_LABEL_RE = re.compile(
+    r"(?iu)(?:направлени\w*\s+(?:от|из)\s+(?:рвк|военком\w*|военн\w*\s+комиссариат\w*)|"
+    r"^\s*(?:рвк|военкомат\w*)\s*[:;,.—–-])"
+)
+
+
+def _extract_known_rvk_districts(value: str) -> str:
+    """Return canonical city district names found in an RVK phrase."""
+    text = " ".join(str(value or "").strip().lower().replace("ё", "е").split())
+    if not text:
+        return ""
+    if re.search(r"(?iu)\b(?:област|край|республик|округ)\w*\b", text):
+        return ""
+
+    found: list[str] = []
+    for stem, canonical in _RVK_DISTRICT_STEMS:
+        if re.search(rf"(?iu)\b{re.escape(stem)}\w*\b", text):
+            if canonical not in found:
+                found.append(canonical)
+
+    if not found:
+        return ""
+    if "Сормовский" in found and "Московский" in found:
+        others = [item for item in found if item not in {"Сормовский", "Московский"}]
+        combined = "Сормовский и Московский"
+        return " и ".join([*others, combined]) if others else combined
+    return " и ".join(found)
+
+
+def normalize_rvk_commissariat_text(value: str) -> str:
+    """Normalize a district/commissariat phrase for the existing RVK Act popup."""
+    text = " ".join(str(value or "").strip().split())
+    if not text:
+        return ""
+
+    text = text.strip(" \t,.;:—–-()[]")
+    text = re.sub(r"(?iu)^\s*да\s*/\s*нет\s*[:;,.—–-]?\s*", "", text)
+    text = re.sub(r"(?iu)^\s*(?:да|есть|имеется)\b\s*[:;,.—–-]?\s*", "", text)
+    text = re.sub(r"(?iu)^\s*(?:по\s+направлени\w*\s+)?(?:от|из)\s+", "", text)
+    text = re.sub(
+        r"(?iu)^\s*(?:рвк|военком\w*|военн\w*\s+комиссариат\w*)\s*[:;,.—–-]?\s*",
+        "",
+        text,
+    )
+    text = text.strip(" \t,.;:—–-()[]")
+    if not text:
+        return ""
+
+    known = _extract_known_rvk_districts(text)
+    if known:
+        return known
+
+    if re.search(
+        r"(?iu)\b(?:диагноз|жалоб|анамнез|больничн|должност|место\s+работы|"
+        r"ф\.?\s*и\.?\s*о\.?|год\s+рождения|дата\s+рождения|"
+        r"психическ\w+\s+статус|соматическ\w+\s+статус|лечение)\b",
+        text,
+    ):
+        return ""
+
+    normalized = text.lower().replace("ё", "е")
+    if normalized in {"да", "нет", "да нет"}:
+        return ""
+
+    text = re.sub(
+        r"(?iu)\s+(?:район(?:а|ов|у|е|ом)?|военком\w*)\s*$",
+        "",
+        text,
+    ).strip(" \t,.;:—–-()[]")
+    return text
+
+
+def parse_rvk_referral_text(text: str) -> tuple[str, str]:
+    """Recover RVK referral decision and commissariat from a full medical text."""
+    lines = [" ".join(line.split()) for line in str(text or "").splitlines() if line.strip()]
+    if not lines:
+        return "", ""
+
+    candidates: list[tuple[int, str]] = []
+    for index, line in enumerate(lines):
+        if not _RVK_TOKEN_RE.search(line):
+            continue
+        explicit = bool(_RVK_EXPLICIT_LABEL_RE.search(line))
+        has_action = bool(_RVK_ACTION_RE.search(line))
+        if explicit or has_action:
+            candidates.append((index, line))
+
+    candidates.sort(
+        key=lambda item: (
+            0 if _RVK_EXPLICIT_LABEL_RE.search(item[1]) else 1,
+            item[0],
+        )
+    )
+
+    for index, line in candidates:
+        decision_line = re.sub(r"(?iu)\bда\s*/\s*нет\b", "", line)
+        if (
+            re.search(
+                r"(?iu)\bбез\s+направлени\w*(?:\s+из|\s+от)?\s*"
+                r"(?:рвк|военком\w*|военн\w*\s+комиссариат\w*)",
+                decision_line,
+            )
+            or re.search(
+                r"(?iu)\bне\s+(?:направлен\w*|госпитализ\w*|поступ\w*)\b",
+                decision_line,
+            )
+            or re.search(
+                r"(?iu)(?:\bрвк\b|военком\w*|военн\w*\s+комиссариат\w*)"
+                r".*?[:;,.—–-]?\s*\bнет\b",
+                decision_line,
+            )
+        ):
+            return "нет", ""
+
+        area = _extract_known_rvk_districts(line)
+        if not area:
+            rvk_match = _RVK_TOKEN_RE.search(line)
+            if rvk_match:
+                area = normalize_rvk_commissariat_text(line[rvk_match.end():])
+
+        if not area and index + 1 < len(lines):
+            next_line = lines[index + 1]
+            if not _RVK_ACTION_RE.search(next_line):
+                area = normalize_rvk_commissariat_text(next_line)
+
+        if area:
+            return "да", area
+
+        explicit_positive = bool(
+            re.search(r"(?iu)\bда\b", decision_line)
+            or re.search(
+                r"(?iu)(?:по\s+направлени\w+|"
+                r"(?:направлен\w*|госпитализ\w*|поступ\w*)\s+(?:от|из)\s+)",
+                decision_line,
+            )
+        )
+        if explicit_positive:
+            return "да", ""
+
+    return "", ""
+
+
 def parse_rvk_referral_value(value: str) -> tuple[str, str]:
-    """Parse rendered RVK referral text into decision and optional area text."""
+    """Parse one rendered RVK referral value into decision and area."""
     text = " ".join(str(value or "").strip().split())
     if not text:
         return "", ""
     normalized = text.lower().replace("ё", "е")
     if normalize_yes_no(normalized) == "нет" or normalized in {"не по направлению", "не направлялся"}:
         return "нет", ""
-    if "направлен" in normalized or "направлению" in normalized or "рвк" in normalized or "военком" in normalized:
-        area = re.sub(
-            r"(?i)^.*?(?:по\s+направлению\s+из\s+рвк|по\s+направлению\s+из\s+военн(?:ого|ый)\s+комиссариат(?:а)?|по\s+направлению\s+из)\s*",
-            "",
-            text,
-        ).strip(" -—–,.;:()")
-        return "да", area
-    return "", ""
+    return parse_rvk_referral_text(text)
 
 
 def normalize_admission_occurrence(value: str) -> str:
