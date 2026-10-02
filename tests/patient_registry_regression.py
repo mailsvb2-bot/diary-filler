@@ -223,12 +223,13 @@ def _assert_registry_scan_and_independent_timelines() -> None:
             return by_path[path]
 
         snapshot = scan_patient_registry(root, as_of=date(2026, 10, 1), parser=parser)
-        # Every selected-date patient subfolder stays visible. A prepared
-        # discharge document must not silently remove the patient from the
-        # current-patients folder census.
-        assert len(snapshot.patients) == 9, (snapshot.patients, snapshot.issues)
-        assert len(snapshot.sick_leave_patients) == 2
+        # The patient's own "... Выписной.docx" excludes that patient.
+        # All other current-patient folders stay visible, including an RVK-only
+        # patient, renamed primary sources and folders with no readable source.
+        assert len(snapshot.patients) == 8, (snapshot.patients, snapshot.issues)
+        assert len(snapshot.sick_leave_patients) == 1
         assert len(snapshot.rvk_patients) == 2
+        assert all(item.folder.name != "Выписан" for item in snapshot.patients)
 
         # Only sick leave active on the requested summary date is prioritized.
         # A future opening date stays in the ordinary group until it begins.
@@ -257,18 +258,6 @@ def _assert_registry_scan_and_independent_timelines() -> None:
         assert smirnov.sick_leave_needed is False
         assert smirnov.rvk_referral is True
         assert smirnov.rvk_commissariat == "Канавинский"
-
-        prepared_discharge = next(
-            item for item in snapshot.patients if item.folder.name == "Выписан"
-        )
-        assert prepared_discharge.sick_leave_needed is True
-        assert prepared_discharge.is_on_sick_leave_on(date(2026, 10, 1)) is True
-        assert prepared_discharge.rvk_referral is False
-        assert prepared_discharge.sick_leave_from is not None
-        assert next_sick_leave_vk_date(
-            prepared_discharge.sick_leave_from,
-            date(2026, 10, 1),
-        ).weekday() == 2
 
         renamed = next(item for item in snapshot.patients if "Переименован" in item.fio)
         assert renamed.primary_path is not None
