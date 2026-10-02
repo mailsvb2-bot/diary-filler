@@ -18,6 +18,7 @@ from medical_models import PatientData, parse_rvk_referral_text, parse_rvk_refer
 from medical_parser import MedicalTextParser
 from medical_service import MedicalDocumentService
 import patient_registry as patient_registry_module
+import startup as startup_module
 from patient_registry import (
     first_sick_leave_vk_date,
     hospitalization_days_on,
