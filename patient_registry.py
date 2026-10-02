@@ -324,7 +324,7 @@ def scan_patient_registry(
     # leave first. Within each group keep a stable alphabetical order.
     patients.sort(
         key=lambda item: (
-            0 if item.sick_leave_needed else 1,
+            0 if item.is_on_sick_leave_on(target_date) else 1,
             item.fio.casefold(),
             item.admission_date or date.max,
             item.primary_path.name.casefold(),
