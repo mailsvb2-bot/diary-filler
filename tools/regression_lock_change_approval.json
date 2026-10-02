@@ -16,7 +16,7 @@
     "patient_registry_regression"
   ],
   "approved_blobs": {
-    "main.py": "6271bd69ca6e512a48be4162152cdce57452ce2c",
+    "main.py": "189167ddb23d5b576a8404f4dabbd3a45271d1a0",
     "medical_expert.py": "3e01f6e90984b660202ca418c748ba2df8ba2c43",
     "medical_parser_core.py": "f9ae6fd03a3173702abbeb5f11ff271947262049",
     "medical_renderer_special.py": "731384f143d8ac63a77147f1aaa5d81c3458dbe7",
@@ -28,7 +28,7 @@
     "smoke_combined_part03_medical_parser_manual.py": "c67b7390c3f710199e76e054aabf101c8611e971",
     "smoke_combined_part04_medical_generation.py": "fdaa8f9f933f5105a298f1ae761bc4282144b0df",
     "smoke_combined_part06_diary_columns_settings.py": "100ed5f305777123a6ddd9704b448cae9a45dae9",
-    "startup.py": "828d69995206901c89e92e921680c813b837a512",
+    "startup.py": "0accf58303f6ce611b33606c8178f6efe32ba4d2",
     "tests/golden_docx_manifest.json": "ed66925cea235be019a67332c526ae3a5e28c7af",
     "tests/patient_registry_regression.py": "9b996969b43f065b7021502935e6b3e9d97d0fbd",
     "tools/document_mechanics_change_approval.json": "b578cdaa0daa62b2fdfe4a8d5f7643583380c70b"
