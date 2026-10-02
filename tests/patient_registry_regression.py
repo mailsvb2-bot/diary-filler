@@ -177,7 +177,7 @@ def _assert_registry_scan_and_independent_timelines() -> None:
         root = Path(temp)
         fixtures = {
             "Иванов": ("Иванов первичный.docx", "Маркер Иванов Тестовый", "01.09.2026", "да, с 20.08.2026"),
-            "Петров": ("Петров первичка.docx", "Маркер Петров Тестовый", "15.09.2026", "нет"),
+            "Петров": ("Петров первичка.docx", "Маркер Петров Тестовый", "15.09.2026", "да, с 15.09.2026"),
             "Сидоров": ("Сидоров первичный.docx", "Маркер Сидоров Тестовый", "20.09.2026", ""),
             "Смирнов": ("Смирнов первичный.docx", "Маркер Смирнов Тестовый", "22.09.2026", "нет"),
             "Кузнецов": ("Кузнецов первичный.docx", "Маркер Кузнецов Тестовый", "25.09.2026", "да, с 05.10.2026"),
@@ -227,7 +227,7 @@ def _assert_registry_scan_and_independent_timelines() -> None:
         # All other current-patient folders stay visible, including an RVK-only
         # patient, renamed primary sources and folders with no readable source.
         assert len(snapshot.patients) == 8, (snapshot.patients, snapshot.issues)
-        assert len(snapshot.sick_leave_patients) == 1
+        assert len(snapshot.sick_leave_patients) == 2
         assert len(snapshot.rvk_patients) == 2
         assert all(item.folder.name != "Выписан" for item in snapshot.patients)
 
@@ -258,6 +258,15 @@ def _assert_registry_scan_and_independent_timelines() -> None:
         assert smirnov.sick_leave_needed is False
         assert smirnov.rvk_referral is True
         assert smirnov.rvk_commissariat == "Канавинский"
+
+        petrov = next(item for item in snapshot.patients if "Петров" in item.fio)
+        assert petrov.sick_leave_needed is True
+        assert petrov.sick_leave_from == date(2026, 9, 15)
+        assert petrov.rvk_referral is False
+        assert next_sick_leave_vk_date(
+            petrov.sick_leave_from,
+            date(2026, 10, 1),
+        ).weekday() == 2
 
         renamed = next(item for item in snapshot.patients if "Переименован" in item.fio)
         assert renamed.primary_path is not None
