@@ -35,9 +35,15 @@ class PatientRegistryEntry:
         return self.admission_date <= value
 
     def is_on_sick_leave_on(self, value: date) -> bool:
-        if not self.sick_leave_needed:
-            return False
-        return self.sick_leave_from is None or self.sick_leave_from <= value
+        # A date-specific census must never count an undated sick-leave flag as
+        # proof that the certificate was already open on that date. Keep the
+        # patient visible with a warning, but exclude them from the dated LN count
+        # until an actual opening date is known.
+        return bool(
+            self.sick_leave_needed
+            and self.sick_leave_from is not None
+            and self.sick_leave_from <= value
+        )
 
 
 @dataclass(frozen=True)
@@ -240,38 +246,45 @@ def scan_patient_registry(
 
         candidates = primary_candidates(patient_folder)
         if not candidates:
+            issues.append(
+                PatientRegistryIssue(
+                    patient_folder,
+                    "Не найден Word-файл вида «Фамилия первичный/первичка».",
+                )
+            )
             continue
 
         parsed_data = None
         chosen = None
+        admission = None
         last_error = None
+        saw_readable_without_admission = False
         for candidate in candidates:
             try:
-                parsed_data = parse(candidate)
-                chosen = candidate
-                break
+                candidate_data = parse(candidate)
             except Exception as exc:
                 last_error = exc
+                continue
 
-        if parsed_data is None or chosen is None:
-            issues.append(
-                PatientRegistryIssue(
-                    patient_folder,
-                    f"Не удалось прочитать первичный документ ({type(last_error).__name__ if last_error else 'ошибка'}).",
-                )
-            )
-            continue
+            candidate_admission = _date_value(getattr(candidate_data, "admission_date", ""))
+            if candidate_admission is None:
+                candidate_admission = _admission_date_from_primary_first_line(candidate)
+            if candidate_admission is None:
+                saw_readable_without_admission = True
+                continue
 
-        admission = _date_value(getattr(parsed_data, "admission_date", ""))
-        if admission is None:
-            admission = _admission_date_from_primary_first_line(chosen)
-        if admission is None:
-            issues.append(
-                PatientRegistryIssue(
-                    patient_folder,
-                    "Не распознана дата поступления ни общим парсером, ни в первой строке первичного документа.",
-                )
+            parsed_data = candidate_data
+            chosen = candidate
+            admission = candidate_admission
+            break
+
+        if parsed_data is None or chosen is None or admission is None:
+            message = (
+                "Не распознана дата поступления ни общим парсером, ни в первой строке первичного документа."
+                if saw_readable_without_admission
+                else f"Не удалось прочитать первичный документ ({type(last_error).__name__ if last_error else 'ошибка'})."
             )
+            issues.append(PatientRegistryIssue(patient_folder, message))
             continue
         if admission > target_date:
             continue
@@ -546,18 +559,14 @@ def launch_patient_summary_tray_process() -> bool:
     if os.name != "nt":
         return False
     try:
-        from startup import _desktop_runtime_command
+        from startup import _desktop_hidden_popen, _desktop_runtime_command
 
         command = _desktop_runtime_command(PATIENT_SUMMARY_TRAY_ARGUMENT)
-        creationflags = (
-            getattr(subprocess, "DETACHED_PROCESS", 0)
-            | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
-        )
-        subprocess.Popen(
-            command,
-            close_fds=True,
-            creationflags=creationflags,
-        )
+        # Reuse the same persistent-child launcher as the intake agent. In a
+        # one-file PyInstaller build it injects PYINSTALLER_RESET_ENVIRONMENT=1,
+        # so the tray host gets its own extraction runtime and cannot be broken
+        # when the parent EXE exits and removes its temporary _MEI directory.
+        _desktop_hidden_popen(command)
         return True
     except (OSError, ValueError, subprocess.SubprocessError):
         return False
