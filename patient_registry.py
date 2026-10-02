@@ -19,6 +19,9 @@ PATIENT_SUMMARY_RUN_KEY = r"Software\Microsoft\Windows\CurrentVersion\Run"
 SUPPORTED_WORD_SUFFIXES = {".doc", ".docx", ".docm"}
 _PRIMARY_NAME_RE = re.compile(r"(?iu)(?:^|[\s._()\-])(?:первичный|первичка)(?:$|[\s._()\-])")
 _DISCHARGE_NAME_RE = re.compile(r"(?iu)(?:^|[\s._()\-])выписной(?:$|[\s._()\-])")
+_PRIMARY_PARSE_CACHE_MAX = 512
+_PRIMARY_PARSE_CACHE: dict[str, tuple[tuple[int, int, int], object]] = {}
+_PRIMARY_PARSE_CACHE_LOCK = threading.Lock()
 
 
 @dataclass(frozen=True)
@@ -231,10 +234,46 @@ def _sick_leave_state(data, primary_path: Path | None = None) -> tuple[bool, dat
     return False, None, ""
 
 
+def _primary_file_signature(path: Path) -> tuple[int, int, int]:
+    stat = path.stat()
+    return (
+        int(getattr(stat, "st_mtime_ns", int(stat.st_mtime * 1_000_000_000))),
+        int(getattr(stat, "st_ctime_ns", int(stat.st_ctime * 1_000_000_000))),
+        int(stat.st_size),
+    )
+
+
 def _default_parser(path: Path):
+    """Parse each unchanged primary only once per process.
+
+    «Мои пациенты» may contain dozens of Word files. Re-opening the window used
+    to rebuild the full parser/service graph for every patient every time. A
+    cheap filesystem signature keeps the second and subsequent scans fast while
+    invalidating immediately when Word changes the file.
+    """
     from medical_service import MedicalDocumentService
 
-    return MedicalDocumentService().parse_primary_document(path)
+    candidate = Path(path)
+    try:
+        key = os.path.normcase(str(candidate.resolve()))
+        signature = _primary_file_signature(candidate)
+    except OSError:
+        return MedicalDocumentService().parse_primary_document(candidate)
+
+    with _PRIMARY_PARSE_CACHE_LOCK:
+        cached = _PRIMARY_PARSE_CACHE.get(key)
+        if cached is not None and cached[0] == signature:
+            return cached[1]
+
+    data = MedicalDocumentService().parse_primary_document(candidate)
+    with _PRIMARY_PARSE_CACHE_LOCK:
+        _PRIMARY_PARSE_CACHE[key] = (signature, data)
+        if len(_PRIMARY_PARSE_CACHE) > _PRIMARY_PARSE_CACHE_MAX:
+            overflow = len(_PRIMARY_PARSE_CACHE) - _PRIMARY_PARSE_CACHE_MAX
+            for old_key in list(_PRIMARY_PARSE_CACHE)[:overflow]:
+                if old_key != key:
+                    _PRIMARY_PARSE_CACHE.pop(old_key, None)
+    return data
 
 
 def scan_patient_registry(
