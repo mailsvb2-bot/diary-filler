@@ -404,7 +404,12 @@ class PatientRegistryMixin:
             row.pack(fill="x", padx=10, pady=6)
             row.grid_columnconfigure(0, weight=1)
 
-            title = f"{entry.fio} — поступление {entry.admission_date.strftime('%d.%m.%Y')}"
+            admission_text = (
+                entry.admission_date.strftime("%d.%m.%Y")
+                if entry.admission_date is not None
+                else "дата не распознана"
+            )
+            title = f"{entry.fio} — поступление {admission_text}"
             title_label = tk.Label(
                 row,
                 text=title,
@@ -434,11 +439,16 @@ class PatientRegistryMixin:
                     next_vk = next_sick_leave_vk_date(entry.sick_leave_from, query_date)
                     hospital_at_vk = hospitalization_days_on(entry, next_vk)
                     sick_at_vk = sick_leave_days_on(entry, next_vk) or 0
+                    hospital_text = (
+                        f"{hospital_at_vk} дн."
+                        if hospital_at_vk is not None
+                        else "дата поступления не распознана"
+                    )
                     details = (
                         f"ЛН с {entry.sick_leave_from.strftime('%d.%m.%Y')}; "
                         f"на выбранную дату {sick_days} дн. по ЛН; "
                         f"следующая ВК {next_vk.strftime('%d.%m.%Y')}; "
-                        f"на день ВК: госпитализация {hospital_at_vk} дн., ЛН {sick_at_vk} дн."
+                        f"на день ВК: госпитализация {hospital_text}, ЛН {sick_at_vk} дн."
                     )
 
             details_label = tk.Label(
@@ -530,7 +540,17 @@ class PatientRegistryMixin:
                     pady=16,
                 ).pack(fill="x", padx=10)
             else:
-                for entry in snapshot.patients:
+                # scan_patient_registry already guarantees this order, but keep
+                # the UI contract explicit: sick-leave patients are always shown
+                # first, followed by the rest of the ward census.
+                ordered_patients = sorted(
+                    snapshot.patients,
+                    key=lambda item: (
+                        0 if item.sick_leave_needed else 1,
+                        item.fio.casefold(),
+                    ),
+                )
+                for entry in ordered_patients:
                     add_patient_row(entry, query_date)
 
             if snapshot.issues:
