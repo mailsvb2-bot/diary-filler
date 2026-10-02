@@ -17,7 +17,6 @@
     ".github/workflows/release.yml": "d7a2645f5f4138a0479cc47370dda23eab7958bd",
     ".github/workflows/windows-build.yml": "4d292dc311928b45c44cbe968273c0f8ee0fef64",
     "BUILD_WINDOWS_INSTALLER.bat": "29a6b493b93bbb54e29e01817b1841f3953a3097",
-    "RELEASE_NOTES.md": "b85c044a87fc425f6d590c01f334118d9a2a85af",
     "installer/MedicalDiaryAutofill.iss": "777981065b7abf0963bb57e4eb74b99c78fb6240",
     "pyproject.toml": "888e353c4697da496647d9f8c74f6f581b5c368a",
     "release_check.py": "9dddcfee4d8b4b5c0d656fdfdcb042af4ba1fd86",
