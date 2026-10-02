@@ -371,12 +371,10 @@ def scan_patient_registry(
     issues: list[PatientRegistryIssue] = []
 
     for patient_folder in sorted((p for p in directory.iterdir() if p.is_dir()), key=lambda p: p.name.casefold()):
-        # The selected root represents the current ward census. A stray folder
-        # that already contains a Word document named "... Выписной" is treated
-        # as discharged and must not be counted in the current patient summary.
-        if has_discharge_patient_document(patient_folder):
-            continue
-
+        # The selected root itself is the source of truth for the ward census.
+        # Do not hide a patient merely because a discharge document has already
+        # been prepared in that folder: clinicians often create the discharge
+        # epicrisis before the patient actually leaves the current-patients folder.
         candidates = patient_source_candidates(patient_folder)
         if not candidates:
             warning = "В папке пациента не найден Word-документ для распознавания."
