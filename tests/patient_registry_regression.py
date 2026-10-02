@@ -345,6 +345,8 @@ def _assert_desktop_wiring_contract() -> None:
         "_desktop_take_direct_primary_request",
         "_desktop_apply_direct_primary",
         "_desktop_close_quad_click_word_document",
+        "_desktop_word_document_is_open",
+        "sequence_word_was_open",
         "MedicalDiaryAutofillQuadClickWordCleanup",
         'GetActiveObject("Word.Application")',
         "document.Close(SaveChanges=0)",
