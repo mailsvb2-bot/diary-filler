@@ -220,8 +220,10 @@ def _desktop_patient_registry_root_from_settings() -> Path | None:
     try:
         payload = json.loads(settings.read_text(encoding="utf-8"))
         folders = payload.get("folders") if isinstance(payload, dict) else None
-        raw = folders.get("patient_registry_dir") if isinstance(folders, dict) else ""
-        root = Path(str(raw or "")).expanduser()
+        raw = str(folders.get("patient_registry_dir") or "").strip() if isinstance(folders, dict) else ""
+        if not raw:
+            return None
+        root = Path(raw).expanduser()
         return root if root.is_dir() else None
     except Exception:
         return None
