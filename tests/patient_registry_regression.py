@@ -322,7 +322,7 @@ def _assert_desktop_wiring_contract() -> None:
         "class PatientSummaryTray",
         "PATIENT_SUMMARY_TRAY_ARGUMENT",
         "launch_patient_summary_tray_process",
-        "DETACHED_PROCESS",
+        "_desktop_hidden_popen",
         "Shell_NotifyIcon",
         "NIM_ADD",
         "NIM_DELETE",
@@ -331,6 +331,7 @@ def _assert_desktop_wiring_contract() -> None:
     ):
         assert snippet in registry_source
     assert "DIR_PATIENT_REGISTRY" in settings_source
+    assert "not Path(current_root).expanduser().is_dir()" in mixin_source
 
 
 def _function_source(path: str, function_name: str) -> str:
@@ -402,7 +403,8 @@ def main() -> None:
     _assert_pre_admission_sick_leave_is_not_rejected()
     print(
         "PATIENT REGISTRY REGRESSION OK: folder scan, discharged-folder exclusion, "
-        "real DOCX ingestion, sick-leave chronology, all sick-leave popup opening dates, persistent tray, "
+        "real DOCX ingestion, dated sick-leave census, candidate fallback diagnostics, "
+        "service-boundary VK chronology, all sick-leave popup opening dates, persistent tray, "
         "7..15-day Wednesday VK schedule and admission-based discharge duration are locked"
     )
 
