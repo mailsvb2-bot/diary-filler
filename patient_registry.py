@@ -26,13 +26,16 @@ class PatientRegistryEntry:
     fio: str
     folder: Path
     primary_path: Path
-    admission_date: date
+    admission_date: date | None
     sick_leave_needed: bool
     sick_leave_from: date | None
     warning: str = ""
 
     def is_present_on(self, value: date) -> bool:
-        return self.admission_date <= value
+        # The selected root is the current ward census. If the date cannot be
+        # recovered from a real Word source, keep the patient visible with a
+        # warning instead of silently dropping the whole folder.
+        return self.admission_date is None or self.admission_date <= value
 
     def is_on_sick_leave_on(self, value: date) -> bool:
         if not self.sick_leave_needed:
@@ -92,13 +95,29 @@ def is_discharge_patient_filename(path: str | Path) -> bool:
 
 
 def has_discharge_patient_document(folder: str | Path) -> bool:
+    """Return True only for a discharge file that belongs to this patient folder.
+
+    The user contract is «<Фамилия пациента> Выписной». A generic template,
+    copied example or another person's discharge must not hide the current
+    patient merely because its filename contains the word «Выписной».
+    """
     root = Path(folder)
     if not root.is_dir():
         return False
-    return any(
-        path.is_file() and is_discharge_patient_filename(path)
-        for path in root.iterdir()
-    )
+
+    folder_key = _normalize_primary_stem(root.name).casefold()
+    surname = (folder_key.split() or [""])[0]
+    if not surname:
+        return False
+
+    for path in root.iterdir():
+        if not path.is_file() or not is_discharge_patient_filename(path):
+            continue
+        stem_key = _normalize_primary_stem(path.stem).casefold()
+        first_token = (stem_key.split() or [""])[0].strip("._()-")
+        if first_token == surname.strip("._()-"):
+            return True
+    return False
 
 
 def _date_value(value: str) -> date | None:
@@ -243,7 +262,7 @@ def scan_patient_registry(
             continue
 
         parsed_data = None
-        chosen = None
+        chosen = candidates[0]
         last_error = None
         for candidate in candidates:
             try:
@@ -253,31 +272,40 @@ def scan_patient_registry(
             except Exception as exc:
                 last_error = exc
 
-        if parsed_data is None or chosen is None:
+        warnings: list[str] = []
+        if parsed_data is None:
+            # Keep the folder in the census. Registry-specific fallbacks can
+            # still recover admission/LN facts directly from the Word source,
+            # while FIO safely falls back to the folder name.
+            warnings.append(
+                f"Первичный документ не разобран общим парсером ({type(last_error).__name__ if last_error else 'ошибка'})."
+            )
             issues.append(
                 PatientRegistryIssue(
                     patient_folder,
-                    f"Не удалось прочитать первичный документ ({type(last_error).__name__ if last_error else 'ошибка'}).",
+                    warnings[-1],
                 )
             )
-            continue
 
         admission = _date_value(getattr(parsed_data, "admission_date", ""))
         if admission is None:
             admission = _admission_date_from_primary_first_line(chosen)
         if admission is None:
+            warnings.append("Дата поступления не распознана.")
             issues.append(
                 PatientRegistryIssue(
                     patient_folder,
                     "Не распознана дата поступления ни общим парсером, ни в первой строке первичного документа.",
                 )
             )
-            continue
-        if admission > target_date:
+        elif admission > target_date:
             continue
 
         fio = " ".join(str(getattr(parsed_data, "fio", "") or "").split()) or patient_folder.name
-        sick_needed, sick_from, warning = _sick_leave_state(parsed_data, chosen)
+        sick_needed, sick_from, sick_warning = _sick_leave_state(parsed_data, chosen)
+        if sick_warning:
+            warnings.append(sick_warning)
+        warning = " ".join(dict.fromkeys(warnings))
         patients.append(
             PatientRegistryEntry(
                 fio=fio,
@@ -290,7 +318,16 @@ def scan_patient_registry(
             )
         )
 
-    patients.sort(key=lambda item: (item.fio.casefold(), item.admission_date, item.primary_path.name.casefold()))
+    # The operational view must put patients with an active/declared sick
+    # leave first. Within each group keep a stable alphabetical order.
+    patients.sort(
+        key=lambda item: (
+            0 if item.sick_leave_needed else 1,
+            item.fio.casefold(),
+            item.admission_date or date.max,
+            item.primary_path.name.casefold(),
+        )
+    )
     return PatientRegistrySnapshot(
         root=directory,
         as_of=target_date,
@@ -340,7 +377,9 @@ def sick_leave_days_on(entry: PatientRegistryEntry, value: date) -> int | None:
     return inclusive_days(entry.sick_leave_from, value)
 
 
-def hospitalization_days_on(entry: PatientRegistryEntry, value: date) -> int:
+def hospitalization_days_on(entry: PatientRegistryEntry, value: date) -> int | None:
+    if entry.admission_date is None:
+        return None
     return inclusive_days(entry.admission_date, value)
 
 
