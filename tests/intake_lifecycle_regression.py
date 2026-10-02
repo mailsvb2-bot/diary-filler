@@ -696,6 +696,63 @@ def assert_watcher_launch_keeps_patient_registry_onboarding() -> None:
         assert not marker.exists()
 
 
+def assert_queued_primary_is_separate_from_first_patient_folder_setup() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        configured_root = Path(tmp) / "patients"
+        configured_root.mkdir()
+
+        class AppStub:
+            root = object()
+
+            def __init__(self, value: str) -> None:
+                self.value = value
+
+            def _patient_registry_root(self):
+                return self.value
+
+        app = AppStub(str(configured_root))
+        original_confirm = app_main._confirm_queued_intake_after_patient_onboarding
+        asked: list[str] = []
+        try:
+            app_main._confirm_queued_intake_after_patient_onboarding = (
+                lambda _app, source: asked.append(str(source)) or False
+            )  # type: ignore[assignment]
+            assert app_main._resolve_queued_intake_after_onboarding(
+                app, "queued.docx", patient_root_ready_before=False
+            ) is None
+            assert asked == ["queued.docx"]
+
+            asked.clear()
+            app_main._confirm_queued_intake_after_patient_onboarding = (
+                lambda _app, source: asked.append(str(source)) or True
+            )  # type: ignore[assignment]
+            assert app_main._resolve_queued_intake_after_onboarding(
+                app, "queued.docx", patient_root_ready_before=False
+            ) == "queued.docx"
+            assert asked == ["queued.docx"]
+
+            asked.clear()
+            app_main._confirm_queued_intake_after_patient_onboarding = (
+                lambda *_args, **_kwargs: (_ for _ in ()).throw(
+                    AssertionError("existing patient root must not add a new confirmation")
+                )
+            )  # type: ignore[assignment]
+            assert app_main._resolve_queued_intake_after_onboarding(
+                app, "queued.docx", patient_root_ready_before=True
+            ) == "queued.docx"
+
+            app.value = str(Path(tmp) / "missing")
+            assert app_main._resolve_queued_intake_after_onboarding(
+                app, "queued.docx", patient_root_ready_before=False
+            ) is None
+        finally:
+            app_main._confirm_queued_intake_after_patient_onboarding = original_confirm  # type: ignore[assignment]
+
+    source = Path("main.py").read_text(encoding="utf-8")
+    resolve_call = source.rindex("_resolve_queued_intake_after_onboarding(")
+    runtime_call = source.rindex("start_desktop_intake_runtime(")
+    assert resolve_call < runtime_call
+
 def assert_visible_gui_claim_precedes_onboarding() -> None:
     source = Path("main.py").read_text(encoding="utf-8")
     claim = source.index("claim_desktop_gui_session()")
@@ -780,10 +837,11 @@ def main() -> None:
     assert_pyinstaller_children_are_independent_and_gui_is_visible()
     assert_install_marker_forces_folder_and_staff_onboarding()
     assert_watcher_launch_keeps_patient_registry_onboarding()
+    assert_queued_primary_is_separate_from_first_patient_folder_setup()
     assert_visible_gui_claim_precedes_onboarding()
     assert_legacy_disabled_preference_heals_and_preserves_user_folder()
     print(
-        "INTAKE LIFECYCLE REGRESSION OK: self-heal + Desktop rebind + event-driven intake + in-place watcher replacement + queued-arrival handoff + duplicate-launch suppression + failed-launch retry + rejected-primary propagation + visible unrecognized-file feedback + independent PyInstaller child runtime + mandatory install intake + pre-onboarding GUI heartbeat claim + mandatory watcher-launch patient-folder onboarding"
+        "INTAKE LIFECYCLE REGRESSION OK: self-heal + Desktop rebind + event-driven intake + in-place watcher replacement + queued-arrival handoff + duplicate-launch suppression + failed-launch retry + rejected-primary propagation + visible unrecognized-file feedback + independent PyInstaller child runtime + mandatory install intake + pre-onboarding GUI heartbeat claim + mandatory watcher-launch patient-folder onboarding + explicit queued-primary handoff"
     )
 
 
