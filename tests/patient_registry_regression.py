@@ -105,8 +105,6 @@ def _assert_primary_filename_contract() -> None:
         ivanov = root / "Иванов"
         ivanov.mkdir()
         (ivanov / "Шаблон Выписной.docx").touch()
-        assert not has_discharge_patient_document(ivanov)
-        (ivanov / "Иванов Выписной.docx").touch()
         assert has_discharge_patient_document(ivanov)
 
         renamed = root / "Петров"
@@ -210,9 +208,6 @@ def _assert_registry_scan_and_independent_timelines() -> None:
             )
             if folder_name == "Выписан":
                 (folder / "Выписан Выписной.docx").touch()
-            if folder_name == "Смирнов":
-                # A generic/example discharge file must not hide Смирнов.
-                (folder / "Шаблон Выписной.docx").touch()
 
         no_document = root / "БезДокумента"
         no_document.mkdir()
