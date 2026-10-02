@@ -856,6 +856,7 @@ def _epi_prompt(title, rows, width=46, linked_groups=None, choice_options=None):
         "На учёте у психиатров": "не состоит",
         "Работает ли пациент": "нет",
         "Нужен ли больничный лист": "нет",
+        "С какого числа больничный лист": "",
         "Есть ли ЭПИ": "да",
     }
     return [values[label] for label, _ in rows]
