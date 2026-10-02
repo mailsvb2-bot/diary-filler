@@ -14,7 +14,7 @@ if str(ROOT) not in sys.path:
 
 from medical_expert import build_expert_anamnesis
 from medical_formatting import treatment_period_text
-from medical_models import PatientData, parse_sick_leave_value
+from medical_models import PatientData, parse_rvk_referral_text, parse_sick_leave_value
 from medical_parser import MedicalTextParser
 from medical_service import MedicalDocumentService
 import patient_registry as patient_registry_module
@@ -55,18 +55,33 @@ def _assert_primary_text_sick_leave_label() -> None:
 
 
 def _assert_rvk_registry_text_parser() -> None:
-    parse_rvk = patient_registry_module._rvk_referral_state_from_text
-    assert parse_rvk("Направление от РВК да/нет: Ленинский") == ("да", "Ленинский")
-    assert parse_rvk("Направление от РВК: да, Ленинского района") == ("да", "Ленинский")
-    assert parse_rvk("Госпитализируется от РВК Канавинского района") == ("да", "Канавинский")
-    assert parse_rvk(
-        "Госпитализируется по направлению военного комиссариата Автозаводского района"
-    ) == ("да", "Автозаводский")
-    assert parse_rvk(
-        "По направлению из Сормовского и Московского военкомата"
-    ) == ("да", "Сормовский и Московский")
-    assert parse_rvk("Направление от РВК: нет") == ("нет", "")
-    assert parse_rvk("Не госпитализируется по направлению из РВК") == ("нет", "")
+    variants = (
+        ("Направление от РВК да/нет: Ленинский", "да", "Ленинский"),
+        ("Направление от РВК: да, Ленинского района", "да", "Ленинский"),
+        ("Госпитализируется от РВК Канавинского района", "да", "Канавинский"),
+        (
+            "Госпитализируется по направлению военного комиссариата Автозаводского района",
+            "да",
+            "Автозаводский",
+        ),
+        ("По направлению из Сормовского и Московского военкомата", "да", "Сормовский и Московский"),
+        ("Направлен Ленинским РВК", "да", "Ленинский"),
+        ("Госпитализирован военным комиссариатом Канавинского района", "да", "Канавинский"),
+        ("Направление от РВК: да\nЛенинский район", "да", "Ленинский"),
+        ("Направление от РВК: нет", "нет", ""),
+        ("Не госпитализируется по направлению из РВК", "нет", ""),
+        ("Направление от РВК да/нет:", "", ""),
+    )
+    for rvk_line, expected_status, expected_area in variants:
+        assert parse_rvk_referral_text(rvk_line) == (expected_status, expected_area), rvk_line
+        data = MedicalTextParser().parse_text(
+            "01.09.2026 Первичный осмотр\n"
+            "Ф.И.О.: Маркер РВК Тестовый\n"
+            f"{rvk_line}\n"
+            "Диагноз: F20.0"
+        )
+        assert data.rvk_referral_present == expected_status, (rvk_line, data.rvk_referral_present)
+        assert data.rvk_referral_commissariat == expected_area, (rvk_line, data.rvk_referral_commissariat)
 
 
 def _assert_primary_filename_contract() -> None:
@@ -428,11 +443,16 @@ def _assert_desktop_wiring_contract() -> None:
         "primary_path: Path | None",
         "rvk_referral: bool",
         "rvk_commissariat: str",
-        "_rvk_referral_state_from_text",
         "_rvk_referral_state",
     ):
         assert snippet in registry_source
     assert "DIR_PATIENT_REGISTRY" in settings_source
+    models_source = Path("medical_models.py").read_text(encoding="utf-8")
+    parser_source = Path("medical_parser_core.py").read_text(encoding="utf-8")
+    dialog_source = Path("dialog_expert.py").read_text(encoding="utf-8")
+    assert "def parse_rvk_referral_text" in models_source
+    assert "rvk_status, rvk_area = parse_rvk_referral_text(text)" in parser_source
+    assert 'getattr(self.data, "rvk_referral_present", "")' in dialog_source
 
 
 def _function_source(path: str, function_name: str) -> str:
