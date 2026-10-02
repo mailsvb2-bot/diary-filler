@@ -26,6 +26,7 @@
     "release_check.py": "9dddcfee4d8b4b5c0d656fdfdcb042af4ba1fd86",
     "tests/windows_live_e2e_contract.py": "17be91ad912a752bf7312ca62564584de2714393",
     "tools/ci_gate_lock.py": "1a6da08b13081af794331027836f3bf011b58432",
-    "version_info.txt": "0003eda564932305799da54ed94fa28597a50dee"
+    "version_info.txt": "0003eda564932305799da54ed94fa28597a50dee",
+    "app_config.py": "094545adc41766450c1b27319f80bd26db6a04fd"
   }
 }
