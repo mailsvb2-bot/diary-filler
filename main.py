@@ -90,6 +90,21 @@ def _confirm_queued_intake_after_patient_onboarding(app, source_path: str | Path
     except Exception:
         return False
 
+def _resolve_queued_intake_after_onboarding(
+    app,
+    source_path: str | Path | None,
+    *,
+    patient_root_ready_before: bool,
+) -> str | None:
+    if not source_path:
+        return None
+    normalized = str(source_path)
+    if patient_root_ready_before:
+        return normalized
+    if not _patient_registry_root_ready(app):
+        return None
+    return normalized if _confirm_queued_intake_after_patient_onboarding(app, normalized) else None
+
 def _first_launch_onboarding(app) -> None:
     """Heal mandatory intake and perform visible first-run onboarding.
 
@@ -542,8 +557,6 @@ def main() -> None:
         app = CombinedMedicalDiaryApp(root)
         patient_root_ready_before = _patient_registry_root_ready(app)
         _first_launch_onboarding(app)
-        patient_root_ready_after = _patient_registry_root_ready(app)
-
         if intake_primary:
             # The intake path can open modal questions while applying the primary.
             # Raise the frameless Tk root first so the user never gets a running
@@ -554,12 +567,11 @@ def main() -> None:
             # startup, closing the folder chooser must not look like it loaded
             # an unrelated primary document. Confirm the already queued watcher
             # event as a separate user action.
-            if not patient_root_ready_before:
-                if not patient_root_ready_after or not _confirm_queued_intake_after_patient_onboarding(
-                    app,
-                    intake_primary,
-                ):
-                    intake_primary = None
+            intake_primary = _resolve_queued_intake_after_onboarding(
+                app,
+                intake_primary,
+                patient_root_ready_before=patient_root_ready_before,
+            )
 
         # Hard boundary: the convenience layer ultimately hands the path to the
         # application's pre-existing _apply_primary_document_path(...) flow.
