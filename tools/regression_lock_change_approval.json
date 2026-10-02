@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "abfac2e21d765ed1e4d015ee8d29b72384aa47e3",
-  "reason": "Fix Explorer four-click reliability by moving Word COM snapshot work off the click-observer loop, while preserving the user-defined My Patients rule that folders with a patient-owned discharge document are excluded and independently covering sick-leave and RVK patients.",
+  "reason": "Fix Explorer four-click reliability by moving Word COM snapshot work off the click-observer loop. Preserve the exact My Patients contract: any discharge-named Word file excludes that patient; otherwise current patients remain visible and sick-leave/VK and RVK flags/actions are independently recognized.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -16,8 +16,8 @@
     "patient_registry_regression"
   ],
   "approved_blobs": {
-    "patient_registry.py": "85249787d9cda1ad1e8f7616a87097f7a38cd64e",
+    "patient_registry.py": "a16ec856b3befdc94661a8b53d2ad041464a2c47",
     "startup.py": "e8f8009935759a68211ecb0b856c5968094cceb2",
-    "tests/patient_registry_regression.py": "9cf5e1b5bee7d18266b6bf48d979eb6a5055c04b"
+    "tests/patient_registry_regression.py": "74753f8bffe42e5cfbf6024305ac68e1320046e2"
   }
 }
