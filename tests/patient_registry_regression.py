@@ -14,7 +14,7 @@ if str(ROOT) not in sys.path:
 
 from medical_expert import build_expert_anamnesis
 from medical_formatting import treatment_period_text
-from medical_models import PatientData, parse_rvk_referral_text, parse_sick_leave_value
+from medical_models import PatientData, parse_rvk_referral_text, parse_rvk_referral_value, parse_sick_leave_value
 from medical_parser import MedicalTextParser
 from medical_service import MedicalDocumentService
 import patient_registry as patient_registry_module
@@ -55,6 +55,9 @@ def _assert_primary_text_sick_leave_label() -> None:
 
 
 def _assert_rvk_registry_text_parser() -> None:
+    assert parse_rvk_referral_value("да, Ленинского района") == ("да", "Ленинский")
+    assert parse_rvk_referral_value("да/нет: Ленинский") == ("да", "Ленинский")
+    assert parse_rvk_referral_value("нет") == ("нет", "")
     variants = (
         ("Направление от РВК да/нет: Ленинский", "да", "Ленинский"),
         ("Направление от РВК: да, Ленинского района", "да", "Ленинский"),
