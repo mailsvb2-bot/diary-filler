@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "a6b478ff2be8c51d2f045a46bfbc00dca07a5d7b",
-  "baseline_note": "Patient census, sick-leave opening-date output, responsive patient summary and Explorer four-click intake baseline. PR #291 head fe286b7a1bf1235019621c3787ef37e57a20de16 passed the complete Windows EXE/installer contour in run 37002477469. Merge a6b478ff2be8c51d2f045a46bfbc00dca07a5d7b has the same tested runtime tree; its first main push run stopped only at the repository's canonical merge-message provenance guard. This metadata-only finalization restores canonical PR provenance while removing the consumed document-mechanics approval.",
+  "baseline_ref": "fd2048c69ceac9c6431377617736d18e03e66036",
+  "baseline_note": "Clean post-merge baseline for the patient census, sick-leave opening-date output, responsive patient summary and Explorer four-click intake work. PR #291 head fe286b7a1bf1235019621c3787ef37e57a20de16 passed the complete Windows EXE/installer contour in run 37002477469. Metadata/provenance finalization PR #292 head 179d52735b8c9c78567dfb5fad4d8fffea3a40f2 passed run 37003338693, and canonical merge fd2048c69ceac9c6431377617736d18e03e66036 passed post-merge main run 37003906364 end-to-end, including provenance, regression/document gates, release gate, golden DOCX, user journeys, Windows E1, EXE, packaged intake E2E and installer smoke.",
   "required_approval_evidence": [
     "ci_gate_lock",
     "patient_registry_regression"
