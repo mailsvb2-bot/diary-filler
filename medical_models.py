@@ -101,7 +101,7 @@ _RVK_ACTION_RE = re.compile(
     r"(?iu)(?:направлен\w*|госпитализ\w*|поступ\w*|доставлен\w*)"
 )
 _RVK_EXPLICIT_LABEL_RE = re.compile(
-    r"(?iu)(?:направлени\w*\s+(?:от|из)\s+(?:рвк|военком\w*|военн\w*\s+комиссариат\w*)|"
+    r"(?iu)(?:^\s*направлени\w*\s+(?:от|из)\s+(?:рвк|военком\w*|военн\w*\s+комиссариат\w*)|"
     r"^\s*(?:рвк|военкомат\w*)\s*[:;,.—–-])"
 )
 
@@ -228,12 +228,16 @@ def parse_rvk_referral_text(text: str) -> tuple[str, str]:
         if area:
             return "да", area
 
+        structured_label = bool(_RVK_EXPLICIT_LABEL_RE.search(line))
         explicit_positive = bool(
             re.search(r"(?iu)\bда\b", decision_line)
-            or re.search(
-                r"(?iu)(?:по\s+направлени\w+|"
-                r"(?:направлен\w*|госпитализ\w*|поступ\w*)\s+(?:от|из)\s+)",
-                decision_line,
+            or (
+                not structured_label
+                and re.search(
+                    r"(?iu)(?:по\s+направлени\w+|"
+                    r"(?:направлен\w*|госпитализ\w*|поступ\w*)\s+(?:от|из)\s+)",
+                    decision_line,
+                )
             )
         )
         if explicit_positive:
