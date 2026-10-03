@@ -44,12 +44,39 @@ class LicenseStore:
                 );
                 CREATE INDEX IF NOT EXISTS idx_license_orders_payment
                     ON license_orders(provider_payment_id);
+                CREATE TABLE IF NOT EXISTS license_meta (
+                    key TEXT PRIMARY KEY,
+                    value TEXT NOT NULL
+                );
                 """
             )
 
     @staticmethod
     def _now() -> str:
         return datetime.now(timezone.utc).isoformat()
+
+    def pin_issuer_public_key(self, public_key_b64: str) -> None:
+        value = str(public_key_b64 or "").strip()
+        if not value:
+            raise ValueError("issuer public key is empty")
+        with self._connect() as con:
+            con.execute("BEGIN IMMEDIATE")
+            row = con.execute(
+                "SELECT value FROM license_meta WHERE key = 'issuer_public_key_b64'"
+            ).fetchone()
+            if row is None:
+                con.execute(
+                    "INSERT INTO license_meta(key, value) VALUES('issuer_public_key_b64', ?)",
+                    (value,),
+                )
+                con.execute("COMMIT")
+                return
+            if str(row["value"]) != value:
+                con.execute("ROLLBACK")
+                raise ValueError(
+                    "issuer public key changed for existing license database"
+                )
+            con.execute("COMMIT")
 
     def create_order(
         self,
