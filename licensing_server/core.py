@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import base64
+import calendar
 from datetime import datetime, timedelta, timezone
 import hashlib
 import hmac
@@ -13,8 +14,6 @@ import uuid
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-from license_calendar import add_calendar_month
-
 PRODUCT_ID = "diary_filler"
 LICENSE_SCHEMA = "dokkomplekt.license.v1"
 OWNER_SCRYPT_SALT = b"diary-filler-owner-bootstrap-v1"
@@ -25,6 +24,15 @@ OWNER_SCRYPT_DKLEN = 32
 # Fixed to the requested owner code without storing the plaintext in source.
 OWNER_CODE_SCRYPT_HEX = "1fd2c06f2a6d893c9f8ee8a4b2253f0138623116090a4ab3ef5b0c3ee65f0281"
 _MACHINE_RE = re.compile(r"^[0-9a-f]{64}$")
+
+
+def _add_calendar_month(value: datetime) -> datetime:
+    if value.month == 12:
+        year, month = value.year + 1, 1
+    else:
+        year, month = value.year, value.month + 1
+    day = min(value.day, calendar.monthrange(year, month)[1])
+    return value.replace(year=year, month=month, day=day)
 
 
 class LicensingServerError(RuntimeError):
@@ -125,7 +133,7 @@ def issue_license(
     valid_until = (
         datetime(9999, 12, 31, 23, 59, 59, tzinfo=timezone.utc)
         if owner
-        else add_calendar_month(issued)
+        else _add_calendar_month(issued)
     )
     metadata = {"product_id": PRODUCT_ID}
     plan = "doctor_start"
