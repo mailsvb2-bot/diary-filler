@@ -8,6 +8,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime, timezone, timedelta
 import base64
+import calendar
 import hashlib
 import hmac
 import json
@@ -19,12 +20,19 @@ import urllib.parse
 import urllib.request
 import uuid
 
-from license_calendar import add_calendar_month
-
 PRODUCT_ID = "diary_filler"
 DEFAULT_PLAN = "doctor_start"
 LICENSE_SCHEMA = "dokkomplekt.license.v1"
 CLOCK_ROLLBACK_TOLERANCE = timedelta(minutes=15)
+
+
+def _add_calendar_month(value: datetime) -> datetime:
+    if value.month == 12:
+        year, month = value.year + 1, 1
+    else:
+        year, month = value.year, value.month + 1
+    day = min(value.day, calendar.monthrange(year, month)[1])
+    return value.replace(year=year, month=month, day=day)
 
 
 class LicenseError(RuntimeError):
@@ -332,7 +340,7 @@ def _validate_config(config: LicenseRuntimeConfig) -> None:
 
 def _validate_paid_calendar_period(payload: dict, valid_until: datetime) -> None:
     issued_at = _parse_utc(str(payload.get("issued_at") or ""))
-    expected_until = add_calendar_month(issued_at)
+    expected_until = _add_calendar_month(issued_at)
     if valid_until != expected_until:
         raise LicenseError("paid diary-filler license is not exactly one calendar month")
 
