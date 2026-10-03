@@ -80,6 +80,7 @@ def payload(
 def main() -> None:
     with tempfile.TemporaryDirectory() as td:
         os.environ["LOCALAPPDATA"] = td
+        os.environ["APPDATA"] = str(Path(td) / "Roaming")
         private = Ed25519PrivateKey.generate()
         public = private.public_key().public_bytes(
             encoding=serialization.Encoding.Raw,
@@ -216,6 +217,23 @@ def main() -> None:
         owner = signed_document(private, payload(machine, days=3650, owner=True))
         owner_status = lc.save_license(owner, config)
         assert owner_status.active and owner_status.owner_unlimited and owner_status.mode == "owner"
+        assert lc._owner_marker_path().exists()
+
+        # The owner marker lives outside the install-local license file and
+        # never grants access by itself. It only forces owner-only reactivation
+        # if the signed license file is lost or damaged.
+        owner_license_text = lc.license_path().read_text(encoding="utf-8")
+        lc.license_path().unlink()
+        lost_owner = lc.current_status(config)
+        assert not lost_owner.active
+        assert lost_owner.mode == "owner_reactivation"
+        assert lost_owner.owner_unlimited
+        lc.license_path().write_text("{broken", encoding="utf-8")
+        damaged_owner = lc.current_status(config)
+        assert not damaged_owner.active
+        assert damaged_owner.mode == "owner_reactivation"
+        assert damaged_owner.owner_unlimited
+        lc.license_path().write_text(owner_license_text, encoding="utf-8")
 
         # Owner access is intentionally independent from the paid-license
         # anti-clock state. Missing/corrupt clock data must never send the
@@ -325,6 +343,7 @@ def main() -> None:
         assert "DefaultDirName={localappdata}\\MedicalDiaryAutofill" in installer_text
         assert "license.json" not in installer_text
         assert "license-clock.json" not in installer_text
+        assert "owner-entitlement.marker" not in installer_text
 
         # Restore a clean paid-license clock state for the independent rollback
         # regression below; owner deliberately ignored the damaged clock above.
