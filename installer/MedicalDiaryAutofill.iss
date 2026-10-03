@@ -63,15 +63,64 @@ Type: files; Name: "{localappdata}\MedicalDiaryAutofill\desktop-intake-agent-han
 Type: files; Name: "{localappdata}\MedicalDiaryAutofill\desktop-intake-agent.log"
 Type: files; Name: "{localappdata}\MedicalDiaryAutofill\self-check.txt"
 Type: files; Name: "{app}\onboarding-required.flag"
+Type: files; Name: "{app}\.MedicalDiaryAutofill-delete-setup.cmd"
 Type: dirifempty; Name: "{localappdata}\MedicalDiaryAutofill"
 
 [Code]
+procedure ScheduleSetupSelfDelete;
+var
+  ResultCode: Integer;
+  SourceExe: String;
+  CleanupScript: String;
+  ScriptBody: String;
+begin
+  { ssDone is reached only after a successful installation. Start a detached
+    helper from the installed app directory, then let Setup terminate. The
+    helper retries until Windows releases the original Setup EXE, removes it,
+    and finally removes itself. }
+  SourceExe := ExpandConstant('{srcexe}');
+  CleanupScript := ExpandConstant('{app}\.MedicalDiaryAutofill-delete-setup.cmd');
+  ScriptBody :=
+    '@echo off' + #13#10 +
+    'setlocal' + #13#10 +
+    'set "target=%~1"' + #13#10 +
+    'for /L %%I in (1,1,60) do (' + #13#10 +
+    '  del /F /Q "%target%" >nul 2>&1' + #13#10 +
+    '  if not exist "%target%" goto deleted' + #13#10 +
+    '  >nul 2>&1 ping 127.0.0.1 -n 2' + #13#10 +
+    ')' + #13#10 +
+    ':deleted' + #13#10 +
+    'del /F /Q "%~f0" >nul 2>&1' + #13#10;
+
+  if not SaveStringToFile(CleanupScript, ScriptBody, False) then
+  begin
+    Log('Could not write setup self-delete helper: ' + CleanupScript);
+    Exit;
+  end;
+
+  if not Exec(
+    CleanupScript,
+    '"' + SourceExe + '"',
+    ExpandConstant('{app}'),
+    SW_HIDE,
+    ewNoWait,
+    ResultCode
+  ) then
+    Log(Format('Could not schedule setup self-delete: %s', [SysErrorMessage(ResultCode)]))
+  else
+    Log('Scheduled setup self-delete for: ' + SourceExe);
+end;
+
 procedure CurStepChanged(CurStep: TSetupStep);
 begin
   if CurStep = ssPostInstall then
   begin
     { Force one visible onboarding after every install/upgrade. }
     SaveStringToFile(ExpandConstant('{app}\onboarding-required.flag'), '1', False);
+  end
+  else if CurStep = ssDone then
+  begin
+    ScheduleSetupSelfDelete;
   end;
 end;
 
