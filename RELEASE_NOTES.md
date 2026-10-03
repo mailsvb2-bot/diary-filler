@@ -9,6 +9,9 @@
 - Status API возвращает доверенное server UTC time; активация/восстановление оплаченной лицензии не ломаются из-за неверных локальных часов Windows.
 - Rate-limit создания счетов учитывает `machine_hash`, поэтому reverse proxy/NAT не объединяет разных врачей в один 30-order bucket.
 - Добавлены регрессии на already-paid recovery, повреждённый payment state, server-time activation, proxy-safe rate limiting и запрет повторного платежа при recovery-сбое.
+- Official release теперь сверяет live `/health`: `product_id` и Ed25519 public key сервера обязаны точно совпадать с trust anchor, который вшивается в EXE.
+- License server фиксирует issuer public key в SQLite: bootstrap-ошибку можно исправить только до первой подтверждённой оплаты; после появления paid/license_issued заказов случайная смена private key блокируется до запуска сервера.
+- Recovery credential хранится в двух DPAPI-защищённых копиях (LocalAppData + AppData), чтобы обычная переустановка/очистка каталога приложения не заставляла оплачивать доступ повторно.
 - Версия приложения, EXE metadata, Inno Setup, Windows CI, live E2E и guarded release workflow синхронизированы как `1.4.31`.
 
 # Release notes — v1.4.30
