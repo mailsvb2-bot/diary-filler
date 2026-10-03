@@ -76,6 +76,7 @@ def main() -> None:
     assert "provider.get_payment" in app_source
     assert '"server_time": datetime.now(timezone.utc).isoformat()' in app_source
     assert 'order_limiter.allow(f"{client_ip(request)}|{machine}")' in app_source
+    assert "store.pin_issuer_public_key(public_key_b64(config[\"private_key\"]))" in app_source
 
     token = new_order_access_token()
     digest = order_token_hash(token)
@@ -90,6 +91,19 @@ def main() -> None:
 
     with tempfile.TemporaryDirectory() as td:
         store = LicenseStore(Path(td) / "licenses.sqlite3")
+        store.pin_issuer_public_key(public_b64)
+        store.pin_issuer_public_key(public_b64)
+        different_private = Ed25519PrivateKey.generate()
+        different_public = different_private.public_key().public_bytes(
+            encoding=serialization.Encoding.Raw,
+            format=serialization.PublicFormat.Raw,
+        )
+        try:
+            store.pin_issuer_public_key(base64.b64encode(different_public).decode("ascii"))
+            raise AssertionError("issuer key rotation was accepted for an existing license database")
+        except ValueError:
+            pass
+
         store.create_order(
             order_id="order-1",
             token_hash=digest,
