@@ -22,7 +22,9 @@ import uuid
 
 PRODUCT_ID = "diary_filler"
 DEFAULT_PLAN = "doctor_start"
-LICENSE_SCHEMA = "dokkomplekt.license.v1"
+LEGACY_LICENSE_SCHEMA = "dokkomplekt.license.v1"
+LICENSE_SCHEMA = "dokkomplekt.license.v2"
+SUPPORTED_LICENSE_SCHEMAS = {LEGACY_LICENSE_SCHEMA, LICENSE_SCHEMA}
 CLOCK_ROLLBACK_TOLERANCE = timedelta(minutes=15)
 
 
@@ -197,7 +199,8 @@ def _verify_signature(document: dict, public_key_b64: str) -> dict:
     except Exception as exc:
         raise LicenseError("Ed25519 verifier is unavailable") from exc
 
-    if document.get("schema") != LICENSE_SCHEMA:
+    schema = str(document.get("schema") or "")
+    if schema not in SUPPORTED_LICENSE_SCHEMAS:
         raise LicenseError("unsupported license schema")
     signed = document.get("license")
     if not isinstance(signed, dict) or signed.get("signature_alg") != "ed25519":
@@ -338,8 +341,12 @@ def _validate_config(config: LicenseRuntimeConfig) -> None:
         raise LicenseError("license public key must be 32 bytes")
 
 
-def _validate_paid_calendar_period(payload: dict, valid_until: datetime) -> None:
+def _validate_paid_calendar_period(schema: str, payload: dict, valid_until: datetime) -> None:
     issued_at = _parse_utc(str(payload.get("issued_at") or ""))
+    if schema == LEGACY_LICENSE_SCHEMA:
+        if valid_until - issued_at != timedelta(days=31):
+            raise LicenseError("legacy paid diary-filler license has an invalid duration")
+        return
     expected_until = _add_calendar_month(issued_at)
     if valid_until != expected_until:
         raise LicenseError("paid diary-filler license is not exactly one calendar month")
@@ -378,7 +385,7 @@ def _evaluate_document(
         and metadata.get("access") == "unlimited"
     )
     if not owner:
-        _validate_paid_calendar_period(payload, valid_until)
+        _validate_paid_calendar_period(str(document.get("schema") or ""), payload, valid_until)
 
     _record_clock(now)
     return LicenseStatus(
