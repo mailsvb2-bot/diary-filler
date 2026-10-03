@@ -336,6 +336,7 @@ def main() -> None:
         assert manager["show_activation"] and manager["show_payment"]
 
         license_ui_text = (ROOT / "license_ui.py").read_text(encoding="utf-8").lower()
+        license_client_text = (ROOT / "license_client.py").read_text(encoding="utf-8").lower()
         for forbidden_public_phrase in (
             "безлимитный доступ владельца",
             "доступ владельца",
@@ -344,7 +345,9 @@ def main() -> None:
             "супер админ",
         ):
             assert forbidden_public_phrase not in license_ui_text
+            assert forbidden_public_phrase not in license_client_text
         assert "ввести код активации" in license_ui_text
+        assert "код активации пуст" in license_client_text
 
         window_text = (ROOT / "window_mixin.py").read_text(encoding="utf-8")
         assert 'text="Лицензия", command=self._show_license_manager' in window_text
