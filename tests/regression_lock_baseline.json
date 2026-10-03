@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "fdf8cfe4dafebcde2bdddf1109cfc38f97d63260",
-  "baseline_note": "Installer lifecycle regression candidate validated on Windows CI run #1436: downloaded Setup copy was deleted after Setup exit while the installed background intake agent remained alive; full Windows build, packaged desktop intake E2E, installer smoke, uninstall smoke, and artifact publication all passed.",
+  "baseline_ref": "327f7150528b9d2c5829a34b9892686fcb8700ef",
+  "baseline_note": "Provenance-recovery baseline after PR #309. The installer deletion regression itself passed full Windows CI before merge; this metadata-only follow-up restores the repository's required canonical two-parent PR merge path after PR #309 was accidentally squash-merged.",
   "required_approval_evidence": [
     "ci_gate_lock",
     "patient_registry_regression"
