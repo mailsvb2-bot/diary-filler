@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "b7b517b3bfe1412d47c6e585b0da177f9cc92ade",
-  "reason": "Keep v1.4.30 License manager behavior while preventing ordinary Windows CI from publishing unlocked EXE/installer artifacts. Binary artifacts may be uploaded only when repository license-server URL and Ed25519 public key are present and the build enforces licensing.",
+  "reason": "Release v1.4.31 with paid-license recovery hardening: preserve existing v1.4.30 licensed-only artifact controls, keep paid order recovery credentials after activation, revalidate already-paid access before any new charge, stabilize MachineGuid identity, use trusted server time, and avoid shared-proxy false rate limits without changing medical document semantics.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -16,23 +16,25 @@
     "patient_registry_regression"
   ],
   "approved_blobs": {
-    ".github/workflows/release.yml": "ee6ea874013be3219ae73ada8d6f89faa253c865",
-    ".github/workflows/windows-build.yml": "8aa87544a1af52265208d0cd5a2e0149a7f4bcc6",
-    ".github/workflows/windows-live-e2e-core.yml": "61eb0542fd804ceb7a8c19649cce5bc03cce7965",
-    "BUILD_WINDOWS_INSTALLER.bat": "daaeb9ca81840f187fe5a7e4ac12ced0710fde7f",
-    "app_config.py": "f4518005208a6f5a7ef7eeb71982dbb3e12e228a",
-    "installer/MedicalDiaryAutofill.iss": "2b6cc9eb8e0408b155e5086b8a95d04ab9eb4b46",
-    "license_client.py": "05a7461c9223a5ded4914a3dbd8c5598a336de6d",
-    "license_ui.py": "4f34833045793a2cac205bb2cef12ba466b3def3",
-    "prod_audit.py": "fe721b372e90830a9ad0f88737eb0e23045ef195",
-    "pyproject.toml": "35463c7d669a7dd3f68895cfbbecbd47a67f60bd",
-    "release_check.py": "0987d383aebbc12efe1a6ff0559597bb350ad00e",
-    "tests/license_client_regression.py": "472dbe3c70601794b894e0ea3e33219bc8aa4cd1",
-    "tests/windows_live_e2e_contract.py": "dc0fa069b7407bf720c42cf024d2d272f6b9051e",
-    "tools/ci_gate_lock.py": "ae5d01314a7061dfb5c34db18ae26b82723341b9",
-    "tools/document_mechanics_change_approval.json": "3dff263dd4319a8ee4fbd4f7da0fc48de194f159",
-    "version_info.txt": "4025c81033d789831bf7ad2f52460beebefdfafa",
-    "window_mixin.py": "f86165cb8f828cafa288d0280fa0681073790787",
-    "tests/windows_ci_artifact_licensing_contract.py": "ca6fd936275adee83a5efe2be671bb3ee6fc184d"
+    ".github/workflows/release.yml": "38dbbeec3eef70cd77b94788feeec509de953889",
+    ".github/workflows/windows-build.yml": "623c4ab9e31c750347d0cbe7f6e4eda54f428b20",
+    ".github/workflows/windows-live-e2e-core.yml": "3aad389cd4087c103b522d4def305f838f724534",
+    "BUILD_WINDOWS_INSTALLER.bat": "a2bb300445fc6adfb1a23eae949869ce69973d60",
+    "app_config.py": "65555a7a3637dcb69b0ba23546c1c42453185f6a",
+    "installer/MedicalDiaryAutofill.iss": "511335a6c81c7341229720100b7e3faa8f359050",
+    "license_client.py": "564262d87c3f521a5d99a20bb2188052105be8e3",
+    "license_ui.py": "885e8c7ffdf00834b344527a68467b7f684767a9",
+    "licensing_server/app.py": "892d0fc7343349e5a0bbbb0312524c5571150646",
+    "prod_audit.py": "356458c703ff9481952aa07512e28c71723a6ad7",
+    "pyproject.toml": "986e4393bf45f2c3951cf6b5e373d438e343f970",
+    "release_check.py": "82faa8849996a7f81853ba027df9a24054d3b057",
+    "tests/license_client_regression.py": "2411208ecba32c7773146f6c010058de9da18e41",
+    "tests/license_server_regression.py": "1243d9498a3d9d978acb467da6b5ba58021e018d",
+    "tests/windows_ci_artifact_licensing_contract.py": "ca6fd936275adee83a5efe2be671bb3ee6fc184d",
+    "tests/windows_live_e2e_contract.py": "f36f1ce8e5989c98f576623a9995c902dc910c6d",
+    "tools/ci_gate_lock.py": "484c6c228ec40b8a5ba44e7cb320e7e05cd61d8e",
+    "tools/document_mechanics_change_approval.json": "afc7915e9c9bfd3d74084f5e5920e5d583bcf6f5",
+    "version_info.txt": "f02abf8e8c2c4664b51f3d4810e0358b40fa638b",
+    "window_mixin.py": "f86165cb8f828cafa288d0280fa0681073790787"
   }
 }
