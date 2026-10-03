@@ -134,18 +134,17 @@ def _payment_flow(parent, config):
 
     try:
         if pending and pending.get("payment_url"):
-            reuse = messagebox.askyesno(
+            # A pending status is not proof that money was not captured:
+            # provider reconciliation may simply be temporarily unavailable.
+            # Never create a second invoice until the old one is terminal.
+            payment = pending
+            messagebox.showinfo(
                 "Незавершённая оплата",
-                "Оплата по предыдущему счёту пока не подтверждена.\n\n"
-                "Да — продолжить прошлую оплату.\n"
-                "Нет — отменить локально старый счёт и создать новый.",
+                "Предыдущий счёт ещё не имеет окончательного статуса.\n\n"
+                "Программа продолжит именно этот счёт и не создаст новый, "
+                "чтобы исключить двойную оплату.",
                 parent=parent,
             )
-            if reuse:
-                payment = pending
-            else:
-                discard_pending_order()
-                payment = begin_monthly_payment(config)
         else:
             payment = begin_monthly_payment(config)
     except LicenseError as exc:
