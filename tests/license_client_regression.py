@@ -24,10 +24,10 @@ def canonical(payload: dict) -> bytes:
     return json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
 
 
-def signed_document(private_key, payload: dict) -> dict:
+def signed_document(private_key, payload: dict, *, schema: str = lc.LICENSE_SCHEMA) -> dict:
     signature = private_key.sign(canonical(payload))
     return {
-        "schema": lc.LICENSE_SCHEMA,
+        "schema": schema,
         "license": {
             "payload": payload,
             "signature_alg": "ed25519",
@@ -36,8 +36,16 @@ def signed_document(private_key, payload: dict) -> dict:
     }
 
 
-def payload(machine: str, *, days: int = 31, product: str = lc.PRODUCT_ID, owner: bool = False) -> dict:
-    now = datetime.now(timezone.utc)
+def payload(
+    machine: str,
+    *,
+    days: int | None = None,
+    product: str = lc.PRODUCT_ID,
+    owner: bool = False,
+    issued_at: datetime | None = None,
+) -> dict:
+    now = (issued_at or datetime.now(timezone.utc)).astimezone(timezone.utc)
+    valid_until = lc._add_calendar_month(now) if days is None else now + timedelta(days=days)
     metadata = {"product_id": product}
     plan = "doctor_start"
     if owner:
@@ -52,7 +60,7 @@ def payload(machine: str, *, days: int = 31, product: str = lc.PRODUCT_ID, owner
         "seats": 1,
         "allowed_machines": [machine],
         "valid_from": now.isoformat().replace("+00:00", "Z"),
-        "valid_until": (now + timedelta(days=days)).isoformat().replace("+00:00", "Z"),
+        "valid_until": valid_until.isoformat().replace("+00:00", "Z"),
         "document_limit_month": 9999999 if owner else 600,
         "template_limit": 999999 if owner else 30,
         "profile_limit": 9999 if owner else 1,
@@ -124,6 +132,16 @@ def main() -> None:
         assert lc.save_license(paid, config).active
         assert lc.current_status(config).mode == "paid"
 
+        # Existing v1 licenses were sold as fixed 31-day periods. They must
+        # remain usable until their originally signed expiration after upgrade.
+        legacy_v1 = signed_document(
+            private,
+            payload(machine, days=31),
+            schema=lc.LEGACY_LICENSE_SCHEMA,
+        )
+        legacy_status = lc._evaluate_document(legacy_v1, config)
+        assert legacy_status.active and legacy_status.mode == "paid"
+
         # Removing or corrupting the anti-rollback state after activation must
         # fail closed rather than reset the clock guard.
         clock_backup = lc._clock_path().read_text(encoding="utf-8")
@@ -170,6 +188,20 @@ def main() -> None:
         try:
             lc._evaluate_document(wrong_machine, config)
             raise AssertionError("wrong-machine license accepted")
+        except lc.LicenseError:
+            pass
+
+        # A signed paid license is still invalid if its period is a fixed
+        # number of days instead of exactly one calendar month.
+        april_30 = datetime(2026, 4, 30, 12, 0, tzinfo=timezone.utc)
+        fixed_31_day_payload = payload(machine, days=31, issued_at=april_30)
+        try:
+            lc._validate_paid_calendar_period(
+                lc.LICENSE_SCHEMA,
+                fixed_31_day_payload,
+                lc._parse_utc(fixed_31_day_payload["valid_until"]),
+            )
+            raise AssertionError("fixed 31-day license bypassed calendar-month contract")
         except lc.LicenseError:
             pass
 

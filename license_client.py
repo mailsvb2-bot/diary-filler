@@ -8,6 +8,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime, timezone, timedelta
 import base64
+import calendar
 import hashlib
 import hmac
 import json
@@ -21,9 +22,19 @@ import uuid
 
 PRODUCT_ID = "diary_filler"
 DEFAULT_PLAN = "doctor_start"
-LICENSE_SCHEMA = "dokkomplekt.license.v1"
+LEGACY_LICENSE_SCHEMA = "dokkomplekt.license.v1"
+LICENSE_SCHEMA = "dokkomplekt.license.v2"
+SUPPORTED_LICENSE_SCHEMAS = {LEGACY_LICENSE_SCHEMA, LICENSE_SCHEMA}
 CLOCK_ROLLBACK_TOLERANCE = timedelta(minutes=15)
-MAX_PAID_LICENSE_DAYS = 35
+
+
+def _add_calendar_month(value: datetime) -> datetime:
+    if value.month == 12:
+        year, month = value.year + 1, 1
+    else:
+        year, month = value.year, value.month + 1
+    day = min(value.day, calendar.monthrange(year, month)[1])
+    return value.replace(year=year, month=month, day=day)
 
 
 class LicenseError(RuntimeError):
@@ -188,7 +199,8 @@ def _verify_signature(document: dict, public_key_b64: str) -> dict:
     except Exception as exc:
         raise LicenseError("Ed25519 verifier is unavailable") from exc
 
-    if document.get("schema") != LICENSE_SCHEMA:
+    schema = str(document.get("schema") or "")
+    if schema not in SUPPORTED_LICENSE_SCHEMAS:
         raise LicenseError("unsupported license schema")
     signed = document.get("license")
     if not isinstance(signed, dict) or signed.get("signature_alg") != "ed25519":
@@ -329,6 +341,17 @@ def _validate_config(config: LicenseRuntimeConfig) -> None:
         raise LicenseError("license public key must be 32 bytes")
 
 
+def _validate_paid_calendar_period(schema: str, payload: dict, valid_until: datetime) -> None:
+    issued_at = _parse_utc(str(payload.get("issued_at") or ""))
+    if schema == LEGACY_LICENSE_SCHEMA:
+        if valid_until - issued_at != timedelta(days=31):
+            raise LicenseError("legacy paid diary-filler license has an invalid duration")
+        return
+    expected_until = _add_calendar_month(issued_at)
+    if valid_until != expected_until:
+        raise LicenseError("paid diary-filler license is not exactly one calendar month")
+
+
 def _evaluate_document(
     document: dict,
     config: LicenseRuntimeConfig,
@@ -362,9 +385,7 @@ def _evaluate_document(
         and metadata.get("access") == "unlimited"
     )
     if not owner:
-        duration = valid_until - valid_from
-        if duration > timedelta(days=MAX_PAID_LICENSE_DAYS):
-            raise LicenseError("paid diary-filler license exceeds monthly duration")
+        _validate_paid_calendar_period(str(document.get("schema") or ""), payload, valid_until)
 
     _record_clock(now)
     return LicenseStatus(
