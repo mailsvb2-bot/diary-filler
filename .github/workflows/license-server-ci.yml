@@ -38,6 +38,9 @@ jobs:
       - name: Run license server regression
         run: python tests/license_server_regression.py
 
+      - name: Run release trust preflight regression
+        run: python tests/license_server_preflight_regression.py
+
       - name: Import FastAPI server with production-shaped configuration
         shell: bash
         run: |
