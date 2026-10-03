@@ -9,6 +9,7 @@ from license_client import (
     activate_owner,
     begin_monthly_payment,
     current_status,
+    discard_pending_order,
     pending_payment_details,
     refresh_paid_order,
     runtime_config,
@@ -66,7 +67,18 @@ def ensure_license(parent, *, interactive: bool = True) -> bool:
         pending = pending_payment_details()
         try:
             if pending and pending.get("payment_url"):
-                payment = pending
+                reuse = messagebox.askyesno(
+                    "Незавершённая оплата",
+                    "Найден предыдущий счёт.\n\n"
+                    "Да — продолжить прошлую оплату.\n"
+                    "Нет — отменить локально старый счёт и создать новый.",
+                    parent=parent,
+                )
+                if reuse:
+                    payment = pending
+                else:
+                    discard_pending_order()
+                    payment = begin_monthly_payment(config)
             else:
                 payment = begin_monthly_payment(config)
         except LicenseError as exc:
