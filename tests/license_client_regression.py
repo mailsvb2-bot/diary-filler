@@ -18,7 +18,6 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 import license_client as lc
-from license_calendar import add_calendar_month
 
 
 def canonical(payload: dict) -> bytes:
@@ -46,7 +45,7 @@ def payload(
     issued_at: datetime | None = None,
 ) -> dict:
     now = (issued_at or datetime.now(timezone.utc)).astimezone(timezone.utc)
-    valid_until = add_calendar_month(now) if days is None else now + timedelta(days=days)
+    valid_until = lc._add_calendar_month(now) if days is None else now + timedelta(days=days)
     metadata = {"product_id": product}
     plan = "doctor_start"
     if owner:
