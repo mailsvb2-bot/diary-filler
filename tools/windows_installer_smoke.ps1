@@ -6,6 +6,7 @@ $ErrorActionPreference = 'Stop'
 $installerSource = (Resolve-Path $InstallerPath).Path
 $installer = Join-Path $env:RUNNER_TEMP 'MedicalDiaryAutofill-Setup-delete-probe.exe'
 $installDir = Join-Path $env:RUNNER_TEMP 'MedicalDiaryAutofill-Installer-Smoke'
+$selfDeleteHelper = Join-Path $installDir '.MedicalDiaryAutofill-delete-setup.cmd'
 $runKeyPath = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run'
 $runValueName = 'MedicalDiaryAutofill Intake'
 $patientSummaryRunValueName = 'MedicalDiaryAutofill Patients'
@@ -48,6 +49,25 @@ function Wait-ForAgentHeartbeat {
     throw 'Installer did not bootstrap a live intake-agent heartbeat'
 }
 
+function Wait-ForInstallerSelfDelete {
+    param([int]$TimeoutSeconds = 20)
+    $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
+    do {
+        if (-not (Test-Path -LiteralPath $installer)) {
+            $helperDeadline = [DateTime]::UtcNow.AddSeconds(5)
+            do {
+                if (-not (Test-Path -LiteralPath $selfDeleteHelper)) {
+                    return
+                }
+                Start-Sleep -Milliseconds 200
+            } while ([DateTime]::UtcNow -lt $helperDeadline)
+            throw 'Installer self-delete helper did not remove itself'
+        }
+        Start-Sleep -Milliseconds 250
+    } while ([DateTime]::UtcNow -lt $deadline)
+    throw 'Downloaded installer did not delete itself after successful installation'
+}
+
 try {
     Stop-AppProcesses
     Remove-Item -LiteralPath $installer -Force -ErrorAction SilentlyContinue
@@ -83,26 +103,22 @@ try {
         throw 'Installer did not deploy the fast PyInstaller onedir runtime'
     }
 
-    # User-facing regression: once Setup itself has exited, the downloaded
-    # installer must be disposable even though the installed background agent
-    # is already alive. The agent must run only from the installed app path.
+    # User-facing regression: after a successful install the downloaded Setup
+    # must remove itself automatically. The installed agent must stay alive and
+    # the original build artifact used to create the disposable copy must remain.
     Wait-ForAgentHeartbeat
     if (@(Get-Process -Name 'MedicalDiaryAutofill' -ErrorAction SilentlyContinue).Count -eq 0) {
-        throw 'Installer-started intake-agent is not running before installer deletion probe'
+        throw 'Installer-started intake-agent is not running before installer self-delete probe'
     }
 
-    try {
-        Remove-Item -LiteralPath $installer -Force -ErrorAction Stop
-    } catch {
-        throw "Downloaded installer is still locked after Setup exit while the background agent is running: $($_.Exception.Message)"
-    }
-    if (Test-Path -LiteralPath $installer) {
-        throw 'Downloaded installer still exists after deletion probe'
+    Wait-ForInstallerSelfDelete
+    if (-not (Test-Path -LiteralPath $installerSource -PathType Leaf)) {
+        throw 'Installer self-delete removed the build artifact instead of only the launched Setup copy'
     }
     if (@(Get-Process -Name 'MedicalDiaryAutofill' -ErrorAction SilentlyContinue).Count -eq 0) {
-        throw 'Background agent stopped when the downloaded installer was deleted'
+        throw 'Background agent stopped when the downloaded installer self-deleted'
     }
-    Write-Host 'INSTALLER DELETE-WHILE-AGENT-RUNNING PROBE OK'
+    Write-Host 'INSTALLER AUTO-SELF-DELETE WHILE AGENT RUNS PROBE OK'
 
     # Measure the actual installed onedir startup path, not the slower portable
     # one-file launcher. The startup probe constructs the real GUI and TkDND
@@ -315,6 +331,8 @@ d.save(p)
 }
 finally {
     Stop-AppProcesses
+    Remove-Item -LiteralPath $installer -Force -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath $selfDeleteHelper -Force -ErrorAction SilentlyContinue
     Remove-ItemProperty -Path $runKeyPath -Name $runValueName -ErrorAction SilentlyContinue
     Remove-Item -LiteralPath $startupScript -Force -ErrorAction SilentlyContinue
     if (Test-Path $installDir) {
