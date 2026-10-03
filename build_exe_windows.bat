@@ -49,15 +49,7 @@ if errorlevel 1 (
   exit /b 1
 )
 
-echo [4/7] Формирую публичную конфигурацию лицензирования...
-python tools\render_license_build_config.py --output build\generated\license_build_config.py
-if errorlevel 1 (
-  echo [ОШИБКА] Конфигурация лицензирования некорректна.
-  if "%CI%"=="" pause
-  exit /b 1
-)
-
-echo [5/7] Проверяю production-safety gate...
+echo [4/7] Проверяю production-safety gate...
 python tools\production_safety_gate.py
 if errorlevel 1 (
   echo [ОШИБКА] Production-safety gate не прошёл. EXE не собираю.
@@ -65,10 +57,18 @@ if errorlevel 1 (
   exit /b 1
 )
 
-echo [6/7] Проверяю release-gate...
+echo [5/7] Проверяю release-gate...
 python release_check.py
 if errorlevel 1 (
   echo [ОШИБКА] Release-gate не прошёл. EXE не собираю.
+  if "%CI%"=="" pause
+  exit /b 1
+)
+
+echo [6/7] Формирую публичную конфигурацию лицензирования...
+python tools\render_license_build_config.py --output build\generated\license_build_config.py
+if errorlevel 1 (
+  echo [ОШИБКА] Конфигурация лицензирования некорректна.
   if "%CI%"=="" pause
   exit /b 1
 )
