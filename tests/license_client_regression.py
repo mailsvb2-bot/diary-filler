@@ -127,6 +127,10 @@ def main() -> None:
         lc._install_id = lambda: "install-b"
         stable_b = lc.machine_fingerprint()
         assert stable_a == stable_b
+        lc._windows_machine_guid = lambda: ""
+        lc._install_id = lambda: "install-c"
+        stable_c = lc.machine_fingerprint()
+        assert stable_c == stable_a, "transient MachineGuid read failure changed paid-license identity"
         lc._windows_machine_guid = old_guid
         lc._install_id = old_install
 
@@ -170,6 +174,13 @@ def main() -> None:
         assert lc.pending_payment_details() is not None
         lc.discard_pending_order()
         assert lc.pending_payment_details() is None
+        lc._pending_order_path().write_text("{broken", encoding="utf-8")
+        try:
+            lc.pending_payment_details()
+            raise AssertionError("damaged pending order was treated as no payment")
+        except lc.LicenseError:
+            pass
+        lc._pending_order_path().unlink(missing_ok=True)
 
         tampered = json.loads(json.dumps(paid))
         tampered["license"]["payload"]["document_limit_month"] = 999999
@@ -213,6 +224,128 @@ def main() -> None:
             raise AssertionError("annual paid license bypassed monthly contract")
         except lc.LicenseError:
             pass
+
+        # Successful payment must leave a DPAPI/HMAC-protected recovery
+        # credential so local license/clock damage never forces a second charge.
+        recovery_order = {
+            "order_id": "00000000-0000-0000-0000-000000000001",
+            "order_access_token": "R" * 48,
+            "payment_url": "https://pay.example.com/recovery",
+            "amount_rub": 100,
+        }
+        lc._save_pending_order(recovery_order)
+        old_json_request = lc._json_request
+        old_machine_fingerprint = lc.machine_fingerprint
+        recovery_calls = []
+        try:
+            lc.machine_fingerprint = lambda: machine
+
+            def _paid_request(_config, method, path, *, body=None, bearer=""):
+                recovery_calls.append((method, path, body, bearer))
+                if method == "GET" and path.endswith("/status"):
+                    return {"status": "license_issued", "amount_rub": 100}
+                if method == "POST" and path.endswith("/activate-machine"):
+                    return {"activated": True, "machine_hash": machine}
+                if method == "POST" and path.endswith("/license"):
+                    return paid
+                raise AssertionError((method, path, body, bearer))
+
+            lc._json_request = _paid_request
+            paid_status = lc.refresh_paid_order(config)
+            assert paid_status.active and paid_status.mode == "paid"
+            assert lc._active_order_path().exists()
+            assert not lc._pending_order_path().exists()
+
+            lc.license_path().write_text("{broken", encoding="utf-8")
+            lc._clock_path().write_text("{broken", encoding="utf-8")
+            recovery_needed = lc.current_status(config)
+            assert not recovery_needed.active
+            assert recovery_needed.mode == "paid_recovery"
+
+            restored = lc.recover_paid_license(config)
+            assert restored.active and restored.mode == "paid"
+            assert lc.current_status(config).active
+            assert lc.current_status(config).mode == "paid"
+        finally:
+            lc._json_request = old_json_request
+            lc.machine_fingerprint = old_machine_fingerprint
+        assert recovery_calls
+
+        # A network/recovery failure for an already-paid entitlement must not
+        # create a fresh payment order.
+        old_runtime_config = lui.runtime_config
+        old_current_status = lui.current_status
+        old_recover = lui.recover_paid_license
+        old_begin_payment = lui.begin_monthly_payment
+        old_showwarning = lui.messagebox.showwarning
+        recovery_ui_calls = {"payment": 0, "warning": 0}
+        try:
+            lui.runtime_config = lambda: config
+            lui.current_status = lambda _config: lc.LicenseStatus(
+                False,
+                "paid_recovery",
+                "recovery required",
+                "doctor_start",
+                None,
+                False,
+            )
+            lui.recover_paid_license = lambda _config: (_ for _ in ()).throw(
+                lc.PaidLicenseRecoveryError("temporary server outage")
+            )
+            lui.begin_monthly_payment = lambda *args, **kwargs: (
+                recovery_ui_calls.__setitem__("payment", recovery_ui_calls["payment"] + 1)
+                or (_ for _ in ()).throw(AssertionError("paid recovery created a second charge"))
+            )
+            lui.messagebox.showwarning = lambda *args, **kwargs: recovery_ui_calls.__setitem__(
+                "warning", recovery_ui_calls["warning"] + 1
+            )
+            assert not lui.ensure_license(None, interactive=True)
+            assert recovery_ui_calls["payment"] == 0
+            assert recovery_ui_calls["warning"] == 1
+        finally:
+            lui.runtime_config = old_runtime_config
+            lui.current_status = old_current_status
+            lui.recover_paid_license = old_recover
+            lui.begin_monthly_payment = old_begin_payment
+            lui.messagebox.showwarning = old_showwarning
+
+        # If a previous invoice is already paid, payment UX must claim it first
+        # and must not create another invoice.
+        old_pending_details = lui.pending_payment_details
+        old_refresh_paid = lui.refresh_paid_order
+        old_begin_payment = lui.begin_monthly_payment
+        old_showinfo = lui.messagebox.showinfo
+        paid_ui_calls = {"payment": 0, "refresh": 0}
+        try:
+            lui.pending_payment_details = lambda: {
+                "order_id": recovery_order["order_id"],
+                "payment_url": recovery_order["payment_url"],
+                "amount_rub": 100,
+            }
+            lui.refresh_paid_order = lambda _config: (
+                paid_ui_calls.__setitem__("refresh", paid_ui_calls["refresh"] + 1)
+                or lc.LicenseStatus(
+                    True,
+                    "paid",
+                    "Лицензия активна",
+                    "doctor_start",
+                    datetime.now(timezone.utc) + timedelta(days=10),
+                    False,
+                )
+            )
+            lui.begin_monthly_payment = lambda *args, **kwargs: (
+                paid_ui_calls.__setitem__("payment", paid_ui_calls["payment"] + 1)
+                or (_ for _ in ()).throw(AssertionError("already-paid invoice created a second charge"))
+            )
+            lui.messagebox.showinfo = lambda *args, **kwargs: None
+            claimed = lui._payment_flow(None, config)
+            assert claimed and claimed.active
+            assert paid_ui_calls == {"payment": 0, "refresh": 1}
+        finally:
+            lui.pending_payment_details = old_pending_details
+            lui.refresh_paid_order = old_refresh_paid
+            lui.begin_monthly_payment = old_begin_payment
+            lui.messagebox.showinfo = old_showinfo
 
         owner = signed_document(private, payload(machine, days=3650, owner=True))
         old_json_request = lc._json_request
