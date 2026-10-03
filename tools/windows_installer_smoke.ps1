@@ -50,11 +50,11 @@ function Wait-ForAgentHeartbeat {
 }
 
 function Wait-ForInstallerSelfDelete {
-    param([int]$TimeoutSeconds = 20)
+    param([int]$TimeoutSeconds = 70)
     $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
     do {
         if (-not (Test-Path -LiteralPath $installer)) {
-            $helperDeadline = [DateTime]::UtcNow.AddSeconds(5)
+            $helperDeadline = [DateTime]::UtcNow.AddSeconds(10)
             do {
                 if (-not (Test-Path -LiteralPath $selfDeleteHelper)) {
                     return
