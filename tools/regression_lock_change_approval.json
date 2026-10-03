@@ -25,6 +25,8 @@
     "pyproject.toml": "3c6cd1022c868f056ea72bc7e368b4a382ec1c9f",
     "release_check.py": "8fc4b246b21f7d1087cf19bb7dd0a0e964791ac7",
     "tools/windows_installer_smoke.ps1": "139bdfd146344dbed574fdedeae459a4f48f2715",
-    "version_info.txt": "9c29942673ec7139f4b98bf979ba9862fd2d1e3a"
+    "version_info.txt": "9c29942673ec7139f4b98bf979ba9862fd2d1e3a",
+    "tools/ci_gate_lock.py": "785782a55ae4a4a685898a0889416f72538f977b",
+    "tests/windows_live_e2e_contract.py": "a5a09e7eab03eab7baaa1b5dd7d5b0c7750c2280"
   }
 }
