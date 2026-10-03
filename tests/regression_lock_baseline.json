@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "6367abf95bd624feba6336789665e08ac2c42789",
-  "baseline_note": "v1.4.28 calendar-month licensing candidate validated by License Server CI #20 and Windows EXE Build #1503: new schema-v2 paid licenses expire after exactly one calendar month with correct 28/29/30/31-day month-end handling; already-issued schema-v1 31-day licenses remain valid until their signed expiry; regression lock, production safety, release gate, golden DOCX, packaged E2E and installer smoke all passed.",
+  "baseline_ref": "b7b517b3bfe1412d47c6e585b0da177f9cc92ade",
+  "baseline_note": "v1.4.29 owner/superadmin hardening validated on merge commit b7b517b3bfe1412d47c6e585b0da177f9cc92ade: License Server CI #32 and Windows EXE Build #1515 passed. Active signed owner access bypasses all licensing/payment UI, owner access survives missing/corrupt anti-clock state, MachineGuid mismatch routes only to owner reactivation, DPAPI owner recovery prevents fallback to monthly payment, server/client owner contract is covered, and the full medical/golden DOCX/packaged EXE/installer regression contour remained green.",
   "required_approval_evidence": [
     "ci_gate_lock",
     "patient_registry_regression"
