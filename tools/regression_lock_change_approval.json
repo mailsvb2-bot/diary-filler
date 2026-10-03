@@ -17,7 +17,7 @@
   ],
   "approved_blobs": {
     "actions_creation_orchestrator.py": "34d8c621d28ec261e6753ded8921f4c651699898",
-    "build_exe_windows.bat": "ce66cf48bc15be04f5d3ce97d78459324968891e",
+    "build_exe_windows.bat": "8bdcd77c4b783c0dad34947f7792264a331328b3",
     "license_client.py": "d4d824b5e080290a3386cee56d78c3f9ff32bd8a",
     "license_ui.py": "ddd9f7fb878556dfd7fbf56fb716ff2da2d27b57",
     "main.py": "bd90d09ef6bb3fcb3053696ce456bc1529fdc850",
