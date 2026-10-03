@@ -3,7 +3,8 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$installer = (Resolve-Path $InstallerPath).Path
+$installerSource = (Resolve-Path $InstallerPath).Path
+$installer = Join-Path $env:RUNNER_TEMP 'MedicalDiaryAutofill-Setup-delete-probe.exe'
 $installDir = Join-Path $env:RUNNER_TEMP 'MedicalDiaryAutofill-Installer-Smoke'
 $runKeyPath = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run'
 $runValueName = 'MedicalDiaryAutofill Intake'
@@ -49,6 +50,8 @@ function Wait-ForAgentHeartbeat {
 
 try {
     Stop-AppProcesses
+    Remove-Item -LiteralPath $installer -Force -ErrorAction SilentlyContinue
+    Copy-Item -LiteralPath $installerSource -Destination $installer -Force
     Remove-ItemProperty -Path $runKeyPath -Name $runValueName -ErrorAction SilentlyContinue
     Remove-ItemProperty -Path $runKeyPath -Name $patientSummaryRunValueName -ErrorAction SilentlyContinue
     Remove-Item -LiteralPath $startupScript -Force -ErrorAction SilentlyContinue
@@ -79,6 +82,27 @@ try {
     if (-not (Test-Path -LiteralPath $internalDir -PathType Container)) {
         throw 'Installer did not deploy the fast PyInstaller onedir runtime'
     }
+
+    # User-facing regression: once Setup itself has exited, the downloaded
+    # installer must be disposable even though the installed background agent
+    # is already alive. The agent must run only from the installed app path.
+    Wait-ForAgentHeartbeat
+    if (@(Get-Process -Name 'MedicalDiaryAutofill' -ErrorAction SilentlyContinue).Count -eq 0) {
+        throw 'Installer-started intake-agent is not running before installer deletion probe'
+    }
+
+    try {
+        Remove-Item -LiteralPath $installer -Force -ErrorAction Stop
+    } catch {
+        throw "Downloaded installer is still locked after Setup exit while the background agent is running: $($_.Exception.Message)"
+    }
+    if (Test-Path -LiteralPath $installer) {
+        throw 'Downloaded installer still exists after deletion probe'
+    }
+    if (@(Get-Process -Name 'MedicalDiaryAutofill' -ErrorAction SilentlyContinue).Count -eq 0) {
+        throw 'Background agent stopped when the downloaded installer was deleted'
+    }
+    Write-Host 'INSTALLER DELETE-WHILE-AGENT-RUNNING PROBE OK'
 
     # Measure the actual installed onedir startup path, not the slower portable
     # one-file launcher. The startup probe constructs the real GUI and TkDND
