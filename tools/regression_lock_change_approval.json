@@ -27,6 +27,7 @@
     "requirements_build.txt": "818e47dcfb686e42af78af3c68b30c5a8e317245",
     "tests/license_client_regression.py": "a0e1e8ec8a7640b340cfd9514aa684f740fcaea9",
     "tools/document_mechanics_change_approval.json": "a305d5c722d556dc57dd2dc68483c34060052ee7",
-    "tools/render_license_build_config.py": "bb72ada22a4eae4872ddac23278bca9e54943616"
+    "tools/render_license_build_config.py": "bb72ada22a4eae4872ddac23278bca9e54943616",
+    "tools/production_safety_gate.py": "7231883d53b492f99636c3f085c383585c13e30f"
   }
 }
