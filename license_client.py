@@ -659,10 +659,12 @@ def _load_active_order() -> dict:
 
 
 def _has_active_order_credentials() -> bool:
+    # Existence is enough to suppress a new charge. If DPAPI/JSON is damaged,
+    # recovery will fail safely and tell the user to retry/support rather than
+    # silently treating an already-paid order as nonexistent.
     try:
-        _load_active_order()
-        return True
-    except LicenseError:
+        return _active_order_path().is_file()
+    except OSError:
         return False
 
 
@@ -839,12 +841,30 @@ def discard_pending_order() -> None:
 
 
 def pending_payment_details() -> dict | None:
+    path = _pending_order_path()
     try:
-        payload = json.loads(_pending_order_path().read_text(encoding="utf-8"))
-    except Exception:
+        raw = path.read_text(encoding="utf-8")
+    except FileNotFoundError:
         return None
+    except OSError as exc:
+        raise LicenseError(
+            "Не удалось прочитать сохранённый счёт. Новый платёж не создан."
+        ) from exc
+    try:
+        payload = json.loads(raw)
+        if payload.get("schema") != 1:
+            raise ValueError("unsupported order schema")
+        order_id = str(payload.get("order_id") or "").strip()
+        payment_url = str(payload.get("payment_url") or "").strip()
+        amount_rub = int(payload.get("amount_rub") or 0)
+        if not order_id or not payment_url or amount_rub <= 0:
+            raise ValueError("incomplete order")
+    except Exception as exc:
+        raise LicenseError(
+            "Сохранённый счёт повреждён. Новый платёж не создан, чтобы исключить повторную оплату."
+        ) from exc
     return {
-        "order_id": str(payload.get("order_id") or ""),
-        "payment_url": str(payload.get("payment_url") or ""),
-        "amount_rub": int(payload.get("amount_rub") or 0),
+        "order_id": order_id,
+        "payment_url": payment_url,
+        "amount_rub": amount_rub,
     }
