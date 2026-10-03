@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "327f7150528b9d2c5829a34b9892686fcb8700ef",
-  "baseline_note": "Provenance-recovery baseline after PR #309. The installer deletion regression itself passed full Windows CI before merge; this metadata-only follow-up restores the repository's required canonical two-parent PR merge path after PR #309 was accidentally squash-merged.",
+  "baseline_ref": "3774c0836001f5ba89e5b36dd1cf274ad1c82128",
+  "baseline_note": "Installer self-delete candidate validated on Windows CI run #1442: after successful install the exact launched Setup EXE deleted itself automatically, the cleanup helper removed itself, the installed background agent remained alive, and the full Windows build/E2E/installer/uninstall/artifact pipeline passed.",
   "required_approval_evidence": [
     "ci_gate_lock",
     "patient_registry_regression"
