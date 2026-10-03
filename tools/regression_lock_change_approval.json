@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "327f7150528b9d2c5829a34b9892686fcb8700ef",
+  "reason": "Make the downloaded Windows Setup executable delete itself only after a successful install, while preserving the installed background agent and adding an exact Windows lifecycle regression.",
+  "required_evidence": [
+    "document_mechanics_guard",
+    "full_patient_replay",
+    "golden_docx",
+    "staff_profile_regression",
+    "gender_generation_matrix",
+    "desktop_intake_contract",
+    "intake_lifecycle_regression",
+    "packaged_desktop_intake_e2e",
+    "installer_uninstall_smoke",
+    "ci_gate_lock",
+    "patient_registry_regression"
+  ],
+  "approved_blobs": {
+    "installer/MedicalDiaryAutofill.iss": "5877915360c8024b5ece990b11f96449e42f0958",
+    "tools/windows_installer_smoke.ps1": "645f7eef54d3b9fb1f3ae6072a26f4fefcb7cc5c"
+  }
+}
