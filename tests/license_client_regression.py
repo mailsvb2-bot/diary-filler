@@ -18,6 +18,7 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 import license_client as lc
+from license_calendar import add_calendar_month
 
 
 def canonical(payload: dict) -> bytes:
@@ -36,8 +37,16 @@ def signed_document(private_key, payload: dict) -> dict:
     }
 
 
-def payload(machine: str, *, days: int = 31, product: str = lc.PRODUCT_ID, owner: bool = False) -> dict:
-    now = datetime.now(timezone.utc)
+def payload(
+    machine: str,
+    *,
+    days: int | None = None,
+    product: str = lc.PRODUCT_ID,
+    owner: bool = False,
+    issued_at: datetime | None = None,
+) -> dict:
+    now = (issued_at or datetime.now(timezone.utc)).astimezone(timezone.utc)
+    valid_until = add_calendar_month(now) if days is None else now + timedelta(days=days)
     metadata = {"product_id": product}
     plan = "doctor_start"
     if owner:
@@ -52,7 +61,7 @@ def payload(machine: str, *, days: int = 31, product: str = lc.PRODUCT_ID, owner
         "seats": 1,
         "allowed_machines": [machine],
         "valid_from": now.isoformat().replace("+00:00", "Z"),
-        "valid_until": (now + timedelta(days=days)).isoformat().replace("+00:00", "Z"),
+        "valid_until": valid_until.isoformat().replace("+00:00", "Z"),
         "document_limit_month": 9999999 if owner else 600,
         "template_limit": 999999 if owner else 30,
         "profile_limit": 9999 if owner else 1,
@@ -170,6 +179,19 @@ def main() -> None:
         try:
             lc._evaluate_document(wrong_machine, config)
             raise AssertionError("wrong-machine license accepted")
+        except lc.LicenseError:
+            pass
+
+        # A signed paid license is still invalid if its period is a fixed
+        # number of days instead of exactly one calendar month.
+        april_30 = datetime(2026, 4, 30, 12, 0, tzinfo=timezone.utc)
+        fixed_31_day_payload = payload(machine, days=31, issued_at=april_30)
+        try:
+            lc._validate_paid_calendar_period(
+                fixed_31_day_payload,
+                lc._parse_utc(fixed_31_day_payload["valid_until"]),
+            )
+            raise AssertionError("fixed 31-day license bypassed calendar-month contract")
         except lc.LicenseError:
             pass
 
