@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "384822dad3fb802d324c7dd75ad10a42b4de1533",
-  "baseline_note": "v1.4.28 monthly licensing candidate validated on merge commit 384822dad3fb802d324c7dd75ad10a42b4de1533: License Server CI #8 and Windows EXE Build #1491 passed, including release gate, golden DOCX, full user journey, packaged desktop intake, installer smoke, artifact publication, owner entitlement, and anti-tamper licensing regressions.",
+  "baseline_note": "v1.4.28 monthly licensing candidate validated on merge commit 384822dad3fb802d324c7dd75ad10a42b4de1533: License Server CI #8 and Windows EXE Build #1491 passed, including release gate, golden DOCX, full user journey, packaged desktop intake, installer smoke, artifact publication, owner entitlement, and anti-tamper licensing regressions. Metadata cleanup is finalized through a canonical PR merge so protected-main provenance remains valid.",
   "required_approval_evidence": [
     "ci_gate_lock",
     "patient_registry_regression"
