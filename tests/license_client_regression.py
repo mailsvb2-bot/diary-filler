@@ -133,6 +133,12 @@ def main() -> None:
         lc._clock_path().write_text("{broken", encoding="utf-8")
         assert not lc.current_status(config).active
         lc._clock_path().write_text(clock_backup, encoding="utf-8")
+        forged = json.loads(clock_backup)
+        protected = str(forged["protected"])
+        forged["protected"] = protected[:-1] + ("A" if protected[-1:] != "A" else "B")
+        lc._clock_path().write_text(json.dumps(forged), encoding="utf-8")
+        assert not lc.current_status(config).active
+        lc._clock_path().write_text(clock_backup, encoding="utf-8")
 
         # A stale local payment order can always be discarded and replaced.
         lc._save_pending_order({
