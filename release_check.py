@@ -40,7 +40,13 @@ REQUIRED_FILES = [
     "patient_registry_mixin.py",
     "license_client.py",
     "license_ui.py",
+    "licensing_server/core.py",
+    "licensing_server/store.py",
+    "licensing_server/yookassa.py",
+    "licensing_server/app.py",
+    "licensing_server/requirements.txt",
     "tests/license_client_regression.py",
+    "tests/license_server_regression.py",
     "tests/patient_registry_regression.py",
     "tools/docx_block_boundary_regression.py",
     "safety_integrity_check.py",
@@ -424,6 +430,9 @@ def main() -> None:
 
     _print_step("Monthly licensing and owner entitlement")
     _run([sys.executable, "tests/license_client_regression.py"], timeout=60)
+
+    _print_step("License server issuance and persistence")
+    _run([sys.executable, "tests/license_server_regression.py"], timeout=60)
 
     _print_step("Smoke tests")
     # smoke_test.py is the canonical executable entrypoint and delegates to the
