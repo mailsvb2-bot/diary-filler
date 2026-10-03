@@ -24,10 +24,10 @@ def canonical(payload: dict) -> bytes:
     return json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
 
 
-def signed_document(private_key, payload: dict) -> dict:
+def signed_document(private_key, payload: dict, *, schema: str = lc.LICENSE_SCHEMA) -> dict:
     signature = private_key.sign(canonical(payload))
     return {
-        "schema": lc.LICENSE_SCHEMA,
+        "schema": schema,
         "license": {
             "payload": payload,
             "signature_alg": "ed25519",
@@ -132,6 +132,16 @@ def main() -> None:
         assert lc.save_license(paid, config).active
         assert lc.current_status(config).mode == "paid"
 
+        # Existing v1 licenses were sold as fixed 31-day periods. They must
+        # remain usable until their originally signed expiration after upgrade.
+        legacy_v1 = signed_document(
+            private,
+            payload(machine, days=31),
+            schema=lc.LEGACY_LICENSE_SCHEMA,
+        )
+        legacy_status = lc._evaluate_document(legacy_v1, config)
+        assert legacy_status.active and legacy_status.mode == "paid"
+
         # Removing or corrupting the anti-rollback state after activation must
         # fail closed rather than reset the clock guard.
         clock_backup = lc._clock_path().read_text(encoding="utf-8")
@@ -187,6 +197,7 @@ def main() -> None:
         fixed_31_day_payload = payload(machine, days=31, issued_at=april_30)
         try:
             lc._validate_paid_calendar_period(
+                lc.LICENSE_SCHEMA,
                 fixed_31_day_payload,
                 lc._parse_utc(fixed_31_day_payload["valid_until"]),
             )
