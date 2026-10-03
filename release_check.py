@@ -38,6 +38,9 @@ REQUIRED_FILES = [
     "performance_check.py",
     "patient_registry.py",
     "patient_registry_mixin.py",
+    "license_client.py",
+    "license_ui.py",
+    "tests/license_client_regression.py",
     "tests/patient_registry_regression.py",
     "tools/docx_block_boundary_regression.py",
     "safety_integrity_check.py",
@@ -418,6 +421,9 @@ def main() -> None:
 
     _print_step("Patient registry and sick-leave chronology")
     _run([sys.executable, "tests/patient_registry_regression.py"], timeout=60)
+
+    _print_step("Monthly licensing and owner entitlement")
+    _run([sys.executable, "tests/license_client_regression.py"], timeout=60)
 
     _print_step("Smoke tests")
     # smoke_test.py is the canonical executable entrypoint and delegates to the

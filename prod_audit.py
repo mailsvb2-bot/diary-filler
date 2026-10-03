@@ -20,8 +20,9 @@ TARGET_VERSION_LABEL = "v1.4.27"
 # Two cohesive patient-registry modules are intentional production architecture:
 # one pure scanner/model and one GUI integration layer. The budget remains exact
 # so unrelated future modules cannot accumulate silently.
-MAX_PYTHON_FILES = 128
+MAX_PYTHON_FILES = 130
 REQUIRED_PATIENT_REGISTRY_RUNTIME_FILES = {"patient_registry.py", "patient_registry_mixin.py"}
+REQUIRED_LICENSE_RUNTIME_FILES = {"license_client.py", "license_ui.py"}
 MAX_TINY_PYTHON_FILES = 25
 # Release/CI probes are executable quality gates, not runtime architecture.
 # Keep the explicit runtime budget intact instead of "fixing" the gate by
@@ -223,6 +224,9 @@ def _assert_architecture_hygiene() -> None:
     missing_registry = sorted(REQUIRED_PATIENT_REGISTRY_RUNTIME_FILES - runtime_names)
     if missing_registry:
         _fail("Patient registry architecture incomplete: " + ", ".join(missing_registry))
+    missing_license = sorted(REQUIRED_LICENSE_RUNTIME_FILES - runtime_names)
+    if missing_license:
+        _fail("License runtime architecture incomplete: " + ", ".join(missing_license))
 
     tiny_files = []
     for path in py_files:

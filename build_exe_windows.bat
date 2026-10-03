@@ -49,7 +49,15 @@ if errorlevel 1 (
   exit /b 1
 )
 
-echo [4/6] Проверяю production-safety gate...
+echo [4/7] Формирую публичную конфигурацию лицензирования...
+python tools\render_license_build_config.py --output build\generated\license_build_config.py
+if errorlevel 1 (
+  echo [ОШИБКА] Конфигурация лицензирования некорректна.
+  if "%CI%"=="" pause
+  exit /b 1
+)
+
+echo [5/7] Проверяю production-safety gate...
 python tools\production_safety_gate.py
 if errorlevel 1 (
   echo [ОШИБКА] Production-safety gate не прошёл. EXE не собираю.
@@ -57,7 +65,7 @@ if errorlevel 1 (
   exit /b 1
 )
 
-echo [5/6] Проверяю release-gate...
+echo [6/7] Проверяю release-gate...
 python release_check.py
 if errorlevel 1 (
   echo [ОШИБКА] Release-gate не прошёл. EXE не собираю.
@@ -65,7 +73,7 @@ if errorlevel 1 (
   exit /b 1
 )
 
-echo [6/6] Собираю portable EXE и быстрый installed runtime через PyInstaller...
+echo [7/7] Собираю portable EXE и быстрый installed runtime через PyInstaller...
 set ADD_TEMPLATES=
 if exist templates (
   set ADD_TEMPLATES=--add-data "templates;templates"
@@ -81,6 +89,9 @@ python -m PyInstaller ^
   --name MedicalDiaryAutofill ^
   --version-file version_info.txt ^
   --noupx ^
+  --paths build\generated ^
+  --hidden-import license_build_config ^
+  --collect-all cryptography ^
   %ADD_TEMPLATES% ^
   --collect-all docx ^
   --collect-all lxml ^
@@ -112,6 +123,9 @@ python -m PyInstaller ^
   --specpath build\installed-spec ^
   --version-file "%CD%\version_info.txt" ^
   --noupx ^
+  --paths build\generated ^
+  --hidden-import license_build_config ^
+  --collect-all cryptography ^
   %ADD_TEMPLATES% ^
   --collect-all docx ^
   --collect-all lxml ^
