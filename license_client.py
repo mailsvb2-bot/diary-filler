@@ -49,6 +49,10 @@ class PaymentPendingError(LicenseError):
     pass
 
 
+class PaymentTerminalError(LicenseError):
+    pass
+
+
 class LicenseExpiredError(LicenseError):
     pass
 
@@ -144,6 +148,10 @@ def _install_id_path() -> Path:
     return _runtime_dir() / "license-install-id.txt"
 
 
+def _machine_fingerprint_cache_path() -> Path:
+    return _runtime_dir() / "license-machine-fingerprint.json"
+
+
 def _atomic_write_text(path: Path, text: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(path.suffix + ".tmp")
@@ -185,17 +193,45 @@ def _windows_machine_guid() -> str:
         return ""
 
 
+def _read_cached_machine_fingerprint() -> str:
+    try:
+        payload = json.loads(_machine_fingerprint_cache_path().read_text(encoding="utf-8"))
+        value = str(payload.get("fingerprint") or "").strip().lower()
+        if payload.get("schema") == 1 and len(value) == 64 and all(ch in "0123456789abcdef" for ch in value):
+            return value
+    except Exception:
+        pass
+    return ""
+
+
+def _cache_machine_fingerprint(value: str) -> None:
+    try:
+        _atomic_write_text(
+            _machine_fingerprint_cache_path(),
+            json.dumps({"schema": 1, "fingerprint": value}, sort_keys=True) + "\n",
+        )
+    except OSError:
+        pass
+
+
 def machine_fingerprint() -> str:
     machine_guid = _windows_machine_guid().strip().lower()
     if machine_guid:
         identity = f"windows-machine-guid-v1|{machine_guid}"
-    else:
-        identity = (
-            "portable-install-v1|"
-            + platform.system().strip().lower()
-            + "|"
-            + _install_id().strip().lower()
-        )
+        fingerprint = hashlib.sha256(identity.encode("utf-8")).hexdigest()
+        _cache_machine_fingerprint(fingerprint)
+        return fingerprint
+
+    cached = _read_cached_machine_fingerprint()
+    if cached:
+        return cached
+
+    identity = (
+        "portable-install-v1|"
+        + platform.system().strip().lower()
+        + "|"
+        + _install_id().strip().lower()
+    )
     return hashlib.sha256(identity.encode("utf-8")).hexdigest()
 
 
@@ -462,7 +498,8 @@ def _evaluate_document(
             True,
         )
 
-    _validate_clock(now, require_initialized=not allow_uninitialized_clock)
+    if not allow_uninitialized_clock:
+        _validate_clock(now, require_initialized=True)
     valid_from = _parse_utc(str(payload.get("valid_from") or ""))
     valid_until = _parse_utc(str(payload.get("valid_until") or ""))
     if now < valid_from:
@@ -473,6 +510,11 @@ def _evaluate_document(
         raise LicenseError("license is not valid for this computer")
 
     _validate_paid_calendar_period(str(document.get("schema") or ""), payload, valid_until)
+    if allow_uninitialized_clock:
+        try:
+            _clock_path().unlink(missing_ok=True)
+        except OSError:
+            pass
     _record_clock(now)
     return LicenseStatus(
         True,
@@ -532,17 +574,10 @@ def current_status(config: LicenseRuntimeConfig | None = None) -> LicenseStatus:
 
 def save_license(document: dict, config: LicenseRuntimeConfig | None = None) -> LicenseStatus:
     config = config or runtime_config()
-    # A license returned by the trusted server is a safe point to rebuild
-    # local anti-rollback state. Existing clock corruption must never strand
-    # an already-paid user after successful server verification.
-    try:
-        status = _evaluate_document(document, config, allow_uninitialized_clock=True)
-    except LicenseError:
-        try:
-            _clock_path().unlink(missing_ok=True)
-        except OSError:
-            pass
-        status = _evaluate_document(document, config, allow_uninitialized_clock=True)
+    # This entry point is used only for a freshly server-returned signed
+    # entitlement. It may rebuild damaged local anti-rollback state, but all
+    # signature/product/machine/period checks still run before the file is saved.
+    status = _evaluate_document(document, config, allow_uninitialized_clock=True)
     if not status.active:
         if status.mode == "expired":
             raise LicenseExpiredError(status.message)
@@ -700,7 +735,7 @@ def refresh_paid_order(config: LicenseRuntimeConfig | None = None) -> LicenseSta
     order_status = str(status.get("status") or "").strip().lower()
     if order_status in {"cancelled", "canceled", "expired", "failed", "refunded"}:
         discard_pending_order()
-        raise LicenseError("Предыдущий счёт больше недействителен. Создайте новый.")
+        raise PaymentTerminalError("Предыдущий счёт больше недействителен. Создайте новый.")
     if order_status not in {"paid", "license_issued"}:
         raise PaymentPendingError("Оплата ещё не подтверждена")
     machine = machine_fingerprint()
@@ -758,7 +793,20 @@ def recover_paid_license(config: LicenseRuntimeConfig | None = None) -> LicenseS
             body={"machine_hash": machine},
             bearer=token,
         )
-        return save_license(document, config)
+        try:
+            return save_license(document, config)
+        except LicenseExpiredError:
+            # The server confirmed the old entitlement itself, so it is safe to
+            # persist that signed expired state and allow a genuinely new payment.
+            _atomic_write_text(
+                license_path(),
+                json.dumps(document, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+            )
+            try:
+                _active_order_path().unlink(missing_ok=True)
+            except OSError:
+                pass
+            raise
     except LicenseExpiredError:
         raise
     except PaidLicenseRecoveryError:
