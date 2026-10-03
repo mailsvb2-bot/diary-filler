@@ -26,6 +26,24 @@ def _format_status(status) -> str:
     return status.message
 
 
+def _activate_owner_only(parent, config, *, prompt: str) -> bool:
+    code = simpledialog.askstring(
+        "Доступ владельца",
+        prompt,
+        show="•",
+        parent=parent,
+    )
+    if not code:
+        return False
+    try:
+        status = activate_owner(code, config)
+    except LicenseError as exc:
+        messagebox.showerror("Доступ владельца", str(exc), parent=parent)
+        return False
+    messagebox.showinfo("Доступ владельца", _format_status(status), parent=parent)
+    return True
+
+
 def ensure_license(parent, *, interactive: bool = True) -> bool:
     config = runtime_config()
     status = current_status(config)
@@ -33,6 +51,26 @@ def ensure_license(parent, *, interactive: bool = True) -> bool:
         return True
     if not interactive:
         return False
+
+    # A previously signed owner entitlement must never enter the paid UX.
+    # If Windows was reinstalled or MachineGuid changed, request only the
+    # owner bootstrap code and reissue the entitlement for this computer.
+    if status.mode == "owner_reactivation":
+        while True:
+            if _activate_owner_only(
+                parent,
+                config,
+                prompt="Повторно введите код владельца для этого компьютера:",
+            ):
+                return True
+            retry = messagebox.askretrycancel(
+                "Доступ владельца",
+                "Безлимитный доступ владельца не активирован.\n"
+                "Оплата для владельца не требуется.",
+                parent=parent,
+            )
+            if not retry:
+                return False
 
     while True:
         choice = messagebox.askyesnocancel(
@@ -47,22 +85,14 @@ def ensure_license(parent, *, interactive: bool = True) -> bool:
         if choice is None:
             return False
         if choice is False:
-            code = simpledialog.askstring(
-                "Доступ владельца",
-                "Введите код владельца:",
-                show="•",
-                parent=parent,
-            )
-            if not code:
-                continue
-            try:
-                status = activate_owner(code, config)
-            except LicenseError as exc:
-                messagebox.showerror("Лицензия", str(exc), parent=parent)
-                status = current_status(config)
-                continue
-            messagebox.showinfo("Лицензия", _format_status(status), parent=parent)
-            return True
+            if _activate_owner_only(
+                parent,
+                config,
+                prompt="Введите код владельца:",
+            ):
+                return True
+            status = current_status(config)
+            continue
 
         pending = pending_payment_details()
         try:
