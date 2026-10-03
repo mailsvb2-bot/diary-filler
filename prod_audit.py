@@ -408,6 +408,8 @@ def _assert_final_user_flow_gate_contract() -> None:
         (release_workflow, 'MEDICAL_AUTOFILL_LICENSE_REQUIRED: "1"', "official release must force license enforcement"),
         (release_workflow, "MEDICAL_AUTOFILL_LICENSE_SERVER_URL", "official release must embed license server URL"),
         (release_workflow, "MEDICAL_AUTOFILL_LICENSE_PUBLIC_KEY_B64", "official release must embed Ed25519 public key"),
+        (release_workflow, "Verify live license server trust anchor", "official release must verify the live license server before packaging"),
+        (release_workflow, "python tools/license_server_preflight.py", "official release must compare live server product/key with embedded trust anchor"),
         (release_workflow, "Create guarded release tag", "official release must create its immutable tag only after validation"),
         (release_workflow, "gh release create", "official release needs a stable GitHub Release channel"),
     ]
