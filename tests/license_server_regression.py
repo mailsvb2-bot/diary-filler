@@ -74,6 +74,8 @@ def main() -> None:
     assert "def reconcile_payment(row: dict)" in app_source
     assert "row = reconcile_payment(row)" in app_source
     assert "provider.get_payment" in app_source
+    assert '"server_time": datetime.now(timezone.utc).isoformat()' in app_source
+    assert 'order_limiter.allow(f"{client_ip(request)}|{machine}")' in app_source
 
     token = new_order_access_token()
     digest = order_token_hash(token)
