@@ -33,6 +33,6 @@
     "tools/document_mechanics_change_approval.json": "3dff263dd4319a8ee4fbd4f7da0fc48de194f159",
     "version_info.txt": "4025c81033d789831bf7ad2f52460beebefdfafa",
     "window_mixin.py": "f86165cb8f828cafa288d0280fa0681073790787",
-    "tests/windows_ci_artifact_licensing_contract.py": "3f7b442fca0c08ba692dd877e92fe53d29c431fa"
+    "tests/windows_ci_artifact_licensing_contract.py": "ca6fd936275adee83a5efe2be671bb3ee6fc184d"
   }
 }
