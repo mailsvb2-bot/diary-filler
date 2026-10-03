@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "e48c4dd1f5693b29e4ddc2558eeb8ba4acb797cb",
-  "reason": "Add monthly Ed25519 licensing with machine binding, DPAPI-protected order access, owner entitlement, build-time public configuration, and a mandatory generation gate without changing medical document semantics.",
+  "reason": "Add monthly Ed25519 licensing, in-repository YooKassa license server, machine binding, owner entitlement, fail-closed client gates, and mandatory client/server regressions without changing medical document semantics.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -20,14 +20,24 @@
     "build_exe_windows.bat": "8bdcd77c4b783c0dad34947f7792264a331328b3",
     "license_client.py": "c05c2cf2f5a195694d502dd2ff95058ab0ee1d56",
     "license_ui.py": "19d3a97abe94334c35f2179cd4e06c3b56881fad",
+    "licensing_server/__init__.py": "99885d7b77bbac2bbc88514ea9cf2496c75c3748",
+    "licensing_server/app.py": "e01d39f9f7eebe60946cda5e9dd409e2b2f3fe55",
+    "licensing_server/core.py": "f0bd1f0e7aceaa9254f9e3edef6a3e7c868895c8",
+    "licensing_server/requirements.txt": "e6c52380317d82d2c03bf38af198804758c399c0",
+    "licensing_server/store.py": "43e65eb556d4674966b3719c33d56fc1f9ea62ca",
+    "licensing_server/yookassa.py": "21d5db366999ccf6b2861be25bdb15470fd0478e",
     "main.py": "bd90d09ef6bb3fcb3053696ce456bc1529fdc850",
     "prod_audit.py": "eb76a8c70a7838af7da40e54085a7cfd9b1d2de4",
-    "release_check.py": "77255ad878673f8a47452138dd51767b00eb4877",
+    "release_check.py": "e0d66d46c5cbb1e769bb4bfd7900e875641c18b8",
     "requirements.txt": "2f16f85d61da281ac1538a925dbed06d851a1a45",
     "requirements_build.txt": "818e47dcfb686e42af78af3c68b30c5a8e317245",
     "tests/license_client_regression.py": "843dfa4a6a25595d192a7796c2fa8967a720f8dd",
+    "tests/license_server_regression.py": "ef1f3b4c11e42bb4a94dc18f8fd8aa647bb149d7",
+    "tests/regression_surface_inventory.py": "92e2f1776dccbb1e0705e0f7966fbd6d51cc5eca",
     "tools/document_mechanics_change_approval.json": "a305d5c722d556dc57dd2dc68483c34060052ee7",
-    "tools/render_license_build_config.py": "bb72ada22a4eae4872ddac23278bca9e54943616",
-    "tools/production_safety_gate.py": "7231883d53b492f99636c3f085c383585c13e30f"
+    "tools/generate_license_server_keypair.py": "058f2dbbe1bb69356f30f9308d34a43e113d970b",
+    "tools/production_safety_gate.py": "7231883d53b492f99636c3f085c383585c13e30f",
+    "tools/regression_lock_check.py": "55606f7da7f68ccff83414d9596d7334cbfc1700",
+    "tools/render_license_build_config.py": "bb72ada22a4eae4872ddac23278bca9e54943616"
   }
 }
