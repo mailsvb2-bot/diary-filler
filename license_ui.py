@@ -100,7 +100,17 @@ def _activate_code(parent, config, *, prompt: str = "Введите код ак�
 
 
 def _payment_flow(parent, config):
-    pending = pending_payment_details()
+    try:
+        pending = pending_payment_details()
+    except LicenseError as exc:
+        messagebox.showwarning(
+            "Проверка оплаты",
+            str(exc)
+            + "\n\nНовый счёт не создан, чтобы исключить повторную оплату.",
+            parent=parent,
+        )
+        return None
+
     if pending:
         try:
             already_paid = refresh_paid_order(config)
