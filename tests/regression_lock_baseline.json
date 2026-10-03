@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "b7b517b3bfe1412d47c6e585b0da177f9cc92ade",
-  "baseline_note": "v1.4.29 owner/superadmin hardening validated on merge commit b7b517b3bfe1412d47c6e585b0da177f9cc92ade: License Server CI #32 and Windows EXE Build #1515 passed. Active signed owner access bypasses all licensing/payment UI, owner access survives missing/corrupt anti-clock state, MachineGuid mismatch routes only to owner reactivation, DPAPI owner recovery prevents fallback to monthly payment, server/client owner contract is covered, and the full medical/golden DOCX/packaged EXE/installer regression contour remained green.",
+  "baseline_ref": "c02a7aafe8a061e1c9d6fe77006f4c501471d40a",
+  "baseline_note": "v1.4.30 licensing distribution hardening validated on merge commit c02a7aafe8a061e1c9d6fe77006f4c501471d40a: License Server CI #42 and Windows EXE Build #1525 passed. Owner/superadmin activation remains server-verified and payment-free for privileged access, calendar-month paid licensing remains enforced, and ordinary Windows CI can no longer publish unlocked EXE/Installer artifacts; both binary upload steps were skipped without production license URL/key while source evidence remained available.",
   "required_approval_evidence": [
     "ci_gate_lock",
     "patient_registry_regression"
