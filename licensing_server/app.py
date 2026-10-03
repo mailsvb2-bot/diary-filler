@@ -126,12 +126,15 @@ def create_app() -> FastAPI:
     def create_order(req: OrderRequest, request: Request) -> dict:
         if req.plan != "doctor_start":
             raise HTTPException(400, "unsupported plan")
-        if not order_limiter.allow(client_ip(request)):
-            raise HTTPException(429, "too many orders")
         try:
             machine = validate_machine_hash(req.machine_hash)
         except LicensingServerError as exc:
             raise HTTPException(400, str(exc)) from exc
+        # Include the machine identity in the bucket. Behind a reverse proxy
+        # many legitimate doctors may share request.client.host; they must not
+        # collectively consume one 30-order allowance.
+        if not order_limiter.allow(f"{client_ip(request)}|{machine}"):
+            raise HTTPException(429, "too many orders")
         order_id = str(uuid.uuid4())
         access_token = new_order_access_token()
         try:
