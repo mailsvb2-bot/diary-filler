@@ -13,9 +13,10 @@ import uuid
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
+from license_calendar import add_calendar_month
+
 PRODUCT_ID = "diary_filler"
 LICENSE_SCHEMA = "dokkomplekt.license.v1"
-MONTHLY_LICENSE_DAYS = 31
 OWNER_SCRYPT_SALT = b"diary-filler-owner-bootstrap-v1"
 OWNER_SCRYPT_N = 1 << 14
 OWNER_SCRYPT_R = 8
@@ -124,7 +125,7 @@ def issue_license(
     valid_until = (
         datetime(9999, 12, 31, 23, 59, 59, tzinfo=timezone.utc)
         if owner
-        else issued + timedelta(days=MONTHLY_LICENSE_DAYS)
+        else add_calendar_month(issued)
     )
     metadata = {"product_id": PRODUCT_ID}
     plan = "doctor_start"
