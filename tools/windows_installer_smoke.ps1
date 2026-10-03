@@ -4,7 +4,8 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $installerSource = (Resolve-Path $InstallerPath).Path
-$installer = Join-Path $env:RUNNER_TEMP 'MedicalDiaryAutofill-Setup-delete-probe.exe'
+$installerProbeDir = Join-Path $env:RUNNER_TEMP 'Проверка установщика с пробелами'
+$installer = Join-Path $installerProbeDir 'MedicalDiaryAutofill Установщик тест.exe'
 $installDir = Join-Path $env:RUNNER_TEMP 'MedicalDiaryAutofill-Installer-Smoke'
 $selfDeleteHelper = Join-Path $installDir '.MedicalDiaryAutofill-delete-setup.cmd'
 $runKeyPath = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run'
@@ -70,6 +71,7 @@ function Wait-ForInstallerSelfDelete {
 
 try {
     Stop-AppProcesses
+    New-Item -ItemType Directory -Path $installerProbeDir -Force | Out-Null
     Remove-Item -LiteralPath $installer -Force -ErrorAction SilentlyContinue
     Copy-Item -LiteralPath $installerSource -Destination $installer -Force
     Remove-ItemProperty -Path $runKeyPath -Name $runValueName -ErrorAction SilentlyContinue
@@ -333,6 +335,7 @@ finally {
     Stop-AppProcesses
     Remove-Item -LiteralPath $installer -Force -ErrorAction SilentlyContinue
     Remove-Item -LiteralPath $selfDeleteHelper -Force -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath $installerProbeDir -Recurse -Force -ErrorAction SilentlyContinue
     Remove-ItemProperty -Path $runKeyPath -Name $runValueName -ErrorAction SilentlyContinue
     Remove-Item -LiteralPath $startupScript -Force -ErrorAction SilentlyContinue
     if (Test-Path $installDir) {

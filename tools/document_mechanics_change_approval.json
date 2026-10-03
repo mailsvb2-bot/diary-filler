@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "base_sha": "902e46aa6ed16f0752db2a77109286997b0922f4",
+  "reason": "Version-only app_config change for the v1.4.27 installer self-delete patch release; document-generation mechanics are unchanged.",
+  "approved_blobs": {
+    "app_config.py": "2f93142215b781b4ab2188d412e6f45a95b777d4"
+  }
+}

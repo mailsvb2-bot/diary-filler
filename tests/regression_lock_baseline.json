@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "c1fbac76fe7f8617ae595f14aee6762d199f5f8a",
-  "baseline_note": "Installer self-delete final candidate validated on Windows CI run #1446: automatic Setup self-deletion, full retry-window coverage, cleanup-helper self-removal, live background agent preservation, packaged E2E, installer/uninstall smoke, and artifact publication all passed.",
+  "baseline_ref": "e48c4dd1f5693b29e4ddc2558eeb8ba4acb797cb",
+  "baseline_note": "v1.4.27 installer hardening candidate validated on Windows CI run #1456: synchronized release identity, Cyrillic-and-spaces Setup path, automatic Setup self-deletion, cleanup-helper self-removal, live background-agent preservation, packaged E2E, installer/uninstall smoke, and artifact publication all passed.",
   "required_approval_evidence": [
     "ci_gate_lock",
     "patient_registry_regression"
