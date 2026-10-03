@@ -258,7 +258,17 @@ def main() -> None:
             paid_status = lc.refresh_paid_order(config)
             assert paid_status.active and paid_status.mode == "paid"
             assert lc._active_order_path().exists()
+            assert lc._active_order_backup_path().exists()
             assert not lc._pending_order_path().exists()
+
+            active_primary = lc._active_order_path().read_text(encoding="utf-8")
+            lc._active_order_path().unlink()
+            backup_loaded = lc._load_active_order()
+            assert backup_loaded["order_id"] == recovery_order["order_id"]
+            lc._active_order_path().write_text("{broken", encoding="utf-8")
+            backup_loaded = lc._load_active_order()
+            assert backup_loaded["order_id"] == recovery_order["order_id"]
+            lc._active_order_path().write_text(active_primary, encoding="utf-8")
 
             lc.license_path().write_text("{broken", encoding="utf-8")
             lc._clock_path().write_text("{broken", encoding="utf-8")
@@ -817,6 +827,7 @@ def main() -> None:
         assert "license-clock.json" not in installer_text
         assert "license-active-order.json" not in installer_text
         assert "license-machine-fingerprint.json" not in installer_text
+        assert "paid-entitlement-recovery.json" not in installer_text
         assert "owner-entitlement.marker" not in installer_text
 
         # Restore a clean paid-license clock state for the independent rollback
