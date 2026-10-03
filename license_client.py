@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone, timedelta
 import base64
 import hashlib
+import hmac
 import json
 import os
 from pathlib import Path
@@ -21,7 +22,7 @@ import uuid
 PRODUCT_ID = "diary_filler"
 DEFAULT_PLAN = "doctor_start"
 LICENSE_SCHEMA = "dokkomplekt.license.v1"
-CLOCK_ROLLBACK_TOLERANCE = timedelta(hours=48)
+CLOCK_ROLLBACK_TOLERANCE = timedelta(minutes=15)
 MAX_PAID_LICENSE_DAYS = 35
 
 
@@ -209,6 +210,59 @@ def _verify_signature(document: dict, public_key_b64: str) -> dict:
     return payload
 
 
+def _fallback_integrity_key(purpose: str) -> bytes:
+    material = (
+        "medical-autofill-local-integrity-v1|"
+        + purpose
+        + "|"
+        + _windows_machine_guid().strip().lower()
+        + "|"
+        + _install_id().strip().lower()
+    )
+    return hashlib.sha256(material.encode("utf-8")).digest()
+
+
+def _protect_local_blob(raw: bytes, purpose: str) -> str:
+    if os.name == "nt":
+        try:
+            import win32crypt
+
+            protected = win32crypt.CryptProtectData(raw, purpose, None, None, None, 0)
+            return "dpapi:" + base64.b64encode(protected).decode("ascii")
+        except Exception as exc:
+            raise LicenseError("Windows could not protect local license state") from exc
+    key = _fallback_integrity_key(purpose)
+    mac = hmac.new(key, raw, hashlib.sha256).digest()
+    return "hmac:" + base64.b64encode(mac + raw).decode("ascii")
+
+
+def _unprotect_local_blob(value: str, purpose: str) -> bytes:
+    scheme, _, encoded = str(value or "").partition(":")
+    try:
+        raw = base64.b64decode(encoded, validate=True)
+    except Exception as exc:
+        raise LicenseError("protected local license state is damaged") from exc
+    if scheme == "dpapi":
+        if os.name != "nt":
+            raise LicenseError("DPAPI state is unavailable on this platform")
+        try:
+            import win32crypt
+
+            _description, clear = win32crypt.CryptUnprotectData(raw, None, None, None, 0)
+            return clear
+        except Exception as exc:
+            raise LicenseError("Windows could not unlock local license state") from exc
+    if scheme == "hmac":
+        if len(raw) < 32:
+            raise LicenseError("protected local license state is damaged")
+        mac, clear = raw[:32], raw[32:]
+        expected = hmac.new(_fallback_integrity_key(purpose), clear, hashlib.sha256).digest()
+        if not hmac.compare_digest(mac, expected):
+            raise LicenseError("protected local license state failed integrity check")
+        return clear
+    raise LicenseError("unsupported protected local license state")
+
+
 def _read_clock_state() -> datetime | None:
     path = _clock_path()
     try:
@@ -218,10 +272,17 @@ def _read_clock_state() -> datetime | None:
     except OSError as exc:
         raise LicenseError("license clock state is unreadable") from exc
     try:
-        payload = json.loads(raw)
-        if payload.get("schema") != 1:
+        outer = json.loads(raw)
+        if outer.get("schema") != 2:
             raise ValueError("unsupported clock schema")
+        clear = _unprotect_local_blob(
+            str(outer.get("protected") or ""),
+            "MedicalDiaryAutofill license clock",
+        )
+        payload = json.loads(clear.decode("utf-8"))
         return _parse_utc(str(payload.get("last_seen_utc") or ""))
+    except LicenseError:
+        raise
     except Exception as exc:
         raise LicenseError("license clock state is damaged") from exc
 
@@ -230,9 +291,16 @@ def _record_clock(now: datetime) -> None:
     previous = _read_clock_state()
     if previous is not None and previous > now:
         now = previous
+    clear = json.dumps(
+        {"last_seen_utc": now.isoformat()},
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    protected = _protect_local_blob(clear, "MedicalDiaryAutofill license clock")
     _atomic_write_text(
         _clock_path(),
-        json.dumps({"schema": 1, "last_seen_utc": now.isoformat()}, ensure_ascii=False) + "\n",
+        json.dumps({"schema": 2, "protected": protected}, ensure_ascii=False) + "\n",
     )
 
 
@@ -341,44 +409,20 @@ def save_license(document: dict, config: LicenseRuntimeConfig | None = None) -> 
 
 
 def _protect_order_token(token: str) -> str:
-    raw = token.encode("utf-8")
-    if os.name == "nt":
-        try:
-            import win32crypt
-
-            protected = win32crypt.CryptProtectData(
-                raw,
-                "MedicalDiaryAutofill license order",
-                None,
-                None,
-                None,
-                0,
-            )
-            return "dpapi:" + base64.b64encode(protected).decode("ascii")
-        except Exception as exc:
-            raise LicenseError("Windows could not protect the order token") from exc
-    return "plain:" + base64.b64encode(raw).decode("ascii")
+    return _protect_local_blob(
+        token.encode("utf-8"),
+        "MedicalDiaryAutofill license order",
+    )
 
 
 def _unprotect_order_token(value: str) -> str:
-    scheme, _, encoded = str(value or "").partition(":")
     try:
-        raw = base64.b64decode(encoded, validate=True)
-    except Exception as exc:
+        return _unprotect_local_blob(
+            value,
+            "MedicalDiaryAutofill license order",
+        ).decode("utf-8")
+    except UnicodeDecodeError as exc:
         raise LicenseError("saved order token is damaged") from exc
-    if scheme == "dpapi":
-        if os.name != "nt":
-            raise LicenseError("DPAPI token is unavailable on this platform")
-        try:
-            import win32crypt
-
-            _description, clear = win32crypt.CryptUnprotectData(raw, None, None, None, 0)
-            return clear.decode("utf-8")
-        except Exception as exc:
-            raise LicenseError("Windows could not unlock the order token") from exc
-    if scheme == "plain" and os.name != "nt":
-        return raw.decode("utf-8")
-    raise LicenseError("unsupported saved order token")
 
 
 def _save_pending_order(payload: dict) -> None:
