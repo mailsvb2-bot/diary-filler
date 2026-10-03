@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "e48c4dd1f5693b29e4ddc2558eeb8ba4acb797cb",
+  "reason": "Add monthly Ed25519 licensing with machine binding, DPAPI-protected order access, owner entitlement, build-time public configuration, and a mandatory generation gate without changing medical document semantics.",
+  "required_evidence": [
+    "document_mechanics_guard",
+    "full_patient_replay",
+    "golden_docx",
+    "staff_profile_regression",
+    "gender_generation_matrix",
+    "desktop_intake_contract",
+    "intake_lifecycle_regression",
+    "packaged_desktop_intake_e2e",
+    "installer_uninstall_smoke",
+    "ci_gate_lock",
+    "patient_registry_regression"
+  ],
+  "approved_blobs": {
+    "actions_creation_orchestrator.py": "34d8c621d28ec261e6753ded8921f4c651699898",
+    "build_exe_windows.bat": "ce66cf48bc15be04f5d3ce97d78459324968891e",
+    "license_client.py": "d4d824b5e080290a3386cee56d78c3f9ff32bd8a",
+    "license_ui.py": "ddd9f7fb878556dfd7fbf56fb716ff2da2d27b57",
+    "main.py": "bd90d09ef6bb3fcb3053696ce456bc1529fdc850",
+    "prod_audit.py": "eb76a8c70a7838af7da40e54085a7cfd9b1d2de4",
+    "release_check.py": "77255ad878673f8a47452138dd51767b00eb4877",
+    "requirements.txt": "2f16f85d61da281ac1538a925dbed06d851a1a45",
+    "requirements_build.txt": "818e47dcfb686e42af78af3c68b30c5a8e317245",
+    "tests/license_client_regression.py": "a0e1e8ec8a7640b340cfd9514aa684f740fcaea9",
+    "tools/document_mechanics_change_approval.json": "a305d5c722d556dc57dd2dc68483c34060052ee7",
+    "tools/render_license_build_config.py": "bb72ada22a4eae4872ddac23278bca9e54943616"
+  }
+}
