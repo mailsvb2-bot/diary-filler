@@ -239,6 +239,36 @@ def main() -> None:
         finally:
             lc.machine_fingerprint = old_fingerprint
 
+        # An already-active owner must bypass every licensing dialog and
+        # every payment function on ordinary startup/generation checks.
+        old_runtime_config = lui.runtime_config
+        old_current_status = lui.current_status
+        old_begin_payment = lui.begin_monthly_payment
+        old_askyesnocancel = lui.messagebox.askyesnocancel
+        try:
+            lui.runtime_config = lambda: config
+            lui.current_status = lambda _config: lc.LicenseStatus(
+                True,
+                "owner",
+                "owner",
+                "vip",
+                None,
+                True,
+            )
+            lui.begin_monthly_payment = lambda *args, **kwargs: (_ for _ in ()).throw(
+                AssertionError("active owner reached monthly payment")
+            )
+            lui.messagebox.askyesnocancel = lambda *args, **kwargs: (_ for _ in ()).throw(
+                AssertionError("active owner reached licensing dialog")
+            )
+            assert lui.ensure_license(None, interactive=True)
+            assert lui.ensure_generation_license(None)
+        finally:
+            lui.runtime_config = old_runtime_config
+            lui.current_status = old_current_status
+            lui.begin_monthly_payment = old_begin_payment
+            lui.messagebox.askyesnocancel = old_askyesnocancel
+
         # The owner-reactivation UI has no route to monthly payment.
         old_runtime_config = lui.runtime_config
         old_current_status = lui.current_status
