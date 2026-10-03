@@ -19,11 +19,12 @@ import urllib.parse
 import urllib.request
 import uuid
 
+from license_calendar import add_calendar_month
+
 PRODUCT_ID = "diary_filler"
 DEFAULT_PLAN = "doctor_start"
 LICENSE_SCHEMA = "dokkomplekt.license.v1"
 CLOCK_ROLLBACK_TOLERANCE = timedelta(minutes=15)
-MAX_PAID_LICENSE_DAYS = 35
 
 
 class LicenseError(RuntimeError):
@@ -329,6 +330,13 @@ def _validate_config(config: LicenseRuntimeConfig) -> None:
         raise LicenseError("license public key must be 32 bytes")
 
 
+def _validate_paid_calendar_period(payload: dict, valid_until: datetime) -> None:
+    issued_at = _parse_utc(str(payload.get("issued_at") or ""))
+    expected_until = add_calendar_month(issued_at)
+    if valid_until != expected_until:
+        raise LicenseError("paid diary-filler license is not exactly one calendar month")
+
+
 def _evaluate_document(
     document: dict,
     config: LicenseRuntimeConfig,
@@ -362,9 +370,7 @@ def _evaluate_document(
         and metadata.get("access") == "unlimited"
     )
     if not owner:
-        duration = valid_until - valid_from
-        if duration > timedelta(days=MAX_PAID_LICENSE_DAYS):
-            raise LicenseError("paid diary-filler license exceeds monthly duration")
+        _validate_paid_calendar_period(payload, valid_until)
 
     _record_clock(now)
     return LicenseStatus(
