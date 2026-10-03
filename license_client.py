@@ -557,7 +557,16 @@ def current_status(config: LicenseRuntimeConfig | None = None) -> LicenseStatus:
             )
         return LicenseStatus(False, "invalid", "Файл лицензии повреждён")
     try:
-        return _evaluate_document(document, config)
+        status = _evaluate_document(document, config)
+        if (
+            not status.active
+            and status.mode == "expired"
+            and _has_active_order_credentials()
+        ):
+            return _paid_recovery_status(
+                "Требуется проверить срок уже оплаченной лицензии"
+            )
+        return status
     except OwnerReactivationRequired as exc:
         return _owner_reactivation_status(str(exc))
     except LicenseError as exc:
