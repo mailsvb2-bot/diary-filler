@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "24863c10a410e412ed4ad751fa488ebd797d6715",
+  "reason": "Add an exact Windows lifecycle regression proving the downloaded Setup executable can be deleted after Setup exits while the installed background intake agent remains running.",
+  "required_evidence": [
+    "document_mechanics_guard",
+    "full_patient_replay",
+    "golden_docx",
+    "staff_profile_regression",
+    "gender_generation_matrix",
+    "desktop_intake_contract",
+    "intake_lifecycle_regression",
+    "packaged_desktop_intake_e2e",
+    "installer_uninstall_smoke",
+    "ci_gate_lock",
+    "patient_registry_regression"
+  ],
+  "approved_blobs": {
+    "tools/windows_installer_smoke.ps1": "890dd80915bbbbea5bd22873ccec75926c60054f"
+  }
+}
