@@ -32,7 +32,7 @@
     "licensing_server/requirements.txt": "e6c52380317d82d2c03bf38af198804758c399c0",
     "licensing_server/store.py": "43e65eb556d4674966b3719c33d56fc1f9ea62ca",
     "licensing_server/yookassa.py": "21d5db366999ccf6b2861be25bdb15470fd0478e",
-    "main.py": "bd90d09ef6bb3fcb3053696ce456bc1529fdc850",
+    "main.py": "bd7d400e8ce59e58506d4b7499d3e3180039eb58",
     "prod_audit.py": "4f10968ad1e1ff87fbf35f43881f743025bb03cc",
     "pyproject.toml": "3f91cb3c50b6fe2f50afb988b808e7979ff10fde",
     "release_check.py": "7c805b42e42d5178b4001e900e1c38202ddfb122",
@@ -49,6 +49,7 @@
     "tools/regression_lock_check.py": "55606f7da7f68ccff83414d9596d7334cbfc1700",
     "tools/render_license_build_config.py": "bb72ada22a4eae4872ddac23278bca9e54943616",
     "version_info.txt": "03b7bea2966e9a297410e0622183c6ab78726d28",
-    ".github/workflows/license-server-ci.yml": "5f38b538f50ebe908c3878726effcb181a1830ec"
+    ".github/workflows/license-server-ci.yml": "5f38b538f50ebe908c3878726effcb181a1830ec",
+    "tests/intake_lifecycle_regression.py": "d9fd3bccf9d5fd3a9148f6a06d9b3834dda7b076"
   }
 }
