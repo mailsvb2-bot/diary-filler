@@ -243,7 +243,11 @@ def main() -> None:
             def _paid_request(_config, method, path, *, body=None, bearer=""):
                 recovery_calls.append((method, path, body, bearer))
                 if method == "GET" and path.endswith("/status"):
-                    return {"status": "license_issued", "amount_rub": 100}
+                    return {
+                        "status": "license_issued",
+                        "amount_rub": 100,
+                        "server_time": paid["license"]["payload"]["issued_at"],
+                    }
                 if method == "POST" and path.endswith("/activate-machine"):
                     return {"activated": True, "machine_hash": machine}
                 if method == "POST" and path.endswith("/license"):
@@ -270,6 +274,69 @@ def main() -> None:
             lc._json_request = old_json_request
             lc.machine_fingerprint = old_machine_fingerprint
         assert recovery_calls
+
+        # A locally expired-looking paid license with recovery credentials
+        # must be revalidated before any new payment is offered.
+        expired_payload = payload(
+            machine,
+            issued_at=datetime.now(timezone.utc) - timedelta(days=60),
+        )
+        expired_document = signed_document(private, expired_payload)
+        lc.license_path().write_text(
+            json.dumps(expired_document, ensure_ascii=False),
+            encoding="utf-8",
+        )
+        lc._clock_path().unlink(missing_ok=True)
+        lc._record_clock(datetime.now(timezone.utc))
+        expired_local = lc.current_status(config)
+        assert not expired_local.active
+        assert expired_local.mode == "paid_recovery"
+        assert lc.save_license(paid, config).active
+
+        # Trusted server time must let a freshly paid entitlement activate even
+        # when the workstation clock is far behind the server.
+        future_server_time = datetime.now(timezone.utc) + timedelta(days=365)
+        future_paid = signed_document(
+            private,
+            payload(machine, issued_at=future_server_time),
+        )
+        future_order = {
+            "order_id": "00000000-0000-0000-0000-000000000002",
+            "order_access_token": "S" * 48,
+            "payment_url": "https://pay.example.com/future",
+            "amount_rub": 100,
+        }
+        lc._save_pending_order(future_order)
+        old_json_request = lc._json_request
+        old_machine_fingerprint = lc.machine_fingerprint
+        try:
+            lc.machine_fingerprint = lambda: machine
+
+            def _future_request(_config, method, path, *, body=None, bearer=""):
+                if method == "GET" and path.endswith("/status"):
+                    return {
+                        "status": "paid",
+                        "amount_rub": 100,
+                        "server_time": future_server_time.isoformat(),
+                    }
+                if method == "POST" and path.endswith("/activate-machine"):
+                    return {"activated": True, "machine_hash": machine}
+                if method == "POST" and path.endswith("/license"):
+                    return future_paid
+                raise AssertionError((method, path, body, bearer))
+
+            lc._json_request = _future_request
+            future_status = lc.refresh_paid_order(config)
+            assert future_status.active and future_status.mode == "paid"
+        finally:
+            lc._json_request = old_json_request
+            lc.machine_fingerprint = old_machine_fingerprint
+
+        # Restore ordinary current-time paid state for the remaining regressions.
+        lc._active_order_path().unlink(missing_ok=True)
+        lc._clock_path().unlink(missing_ok=True)
+        assert lc.save_license(paid, config).active
+        lc._save_active_order(recovery_order)
 
         # A network/recovery failure for an already-paid entitlement must not
         # create a fresh payment order.
@@ -306,6 +373,30 @@ def main() -> None:
             lui.runtime_config = old_runtime_config
             lui.current_status = old_current_status
             lui.recover_paid_license = old_recover
+            lui.begin_monthly_payment = old_begin_payment
+            lui.messagebox.showwarning = old_showwarning
+
+        # Corrupt pending payment state must block a fresh charge rather than
+        # being silently treated as no existing invoice.
+        old_pending_details = lui.pending_payment_details
+        old_begin_payment = lui.begin_monthly_payment
+        old_showwarning = lui.messagebox.showwarning
+        damaged_pending_calls = {"payment": 0, "warning": 0}
+        try:
+            lui.pending_payment_details = lambda: (_ for _ in ()).throw(
+                lc.LicenseError("damaged pending order")
+            )
+            lui.begin_monthly_payment = lambda *args, **kwargs: (
+                damaged_pending_calls.__setitem__("payment", damaged_pending_calls["payment"] + 1)
+                or (_ for _ in ()).throw(AssertionError("damaged pending order created a new charge"))
+            )
+            lui.messagebox.showwarning = lambda *args, **kwargs: damaged_pending_calls.__setitem__(
+                "warning", damaged_pending_calls["warning"] + 1
+            )
+            assert lui._payment_flow(None, config) is None
+            assert damaged_pending_calls == {"payment": 0, "warning": 1}
+        finally:
+            lui.pending_payment_details = old_pending_details
             lui.begin_monthly_payment = old_begin_payment
             lui.messagebox.showwarning = old_showwarning
 
@@ -584,6 +675,8 @@ def main() -> None:
         assert "DefaultDirName={localappdata}\\MedicalDiaryAutofill" in installer_text
         assert "license.json" not in installer_text
         assert "license-clock.json" not in installer_text
+        assert "license-active-order.json" not in installer_text
+        assert "license-machine-fingerprint.json" not in installer_text
         assert "owner-entitlement.marker" not in installer_text
 
         # Restore a clean paid-license clock state for the independent rollback
