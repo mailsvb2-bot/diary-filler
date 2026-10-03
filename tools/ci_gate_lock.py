@@ -11,6 +11,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 WINDOWS_WORKFLOW = ROOT / ".github" / "workflows" / "windows-build.yml"
 RELEASE_WORKFLOW = ROOT / ".github" / "workflows" / "release.yml"
+LICENSE_SERVER_WORKFLOW = ROOT / ".github" / "workflows" / "license-server-ci.yml"
 
 WINDOWS_REQUIRED_IN_ORDER = (
     "python tools/main_branch_policy.py",
@@ -89,6 +90,7 @@ REQUIRED_REPOSITORY_FILES = (
     "tests/windows11_live_e2e_contract.py",
     "tests/windows11_live_gui_e2e.py",
     ".github/workflows/windows-live-e2e.yml",
+    ".github/workflows/license-server-ci.yml",
     ".github/workflows/windows-live-e2e-core.yml",
     "tools/windows_live_e2e_preflight.ps1",
     "tools/windows11_live_e2e_preflight.ps1",
@@ -129,6 +131,7 @@ def main() -> None:
 
     windows = WINDOWS_WORKFLOW.read_text(encoding="utf-8")
     release = RELEASE_WORKFLOW.read_text(encoding="utf-8")
+    license_server = LICENSE_SERVER_WORKFLOW.read_text(encoding="utf-8")
 
     for required in ("pull_request:", "workflow_dispatch:", "branches: [main, master]", "fetch-depth: 0", "pull-requests: read"):
         if required not in windows:
@@ -160,6 +163,17 @@ def main() -> None:
         if required not in release:
             raise SystemExit(f"CI GATE LOCK FAILED: release workflow lost release-safety contract: {required}")
     _require_order(release, RELEASE_REQUIRED_IN_ORDER, "release workflow")
+
+    for required in (
+        "pull_request:",
+        "branches: [main, master]",
+        "pip install -r licensing_server/requirements.txt",
+        "python tests/license_server_regression.py",
+        "Import FastAPI server with production-shaped configuration",
+        "LICENSE SERVER HTTP IMPORT OK",
+    ):
+        if required not in license_server:
+            raise SystemExit(f"CI GATE LOCK FAILED: license-server workflow lost mandatory gate: {required}")
 
     for forbidden in (
         "SIGNING_CERT_PFX_BASE64",

@@ -56,6 +56,7 @@ REQUIRED_FILES = [
     ".github/workflows/release.yml",
     ".github/workflows/windows-live-e2e.yml",
     ".github/workflows/windows-live-e2e-core.yml",
+    ".github/workflows/license-server-ci.yml",
     "tests/windows_live_e2e_contract.py",
     "tests/windows_live_gui_e2e.py",
     "tools/windows_live_e2e_preflight.ps1",

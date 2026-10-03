@@ -22,6 +22,7 @@ MUST_BE_LOCKED = (
     ".github/workflows/release.yml",
     ".github/workflows/windows-live-e2e.yml",
     ".github/workflows/windows-live-e2e-core.yml",
+    ".github/workflows/license-server-ci.yml",
     "installer/MedicalDiaryAutofill.iss",
     "main.py",
     "startup.py",

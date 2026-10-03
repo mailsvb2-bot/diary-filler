@@ -1,0 +1,80 @@
+name: License Server CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: license-server-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  server:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: licensing_server/requirements.txt
+
+      - name: Install server dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r licensing_server/requirements.txt
+
+      - name: Run license server regression
+        run: python tests/license_server_regression.py
+
+      - name: Import FastAPI server with production-shaped configuration
+        shell: bash
+        run: |
+          python - <<'PY'
+          import base64
+          import os
+          import tempfile
+          from cryptography.hazmat.primitives import serialization
+          from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+
+          private = Ed25519PrivateKey.generate()
+          raw = private.private_bytes(
+              encoding=serialization.Encoding.Raw,
+              format=serialization.PrivateFormat.Raw,
+              encryption_algorithm=serialization.NoEncryption(),
+          )
+          with tempfile.TemporaryDirectory() as td:
+              os.environ["DIARY_FILLER_MONTHLY_PRICE_RUB"] = "100"
+              os.environ["DIARY_FILLER_LICENSE_PRIVATE_KEY_B64"] = base64.b64encode(raw).decode("ascii")
+              os.environ["DIARY_FILLER_LICENSE_DB"] = td + "/licenses.sqlite3"
+              os.environ["YOOKASSA_SHOP_ID"] = "ci-shop"
+              os.environ["YOOKASSA_SECRET_KEY"] = "ci-secret"
+              os.environ["DIARY_FILLER_PAYMENT_RETURN_URL"] = "https://licenses.example.test/payment-return"
+              from licensing_server.app import app
+              paths = {route.path for route in app.routes}
+              required = {
+                  "/health",
+                  "/payment-return",
+                  "/api/orders",
+                  "/api/orders/{order_id}/status",
+                  "/api/orders/{order_id}/activate-machine",
+                  "/api/orders/{order_id}/license",
+                  "/api/owner/license",
+                  "/api/webhooks/yookassa",
+              }
+              missing = sorted(required - paths)
+              if missing:
+                  raise SystemExit("missing license-server routes: " + ", ".join(missing))
+              print("LICENSE SERVER HTTP IMPORT OK")
+          PY
