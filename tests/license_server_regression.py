@@ -16,8 +16,8 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 import license_client as client
+from license_calendar import add_calendar_month
 from licensing_server.core import (
-    MONTHLY_LICENSE_DAYS,
     OWNER_CODE_SCRYPT_HEX,
     _scrypt_code,
     issue_license,
@@ -40,6 +40,25 @@ def main() -> None:
     private_b64 = base64.b64encode(private_raw).decode("ascii")
     public_b64 = public_key_b64(private_b64)
     machine = "a" * 64
+
+    calendar_cases = [
+        (datetime(2026, 1, 31, 12, 0, tzinfo=timezone.utc), datetime(2026, 2, 28, 12, 0, tzinfo=timezone.utc)),
+        (datetime(2028, 1, 31, 12, 0, tzinfo=timezone.utc), datetime(2028, 2, 29, 12, 0, tzinfo=timezone.utc)),
+        (datetime(2026, 4, 30, 12, 0, tzinfo=timezone.utc), datetime(2026, 5, 30, 12, 0, tzinfo=timezone.utc)),
+        (datetime(2026, 5, 31, 12, 0, tzinfo=timezone.utc), datetime(2026, 6, 30, 12, 0, tzinfo=timezone.utc)),
+        (datetime(2028, 2, 29, 12, 0, tzinfo=timezone.utc), datetime(2028, 3, 29, 12, 0, tzinfo=timezone.utc)),
+        (datetime(2026, 12, 31, 12, 0, tzinfo=timezone.utc), datetime(2027, 1, 31, 12, 0, tzinfo=timezone.utc)),
+    ]
+    for issued_at, expected_until in calendar_cases:
+        calendar_license = issue_license(
+            private_b64,
+            machine_hash=machine,
+            order_id="calendar-boundary",
+            owner=False,
+            now=issued_at,
+        )
+        calendar_payload = calendar_license["license"]["payload"]
+        assert client._parse_utc(calendar_payload["valid_until"]) == expected_until
 
     payment = {
         "status": "succeeded",
@@ -95,9 +114,9 @@ def main() -> None:
         payload = paid["license"]["payload"]
         assert payload["metadata"]["product_id"] == "diary_filler"
         assert payload["plan"] == "doctor_start"
-        start = client._parse_utc(payload["valid_from"])
         end = client._parse_utc(payload["valid_until"])
-        assert (end - start).days <= MONTHLY_LICENSE_DAYS + 1
+        issued_at = client._parse_utc(payload["issued_at"])
+        assert end == add_calendar_month(issued_at)
 
         os.environ["LOCALAPPDATA"] = td
         config = client.LicenseRuntimeConfig(
