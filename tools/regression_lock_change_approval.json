@@ -42,7 +42,7 @@
     "tests/license_server_regression.py": "ef1f3b4c11e42bb4a94dc18f8fd8aa647bb149d7",
     "tests/regression_surface_inventory.py": "92e2f1776dccbb1e0705e0f7966fbd6d51cc5eca",
     "tests/windows_live_e2e_contract.py": "b9490a08ba3318ac9f1c728654395a5462f35a8f",
-    "tools/ci_gate_lock.py": "c697752575d32544e54688a41b17bd9591660995",
+    "tools/ci_gate_lock.py": "16888a41f361eeecc3e469b4899048195ada5c10",
     "tools/document_mechanics_change_approval.json": "4abd3ee45e22953ecae0e0f201c246b38dd5eeda",
     "tools/generate_license_server_keypair.py": "058f2dbbe1bb69356f30f9308d34a43e113d970b",
     "tools/production_safety_gate.py": "7231883d53b492f99636c3f085c383585c13e30f",
