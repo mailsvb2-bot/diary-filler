@@ -5,11 +5,12 @@ import ast
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-# The patient registry is intentionally split into one pure model/scanner and
-# one Tk integration layer. Keep the budget exact: further root-module growth
-# must be reviewed instead of silently expanding.
-MAX_RUNTIME_PYTHON_FILES = 128
+# The patient registry and licensing runtime each have one intentionally small
+# architecture surface. Keep the budget exact: further root-module growth must
+# be reviewed instead of silently expanding.
+MAX_RUNTIME_PYTHON_FILES = 130
 REQUIRED_PATIENT_REGISTRY_RUNTIME_FILES = {"patient_registry.py", "patient_registry_mixin.py"}
+REQUIRED_LICENSE_RUNTIME_FILES = {"license_client.py", "license_ui.py"}
 RELEASE_ONLY_ENTRYPOINTS = {"gui_runtime_check.py", "verify_built_exe.py"}
 
 
@@ -33,6 +34,9 @@ def assert_runtime_budget() -> None:
     missing_registry = sorted(REQUIRED_PATIENT_REGISTRY_RUNTIME_FILES - runtime_names)
     if missing_registry:
         fail("patient registry architecture is incomplete: " + ", ".join(missing_registry))
+    missing_license = sorted(REQUIRED_LICENSE_RUNTIME_FILES - runtime_names)
+    if missing_license:
+        fail("license runtime architecture is incomplete: " + ", ".join(missing_license))
 
 
 def assert_behavior_contracts() -> None:
