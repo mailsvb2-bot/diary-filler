@@ -212,6 +212,17 @@ def _self_check_rows() -> list[tuple[str, bool, str]]:
     rows.append(("Программа", True, f"версия {APP_VERSION}"))
 
     try:
+        from license_client import current_status
+        license_status = current_status()
+        rows.append((
+            "Лицензия",
+            license_status.active,
+            license_status.message,
+        ))
+    except Exception:
+        rows.append(("Лицензия", False, "не удалось проверить техническое состояние лицензии"))
+
+    try:
         intake = desktop_intake_root_path()
         rows.append(("Выписанные пациенты", intake.is_dir(), "папка доступна" if intake.is_dir() else "папка пока не создана"))
     except Exception:
@@ -467,9 +478,16 @@ def _activate_root_for_intake(root) -> None:
 def _run_patient_summary_mode(*, start_in_tray: bool = False) -> None:
     """Open the independent daily patient summary host."""
     from app import CombinedMedicalDiaryApp
+    from license_ui import ensure_license
 
     root = _create_root()
     root.withdraw()
+    if not ensure_license(root, interactive=not start_in_tray):
+        try:
+            root.destroy()
+        except Exception:
+            pass
+        return
     app = CombinedMedicalDiaryApp(root)
     app.show_my_patients(startup_mode=True, start_in_tray=start_in_tray)
     try:
@@ -513,6 +531,18 @@ def main() -> None:
         intake_primary = _intake_primary_argument(sys.argv[1:]) or None
         direct_primary = _direct_primary_argument(sys.argv[1:]) or None
         root = _create_root()
+        # Licensing is checked only for a visible GUI. The hidden watcher remains
+        # lightweight and can wake the GUI, but document generation still has a
+        # second mandatory gate at the creation boundary.
+        from license_ui import ensure_license
+
+        if not ensure_license(root, interactive=True):
+            try:
+                root.destroy()
+            except Exception:
+                pass
+            return
+
         # Claim the visible-GUI heartbeat before imports and modal onboarding.
         # Otherwise the hidden intake watcher can race a long folder chooser and
         # launch a second GUI with an unrelated Word file.
