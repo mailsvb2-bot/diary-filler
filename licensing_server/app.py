@@ -158,9 +158,31 @@ def create_app() -> FastAPI:
             "status": "pending",
         }
 
+    def reconcile_payment(row: dict) -> dict:
+        if row["status"] not in {"pending", "created"}:
+            return row
+        try:
+            payment = provider.get_payment(str(row["provider_payment_id"]))
+        except YooKassaError:
+            return row
+        if not provider.payment_matches_order(
+            payment,
+            order_id=row["order_id"],
+            amount_rub=row["amount_rub"],
+        ):
+            return row
+        status = str(payment.get("status") or "").lower()
+        paid = bool(payment.get("paid"))
+        if status == "succeeded" and paid:
+            store.mark_paid(row["order_id"])
+        elif status == "canceled":
+            store.mark_cancelled(row["order_id"])
+        return store.get_order(row["order_id"]) or row
+
     @app.get("/api/orders/{order_id}/status")
     def order_status(order_id: str, authorization: str | None = Header(default=None)) -> dict:
         row = authorized_order(order_id, authorization)
+        row = reconcile_payment(row)
         return {"order_id": order_id, "status": row["status"], "amount_rub": row["amount_rub"]}
 
     @app.post("/api/orders/{order_id}/activate-machine")
