@@ -698,6 +698,19 @@ def _paid_recovery_status(message: str) -> LicenseStatus:
     )
 
 
+def _discard_active_order_if_matches(order_id: str) -> None:
+    try:
+        active = _load_active_order()
+    except LicenseError:
+        return
+    if str(active.get("order_id") or "") != str(order_id):
+        return
+    try:
+        _active_order_path().unlink(missing_ok=True)
+    except OSError:
+        pass
+
+
 def _json_request(
     config: LicenseRuntimeConfig,
     method: str,
@@ -786,7 +799,18 @@ def refresh_paid_order(config: LicenseRuntimeConfig | None = None) -> LicenseSta
     # Persist the recovery credential before local license state. If a disk or
     # clock-state error happens after payment, the user can retry without paying again.
     _save_active_order(order)
-    result = save_license(document, config, trusted_now=trusted_now)
+    try:
+        result = save_license(document, config, trusted_now=trusted_now)
+    except LicenseExpiredError:
+        # This can happen when an old paid order file survived a previous
+        # successful activation. Server-confirmed expiry is the one safe case
+        # where the stale order may be cleared and renewal may proceed.
+        try:
+            _pending_order_path().unlink(missing_ok=True)
+        except OSError:
+            pass
+        _discard_active_order_if_matches(order_id)
+        raise
     try:
         _pending_order_path().unlink(missing_ok=True)
     except OSError:
