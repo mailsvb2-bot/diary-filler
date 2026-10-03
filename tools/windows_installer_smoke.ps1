@@ -5,8 +5,6 @@ param(
 $ErrorActionPreference = 'Stop'
 $installerSource = (Resolve-Path $InstallerPath).Path
 $installer = Join-Path $env:RUNNER_TEMP 'MedicalDiaryAutofill-Setup-delete-probe.exe'
-Remove-Item -LiteralPath $installer -Force -ErrorAction SilentlyContinue
-Copy-Item -LiteralPath $installerSource -Destination $installer -Force
 $installDir = Join-Path $env:RUNNER_TEMP 'MedicalDiaryAutofill-Installer-Smoke'
 $runKeyPath = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run'
 $runValueName = 'MedicalDiaryAutofill Intake'
@@ -53,6 +51,7 @@ function Wait-ForAgentHeartbeat {
 try {
     Stop-AppProcesses
     Remove-Item -LiteralPath $installer -Force -ErrorAction SilentlyContinue
+    Copy-Item -LiteralPath $installerSource -Destination $installer -Force
     Remove-ItemProperty -Path $runKeyPath -Name $runValueName -ErrorAction SilentlyContinue
     Remove-ItemProperty -Path $runKeyPath -Name $patientSummaryRunValueName -ErrorAction SilentlyContinue
     Remove-Item -LiteralPath $startupScript -Force -ErrorAction SilentlyContinue
