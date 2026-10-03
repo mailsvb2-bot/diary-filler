@@ -174,6 +174,7 @@ def main() -> None:
         "branches: [main, master]",
         "pip install -r licensing_server/requirements.txt",
         "python tests/license_server_regression.py",
+        "python tests/license_server_preflight_regression.py",
         "Import FastAPI server with production-shaped configuration",
         "LICENSE SERVER HTTP IMPORT OK",
     ):
