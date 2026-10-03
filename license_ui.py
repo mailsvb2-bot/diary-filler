@@ -47,7 +47,7 @@ def _manager_state(status) -> dict:
             "title": "Лицензия активна",
             "details": details,
             "show_payment": False,
-            "show_activation": False,
+            "show_activation": True,
         }
     if status.mode == "owner_reactivation":
         return {
