@@ -16,6 +16,6 @@
     "patient_registry_regression"
   ],
   "approved_blobs": {
-    "tools/windows_installer_smoke.ps1": "890dd80915bbbbea5bd22873ccec75926c60054f"
+    "tools/windows_installer_smoke.ps1": "baaa7ba35dfb034199bbf78e8038566c3c671c61"
   }
 }
