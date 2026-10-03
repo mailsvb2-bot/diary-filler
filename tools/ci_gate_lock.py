@@ -45,8 +45,8 @@ WINDOWS_REQUIRED_IN_ORDER = (
 RELEASE_REQUIRED_IN_ORDER = (
     "Checkout exact release candidate",
     "Guard production licensing configuration",
-    "Verify live license server trust anchor",
     "Resolve and guard release target",
+    "Verify live license server trust anchor",
     "python tools/regression_lock_check.py",
     "python tools/ci_gate_lock.py",
     "python tests/regression_surface_inventory.py",
