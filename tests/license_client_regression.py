@@ -331,6 +331,18 @@ def main() -> None:
         assert "влад" not in manager["details"].lower()
         assert "безлим" not in manager["details"].lower()
 
+        paid_public = lc.LicenseStatus(
+            True,
+            "paid",
+            "Лицензия активна",
+            "doctor_start",
+            datetime.now(timezone.utc) + timedelta(days=10),
+            False,
+        )
+        manager = lui._manager_state(paid_public)
+        assert manager["show_activation"]
+        assert not manager["show_payment"]
+
         missing_public = lc.LicenseStatus(False, "missing", "Лицензия не активирована")
         manager = lui._manager_state(missing_public)
         assert manager["show_activation"] and manager["show_payment"]
