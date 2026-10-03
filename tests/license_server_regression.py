@@ -16,7 +16,6 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 import license_client as client
-from license_calendar import add_calendar_month
 from licensing_server.core import (
     OWNER_CODE_SCRYPT_HEX,
     _scrypt_code,
@@ -116,7 +115,7 @@ def main() -> None:
         assert payload["plan"] == "doctor_start"
         end = client._parse_utc(payload["valid_until"])
         issued_at = client._parse_utc(payload["issued_at"])
-        assert end == add_calendar_month(issued_at)
+        assert end == client._add_calendar_month(issued_at)
 
         os.environ["LOCALAPPDATA"] = td
         config = client.LicenseRuntimeConfig(
