@@ -45,6 +45,18 @@ class OwnerReactivationRequired(LicenseError):
     pass
 
 
+class PaymentPendingError(LicenseError):
+    pass
+
+
+class LicenseExpiredError(LicenseError):
+    pass
+
+
+class PaidLicenseRecoveryError(LicenseError):
+    pass
+
+
 @dataclass(frozen=True)
 class LicenseRuntimeConfig:
     server_url: str
@@ -112,6 +124,10 @@ def license_path() -> Path:
 
 def _pending_order_path() -> Path:
     return _runtime_dir() / "license-order.json"
+
+
+def _active_order_path() -> Path:
+    return _runtime_dir() / "license-active-order.json"
 
 
 def _clock_path() -> Path:
@@ -483,11 +499,19 @@ def current_status(config: LicenseRuntimeConfig | None = None) -> LicenseStatus:
             return _owner_reactivation_status(
                 "Требуется повторная активация лицензии"
             )
+        if _has_active_order_credentials():
+            return _paid_recovery_status(
+                "Требуется восстановить уже оплаченную лицензию"
+            )
         return LicenseStatus(False, "missing", "Лицензия не активирована")
     except Exception:
         if owner_marker:
             return _owner_reactivation_status(
                 "Требуется повторная активация лицензии"
+            )
+        if _has_active_order_credentials():
+            return _paid_recovery_status(
+                "Требуется восстановить уже оплаченную лицензию"
             )
         return LicenseStatus(False, "invalid", "Файл лицензии повреждён")
     try:
@@ -499,13 +523,29 @@ def current_status(config: LicenseRuntimeConfig | None = None) -> LicenseStatus:
             return _owner_reactivation_status(
                 "Требуется повторная активация лицензии"
             )
+        if _has_active_order_credentials():
+            return _paid_recovery_status(
+                "Требуется проверить уже оплаченную лицензию"
+            )
         return LicenseStatus(False, "invalid", str(exc))
 
 
 def save_license(document: dict, config: LicenseRuntimeConfig | None = None) -> LicenseStatus:
     config = config or runtime_config()
-    status = _evaluate_document(document, config, allow_uninitialized_clock=True)
+    # A license returned by the trusted server is a safe point to rebuild
+    # local anti-rollback state. Existing clock corruption must never strand
+    # an already-paid user after successful server verification.
+    try:
+        status = _evaluate_document(document, config, allow_uninitialized_clock=True)
+    except LicenseError:
+        try:
+            _clock_path().unlink(missing_ok=True)
+        except OSError:
+            pass
+        status = _evaluate_document(document, config, allow_uninitialized_clock=True)
     if not status.active:
+        if status.mode == "expired":
+            raise LicenseExpiredError(status.message)
         raise LicenseError(status.message)
     _atomic_write_text(
         license_path(),
@@ -533,7 +573,7 @@ def _unprotect_order_token(value: str) -> str:
         raise LicenseError("saved order token is damaged") from exc
 
 
-def _save_pending_order(payload: dict) -> None:
+def _store_order_credentials(path: Path, payload: dict, *, include_payment: bool) -> None:
     token = str(payload.get("order_access_token") or "").strip()
     order_id = str(payload.get("order_id") or "").strip()
     if not token or not order_id:
@@ -542,22 +582,64 @@ def _save_pending_order(payload: dict) -> None:
         "schema": 1,
         "order_id": order_id,
         "order_access_token": _protect_order_token(token),
-        "payment_url": str(payload.get("payment_url") or ""),
-        "amount_rub": int(payload.get("amount_rub") or 0),
-        "created_at": datetime.now(timezone.utc).isoformat(),
+        "saved_at": datetime.now(timezone.utc).isoformat(),
     }
-    _atomic_write_text(_pending_order_path(), json.dumps(stored, ensure_ascii=False, indent=2) + "\n")
+    if include_payment:
+        stored["payment_url"] = str(payload.get("payment_url") or "")
+        stored["amount_rub"] = int(payload.get("amount_rub") or 0)
+    _atomic_write_text(path, json.dumps(stored, ensure_ascii=False, indent=2) + "\n")
+
+
+def _load_order_credentials(path: Path, missing_message: str) -> dict:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        raise LicenseError(missing_message) from exc
+    if payload.get("schema") != 1:
+        raise LicenseError("Сохранённые данные лицензии имеют неизвестный формат")
+    payload["order_access_token"] = _unprotect_order_token(str(payload.get("order_access_token") or ""))
+    return payload
+
+
+def _save_pending_order(payload: dict) -> None:
+    _store_order_credentials(_pending_order_path(), payload, include_payment=True)
 
 
 def _load_pending_order() -> dict:
+    return _load_order_credentials(
+        _pending_order_path(),
+        "Нет сохранённого заказа на оплату",
+    )
+
+
+def _save_active_order(order: dict) -> None:
+    _store_order_credentials(_active_order_path(), order, include_payment=False)
+
+
+def _load_active_order() -> dict:
+    return _load_order_credentials(
+        _active_order_path(),
+        "Нет данных для восстановления оплаченной лицензии",
+    )
+
+
+def _has_active_order_credentials() -> bool:
     try:
-        payload = json.loads(_pending_order_path().read_text(encoding="utf-8"))
-    except Exception as exc:
-        raise LicenseError("Нет сохранённого заказа на оплату") from exc
-    if payload.get("schema") != 1:
-        raise LicenseError("Сохранённый заказ имеет неизвестный формат")
-    payload["order_access_token"] = _unprotect_order_token(str(payload.get("order_access_token") or ""))
-    return payload
+        _load_active_order()
+        return True
+    except LicenseError:
+        return False
+
+
+def _paid_recovery_status(message: str) -> LicenseStatus:
+    return LicenseStatus(
+        False,
+        "paid_recovery",
+        message,
+        "doctor_start",
+        None,
+        False,
+    )
 
 
 def _json_request(
@@ -620,7 +702,7 @@ def refresh_paid_order(config: LicenseRuntimeConfig | None = None) -> LicenseSta
         discard_pending_order()
         raise LicenseError("Предыдущий счёт больше недействителен. Создайте новый.")
     if order_status not in {"paid", "license_issued"}:
-        raise LicenseError("Оплата ещё не подтверждена")
+        raise PaymentPendingError("Оплата ещё не подтверждена")
     machine = machine_fingerprint()
     try:
         _json_request(
@@ -640,12 +722,51 @@ def refresh_paid_order(config: LicenseRuntimeConfig | None = None) -> LicenseSta
         body={"machine_hash": machine},
         bearer=token,
     )
+    # Persist the recovery credential before local license state. If a disk or
+    # clock-state error happens after payment, the user can retry without paying again.
+    _save_active_order(order)
     result = save_license(document, config)
     try:
         _pending_order_path().unlink(missing_ok=True)
     except OSError:
         pass
     return result
+
+
+def recover_paid_license(config: LicenseRuntimeConfig | None = None) -> LicenseStatus:
+    config = config or runtime_config()
+    order = _load_active_order()
+    order_id = str(order["order_id"])
+    token = str(order["order_access_token"])
+    try:
+        status = _json_request(
+            config,
+            "GET",
+            f"/api/orders/{order_id}/status",
+            bearer=token,
+        )
+        order_status = str(status.get("status") or "").strip().lower()
+        if order_status not in {"paid", "license_issued"}:
+            raise PaidLicenseRecoveryError(
+                "Сервер не подтвердил действующую оплаченную лицензию"
+            )
+        machine = machine_fingerprint()
+        document = _json_request(
+            config,
+            "POST",
+            f"/api/orders/{order_id}/license",
+            body={"machine_hash": machine},
+            bearer=token,
+        )
+        return save_license(document, config)
+    except LicenseExpiredError:
+        raise
+    except PaidLicenseRecoveryError:
+        raise
+    except LicenseError as exc:
+        raise PaidLicenseRecoveryError(
+            "Не удалось восстановить уже оплаченную лицензию. Повторная оплата не требуется."
+        ) from exc
 
 
 def activate_owner(bootstrap_code: str, config: LicenseRuntimeConfig | None = None) -> LicenseStatus:
