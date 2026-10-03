@@ -215,7 +215,26 @@ def main() -> None:
             pass
 
         owner = signed_document(private, payload(machine, days=3650, owner=True))
-        owner_status = lc.save_license(owner, config)
+        old_json_request = lc._json_request
+        old_machine_fingerprint = lc.machine_fingerprint
+        owner_activation_calls = []
+        try:
+            lc.machine_fingerprint = lambda: machine
+
+            def _owner_request(_config, method, path, *, body=None, bearer=""):
+                owner_activation_calls.append((method, path, body, bearer))
+                assert method == "POST"
+                assert path == "/api/owner/license"
+                assert body == {"bootstrap_code": "owner-code", "machine_hash": machine}
+                assert bearer == ""
+                return owner
+
+            lc._json_request = _owner_request
+            owner_status = lc.activate_owner("owner-code", config)
+        finally:
+            lc._json_request = old_json_request
+            lc.machine_fingerprint = old_machine_fingerprint
+        assert owner_activation_calls
         assert owner_status.active and owner_status.owner_unlimited and owner_status.mode == "owner"
         assert lc._owner_marker_path().exists()
 
