@@ -71,6 +71,9 @@ jobs:
       - name: Lock known-good production and test surface
         run: python tools/regression_lock_check.py
 
+      - name: Lock licensed-only Windows binary artifact publication
+        run: python tests/windows_ci_artifact_licensing_contract.py
+
       - name: Lock mandatory CI regression topology
         run: python tools/ci_gate_lock.py
 
