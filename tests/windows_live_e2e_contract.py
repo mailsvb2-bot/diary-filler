@@ -112,7 +112,7 @@ def main() -> None:
             "python verify_built_exe.py",
             "./tools/windows_desktop_intake_e2e.ps1 -AppPath ./dist/MedicalDiaryAutofill.exe",
             "BUILD_WINDOWS_INSTALLER.bat",
-            "./tools/windows_installer_smoke.ps1 -InstallerPath ./dist/MedicalDiaryAutofill-Setup-1.4.29.exe",
+            "./tools/windows_installer_smoke.ps1 -InstallerPath ./dist/MedicalDiaryAutofill-Setup-1.4.30.exe",
             "Capture desktop evidence on failure",
             "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
             r"MedicalDiaryAutofill-${{ inputs.target_os }}-Live-E2E-${{ github.run_id }}",
