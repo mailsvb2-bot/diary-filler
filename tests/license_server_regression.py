@@ -98,11 +98,10 @@ def main() -> None:
             encoding=serialization.Encoding.Raw,
             format=serialization.PublicFormat.Raw,
         )
-        try:
-            store.pin_issuer_public_key(base64.b64encode(different_public).decode("ascii"))
-            raise AssertionError("issuer key rotation was accepted for an existing license database")
-        except ValueError:
-            pass
+        different_public_b64 = base64.b64encode(different_public).decode("ascii")
+        # Before any paid order exists, bootstrap configuration can still be
+        # corrected without trapping a fresh deployment on a typo.
+        store.pin_issuer_public_key(different_public_b64)
 
         store.create_order(
             order_id="order-1",
@@ -116,6 +115,17 @@ def main() -> None:
         assert row and row["status"] == "pending"
         store.mark_paid("order-1")
         assert store.get_order("order-1")["status"] == "paid"
+
+        third_private = Ed25519PrivateKey.generate()
+        third_public = third_private.public_key().public_bytes(
+            encoding=serialization.Encoding.Raw,
+            format=serialization.PublicFormat.Raw,
+        )
+        try:
+            store.pin_issuer_public_key(base64.b64encode(third_public).decode("ascii"))
+            raise AssertionError("issuer key rotation was accepted after a paid order")
+        except ValueError:
+            pass
 
         paid = issue_license(
             private_b64,
