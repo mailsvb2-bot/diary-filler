@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "base_sha": "6a29c8edb3c2baa74126b533190d8e1e6d2ae222",
-  "reason": "Bump APP_VERSION to v1.4.29 for owner/superadmin licensing hardening only; medical parsing, rendering, templates and document-generation semantics are unchanged.",
+  "base_sha": "023d7ae455f698f44eb334e5ce26de89b8542fa5",
+  "reason": "Bump APP_VERSION to v1.4.30 for the license-manager UI only; medical parsing, rendering, templates and document-generation semantics are unchanged.",
   "approved_blobs": {
-    "app_config.py": "37721516c64f5f7781444ce2506ab6cca33b9e82"
+    "app_config.py": "f4518005208a6f5a7ef7eeb71982dbb3e12e228a"
   }
 }
