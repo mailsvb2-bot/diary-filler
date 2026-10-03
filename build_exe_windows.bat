@@ -97,6 +97,7 @@ python -m PyInstaller ^
   --collect-all lxml ^
   --collect-all tkinterdnd2 ^
   --hidden-import win32api ^
+  --hidden-import win32crypt ^
   --hidden-import win32print ^
   --hidden-import pythoncom ^
   --hidden-import win32com ^
@@ -131,6 +132,7 @@ python -m PyInstaller ^
   --collect-all lxml ^
   --collect-all tkinterdnd2 ^
   --hidden-import win32api ^
+  --hidden-import win32crypt ^
   --hidden-import win32print ^
   --hidden-import pythoncom ^
   --hidden-import win32com ^
