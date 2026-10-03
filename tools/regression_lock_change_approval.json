@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "c1fbac76fe7f8617ae595f14aee6762d199f5f8a",
+  "reason": "Harden the installer self-delete release by assigning a distinct v1.4.27 identity and proving the launched Setup self-deletes correctly from a Windows path containing Cyrillic characters and spaces.",
+  "required_evidence": [
+    "document_mechanics_guard",
+    "full_patient_replay",
+    "golden_docx",
+    "staff_profile_regression",
+    "gender_generation_matrix",
+    "desktop_intake_contract",
+    "intake_lifecycle_regression",
+    "packaged_desktop_intake_e2e",
+    "installer_uninstall_smoke",
+    "ci_gate_lock",
+    "patient_registry_regression"
+  ],
+  "approved_blobs": {
+    ".github/workflows/release.yml": "0f2167d9e0ddddf08e2f88198e4a89848baad07c",
+    ".github/workflows/windows-build.yml": "157c5b695df6abbd455b812cf146011637b49460",
+    "BUILD_WINDOWS_INSTALLER.bat": "1e708b3597bcbd148398aeed55c9bf0d2eaf122e",
+    "app_config.py": "2f93142215b781b4ab2188d412e6f45a95b777d4",
+    "installer/MedicalDiaryAutofill.iss": "3f25616005a5fa3a8cd119671239686290c9e36e",
+    "prod_audit.py": "9da5f2615fa962cc5c76f3861ec7ec38466da41f",
+    "pyproject.toml": "3c6cd1022c868f056ea72bc7e368b4a382ec1c9f",
+    "release_check.py": "8fc4b246b21f7d1087cf19bb7dd0a0e964791ac7",
+    "tools/windows_installer_smoke.ps1": "139bdfd146344dbed574fdedeae459a4f48f2715",
+    "version_info.txt": "9c29942673ec7139f4b98bf979ba9862fd2d1e3a"
+  }
+}
