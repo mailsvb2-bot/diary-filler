@@ -1,3 +1,14 @@
+# Release notes — v1.4.29
+
+## v1.4.29
+
+- Усилен owner/superadmin-доступ: подписанная `owner_superadmin/access=unlimited` лицензия полностью исключена из платёжного пути.
+- Бессрочный owner-доступ больше не зависит от anti-clock state; удаление, повреждение или откат локального clock-файла не может отправить владельца в оплату.
+- При смене Windows MachineGuid старая подписанная owner-лицензия распознаётся как owner reactivation: программа предлагает только повторно ввести код владельца, без месячной оплаты.
+- Добавлены регрессии, запрещающие вызов `begin_monthly_payment()` из owner-reactivation UX.
+- Зафиксирован installer-контракт: `license.json` и `license-clock.json` не удаляются установщиком/деинсталлятором.
+- Версия приложения, EXE metadata, Inno Setup, Windows CI, live E2E и guarded release workflow синхронизированы как `1.4.29`.
+
 # Release notes — v1.4.28
 
 ## v1.4.28
