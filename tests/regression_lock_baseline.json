@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "3774c0836001f5ba89e5b36dd1cf274ad1c82128",
-  "baseline_note": "Installer self-delete candidate validated on Windows CI run #1442: after successful install the exact launched Setup EXE deleted itself automatically, the cleanup helper removed itself, the installed background agent remained alive, and the full Windows build/E2E/installer/uninstall/artifact pipeline passed.",
+  "baseline_ref": "c1fbac76fe7f8617ae595f14aee6762d199f5f8a",
+  "baseline_note": "Installer self-delete final candidate validated on Windows CI run #1446: automatic Setup self-deletion, full retry-window coverage, cleanup-helper self-removal, live background agent preservation, packaged E2E, installer/uninstall smoke, and artifact publication all passed.",
   "required_approval_evidence": [
     "ci_gate_lock",
     "patient_registry_regression"
