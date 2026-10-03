@@ -58,6 +58,7 @@ CRITICAL_PATTERNS = (
     "BUILD_WINDOWS_INSTALLER.bat",
     "make_release_zip.py",
     "requirements*.txt",
+    "*/requirements*.txt",
     "pyproject.toml",
     "version_info.txt",
 )
