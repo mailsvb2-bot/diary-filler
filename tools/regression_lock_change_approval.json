@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "384822dad3fb802d324c7dd75ad10a42b4de1533",
+  "reason": "Replace fixed 31-day paid licenses with exact one-calendar-month issuance and verification, with leap-year and month-end regressions.",
+  "required_evidence": [
+    "document_mechanics_guard",
+    "full_patient_replay",
+    "golden_docx",
+    "staff_profile_regression",
+    "gender_generation_matrix",
+    "desktop_intake_contract",
+    "intake_lifecycle_regression",
+    "packaged_desktop_intake_e2e",
+    "installer_uninstall_smoke",
+    "ci_gate_lock",
+    "patient_registry_regression"
+  ],
+  "approved_blobs": {
+    "license_calendar.py": "73d0390bf2ecaa1b2ec0762b3d40353a0c391d6f",
+    "license_client.py": "3aa82a419973533d3487e5d7dbf0822bc82c7c22",
+    "licensing_server/core.py": "35b22910aee768eb51460cee25425c0d2bfe0bee",
+    "release_check.py": "e61d2e6c19c276975971133d1451e50b28d57717",
+    "tests/license_client_regression.py": "d33fc4608caaba923d87d8c57d27c0e1d7122a3d",
+    "tests/license_server_regression.py": "f26be87f9dd72f6152166c53d29b9223c8c0383a"
+  }
+}
