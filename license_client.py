@@ -13,7 +13,6 @@ import json
 import os
 from pathlib import Path
 import platform
-import socket
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -69,9 +68,16 @@ def runtime_config() -> LicenseRuntimeConfig:
     except Exception:
         pass
 
-    server_url = os.environ.get("MEDICAL_AUTOFILL_LICENSE_SERVER_URL", embedded_url).strip().rstrip("/")
-    public_key_b64 = os.environ.get("MEDICAL_AUTOFILL_LICENSE_PUBLIC_KEY_B64", embedded_key).strip()
-    required = _env_bool("MEDICAL_AUTOFILL_LICENSE_REQUIRED", embedded_required)
+    if embedded_required:
+        # A packaged production build must not let a local process environment
+        # disable enforcement or replace the compiled trust anchor/server.
+        server_url = embedded_url.strip().rstrip("/")
+        public_key_b64 = embedded_key.strip()
+        required = True
+    else:
+        server_url = os.environ.get("MEDICAL_AUTOFILL_LICENSE_SERVER_URL", embedded_url).strip().rstrip("/")
+        public_key_b64 = os.environ.get("MEDICAL_AUTOFILL_LICENSE_PUBLIC_KEY_B64", embedded_key).strip()
+        required = _env_bool("MEDICAL_AUTOFILL_LICENSE_REQUIRED", embedded_required)
     return LicenseRuntimeConfig(
         server_url=server_url,
         public_key_b64=public_key_b64,
@@ -142,13 +148,17 @@ def _windows_machine_guid() -> str:
 
 
 def machine_fingerprint() -> str:
-    facts = [
-        platform.system().strip().lower(),
-        socket.gethostname().strip().lower(),
-        _windows_machine_guid().strip().lower(),
-        _install_id().strip().lower(),
-    ]
-    return hashlib.sha256("|".join(facts).encode("utf-8")).hexdigest()
+    machine_guid = _windows_machine_guid().strip().lower()
+    if machine_guid:
+        identity = f"windows-machine-guid-v1|{machine_guid}"
+    else:
+        identity = (
+            "portable-install-v1|"
+            + platform.system().strip().lower()
+            + "|"
+            + _install_id().strip().lower()
+        )
+    return hashlib.sha256(identity.encode("utf-8")).hexdigest()
 
 
 def _parse_utc(value: str) -> datetime:
@@ -200,11 +210,20 @@ def _verify_signature(document: dict, public_key_b64: str) -> dict:
 
 
 def _read_clock_state() -> datetime | None:
+    path = _clock_path()
     try:
-        payload = json.loads(_clock_path().read_text(encoding="utf-8"))
-        return _parse_utc(str(payload.get("last_seen_utc") or ""))
-    except Exception:
+        raw = path.read_text(encoding="utf-8")
+    except FileNotFoundError:
         return None
+    except OSError as exc:
+        raise LicenseError("license clock state is unreadable") from exc
+    try:
+        payload = json.loads(raw)
+        if payload.get("schema") != 1:
+            raise ValueError("unsupported clock schema")
+        return _parse_utc(str(payload.get("last_seen_utc") or ""))
+    except Exception as exc:
+        raise LicenseError("license clock state is damaged") from exc
 
 
 def _record_clock(now: datetime) -> None:
@@ -217,9 +236,13 @@ def _record_clock(now: datetime) -> None:
     )
 
 
-def _validate_clock(now: datetime) -> None:
+def _validate_clock(now: datetime, *, require_initialized: bool) -> None:
     previous = _read_clock_state()
-    if previous is not None and previous - now > CLOCK_ROLLBACK_TOLERANCE:
+    if previous is None:
+        if require_initialized:
+            raise LicenseError("license clock state is missing")
+        return
+    if previous - now > CLOCK_ROLLBACK_TOLERANCE:
         raise LicenseError("system clock rollback detected")
 
 
@@ -238,10 +261,16 @@ def _validate_config(config: LicenseRuntimeConfig) -> None:
         raise LicenseError("license public key must be 32 bytes")
 
 
-def _evaluate_document(document: dict, config: LicenseRuntimeConfig, *, now: datetime | None = None) -> LicenseStatus:
+def _evaluate_document(
+    document: dict,
+    config: LicenseRuntimeConfig,
+    *,
+    now: datetime | None = None,
+    allow_uninitialized_clock: bool = False,
+) -> LicenseStatus:
     _validate_config(config)
     now = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
-    _validate_clock(now)
+    _validate_clock(now, require_initialized=not allow_uninitialized_clock)
     payload = _verify_signature(document, config.public_key_b64)
     metadata = payload.get("metadata")
     if not isinstance(metadata, dict) or metadata.get("product_id") != config.product_id:
@@ -301,7 +330,7 @@ def current_status(config: LicenseRuntimeConfig | None = None) -> LicenseStatus:
 
 def save_license(document: dict, config: LicenseRuntimeConfig | None = None) -> LicenseStatus:
     config = config or runtime_config()
-    status = _evaluate_document(document, config)
+    status = _evaluate_document(document, config, allow_uninitialized_clock=True)
     if not status.active:
         raise LicenseError(status.message)
     _atomic_write_text(
@@ -434,7 +463,11 @@ def refresh_paid_order(config: LicenseRuntimeConfig | None = None) -> LicenseSta
     order_id = str(order["order_id"])
     token = str(order["order_access_token"])
     status = _json_request(config, "GET", f"/api/orders/{order_id}/status", bearer=token)
-    if str(status.get("status") or "") not in {"paid", "license_issued"}:
+    order_status = str(status.get("status") or "").strip().lower()
+    if order_status in {"cancelled", "canceled", "expired", "failed", "refunded"}:
+        discard_pending_order()
+        raise LicenseError("Предыдущий счёт больше недействителен. Создайте новый.")
+    if order_status not in {"paid", "license_issued"}:
         raise LicenseError("Оплата ещё не подтверждена")
     machine = machine_fingerprint()
     try:
@@ -475,6 +508,13 @@ def activate_owner(bootstrap_code: str, config: LicenseRuntimeConfig | None = No
         body={"bootstrap_code": code, "machine_hash": machine_fingerprint()},
     )
     return save_license(document, config)
+
+
+def discard_pending_order() -> None:
+    try:
+        _pending_order_path().unlink(missing_ok=True)
+    except OSError as exc:
+        raise LicenseError("Не удалось удалить старый заказ") from exc
 
 
 def pending_payment_details() -> dict | None:
