@@ -35,19 +35,20 @@
     "main.py": "bd90d09ef6bb3fcb3053696ce456bc1529fdc850",
     "prod_audit.py": "4f10968ad1e1ff87fbf35f43881f743025bb03cc",
     "pyproject.toml": "3f91cb3c50b6fe2f50afb988b808e7979ff10fde",
-    "release_check.py": "2e5caee04909375c1d824fbfebdb7a6d100b087e",
+    "release_check.py": "7c805b42e42d5178b4001e900e1c38202ddfb122",
     "requirements.txt": "2f16f85d61da281ac1538a925dbed06d851a1a45",
     "requirements_build.txt": "818e47dcfb686e42af78af3c68b30c5a8e317245",
     "tests/license_client_regression.py": "5fa833c4da01524327ff334c6022f2cde97e6d22",
     "tests/license_server_regression.py": "b8791c6eafb59008a12fa01a6fead7c6959d5ea4",
-    "tests/regression_surface_inventory.py": "92e2f1776dccbb1e0705e0f7966fbd6d51cc5eca",
+    "tests/regression_surface_inventory.py": "ca1790bea803e562a49f2c671e83ebed794607bf",
     "tests/windows_live_e2e_contract.py": "b9490a08ba3318ac9f1c728654395a5462f35a8f",
-    "tools/ci_gate_lock.py": "16888a41f361eeecc3e469b4899048195ada5c10",
+    "tools/ci_gate_lock.py": "a03b1256f237767ce47f52d9be6cef12e8ce1b1e",
     "tools/document_mechanics_change_approval.json": "4abd3ee45e22953ecae0e0f201c246b38dd5eeda",
     "tools/generate_license_server_keypair.py": "058f2dbbe1bb69356f30f9308d34a43e113d970b",
     "tools/production_safety_gate.py": "7231883d53b492f99636c3f085c383585c13e30f",
     "tools/regression_lock_check.py": "55606f7da7f68ccff83414d9596d7334cbfc1700",
     "tools/render_license_build_config.py": "bb72ada22a4eae4872ddac23278bca9e54943616",
-    "version_info.txt": "03b7bea2966e9a297410e0622183c6ab78726d28"
+    "version_info.txt": "03b7bea2966e9a297410e0622183c6ab78726d28",
+    ".github/workflows/license-server-ci.yml": "5f38b538f50ebe908c3878726effcb181a1830ec"
   }
 }
