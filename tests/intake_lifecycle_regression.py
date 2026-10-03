@@ -710,9 +710,16 @@ def assert_watcher_launch_keeps_patient_registry_onboarding() -> None:
 
 def assert_visible_gui_claim_precedes_onboarding() -> None:
     source = Path("main.py").read_text(encoding="utf-8")
-    claim = source.index("claim_desktop_gui_session()")
-    onboarding = source.rindex("_first_launch_onboarding(")
-    assert claim < onboarding, "visible GUI heartbeat must be claimed before first-run modal onboarding"
+    main_source = source[source.index("def main() -> None:"):]
+    root = main_source.index("root = _create_root()")
+    claim = main_source.index("claim_desktop_gui_session()", root)
+    license_import = main_source.index("from license_ui import ensure_license", root)
+    license_gate = main_source.index("if not ensure_license(", license_import)
+    gui_import = main_source.index("from app import CombinedMedicalDiaryApp", license_gate)
+    onboarding = main_source.index("_first_launch_onboarding(", gui_import)
+    assert root < claim < license_import < license_gate < gui_import < onboarding, (
+        "visible GUI heartbeat must be claimed before licensing/modal startup and heavy GUI import"
+    )
 
     startup_source = Path("startup.py").read_text(encoding="utf-8")
     for snippet in (
@@ -795,7 +802,7 @@ def main() -> None:
     assert_visible_gui_claim_precedes_onboarding()
     assert_legacy_disabled_preference_heals_and_preserves_user_folder()
     print(
-        "INTAKE LIFECYCLE REGRESSION OK: self-heal + Desktop rebind + event-driven intake + in-place watcher replacement + queued-arrival handoff + duplicate-launch suppression + failed-launch retry + rejected-primary propagation + visible unrecognized-file feedback + independent PyInstaller child runtime + mandatory install intake + pre-onboarding GUI heartbeat claim + mandatory watcher-launch patient-folder onboarding"
+        "INTAKE LIFECYCLE REGRESSION OK: self-heal + Desktop rebind + event-driven intake + in-place watcher replacement + queued-arrival handoff + duplicate-launch suppression + failed-launch retry + rejected-primary propagation + visible unrecognized-file feedback + independent PyInstaller child runtime + mandatory install intake + pre-license/pre-onboarding GUI heartbeat claim + mandatory watcher-launch patient-folder onboarding"
     )
 
 
