@@ -45,9 +45,6 @@ jobs:
             throw "MEDICAL_AUTOFILL_LICENSE_PUBLIC_KEY_B64 repository variable is required."
           }
 
-      - name: Verify live license server trust anchor
-        run: python tools/license_server_preflight.py
-
       - name: Resolve and guard release target
         id: release_target
         shell: pwsh
@@ -126,6 +123,9 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r requirements_build.txt
+
+      - name: Verify live license server trust anchor
+        run: python tools/license_server_preflight.py
 
       - name: Lock known-good production and test surface
         run: python tools/regression_lock_check.py
