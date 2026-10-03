@@ -80,8 +80,9 @@ def main() -> None:
     assert order_token_matches(token, digest)
     assert not order_token_matches(token + "x", digest)
 
-    # Production owner code is stored only as a memory-hard digest. Exercise
-    # the primitive with a test code without exposing the production plaintext.
+    # Production owner code is stored only as a memory-hard digest. Lock the
+    # exact verifier value without committing the plaintext owner code.
+    assert OWNER_CODE_SCRYPT_HEX == "1fd2c06f2a6d893c9f8ee8a4b2253f0138623116090a4ab3ef5b0c3ee65f0281"
     assert len(OWNER_CODE_SCRYPT_HEX) == 64
     assert _scrypt_code("test-owner-code") != OWNER_CODE_SCRYPT_HEX
 
