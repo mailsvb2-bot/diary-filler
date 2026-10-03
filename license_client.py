@@ -572,12 +572,22 @@ def current_status(config: LicenseRuntimeConfig | None = None) -> LicenseStatus:
         return LicenseStatus(False, "invalid", str(exc))
 
 
-def save_license(document: dict, config: LicenseRuntimeConfig | None = None) -> LicenseStatus:
+def save_license(
+    document: dict,
+    config: LicenseRuntimeConfig | None = None,
+    *,
+    trusted_now: datetime | None = None,
+) -> LicenseStatus:
     config = config or runtime_config()
     # This entry point is used only for a freshly server-returned signed
     # entitlement. It may rebuild damaged local anti-rollback state, but all
     # signature/product/machine/period checks still run before the file is saved.
-    status = _evaluate_document(document, config, allow_uninitialized_clock=True)
+    status = _evaluate_document(
+        document,
+        config,
+        now=trusted_now,
+        allow_uninitialized_clock=True,
+    )
     if not status.active:
         if status.mode == "expired":
             raise LicenseExpiredError(status.message)
@@ -735,6 +745,11 @@ def refresh_paid_order(config: LicenseRuntimeConfig | None = None) -> LicenseSta
     token = str(order["order_access_token"])
     status = _json_request(config, "GET", f"/api/orders/{order_id}/status", bearer=token)
     order_status = str(status.get("status") or "").strip().lower()
+    trusted_now = None
+    try:
+        trusted_now = _parse_utc(str(status.get("server_time") or ""))
+    except LicenseError:
+        pass
     if order_status in {"cancelled", "canceled", "expired", "failed", "refunded"}:
         discard_pending_order()
         raise PaymentTerminalError("Предыдущий счёт больше недействителен. Создайте новый.")
@@ -762,7 +777,7 @@ def refresh_paid_order(config: LicenseRuntimeConfig | None = None) -> LicenseSta
     # Persist the recovery credential before local license state. If a disk or
     # clock-state error happens after payment, the user can retry without paying again.
     _save_active_order(order)
-    result = save_license(document, config)
+    result = save_license(document, config, trusted_now=trusted_now)
     try:
         _pending_order_path().unlink(missing_ok=True)
     except OSError:
@@ -783,6 +798,11 @@ def recover_paid_license(config: LicenseRuntimeConfig | None = None) -> LicenseS
             bearer=token,
         )
         order_status = str(status.get("status") or "").strip().lower()
+        trusted_now = None
+        try:
+            trusted_now = _parse_utc(str(status.get("server_time") or ""))
+        except LicenseError:
+            pass
         if order_status not in {"paid", "license_issued"}:
             raise PaidLicenseRecoveryError(
                 "Сервер не подтвердил действующую оплаченную лицензию"
@@ -796,7 +816,7 @@ def recover_paid_license(config: LicenseRuntimeConfig | None = None) -> LicenseS
             bearer=token,
         )
         try:
-            return save_license(document, config)
+            return save_license(document, config, trusted_now=trusted_now)
         except LicenseExpiredError:
             # The server confirmed the old entitlement itself, so it is safe to
             # persist that signed expired state and allow a genuinely new payment.
