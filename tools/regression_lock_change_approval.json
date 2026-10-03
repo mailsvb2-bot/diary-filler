@@ -16,11 +16,9 @@
     "patient_registry_regression"
   ],
   "approved_blobs": {
-    "license_calendar.py": "73d0390bf2ecaa1b2ec0762b3d40353a0c391d6f",
-    "license_client.py": "3aa82a419973533d3487e5d7dbf0822bc82c7c22",
-    "licensing_server/core.py": "35b22910aee768eb51460cee25425c0d2bfe0bee",
-    "release_check.py": "e61d2e6c19c276975971133d1451e50b28d57717",
-    "tests/license_client_regression.py": "d33fc4608caaba923d87d8c57d27c0e1d7122a3d",
-    "tests/license_server_regression.py": "f26be87f9dd72f6152166c53d29b9223c8c0383a"
+    "license_client.py": "fc0c5161ed77e25ee4cd9b8b015876d97c9f35c8",
+    "licensing_server/core.py": "62551f898e8bb501fe4f65e633d33be7ca6a15f0",
+    "tests/license_client_regression.py": "b3a67084a0b986ab2336a6babe398ed961dd4a33",
+    "tests/license_server_regression.py": "e9dc707c5ea38974395be26943556f50d93b3c1a"
   }
 }
