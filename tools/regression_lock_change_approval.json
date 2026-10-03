@@ -17,7 +17,7 @@
   ],
   "approved_blobs": {
     ".github/workflows/license-server-ci.yml": "d343c852bd2d31bd4f8a9404f3dedada39f5035b",
-    ".github/workflows/release.yml": "544023c613d1d169661c070d8b94f1cf0b9a91d3",
+    ".github/workflows/release.yml": "ec19efe2995f58754698e5f658010bf45d534c3b",
     ".github/workflows/windows-build.yml": "623c4ab9e31c750347d0cbe7f6e4eda54f428b20",
     ".github/workflows/windows-live-e2e-core.yml": "3aad389cd4087c103b522d4def305f838f724534",
     "BUILD_WINDOWS_INSTALLER.bat": "a2bb300445fc6adfb1a23eae949869ce69973d60",
@@ -34,7 +34,7 @@
     "tests/license_server_regression.py": "1243d9498a3d9d978acb467da6b5ba58021e018d",
     "tests/windows_ci_artifact_licensing_contract.py": "ca6fd936275adee83a5efe2be671bb3ee6fc184d",
     "tests/windows_live_e2e_contract.py": "f36f1ce8e5989c98f576623a9995c902dc910c6d",
-    "tools/ci_gate_lock.py": "4345d4471d8ed28ad8207d0ea1ff039b1ba5b0d3",
+    "tools/ci_gate_lock.py": "0abeb941ab341d68f28f6a97983835f2594db21a",
     "tools/document_mechanics_change_approval.json": "afc7915e9c9bfd3d74084f5e5920e5d583bcf6f5",
     "tools/license_server_preflight.py": "907b0d3be4c88d8d24a4feacb998a082bb9333cf",
     "version_info.txt": "f02abf8e8c2c4664b51f3d4810e0358b40fa638b",
