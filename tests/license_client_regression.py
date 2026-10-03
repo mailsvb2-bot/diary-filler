@@ -338,6 +338,55 @@ def main() -> None:
         assert lc.save_license(paid, config).active
         lc._save_active_order(recovery_order)
 
+        # If a stale pending file survived the first activation, a server-
+        # confirmed expired signed license must clean both stale order records.
+        stale_order = {
+            "order_id": "00000000-0000-0000-0000-000000000003",
+            "order_access_token": "T" * 48,
+            "payment_url": "https://pay.example.com/stale",
+            "amount_rub": 100,
+        }
+        stale_expired = signed_document(
+            private,
+            payload(machine, issued_at=datetime.now(timezone.utc) - timedelta(days=60)),
+        )
+        lc._save_pending_order(stale_order)
+        lc._save_active_order(stale_order)
+        old_json_request = lc._json_request
+        old_machine_fingerprint = lc.machine_fingerprint
+        try:
+            lc.machine_fingerprint = lambda: machine
+
+            def _stale_request(_config, method, path, *, body=None, bearer=""):
+                if method == "GET" and path.endswith("/status"):
+                    return {
+                        "status": "license_issued",
+                        "amount_rub": 100,
+                        "server_time": datetime.now(timezone.utc).isoformat(),
+                    }
+                if method == "POST" and path.endswith("/activate-machine"):
+                    return {"activated": True, "machine_hash": machine}
+                if method == "POST" and path.endswith("/license"):
+                    return stale_expired
+                raise AssertionError((method, path))
+
+            lc._json_request = _stale_request
+            try:
+                lc.refresh_paid_order(config)
+                raise AssertionError("expired stale order was accepted")
+            except lc.LicenseExpiredError:
+                pass
+            assert not lc._pending_order_path().exists()
+            assert not lc._active_order_path().exists()
+        finally:
+            lc._json_request = old_json_request
+            lc.machine_fingerprint = old_machine_fingerprint
+
+        # Restore an active recovery credential for later recovery-UI tests.
+        lc._save_active_order(recovery_order)
+        lc._clock_path().unlink(missing_ok=True)
+        assert lc.save_license(paid, config).active
+
         # A network/recovery failure for an already-paid entitlement must not
         # create a fresh payment order.
         old_runtime_config = lui.runtime_config
@@ -399,6 +448,97 @@ def main() -> None:
             lui.pending_payment_details = old_pending_details
             lui.begin_monthly_payment = old_begin_payment
             lui.messagebox.showwarning = old_showwarning
+
+        # A server-confirmed expired stale order is the only old-order case
+        # that may unlock exactly one fresh renewal invoice.
+        old_pending_details = lui.pending_payment_details
+        old_refresh_paid = lui.refresh_paid_order
+        old_begin_payment = lui.begin_monthly_payment
+        old_showinfo = lui.messagebox.showinfo
+        old_showwarning = lui.messagebox.showwarning
+        old_webopen = lui.webbrowser.open
+        renewal_calls = {"payment": 0, "refresh": 0}
+        try:
+            lui.pending_payment_details = lambda: {
+                "order_id": "expired-order",
+                "payment_url": "https://pay.example.com/expired",
+                "amount_rub": 100,
+            }
+
+            def _renewal_refresh(_config):
+                renewal_calls["refresh"] += 1
+                if renewal_calls["refresh"] == 1:
+                    raise lc.LicenseExpiredError("expired")
+                return lc.LicenseStatus(
+                    True,
+                    "paid",
+                    "Лицензия активна",
+                    "doctor_start",
+                    datetime.now(timezone.utc) + timedelta(days=28),
+                    False,
+                )
+
+            lui.refresh_paid_order = _renewal_refresh
+            lui.begin_monthly_payment = lambda _config: (
+                renewal_calls.__setitem__("payment", renewal_calls["payment"] + 1)
+                or {
+                    "order_id": "new-order",
+                    "payment_url": "https://pay.example.com/new",
+                    "amount_rub": 100,
+                }
+            )
+            lui.messagebox.showinfo = lambda *args, **kwargs: None
+            lui.messagebox.showwarning = lambda *args, **kwargs: None
+            lui.webbrowser.open = lambda *args, **kwargs: True
+            renewed = lui._payment_flow(None, config)
+            assert renewed and renewed.active
+            assert renewal_calls == {"payment": 1, "refresh": 2}
+        finally:
+            lui.pending_payment_details = old_pending_details
+            lui.refresh_paid_order = old_refresh_paid
+            lui.begin_monthly_payment = old_begin_payment
+            lui.messagebox.showinfo = old_showinfo
+            lui.messagebox.showwarning = old_showwarning
+            lui.webbrowser.open = old_webopen
+
+        # A nonterminal old invoice may never be replaced merely because the
+        # payment provider reconciliation is delayed.
+        old_pending_details = lui.pending_payment_details
+        old_refresh_paid = lui.refresh_paid_order
+        old_begin_payment = lui.begin_monthly_payment
+        old_showinfo = lui.messagebox.showinfo
+        old_showwarning = lui.messagebox.showwarning
+        old_webopen = lui.webbrowser.open
+        pending_calls = {"payment": 0, "refresh": 0}
+        try:
+            lui.pending_payment_details = lambda: {
+                "order_id": "pending-order",
+                "payment_url": "https://pay.example.com/pending",
+                "amount_rub": 100,
+            }
+
+            def _still_pending(_config):
+                pending_calls["refresh"] += 1
+                raise lc.PaymentPendingError("pending")
+
+            lui.refresh_paid_order = _still_pending
+            lui.begin_monthly_payment = lambda *args, **kwargs: (
+                pending_calls.__setitem__("payment", pending_calls["payment"] + 1)
+                or (_ for _ in ()).throw(AssertionError("nonterminal invoice was replaced"))
+            )
+            lui.messagebox.showinfo = lambda *args, **kwargs: None
+            lui.messagebox.showwarning = lambda *args, **kwargs: None
+            lui.webbrowser.open = lambda *args, **kwargs: True
+            assert lui._payment_flow(None, config) is None
+            assert pending_calls["payment"] == 0
+            assert pending_calls["refresh"] >= 1
+        finally:
+            lui.pending_payment_details = old_pending_details
+            lui.refresh_paid_order = old_refresh_paid
+            lui.begin_monthly_payment = old_begin_payment
+            lui.messagebox.showinfo = old_showinfo
+            lui.messagebox.showwarning = old_showwarning
+            lui.webbrowser.open = old_webopen
 
         # If a previous invoice is already paid, payment UX must claim it first
         # and must not create another invoice.
