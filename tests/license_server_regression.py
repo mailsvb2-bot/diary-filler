@@ -56,6 +56,7 @@ def main() -> None:
             owner=False,
             now=issued_at,
         )
+        assert calendar_license["schema"] == client.LICENSE_SCHEMA
         calendar_payload = calendar_license["license"]["payload"]
         assert client._parse_utc(calendar_payload["valid_until"]) == expected_until
 
