@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 import tempfile
 import sys
+import types
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
@@ -82,9 +83,67 @@ def main() -> None:
         )
         machine = lc.machine_fingerprint()
 
+        # Embedded production enforcement is authoritative and cannot be
+        # disabled or pointed at a different trust anchor through environment.
+        fake_embedded = types.SimpleNamespace(
+            LICENSE_SERVER_URL="https://embedded.example.com",
+            LICENSE_PUBLIC_KEY_B64=config.public_key_b64,
+            LICENSE_REQUIRED=True,
+        )
+        old_module = sys.modules.get("license_build_config")
+        sys.modules["license_build_config"] = fake_embedded
+        os.environ["MEDICAL_AUTOFILL_LICENSE_SERVER_URL"] = ""
+        os.environ["MEDICAL_AUTOFILL_LICENSE_PUBLIC_KEY_B64"] = ""
+        os.environ["MEDICAL_AUTOFILL_LICENSE_REQUIRED"] = "0"
+        embedded = lc.runtime_config()
+        assert embedded.required
+        assert embedded.server_url == "https://embedded.example.com"
+        assert embedded.public_key_b64 == config.public_key_b64
+        if old_module is None:
+            sys.modules.pop("license_build_config", None)
+        else:
+            sys.modules["license_build_config"] = old_module
+        os.environ.pop("MEDICAL_AUTOFILL_LICENSE_SERVER_URL", None)
+        os.environ.pop("MEDICAL_AUTOFILL_LICENSE_PUBLIC_KEY_B64", None)
+        os.environ.pop("MEDICAL_AUTOFILL_LICENSE_REQUIRED", None)
+
+        # Windows identity must not depend on hostname or reinstall-local ID
+        # when the stable MachineGuid is available.
+        old_guid = lc._windows_machine_guid
+        old_install = lc._install_id
+        lc._windows_machine_guid = lambda: "stable-guid"
+        lc._install_id = lambda: "install-a"
+        stable_a = lc.machine_fingerprint()
+        lc._install_id = lambda: "install-b"
+        stable_b = lc.machine_fingerprint()
+        assert stable_a == stable_b
+        lc._windows_machine_guid = old_guid
+        lc._install_id = old_install
+
         paid = signed_document(private, payload(machine))
         assert lc.save_license(paid, config).active
         assert lc.current_status(config).mode == "paid"
+
+        # Removing or corrupting the anti-rollback state after activation must
+        # fail closed rather than reset the clock guard.
+        clock_backup = lc._clock_path().read_text(encoding="utf-8")
+        lc._clock_path().unlink()
+        assert not lc.current_status(config).active
+        lc._clock_path().write_text(clock_backup, encoding="utf-8")
+        lc._clock_path().write_text("{broken", encoding="utf-8")
+        assert not lc.current_status(config).active
+        lc._clock_path().write_text(clock_backup, encoding="utf-8")
+
+        # A stale local payment order can always be discarded and replaced.
+        lc._save_pending_order({
+            "order_id": "00000000-0000-0000-0000-000000000099",
+            "order_access_token": "token",
+            "payment_url": "https://pay.example.com/old",
+            "amount_rub": 1,
+        })
+        assert lc.pending_payment_details() is not None
+        lc.discard_pending_order()
+        assert lc.pending_payment_details() is None
 
         tampered = json.loads(json.dumps(paid))
         tampered["license"]["payload"]["document_limit_month"] = 999999
