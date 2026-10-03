@@ -27,6 +27,7 @@
     "tools/windows_installer_smoke.ps1": "139bdfd146344dbed574fdedeae459a4f48f2715",
     "version_info.txt": "9c29942673ec7139f4b98bf979ba9862fd2d1e3a",
     "tools/ci_gate_lock.py": "785782a55ae4a4a685898a0889416f72538f977b",
-    "tests/windows_live_e2e_contract.py": "a5a09e7eab03eab7baaa1b5dd7d5b0c7750c2280"
+    "tests/windows_live_e2e_contract.py": "a5a09e7eab03eab7baaa1b5dd7d5b0c7750c2280",
+    ".github/workflows/windows-live-e2e-core.yml": "a16f391223ddb8201fd9576c32055abcc0ee37ef"
   }
 }
