@@ -428,7 +428,7 @@ def _evaluate_document(
     if owner:
         if not machine_allowed:
             raise OwnerReactivationRequired(
-                "Безлимитный доступ владельца нужно повторно активировать на этом компьютере"
+                "Требуется повторная активация лицензии на этом компьютере"
             )
         # An Ed25519-signed owner entitlement is intentionally non-expiring.
         # It must not depend on mutable anti-rollback clock state, otherwise a
@@ -440,7 +440,7 @@ def _evaluate_document(
         return LicenseStatus(
             True,
             "owner",
-            "Безлимитный доступ владельца",
+            "Лицензия активна",
             plan,
             valid_until,
             True,
@@ -481,13 +481,13 @@ def current_status(config: LicenseRuntimeConfig | None = None) -> LicenseStatus:
     except FileNotFoundError:
         if owner_marker:
             return _owner_reactivation_status(
-                "Безлимитный доступ владельца нужно восстановить"
+                "Требуется повторная активация лицензии"
             )
         return LicenseStatus(False, "missing", "Лицензия не активирована")
     except Exception:
         if owner_marker:
             return _owner_reactivation_status(
-                "Безлимитный доступ владельца нужно восстановить"
+                "Требуется повторная активация лицензии"
             )
         return LicenseStatus(False, "invalid", "Файл лицензии повреждён")
     try:
@@ -497,7 +497,7 @@ def current_status(config: LicenseRuntimeConfig | None = None) -> LicenseStatus:
     except LicenseError as exc:
         if owner_marker:
             return _owner_reactivation_status(
-                "Безлимитный доступ владельца нужно повторно активировать"
+                "Требуется повторная активация лицензии"
             )
         return LicenseStatus(False, "invalid", str(exc))
 
@@ -652,7 +652,7 @@ def activate_owner(bootstrap_code: str, config: LicenseRuntimeConfig | None = No
     config = config or runtime_config()
     code = str(bootstrap_code or "").strip()
     if not code:
-        raise LicenseError("Код владельца пуст")
+        raise LicenseError("Код активации пуст")
     document = _json_request(
         config,
         "POST",
