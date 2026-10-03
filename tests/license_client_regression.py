@@ -306,6 +306,95 @@ def main() -> None:
             lui.begin_monthly_payment = old_begin_payment
             lui.messagebox.askyesnocancel = old_askyesnocancel
 
+        # Public license-manager UX must stay discreet: privileged access is
+        # internally recognized, but the interface only says that the license is active.
+        active_private = lc.LicenseStatus(True, "owner", "internal", "vip", None, True)
+        manager = lui._manager_state(active_private)
+        assert manager["title"] == "Лицензия активна"
+        assert manager["details"] == "Доступ активирован."
+        assert not manager["show_payment"]
+        assert not manager["show_activation"]
+        assert lui._format_status(active_private) == "Лицензия активна."
+
+        reactivate_private = lc.LicenseStatus(
+            False,
+            "owner_reactivation",
+            "internal",
+            "vip",
+            None,
+            True,
+        )
+        manager = lui._manager_state(reactivate_private)
+        assert manager["title"] == "Требуется активация"
+        assert manager["show_activation"]
+        assert not manager["show_payment"]
+        assert "влад" not in manager["details"].lower()
+        assert "безлим" not in manager["details"].lower()
+
+        paid_public = lc.LicenseStatus(
+            True,
+            "paid",
+            "Лицензия активна",
+            "doctor_start",
+            datetime.now(timezone.utc) + timedelta(days=10),
+            False,
+        )
+        manager = lui._manager_state(paid_public)
+        assert manager["show_activation"]
+        assert not manager["show_payment"]
+
+        missing_public = lc.LicenseStatus(False, "missing", "Лицензия не активирована")
+        manager = lui._manager_state(missing_public)
+        assert manager["show_activation"] and manager["show_payment"]
+
+        license_ui_text = (ROOT / "license_ui.py").read_text(encoding="utf-8").lower()
+        license_client_text = (ROOT / "license_client.py").read_text(encoding="utf-8").lower()
+        for forbidden_public_phrase in (
+            "безлимитный доступ владельца",
+            "доступ владельца",
+            "код владельца",
+            "суперадмин",
+            "супер админ",
+        ):
+            assert forbidden_public_phrase not in license_ui_text
+            assert forbidden_public_phrase not in license_client_text
+        assert "ввести код активации" in license_ui_text
+        assert "код активации пуст" in license_client_text
+
+        window_text = (ROOT / "window_mixin.py").read_text(encoding="utf-8")
+        assert 'text="Лицензия", command=self._show_license_manager' in window_text
+        assert "show_license_manager(self.root)" in window_text
+
+        # Entering an activation code from the manager must use the same secure
+        # server verification and return an active license without touching payment.
+        old_activate_owner = lui.activate_owner
+        old_askstring = lui.simpledialog.askstring
+        old_showinfo = lui.messagebox.showinfo
+        old_showerror = lui.messagebox.showerror
+        old_begin_payment = lui.begin_monthly_payment
+        manager_calls = {"activation": 0, "payment": 0}
+        try:
+            lui.simpledialog.askstring = lambda *args, **kwargs: "activation-code"
+            lui.activate_owner = lambda code, _config: (
+                manager_calls.__setitem__("activation", manager_calls["activation"] + 1)
+                or lc.LicenseStatus(True, "owner", "internal", "vip", None, True)
+            )
+            lui.begin_monthly_payment = lambda *args, **kwargs: (
+                manager_calls.__setitem__("payment", manager_calls["payment"] + 1)
+                or (_ for _ in ()).throw(AssertionError("activation code reached payment"))
+            )
+            lui.messagebox.showinfo = lambda *args, **kwargs: None
+            lui.messagebox.showerror = lambda *args, **kwargs: None
+            manager_status = lui._activate_code(None, config)
+            assert manager_status and manager_status.active
+            assert manager_calls == {"activation": 1, "payment": 0}
+        finally:
+            lui.activate_owner = old_activate_owner
+            lui.simpledialog.askstring = old_askstring
+            lui.messagebox.showinfo = old_showinfo
+            lui.messagebox.showerror = old_showerror
+            lui.begin_monthly_payment = old_begin_payment
+
         # The owner-reactivation UI has no route to monthly payment.
         old_runtime_config = lui.runtime_config
         old_current_status = lui.current_status

@@ -1,6 +1,7 @@
-"""Small Tk licensing UX for visible MedicalDiaryAutofill sessions."""
+"""Tk licensing UX for visible MedicalDiaryAutofill sessions."""
 from __future__ import annotations
 
+import tkinter as tk
 import webbrowser
 from tkinter import messagebox, simpledialog
 
@@ -19,29 +20,217 @@ from license_client import (
 def _format_status(status) -> str:
     if status.active:
         if status.owner_unlimited:
-            return "Безлимитный доступ владельца активен."
+            return "Лицензия активна."
         if status.valid_until is not None:
             return "Лицензия активна до " + status.valid_until.astimezone().strftime("%d.%m.%Y %H:%M")
-        return status.message
+        return "Лицензия активна."
+    if status.mode == "owner_reactivation":
+        return "Требуется повторная активация лицензии на этом компьютере."
     return status.message
 
 
-def _activate_owner_only(parent, config, *, prompt: str) -> bool:
+def _manager_state(status) -> dict:
+    if status.active and status.owner_unlimited:
+        return {
+            "title": "Лицензия активна",
+            "details": "Доступ активирован.",
+            "show_payment": False,
+            "show_activation": False,
+        }
+    if status.active:
+        details = (
+            "Действует до: " + status.valid_until.astimezone().strftime("%d.%m.%Y %H:%M")
+            if status.valid_until is not None
+            else "Лицензия активна."
+        )
+        return {
+            "title": "Лицензия активна",
+            "details": details,
+            "show_payment": False,
+            "show_activation": True,
+        }
+    if status.mode == "owner_reactivation":
+        return {
+            "title": "Требуется активация",
+            "details": "Введите код активации для этого компьютера.",
+            "show_payment": False,
+            "show_activation": True,
+        }
+    return {
+        "title": "Лицензия не активна",
+        "details": _format_status(status),
+        "show_payment": True,
+        "show_activation": True,
+    }
+
+
+def _activate_code(parent, config, *, prompt: str = "Введите код активации:"):
     code = simpledialog.askstring(
-        "Доступ владельца",
+        "Код активации",
         prompt,
         show="•",
         parent=parent,
     )
     if not code:
-        return False
+        return None
     try:
         status = activate_owner(code, config)
     except LicenseError as exc:
-        messagebox.showerror("Доступ владельца", str(exc), parent=parent)
-        return False
-    messagebox.showinfo("Доступ владельца", _format_status(status), parent=parent)
-    return True
+        messagebox.showerror("Активация лицензии", str(exc), parent=parent)
+        return None
+    messagebox.showinfo("Лицензия", "Лицензия активирована.", parent=parent)
+    return status
+
+
+def _payment_flow(parent, config):
+    pending = pending_payment_details()
+    try:
+        if pending and pending.get("payment_url"):
+            reuse = messagebox.askyesno(
+                "Незавершённая оплата",
+                "Найден предыдущий счёт.\n\n"
+                "Да — продолжить прошлую оплату.\n"
+                "Нет — отменить локально старый счёт и создать новый.",
+                parent=parent,
+            )
+            if reuse:
+                payment = pending
+            else:
+                discard_pending_order()
+                payment = begin_monthly_payment(config)
+        else:
+            payment = begin_monthly_payment(config)
+    except LicenseError as exc:
+        messagebox.showerror("Лицензия", str(exc), parent=parent)
+        return None
+
+    url = str(payment.get("payment_url") or "")
+    amount = int(payment.get("amount_rub") or 0)
+    if url:
+        try:
+            webbrowser.open(url, new=2)
+        except Exception:
+            pass
+    messagebox.showinfo(
+        "Оплата лицензии",
+        (f"Сумма: {amount} ₽\n\n" if amount else "")
+        + "Страница оплаты открыта в браузере.\n"
+        + "После завершения оплаты нажмите ОК — программа проверит платёж.",
+        parent=parent,
+    )
+    try:
+        status = refresh_paid_order(config)
+    except LicenseError as exc:
+        messagebox.showwarning(
+            "Оплата пока не подтверждена",
+            str(exc) + "\n\nПроверку можно повторить из окна «Лицензия».",
+            parent=parent,
+        )
+        return None
+    messagebox.showinfo("Лицензия", _format_status(status), parent=parent)
+    return status
+
+
+def show_license_manager(parent) -> None:
+    config = runtime_config()
+    window = tk.Toplevel(parent)
+    window.title("Лицензия")
+    window.transient(parent)
+    window.resizable(False, False)
+    window.configure(bg="#07111f")
+    try:
+        window.grab_set()
+    except tk.TclError:
+        pass
+
+    width, height = 430, 245
+    try:
+        parent.update_idletasks()
+        x = parent.winfo_rootx() + max(0, (parent.winfo_width() - width) // 2)
+        y = parent.winfo_rooty() + max(0, (parent.winfo_height() - height) // 2)
+        window.geometry(f"{width}x{height}+{x}+{y}")
+    except Exception:
+        window.geometry(f"{width}x{height}")
+
+    title_var = tk.StringVar()
+    details_var = tk.StringVar()
+    content = tk.Frame(window, bg="#07111f", padx=24, pady=22)
+    content.pack(fill="both", expand=True)
+
+    tk.Label(
+        content,
+        textvariable=title_var,
+        bg="#07111f",
+        fg="#eaf6ff",
+        font=("Segoe UI", 15, "bold"),
+        anchor="w",
+    ).pack(fill="x")
+    tk.Label(
+        content,
+        textvariable=details_var,
+        bg="#07111f",
+        fg="#91a8bb",
+        font=("Segoe UI", 10),
+        anchor="w",
+        justify="left",
+        wraplength=380,
+    ).pack(fill="x", pady=(10, 18))
+
+    buttons = tk.Frame(content, bg="#07111f")
+    buttons.pack(fill="x", side="bottom")
+
+    def button(text: str, command, *, accent: bool = False):
+        return tk.Button(
+            buttons,
+            text=text,
+            command=command,
+            bg="#24c8fb" if accent else "#10263a",
+            fg="#03101f" if accent else "#eaf6ff",
+            activebackground="#7ee3ff" if accent else "#18344d",
+            activeforeground="#03101f" if accent else "#ffffff",
+            relief="flat",
+            bd=0,
+            padx=14,
+            pady=8,
+            font=("Segoe UI", 10, "bold" if accent else "normal"),
+            cursor="hand2",
+        )
+
+    def refresh() -> None:
+        for child in buttons.winfo_children():
+            child.destroy()
+        status = current_status(config)
+        state = _manager_state(status)
+        title_var.set(state["title"])
+        details_var.set(state["details"])
+
+        if state["show_activation"]:
+            button(
+                "Ввести код активации",
+                lambda: activate_and_refresh(),
+                accent=not state["show_payment"],
+            ).pack(side="left", padx=(0, 8))
+        if state["show_payment"]:
+            button(
+                "Оплатить лицензию",
+                lambda: pay_and_refresh(),
+                accent=True,
+            ).pack(side="left", padx=(0, 8))
+        button("Закрыть", window.destroy).pack(side="right")
+
+    def activate_and_refresh() -> None:
+        if _activate_code(window, config) is not None:
+            refresh()
+
+    def pay_and_refresh() -> None:
+        _payment_flow(window, config)
+        refresh()
+
+    refresh()
+    try:
+        window.wait_window()
+    except tk.TclError:
+        pass
 
 
 def ensure_license(parent, *, interactive: bool = True) -> bool:
@@ -52,21 +241,18 @@ def ensure_license(parent, *, interactive: bool = True) -> bool:
     if not interactive:
         return False
 
-    # A previously signed owner entitlement must never enter the paid UX.
-    # If Windows was reinstalled or MachineGuid changed, request only the
-    # owner bootstrap code and reissue the entitlement for this computer.
+    # A previously signed privileged entitlement never enters paid UX.
     if status.mode == "owner_reactivation":
         while True:
-            if _activate_owner_only(
+            if _activate_code(
                 parent,
                 config,
-                prompt="Повторно введите код владельца для этого компьютера:",
-            ):
+                prompt="Повторно введите код активации для этого компьютера:",
+            ) is not None:
                 return True
             retry = messagebox.askretrycancel(
-                "Доступ владельца",
-                "Безлимитный доступ владельца не активирован.\n"
-                "Оплата для владельца не требуется.",
+                "Активация лицензии",
+                "Лицензия не активирована. Повторить ввод кода?",
                 parent=parent,
             )
             if not retry:
@@ -77,71 +263,23 @@ def ensure_license(parent, *, interactive: bool = True) -> bool:
             "Лицензия MedicalDiaryAutofill",
             _format_status(status)
             + "\n\n"
-            + "Да — оплатить/продлить лицензию на месяц.\n"
-            + "Нет — ввести код владельца.\n"
+            + "Да — оплатить лицензию.\n"
+            + "Нет — ввести код активации.\n"
             + "Отмена — закрыть.",
             parent=parent,
         )
         if choice is None:
             return False
         if choice is False:
-            if _activate_owner_only(
-                parent,
-                config,
-                prompt="Введите код владельца:",
-            ):
+            if _activate_code(parent, config) is not None:
                 return True
             status = current_status(config)
             continue
 
-        pending = pending_payment_details()
-        try:
-            if pending and pending.get("payment_url"):
-                reuse = messagebox.askyesno(
-                    "Незавершённая оплата",
-                    "Найден предыдущий счёт.\n\n"
-                    "Да — продолжить прошлую оплату.\n"
-                    "Нет — отменить локально старый счёт и создать новый.",
-                    parent=parent,
-                )
-                if reuse:
-                    payment = pending
-                else:
-                    discard_pending_order()
-                    payment = begin_monthly_payment(config)
-            else:
-                payment = begin_monthly_payment(config)
-        except LicenseError as exc:
-            messagebox.showerror("Лицензия", str(exc), parent=parent)
-            status = current_status(config)
-            continue
-
-        url = str(payment.get("payment_url") or "")
-        amount = int(payment.get("amount_rub") or 0)
-        if url:
-            try:
-                webbrowser.open(url, new=2)
-            except Exception:
-                pass
-        messagebox.showinfo(
-            "Оплата лицензии",
-            (f"Сумма: {amount} ₽\n\n" if amount else "")
-            + "Страница оплаты открыта в браузере.\n"
-            + "После завершения оплаты нажмите ОК — программа проверит платёж.",
-            parent=parent,
-        )
-        try:
-            status = refresh_paid_order(config)
-        except LicenseError as exc:
-            messagebox.showwarning(
-                "Оплата пока не подтверждена",
-                str(exc) + "\n\nМожно повторить проверку, снова нажав «Оплатить/продлить».",
-                parent=parent,
-            )
-            status = current_status(config)
-            continue
-        messagebox.showinfo("Лицензия", _format_status(status), parent=parent)
-        return True
+        paid = _payment_flow(parent, config)
+        if paid is not None and paid.active:
+            return True
+        status = current_status(config)
 
 
 def ensure_generation_license(parent) -> bool:

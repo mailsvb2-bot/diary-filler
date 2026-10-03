@@ -288,6 +288,11 @@ class WindowMixin:
         c.create_line(7, 11, 10, 14, 16, 7, fill=ACCENT, width=1.4, capstyle="round", joinstyle="round")
         return c
 
+    def _show_license_manager(self) -> None:
+        from license_ui import show_license_manager
+
+        show_license_manager(self.root)
+
     def _build_header(self, parent: tk.Frame) -> None:
         """Шапка без зачёркнутых элементов: убраны логотип слева и service-icons справа."""
         header = tk.Frame(parent, bg=DEEP, padx=self._px(7, 4), pady=self._px(4, 2))
@@ -348,10 +353,17 @@ class WindowMixin:
             relief="flat", bd=0, padx=self._px(8, 5),
             font=self._font(9 if self._compact_ui else 10), cursor="hand2",
         )
-        staff_button.grid(row=0, column=3, padx=(0, self._px(8, 4)))
-        self._window_control_button(controls, "−", self._minimize_window).grid(row=0, column=4)
-        self._window_control_button(controls, "□", self._toggle_maximize).grid(row=0, column=5)
-        self._window_control_button(controls, "×", self._request_close, danger=True).grid(row=0, column=6)
+        staff_button.grid(row=0, column=3, padx=(0, self._px(4, 3)))
+        license_button = tk.Button(
+            controls, text="Лицензия", command=self._show_license_manager,
+            bg=DEEP, fg=MUTED, activebackground=BG_2, activeforeground=ACCENT,
+            relief="flat", bd=0, padx=self._px(8, 5),
+            font=self._font(9 if self._compact_ui else 10), cursor="hand2",
+        )
+        license_button.grid(row=0, column=4, padx=(0, self._px(8, 4)))
+        self._window_control_button(controls, "−", self._minimize_window).grid(row=0, column=5)
+        self._window_control_button(controls, "□", self._toggle_maximize).grid(row=0, column=6)
+        self._window_control_button(controls, "×", self._request_close, danger=True).grid(row=0, column=7)
 
     def _header_icon_button(self, parent, text: str, command) -> tk.Button:
         return tk.Button(
