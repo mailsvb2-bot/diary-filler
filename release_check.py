@@ -39,6 +39,7 @@ REQUIRED_FILES = [
     "patient_registry.py",
     "patient_registry_mixin.py",
     "license_client.py",
+    "license_calendar.py",
     "license_ui.py",
     "licensing_server/core.py",
     "licensing_server/store.py",
