@@ -18,14 +18,14 @@
   "approved_blobs": {
     "actions_creation_orchestrator.py": "34d8c621d28ec261e6753ded8921f4c651699898",
     "build_exe_windows.bat": "8bdcd77c4b783c0dad34947f7792264a331328b3",
-    "license_client.py": "d4d824b5e080290a3386cee56d78c3f9ff32bd8a",
-    "license_ui.py": "ddd9f7fb878556dfd7fbf56fb716ff2da2d27b57",
+    "license_client.py": "c05c2cf2f5a195694d502dd2ff95058ab0ee1d56",
+    "license_ui.py": "19d3a97abe94334c35f2179cd4e06c3b56881fad",
     "main.py": "bd90d09ef6bb3fcb3053696ce456bc1529fdc850",
     "prod_audit.py": "eb76a8c70a7838af7da40e54085a7cfd9b1d2de4",
     "release_check.py": "77255ad878673f8a47452138dd51767b00eb4877",
     "requirements.txt": "2f16f85d61da281ac1538a925dbed06d851a1a45",
     "requirements_build.txt": "818e47dcfb686e42af78af3c68b30c5a8e317245",
-    "tests/license_client_regression.py": "b4d654259b45111b7e70de7d98c77435c65fca13",
+    "tests/license_client_regression.py": "843dfa4a6a25595d192a7796c2fa8967a720f8dd",
     "tools/document_mechanics_change_approval.json": "a305d5c722d556dc57dd2dc68483c34060052ee7",
     "tools/render_license_build_config.py": "bb72ada22a4eae4872ddac23278bca9e54943616",
     "tools/production_safety_gate.py": "7231883d53b492f99636c3f085c383585c13e30f"
