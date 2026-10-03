@@ -27,6 +27,7 @@ from licensing_server.core import (
     public_key_b64,
 )
 from licensing_server.store import LicenseStore
+from licensing_server.yookassa import YooKassaClient
 
 
 def main() -> None:
@@ -39,6 +40,21 @@ def main() -> None:
     private_b64 = base64.b64encode(private_raw).decode("ascii")
     public_b64 = public_key_b64(private_b64)
     machine = "a" * 64
+
+    payment = {
+        "status": "succeeded",
+        "paid": True,
+        "amount": {"value": "100.00", "currency": "RUB"},
+        "metadata": {"order_id": "order-1", "product_id": "diary_filler"},
+    }
+    assert YooKassaClient.payment_matches_order(payment, order_id="order-1", amount_rub=100)
+    assert not YooKassaClient.payment_matches_order(payment, order_id="order-2", amount_rub=100)
+    assert not YooKassaClient.payment_matches_order(payment, order_id="order-1", amount_rub=101)
+
+    app_source = (ROOT / "licensing_server" / "app.py").read_text(encoding="utf-8")
+    assert "def reconcile_payment(row: dict)" in app_source
+    assert "row = reconcile_payment(row)" in app_source
+    assert "provider.get_payment" in app_source
 
     token = new_order_access_token()
     digest = order_token_hash(token)
