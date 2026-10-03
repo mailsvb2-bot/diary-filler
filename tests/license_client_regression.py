@@ -18,6 +18,7 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 import license_client as lc
+import license_ui as lui
 
 
 def canonical(payload: dict) -> bytes:
@@ -213,8 +214,87 @@ def main() -> None:
             pass
 
         owner = signed_document(private, payload(machine, days=3650, owner=True))
-        owner_status = lc._evaluate_document(owner, config)
+        owner_status = lc.save_license(owner, config)
         assert owner_status.active and owner_status.owner_unlimited and owner_status.mode == "owner"
+
+        # Owner access is intentionally independent from the paid-license
+        # anti-clock state. Missing/corrupt clock data must never send the
+        # owner into the subscription/payment path.
+        lc._clock_path().unlink(missing_ok=True)
+        owner_status = lc.current_status(config)
+        assert owner_status.active and owner_status.mode == "owner" and owner_status.owner_unlimited
+        lc._clock_path().write_text("{broken", encoding="utf-8")
+        owner_status = lc.current_status(config)
+        assert owner_status.active and owner_status.mode == "owner" and owner_status.owner_unlimited
+
+        # If Windows/MachineGuid changes, a valid signed owner entitlement is
+        # recognized as owner reactivation rather than a missing paid license.
+        old_fingerprint = lc.machine_fingerprint
+        lc.machine_fingerprint = lambda: "f" * 64
+        try:
+            reactivation = lc.current_status(config)
+            assert not reactivation.active
+            assert reactivation.mode == "owner_reactivation"
+            assert reactivation.owner_unlimited
+        finally:
+            lc.machine_fingerprint = old_fingerprint
+
+        # The owner-reactivation UI has no route to monthly payment.
+        old_runtime_config = lui.runtime_config
+        old_current_status = lui.current_status
+        old_activate_owner = lui.activate_owner
+        old_begin_payment = lui.begin_monthly_payment
+        old_askstring = lui.simpledialog.askstring
+        old_askyesnocancel = lui.messagebox.askyesnocancel
+        old_showinfo = lui.messagebox.showinfo
+        old_showerror = lui.messagebox.showerror
+        old_retry = lui.messagebox.askretrycancel
+        calls = {"payment": 0, "owner": 0}
+        try:
+            lui.runtime_config = lambda: config
+            lui.current_status = lambda _config: lc.LicenseStatus(
+                False,
+                "owner_reactivation",
+                "owner reactivation required",
+                "vip",
+                None,
+                True,
+            )
+            lui.simpledialog.askstring = lambda *args, **kwargs: "owner-code"
+            lui.activate_owner = lambda code, _config: (
+                calls.__setitem__("owner", calls["owner"] + 1)
+                or lc.LicenseStatus(True, "owner", "owner", "vip", None, True)
+            )
+            def _payment_forbidden(*args, **kwargs):
+                calls["payment"] += 1
+                raise AssertionError("owner reactivation reached monthly payment")
+            lui.begin_monthly_payment = _payment_forbidden
+            lui.messagebox.askyesnocancel = lambda *args, **kwargs: (_ for _ in ()).throw(
+                AssertionError("owner reactivation reached paid-license chooser")
+            )
+            lui.messagebox.showinfo = lambda *args, **kwargs: None
+            lui.messagebox.showerror = lambda *args, **kwargs: None
+            lui.messagebox.askretrycancel = lambda *args, **kwargs: False
+            assert lui.ensure_license(None, interactive=True)
+            assert calls == {"payment": 0, "owner": 1}
+        finally:
+            lui.runtime_config = old_runtime_config
+            lui.current_status = old_current_status
+            lui.activate_owner = old_activate_owner
+            lui.begin_monthly_payment = old_begin_payment
+            lui.simpledialog.askstring = old_askstring
+            lui.messagebox.askyesnocancel = old_askyesnocancel
+            lui.messagebox.showinfo = old_showinfo
+            lui.messagebox.showerror = old_showerror
+            lui.messagebox.askretrycancel = old_retry
+
+        # Installer contract: user-owned licensing state shares the production
+        # LocalAppData directory and must never be listed for install/uninstall
+        # deletion.
+        installer_text = (ROOT / "installer" / "MedicalDiaryAutofill.iss").read_text(encoding="utf-8")
+        assert "DefaultDirName={localappdata}\\MedicalDiaryAutofill" in installer_text
+        assert "license.json" not in installer_text
+        assert "license-clock.json" not in installer_text
 
         required_missing = lc.LicenseRuntimeConfig("", "", True)
         assert not lc.current_status(required_missing).active
