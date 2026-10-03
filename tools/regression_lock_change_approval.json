@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "3774c0836001f5ba89e5b36dd1cf274ad1c82128",
+  "reason": "Extend the mandatory installer self-delete regression timeout so it covers the cleanup helper's full retry window and cannot fail early while valid retries are still in progress.",
+  "required_evidence": [
+    "document_mechanics_guard",
+    "full_patient_replay",
+    "golden_docx",
+    "staff_profile_regression",
+    "gender_generation_matrix",
+    "desktop_intake_contract",
+    "intake_lifecycle_regression",
+    "packaged_desktop_intake_e2e",
+    "installer_uninstall_smoke",
+    "ci_gate_lock",
+    "patient_registry_regression"
+  ],
+  "approved_blobs": {
+    "tools/windows_installer_smoke.ps1": "98734b60cc887164184362e1de0df36c071fe7e5"
+  }
+}
