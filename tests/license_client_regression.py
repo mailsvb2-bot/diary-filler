@@ -326,6 +326,11 @@ def main() -> None:
         assert "license.json" not in installer_text
         assert "license-clock.json" not in installer_text
 
+        # Restore a clean paid-license clock state for the independent rollback
+        # regression below; owner deliberately ignored the damaged clock above.
+        lc._clock_path().unlink(missing_ok=True)
+        assert lc.save_license(paid, config).active
+
         required_missing = lc.LicenseRuntimeConfig("", "", True)
         assert not lc.current_status(required_missing).active
         dev_missing = lc.LicenseRuntimeConfig("", "", False)
