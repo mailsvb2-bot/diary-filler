@@ -186,7 +186,12 @@ def create_app() -> FastAPI:
     def order_status(order_id: str, authorization: str | None = Header(default=None)) -> dict:
         row = authorized_order(order_id, authorization)
         row = reconcile_payment(row)
-        return {"order_id": order_id, "status": row["status"], "amount_rub": row["amount_rub"]}
+        return {
+            "order_id": order_id,
+            "status": row["status"],
+            "amount_rub": row["amount_rub"],
+            "server_time": datetime.now(timezone.utc).isoformat(),
+        }
 
     @app.post("/api/orders/{order_id}/activate-machine")
     def activate_machine(order_id: str, req: MachineRequest, authorization: str | None = Header(default=None)) -> dict:
