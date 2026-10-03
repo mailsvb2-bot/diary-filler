@@ -531,6 +531,13 @@ def main() -> None:
         intake_primary = _intake_primary_argument(sys.argv[1:]) or None
         direct_primary = _direct_primary_argument(sys.argv[1:]) or None
         root = _create_root()
+
+        # Claim the visible-GUI heartbeat immediately after creating the root,
+        # before importing/opening licensing or any other modal UI. Otherwise the
+        # hidden intake watcher can mistake a slow license check for "no GUI" and
+        # launch duplicate primary processes.
+        claim_desktop_gui_session()
+
         # Licensing is checked only for a visible GUI. The hidden watcher remains
         # lightweight and can wake the GUI, but document generation still has a
         # second mandatory gate at the creation boundary.
@@ -542,11 +549,6 @@ def main() -> None:
             except Exception:
                 pass
             return
-
-        # Claim the visible-GUI heartbeat before imports and modal onboarding.
-        # Otherwise the hidden intake watcher can race a long folder chooser and
-        # launch a second GUI with an unrelated Word file.
-        claim_desktop_gui_session()
 
         # Import the large GUI/document graph only for a real visible session.
         # The persistent --intake-agent stays lightweight and no longer pays the
