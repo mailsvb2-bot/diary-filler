@@ -118,6 +118,12 @@ def _clock_path() -> Path:
     return _runtime_dir() / "license-clock.json"
 
 
+def _owner_marker_path() -> Path:
+    base = os.environ.get("APPDATA", "").strip()
+    root = Path(base) if base else _runtime_dir().parent
+    return root / "MedicalDiaryAutofill" / "owner-entitlement.marker"
+
+
 def _install_id_path() -> Path:
     return _runtime_dir() / "license-install-id.txt"
 
@@ -279,6 +285,45 @@ def _unprotect_local_blob(value: str, purpose: str) -> bytes:
     raise LicenseError("unsupported protected local license state")
 
 
+def _write_owner_marker() -> None:
+    clear = json.dumps(
+        {"schema": 1, "owner": True},
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    protected = _protect_local_blob(clear, "MedicalDiaryAutofill owner marker")
+    _atomic_write_text(
+        _owner_marker_path(),
+        json.dumps({"schema": 1, "protected": protected}, ensure_ascii=False) + "\n",
+    )
+
+
+def _has_owner_marker() -> bool:
+    try:
+        outer = json.loads(_owner_marker_path().read_text(encoding="utf-8"))
+        if outer.get("schema") != 1:
+            return False
+        clear = _unprotect_local_blob(
+            str(outer.get("protected") or ""),
+            "MedicalDiaryAutofill owner marker",
+        )
+        payload = json.loads(clear.decode("utf-8"))
+        return payload == {"owner": True, "schema": 1}
+    except Exception:
+        return False
+
+
+def _owner_reactivation_status(message: str) -> LicenseStatus:
+    return LicenseStatus(
+        False,
+        "owner_reactivation",
+        message,
+        "vip",
+        None,
+        True,
+    )
+
+
 def _read_clock_state() -> datetime | None:
     path = _clock_path()
     try:
@@ -430,24 +475,30 @@ def current_status(config: LicenseRuntimeConfig | None = None) -> LicenseStatus:
         if config.required:
             return LicenseStatus(False, "misconfigured", "Лицензирование не настроено в сборке")
         return LicenseStatus(True, "development", "Лицензирование пока не включено в этой сборке")
+    owner_marker = _has_owner_marker()
     try:
         document = json.loads(license_path().read_text(encoding="utf-8"))
     except FileNotFoundError:
+        if owner_marker:
+            return _owner_reactivation_status(
+                "Безлимитный доступ владельца нужно восстановить"
+            )
         return LicenseStatus(False, "missing", "Лицензия не активирована")
     except Exception:
+        if owner_marker:
+            return _owner_reactivation_status(
+                "Безлимитный доступ владельца нужно восстановить"
+            )
         return LicenseStatus(False, "invalid", "Файл лицензии повреждён")
     try:
         return _evaluate_document(document, config)
     except OwnerReactivationRequired as exc:
-        return LicenseStatus(
-            False,
-            "owner_reactivation",
-            str(exc),
-            "vip",
-            None,
-            True,
-        )
+        return _owner_reactivation_status(str(exc))
     except LicenseError as exc:
+        if owner_marker:
+            return _owner_reactivation_status(
+                "Безлимитный доступ владельца нужно повторно активировать"
+            )
         return LicenseStatus(False, "invalid", str(exc))
 
 
@@ -460,6 +511,8 @@ def save_license(document: dict, config: LicenseRuntimeConfig | None = None) -> 
         license_path(),
         json.dumps(document, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
     )
+    if status.owner_unlimited:
+        _write_owner_marker()
     return status
 
 
