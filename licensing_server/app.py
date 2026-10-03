@@ -89,6 +89,9 @@ def _config() -> dict:
 def create_app() -> FastAPI:
     config = _config()
     store = LicenseStore(config["db_path"])
+    # Refuse accidental private-key rotation before the server can create or
+    # reconcile payment orders. Existing released clients trust this identity.
+    store.pin_issuer_public_key(public_key_b64(config["private_key"]))
     provider = YooKassaClient(config["shop_id"], config["secret_key"], config["return_url"])
     owner_limiter = SlidingLimiter(10, timedelta(hours=1))
     order_limiter = SlidingLimiter(30, timedelta(hours=1))
