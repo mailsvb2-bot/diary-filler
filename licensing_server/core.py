@@ -15,7 +15,7 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 PRODUCT_ID = "diary_filler"
-LICENSE_SCHEMA = "dokkomplekt.license.v1"
+LICENSE_SCHEMA = "dokkomplekt.license.v2"
 OWNER_SCRYPT_SALT = b"diary-filler-owner-bootstrap-v1"
 OWNER_SCRYPT_N = 1 << 14
 OWNER_SCRYPT_R = 8
