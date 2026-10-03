@@ -43,6 +43,7 @@ WINDOWS_REQUIRED_IN_ORDER = (
 
 RELEASE_REQUIRED_IN_ORDER = (
     "Checkout exact release candidate",
+    "Guard production licensing configuration",
     "Resolve and guard release target",
     "python tools/regression_lock_check.py",
     "python tools/ci_gate_lock.py",
@@ -149,6 +150,10 @@ def main() -> None:
         '"RELEASE_TAG=$tag"',
         "fetch-depth: 0",
         "Create guarded release tag",
+        "Guard production licensing configuration",
+        'MEDICAL_AUTOFILL_LICENSE_REQUIRED: "1"',
+        "MEDICAL_AUTOFILL_LICENSE_SERVER_URL",
+        "MEDICAL_AUTOFILL_LICENSE_PUBLIC_KEY_B64",
         'ref="refs/tags/$env:RELEASE_TAG"',
         "Current main moved during release validation; refusing to create the release tag.",
     ):
