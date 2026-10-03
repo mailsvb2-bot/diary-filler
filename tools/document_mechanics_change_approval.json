@@ -1,9 +1,8 @@
 {
   "schema_version": 1,
-  "base_sha": "df7400df27af897b5cf83e358ce46af0cbc17ad8",
-  "reason": "Add the mandatory paid-license gate at the existing create_selected_outputs boundary and bump only APP_VERSION to v1.4.28; medical parsing, rendering, templates and patient-data semantics are unchanged.",
+  "base_sha": "6a29c8edb3c2baa74126b533190d8e1e6d2ae222",
+  "reason": "Bump APP_VERSION to v1.4.29 for owner/superadmin licensing hardening only; medical parsing, rendering, templates and document-generation semantics are unchanged.",
   "approved_blobs": {
-    "actions_creation_orchestrator.py": "34d8c621d28ec261e6753ded8921f4c651699898",
-    "app_config.py": "860d00cc142b44b22840c3b0cb6e38bca716d163"
+    "app_config.py": "37721516c64f5f7781444ce2506ab6cca33b9e82"
   }
 }

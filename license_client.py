@@ -41,6 +41,10 @@ class LicenseError(RuntimeError):
     pass
 
 
+class OwnerReactivationRequired(LicenseError):
+    pass
+
+
 @dataclass(frozen=True)
 class LicenseRuntimeConfig:
     server_url: str
@@ -112,6 +116,12 @@ def _pending_order_path() -> Path:
 
 def _clock_path() -> Path:
     return _runtime_dir() / "license-clock.json"
+
+
+def _owner_marker_path() -> Path:
+    base = os.environ.get("APPDATA", "").strip()
+    root = Path(base) if base else _runtime_dir().parent
+    return root / "MedicalDiaryAutofill" / "owner-entitlement.marker"
 
 
 def _install_id_path() -> Path:
@@ -275,6 +285,45 @@ def _unprotect_local_blob(value: str, purpose: str) -> bytes:
     raise LicenseError("unsupported protected local license state")
 
 
+def _write_owner_marker() -> None:
+    clear = json.dumps(
+        {"schema": 1, "owner": True},
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    protected = _protect_local_blob(clear, "MedicalDiaryAutofill owner marker")
+    _atomic_write_text(
+        _owner_marker_path(),
+        json.dumps({"schema": 1, "protected": protected}, ensure_ascii=False) + "\n",
+    )
+
+
+def _has_owner_marker() -> bool:
+    try:
+        outer = json.loads(_owner_marker_path().read_text(encoding="utf-8"))
+        if outer.get("schema") != 1:
+            return False
+        clear = _unprotect_local_blob(
+            str(outer.get("protected") or ""),
+            "MedicalDiaryAutofill owner marker",
+        )
+        payload = json.loads(clear.decode("utf-8"))
+        return payload == {"owner": True, "schema": 1}
+    except Exception:
+        return False
+
+
+def _owner_reactivation_status(message: str) -> LicenseStatus:
+    return LicenseStatus(
+        False,
+        "owner_reactivation",
+        message,
+        "vip",
+        None,
+        True,
+    )
+
+
 def _read_clock_state() -> datetime | None:
     path = _clock_path()
     try:
@@ -361,40 +410,61 @@ def _evaluate_document(
 ) -> LicenseStatus:
     _validate_config(config)
     now = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
-    _validate_clock(now, require_initialized=not allow_uninitialized_clock)
     payload = _verify_signature(document, config.public_key_b64)
     metadata = payload.get("metadata")
     if not isinstance(metadata, dict) or metadata.get("product_id") != config.product_id:
         raise LicenseError("license belongs to another product")
 
+    plan = str(payload.get("plan") or "")
+    owner = (
+        plan == "vip"
+        and payload.get("order_id") is None
+        and metadata.get("role") == "owner_superadmin"
+        and metadata.get("access") == "unlimited"
+    )
+    allowed = payload.get("allowed_machines")
+    machine_allowed = isinstance(allowed, list) and machine_fingerprint() in {str(item) for item in allowed}
+
+    if owner:
+        if not machine_allowed:
+            raise OwnerReactivationRequired(
+                "Безлимитный доступ владельца нужно повторно активировать на этом компьютере"
+            )
+        # An Ed25519-signed owner entitlement is intentionally non-expiring.
+        # It must not depend on mutable anti-rollback clock state, otherwise a
+        # damaged clock file could incorrectly route the owner into paid UX.
+        try:
+            valid_until = _parse_utc(str(payload.get("valid_until") or ""))
+        except LicenseError:
+            valid_until = None
+        return LicenseStatus(
+            True,
+            "owner",
+            "Безлимитный доступ владельца",
+            plan,
+            valid_until,
+            True,
+        )
+
+    _validate_clock(now, require_initialized=not allow_uninitialized_clock)
     valid_from = _parse_utc(str(payload.get("valid_from") or ""))
     valid_until = _parse_utc(str(payload.get("valid_until") or ""))
     if now < valid_from:
         raise LicenseError("license is not valid yet")
     if now > valid_until:
-        return LicenseStatus(False, "expired", "Срок лицензии истёк", str(payload.get("plan") or ""), valid_until)
-
-    allowed = payload.get("allowed_machines")
-    if not isinstance(allowed, list) or machine_fingerprint() not in {str(item) for item in allowed}:
+        return LicenseStatus(False, "expired", "Срок лицензии истёк", plan, valid_until)
+    if not machine_allowed:
         raise LicenseError("license is not valid for this computer")
 
-    plan = str(payload.get("plan") or "")
-    owner = (
-        plan == "vip"
-        and metadata.get("role") == "owner_superadmin"
-        and metadata.get("access") == "unlimited"
-    )
-    if not owner:
-        _validate_paid_calendar_period(str(document.get("schema") or ""), payload, valid_until)
-
+    _validate_paid_calendar_period(str(document.get("schema") or ""), payload, valid_until)
     _record_clock(now)
     return LicenseStatus(
         True,
-        "owner" if owner else "paid",
-        "Безлимитный доступ владельца" if owner else "Лицензия активна",
+        "paid",
+        "Лицензия активна",
         plan,
         valid_until,
-        owner,
+        False,
     )
 
 
@@ -405,15 +475,30 @@ def current_status(config: LicenseRuntimeConfig | None = None) -> LicenseStatus:
         if config.required:
             return LicenseStatus(False, "misconfigured", "Лицензирование не настроено в сборке")
         return LicenseStatus(True, "development", "Лицензирование пока не включено в этой сборке")
+    owner_marker = _has_owner_marker()
     try:
         document = json.loads(license_path().read_text(encoding="utf-8"))
     except FileNotFoundError:
+        if owner_marker:
+            return _owner_reactivation_status(
+                "Безлимитный доступ владельца нужно восстановить"
+            )
         return LicenseStatus(False, "missing", "Лицензия не активирована")
     except Exception:
+        if owner_marker:
+            return _owner_reactivation_status(
+                "Безлимитный доступ владельца нужно восстановить"
+            )
         return LicenseStatus(False, "invalid", "Файл лицензии повреждён")
     try:
         return _evaluate_document(document, config)
+    except OwnerReactivationRequired as exc:
+        return _owner_reactivation_status(str(exc))
     except LicenseError as exc:
+        if owner_marker:
+            return _owner_reactivation_status(
+                "Безлимитный доступ владельца нужно повторно активировать"
+            )
         return LicenseStatus(False, "invalid", str(exc))
 
 
@@ -426,6 +511,8 @@ def save_license(document: dict, config: LicenseRuntimeConfig | None = None) -> 
         license_path(),
         json.dumps(document, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
     )
+    if status.owner_unlimited:
+        _write_owner_marker()
     return status
 
 
