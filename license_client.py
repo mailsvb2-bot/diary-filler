@@ -134,6 +134,12 @@ def _active_order_path() -> Path:
     return _runtime_dir() / "license-active-order.json"
 
 
+def _active_order_backup_path() -> Path:
+    base = os.environ.get("APPDATA", "").strip()
+    root = Path(base) if base else _runtime_dir().parent
+    return root / "MedicalDiaryAutofill" / "paid-entitlement-recovery.json"
+
+
 def _clock_path() -> Path:
     return _runtime_dir() / "license-clock.json"
 
@@ -668,12 +674,30 @@ def _load_pending_order() -> dict:
 
 def _save_active_order(order: dict) -> None:
     _store_order_credentials(_active_order_path(), order, include_payment=False)
+    try:
+        _store_order_credentials(
+            _active_order_backup_path(),
+            order,
+            include_payment=False,
+        )
+    except (LicenseError, OSError):
+        # The LocalAppData copy is authoritative for the current installation;
+        # the roaming copy is resilience against ordinary app reinstall/cleanup.
+        pass
 
 
 def _load_active_order() -> dict:
-    return _load_order_credentials(
-        _active_order_path(),
-        "Нет данных для восстановления оплаченной лицензии",
+    errors = []
+    for path in (_active_order_path(), _active_order_backup_path()):
+        try:
+            return _load_order_credentials(
+                path,
+                "Нет данных для восстановления оплаченной лицензии",
+            )
+        except LicenseError as exc:
+            errors.append(exc)
+    raise LicenseError("Нет читаемых данных для восстановления оплаченной лицензии") from (
+        errors[-1] if errors else None
     )
 
 
@@ -681,10 +705,13 @@ def _has_active_order_credentials() -> bool:
     # Existence is enough to suppress a new charge. If DPAPI/JSON is damaged,
     # recovery will fail safely and tell the user to retry/support rather than
     # silently treating an already-paid order as nonexistent.
-    try:
-        return _active_order_path().is_file()
-    except OSError:
-        return False
+    for path in (_active_order_path(), _active_order_backup_path()):
+        try:
+            if path.is_file():
+                return True
+        except OSError:
+            pass
+    return False
 
 
 def _paid_recovery_status(message: str) -> LicenseStatus:
@@ -705,10 +732,11 @@ def _discard_active_order_if_matches(order_id: str) -> None:
         return
     if str(active.get("order_id") or "") != str(order_id):
         return
-    try:
-        _active_order_path().unlink(missing_ok=True)
-    except OSError:
-        pass
+    for path in (_active_order_path(), _active_order_backup_path()):
+        try:
+            path.unlink(missing_ok=True)
+        except OSError:
+            pass
 
 
 def _json_request(
@@ -857,10 +885,11 @@ def recover_paid_license(config: LicenseRuntimeConfig | None = None) -> LicenseS
                 license_path(),
                 json.dumps(document, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
             )
-            try:
-                _active_order_path().unlink(missing_ok=True)
-            except OSError:
-                pass
+            for path in (_active_order_path(), _active_order_backup_path()):
+                try:
+                    path.unlink(missing_ok=True)
+                except OSError:
+                    pass
             raise
     except LicenseExpiredError:
         raise
