@@ -8,25 +8,42 @@ on:
         required: true
         type: string
   push:
-    branches: [production-v1.4.27]
+    branches: [production-v1.4.28]
 
 permissions:
   contents: write
 
 concurrency:
-  group: release-${{ github.event_name == 'workflow_dispatch' && inputs.tag || 'v1.4.27' }}
+  group: release-${{ github.event_name == 'workflow_dispatch' && inputs.tag || 'v1.4.28' }}
   cancel-in-progress: false
 
 jobs:
   release:
     runs-on: windows-latest
     timeout-minutes: 35
+    env:
+      MEDICAL_AUTOFILL_LICENSE_REQUIRED: "1"
+      MEDICAL_AUTOFILL_LICENSE_SERVER_URL: ${{ vars.MEDICAL_AUTOFILL_LICENSE_SERVER_URL }}
+      MEDICAL_AUTOFILL_LICENSE_PUBLIC_KEY_B64: ${{ vars.MEDICAL_AUTOFILL_LICENSE_PUBLIC_KEY_B64 }}
     steps:
       - name: Checkout exact release candidate
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.sha }}
           fetch-depth: 0
+
+      - name: Guard production licensing configuration
+        shell: pwsh
+        run: |
+          if ($env:MEDICAL_AUTOFILL_LICENSE_REQUIRED -ne "1") {
+            throw "Official release must enforce licensing."
+          }
+          if ([string]::IsNullOrWhiteSpace($env:MEDICAL_AUTOFILL_LICENSE_SERVER_URL)) {
+            throw "MEDICAL_AUTOFILL_LICENSE_SERVER_URL repository variable is required."
+          }
+          if ([string]::IsNullOrWhiteSpace($env:MEDICAL_AUTOFILL_LICENSE_PUBLIC_KEY_B64)) {
+            throw "MEDICAL_AUTOFILL_LICENSE_PUBLIC_KEY_B64 repository variable is required."
+          }
 
       - name: Resolve and guard release target
         id: release_target
@@ -36,8 +53,8 @@ jobs:
         run: |
           $recoverExistingTag = $false
           if ("${{ github.event_name }}" -eq "push") {
-            if ("${{ github.ref }}" -ne "refs/heads/production-v1.4.27") {
-              throw "One-shot release may run only from refs/heads/production-v1.4.27."
+            if ("${{ github.ref }}" -ne "refs/heads/production-v1.4.28") {
+              throw "One-shot release may run only from refs/heads/production-v1.4.28."
             }
             $mainSha = gh api "repos/${{ github.repository }}/git/ref/heads/main" --jq ".object.sha"
             if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($mainSha)) {
@@ -46,7 +63,7 @@ jobs:
             if ($mainSha.Trim() -ne "${{ github.sha }}") {
               throw "One-shot release branch is not the exact current main SHA; refusing to publish."
             }
-            $tag = "v1.4.27"
+            $tag = "v1.4.28"
             $matchingTagRefs = @(gh api "repos/${{ github.repository }}/git/matching-refs/tags/$tag" --jq ".[].ref")
             if ($LASTEXITCODE -ne 0) {
               throw "Unable to inspect existing release tags."
@@ -214,7 +231,7 @@ jobs:
 
       - name: Smoke installed and uninstalled application
         shell: pwsh
-        run: ./tools/windows_installer_smoke.ps1 -InstallerPath ./dist/MedicalDiaryAutofill-Setup-1.4.27.exe
+        run: ./tools/windows_installer_smoke.ps1 -InstallerPath ./dist/MedicalDiaryAutofill-Setup-1.4.28.exe
 
       - name: Build clean source archive
         run: python make_release_zip.py
@@ -257,4 +274,4 @@ jobs:
           $releaseTags = @(gh api --paginate "repos/${{ github.repository }}/releases" --jq ".[].tag_name")
           if ($LASTEXITCODE -ne 0) { throw "Unable to inspect existing GitHub Releases." }
           if ($releaseTags -contains $env:RELEASE_TAG) { throw "Release $env:RELEASE_TAG already exists; refusing to overwrite it." }
-          gh release create "$env:RELEASE_TAG" dist\MedicalDiaryAutofill.exe dist\MedicalDiaryAutofill-Setup-1.4.27.exe release\MedicalDiaryAutofill_PRODUCTION_SOURCE.zip --verify-tag --title "MedicalDiaryAutofill $env:RELEASE_TAG" --generate-notes
+          gh release create "$env:RELEASE_TAG" dist\MedicalDiaryAutofill.exe dist\MedicalDiaryAutofill-Setup-1.4.28.exe release\MedicalDiaryAutofill_PRODUCTION_SOURCE.zip --verify-tag --title "MedicalDiaryAutofill $env:RELEASE_TAG" --generate-notes

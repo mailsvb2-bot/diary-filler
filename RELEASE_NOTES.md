@@ -1,3 +1,15 @@
+# Release notes — v1.4.28
+
+## v1.4.28
+
+- Добавлено ежемесячное лицензирование MedicalDiaryAutofill: Ed25519-подпись, привязка к Windows MachineGuid, 31-дневная оплаченная лицензия и повторная проверка непосредственно перед генерацией документов.
+- В репозитории добавлен собственный `licensing_server`: YooKassa, SQLite persistence, server-side verification платежа, idempotent выдача лицензии и отдельный owner-superadmin flow.
+- Owner-доступ фиксирован на заданный владельцем код, но в исходниках хранится только memory-hard `scrypt`-отпечаток; plaintext-код не попадает в GitHub и EXE. Подписанная owner-лицензия даёт `owner_superadmin/access=unlimited` и все функции.
+- Закрыты обходы лицензии через environment override, удаление anti-clock состояния, переименование Windows-компьютера и зависший старый платёжный заказ.
+- Official release теперь fail-closed: требует `MEDICAL_AUTOFILL_LICENSE_REQUIRED=1`, license-server URL и Ed25519 public key; без них релиз не публикуется.
+- Windows DPAPI helper `win32crypt` включён в обе PyInstaller-сборки явно.
+- Версия приложения, Python package, EXE metadata, Inno Setup, Windows CI, live E2E и release workflow синхронизированы как `1.4.28`; installer: `MedicalDiaryAutofill-Setup-1.4.28.exe`.
+
 # Release notes — v1.4.27
 
 ## v1.4.27

@@ -38,6 +38,15 @@ REQUIRED_FILES = [
     "performance_check.py",
     "patient_registry.py",
     "patient_registry_mixin.py",
+    "license_client.py",
+    "license_ui.py",
+    "licensing_server/core.py",
+    "licensing_server/store.py",
+    "licensing_server/yookassa.py",
+    "licensing_server/app.py",
+    "licensing_server/requirements.txt",
+    "tests/license_client_regression.py",
+    "tests/license_server_regression.py",
     "tests/patient_registry_regression.py",
     "tools/docx_block_boundary_regression.py",
     "safety_integrity_check.py",
@@ -47,6 +56,7 @@ REQUIRED_FILES = [
     ".github/workflows/release.yml",
     ".github/workflows/windows-live-e2e.yml",
     ".github/workflows/windows-live-e2e-core.yml",
+    ".github/workflows/license-server-ci.yml",
     "tests/windows_live_e2e_contract.py",
     "tests/windows_live_gui_e2e.py",
     "tools/windows_live_e2e_preflight.ps1",
@@ -205,8 +215,12 @@ def _assert_build_contract() -> None:
         "python tools/generation_performance_profile.py --runs 3",
         "python verify_built_exe.py",
         "./tools/windows_desktop_intake_e2e.ps1 -AppPath ./dist/MedicalDiaryAutofill.exe",
-        "./tools/windows_installer_smoke.ps1 -InstallerPath ./dist/MedicalDiaryAutofill-Setup-1.4.27.exe",
+        "./tools/windows_installer_smoke.ps1 -InstallerPath ./dist/MedicalDiaryAutofill-Setup-1.4.28.exe",
         "Create guarded release tag",
+        "MEDICAL_AUTOFILL_LICENSE_REQUIRED",
+        "MEDICAL_AUTOFILL_LICENSE_SERVER_URL",
+        "MEDICAL_AUTOFILL_LICENSE_PUBLIC_KEY_B64",
+        "Guard production licensing configuration",
         "gh release create",
         "--verify-tag",
     ]:
@@ -418,6 +432,12 @@ def main() -> None:
 
     _print_step("Patient registry and sick-leave chronology")
     _run([sys.executable, "tests/patient_registry_regression.py"], timeout=60)
+
+    _print_step("Monthly licensing and owner entitlement")
+    _run([sys.executable, "tests/license_client_regression.py"], timeout=60)
+
+    _print_step("License server issuance and persistence")
+    _run([sys.executable, "tests/license_server_regression.py"], timeout=60)
 
     _print_step("Smoke tests")
     # smoke_test.py is the canonical executable entrypoint and delegates to the

@@ -11,6 +11,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 WINDOWS_WORKFLOW = ROOT / ".github" / "workflows" / "windows-build.yml"
 RELEASE_WORKFLOW = ROOT / ".github" / "workflows" / "release.yml"
+LICENSE_SERVER_WORKFLOW = ROOT / ".github" / "workflows" / "license-server-ci.yml"
 
 WINDOWS_REQUIRED_IN_ORDER = (
     "python tools/main_branch_policy.py",
@@ -38,11 +39,12 @@ WINDOWS_REQUIRED_IN_ORDER = (
     "python verify_built_exe.py",
     "./tools/windows_desktop_intake_e2e.ps1 -AppPath ./dist/MedicalDiaryAutofill.exe",
     "BUILD_WINDOWS_INSTALLER.bat",
-    "./tools/windows_installer_smoke.ps1 -InstallerPath ./dist/MedicalDiaryAutofill-Setup-1.4.27.exe",
+    "./tools/windows_installer_smoke.ps1 -InstallerPath ./dist/MedicalDiaryAutofill-Setup-1.4.28.exe",
 )
 
 RELEASE_REQUIRED_IN_ORDER = (
     "Checkout exact release candidate",
+    "Guard production licensing configuration",
     "Resolve and guard release target",
     "python tools/regression_lock_check.py",
     "python tools/ci_gate_lock.py",
@@ -67,7 +69,7 @@ RELEASE_REQUIRED_IN_ORDER = (
     "python verify_built_exe.py",
     "./tools/windows_desktop_intake_e2e.ps1 -AppPath ./dist/MedicalDiaryAutofill.exe",
     "BUILD_WINDOWS_INSTALLER.bat",
-    "./tools/windows_installer_smoke.ps1 -InstallerPath ./dist/MedicalDiaryAutofill-Setup-1.4.27.exe",
+    "./tools/windows_installer_smoke.ps1 -InstallerPath ./dist/MedicalDiaryAutofill-Setup-1.4.28.exe",
     "python make_release_zip.py",
     "Create guarded release tag",
     "gh release create",
@@ -88,6 +90,7 @@ REQUIRED_REPOSITORY_FILES = (
     "tests/windows11_live_e2e_contract.py",
     "tests/windows11_live_gui_e2e.py",
     ".github/workflows/windows-live-e2e.yml",
+    ".github/workflows/license-server-ci.yml",
     ".github/workflows/windows-live-e2e-core.yml",
     "tools/windows_live_e2e_preflight.ps1",
     "tools/windows11_live_e2e_preflight.ps1",
@@ -128,6 +131,7 @@ def main() -> None:
 
     windows = WINDOWS_WORKFLOW.read_text(encoding="utf-8")
     release = RELEASE_WORKFLOW.read_text(encoding="utf-8")
+    license_server = LICENSE_SERVER_WORKFLOW.read_text(encoding="utf-8")
 
     for required in ("pull_request:", "workflow_dispatch:", "branches: [main, master]", "fetch-depth: 0", "pull-requests: read"):
         if required not in windows:
@@ -140,21 +144,36 @@ def main() -> None:
     for required in (
         "workflow_dispatch:",
         "push:",
-        "branches: [production-v1.4.27]",
+        "branches: [production-v1.4.28]",
         "Checkout exact release candidate",
         "Resolve and guard release target",
-        "refs/heads/production-v1.4.27",
+        "refs/heads/production-v1.4.28",
         "git/ref/heads/main",
         "Tag $tag already exists at a different SHA; refusing to move or overwrite it.",
         '"RELEASE_TAG=$tag"',
         "fetch-depth: 0",
         "Create guarded release tag",
+        "Guard production licensing configuration",
+        'MEDICAL_AUTOFILL_LICENSE_REQUIRED: "1"',
+        "MEDICAL_AUTOFILL_LICENSE_SERVER_URL",
+        "MEDICAL_AUTOFILL_LICENSE_PUBLIC_KEY_B64",
         'ref="refs/tags/$env:RELEASE_TAG"',
         "Current main moved during release validation; refusing to create the release tag.",
     ):
         if required not in release:
             raise SystemExit(f"CI GATE LOCK FAILED: release workflow lost release-safety contract: {required}")
     _require_order(release, RELEASE_REQUIRED_IN_ORDER, "release workflow")
+
+    for required in (
+        "pull_request:",
+        "branches: [main, master]",
+        "pip install -r licensing_server/requirements.txt",
+        "python tests/license_server_regression.py",
+        "Import FastAPI server with production-shaped configuration",
+        "LICENSE SERVER HTTP IMPORT OK",
+    ):
+        if required not in license_server:
+            raise SystemExit(f"CI GATE LOCK FAILED: license-server workflow lost mandatory gate: {required}")
 
     for forbidden in (
         "SIGNING_CERT_PFX_BASE64",
@@ -179,7 +198,7 @@ def main() -> None:
     release_create = release[publish_release:]
     for asset in (
         r"dist\MedicalDiaryAutofill.exe",
-        r"dist\MedicalDiaryAutofill-Setup-1.4.27.exe",
+        r"dist\MedicalDiaryAutofill-Setup-1.4.28.exe",
         r"release\MedicalDiaryAutofill_PRODUCTION_SOURCE.zip",
     ):
         if asset not in release_create:

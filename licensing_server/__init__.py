@@ -1,0 +1,1 @@
+"""MedicalDiaryAutofill licensing server package."""

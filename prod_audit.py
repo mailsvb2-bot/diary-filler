@@ -15,13 +15,14 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
-TARGET_VERSION = "1.4.27"
-TARGET_VERSION_LABEL = "v1.4.27"
+TARGET_VERSION = "1.4.28"
+TARGET_VERSION_LABEL = "v1.4.28"
 # Two cohesive patient-registry modules are intentional production architecture:
 # one pure scanner/model and one GUI integration layer. The budget remains exact
 # so unrelated future modules cannot accumulate silently.
-MAX_PYTHON_FILES = 128
+MAX_PYTHON_FILES = 130
 REQUIRED_PATIENT_REGISTRY_RUNTIME_FILES = {"patient_registry.py", "patient_registry_mixin.py"}
+REQUIRED_LICENSE_RUNTIME_FILES = {"license_client.py", "license_ui.py"}
 MAX_TINY_PYTHON_FILES = 25
 # Release/CI probes are executable quality gates, not runtime architecture.
 # Keep the explicit runtime budget intact instead of "fixing" the gate by
@@ -223,6 +224,9 @@ def _assert_architecture_hygiene() -> None:
     missing_registry = sorted(REQUIRED_PATIENT_REGISTRY_RUNTIME_FILES - runtime_names)
     if missing_registry:
         _fail("Patient registry architecture incomplete: " + ", ".join(missing_registry))
+    missing_license = sorted(REQUIRED_LICENSE_RUNTIME_FILES - runtime_names)
+    if missing_license:
+        _fail("License runtime architecture incomplete: " + ", ".join(missing_license))
 
     tiny_files = []
     for path in py_files:
@@ -400,7 +404,10 @@ def _assert_final_user_flow_gate_contract() -> None:
         (release_workflow, "python tools/generation_performance_profile.py --runs 3", "official release must enforce generation performance budget"),
         (release_workflow, "python verify_built_exe.py", "official release must verify the exact packaged EXE"),
         (release_workflow, "./tools/windows_desktop_intake_e2e.ps1 -AppPath ./dist/MedicalDiaryAutofill.exe", "official release must exercise packaged desktop intake"),
-        (release_workflow, "./tools/windows_installer_smoke.ps1 -InstallerPath ./dist/MedicalDiaryAutofill-Setup-1.4.27.exe", "official release must smoke-test install/uninstall"),
+        (release_workflow, "./tools/windows_installer_smoke.ps1 -InstallerPath ./dist/MedicalDiaryAutofill-Setup-1.4.28.exe", "official release must smoke-test install/uninstall"),
+        (release_workflow, 'MEDICAL_AUTOFILL_LICENSE_REQUIRED: "1"', "official release must force license enforcement"),
+        (release_workflow, "MEDICAL_AUTOFILL_LICENSE_SERVER_URL", "official release must embed license server URL"),
+        (release_workflow, "MEDICAL_AUTOFILL_LICENSE_PUBLIC_KEY_B64", "official release must embed Ed25519 public key"),
         (release_workflow, "Create guarded release tag", "official release must create its immutable tag only after validation"),
         (release_workflow, "gh release create", "official release needs a stable GitHub Release channel"),
     ]

@@ -22,6 +22,7 @@ MUST_BE_LOCKED = (
     ".github/workflows/release.yml",
     ".github/workflows/windows-live-e2e.yml",
     ".github/workflows/windows-live-e2e-core.yml",
+    ".github/workflows/license-server-ci.yml",
     "installer/MedicalDiaryAutofill.iss",
     "main.py",
     "startup.py",
@@ -74,6 +75,7 @@ MUST_BE_LOCKED = (
     "build_exe_windows.bat",
     "BUILD_WINDOWS_INSTALLER.bat",
     "requirements_build.txt",
+    "licensing_server/requirements.txt",
     "pyproject.toml",
     "version_info.txt",
 )
@@ -90,6 +92,7 @@ FUTURE_UNKNOWN_FILES_MUST_BE_LOCKED = (
     "data/future_catalog.tsv",
     "config/future_runtime.ini",
     ".github/workflows/future-release.yaml",
+    "future_service/requirements-prod.txt",
 )
 
 MUST_STAY_MUTABLE_METADATA = (
