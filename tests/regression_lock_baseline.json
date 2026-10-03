@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "24863c10a410e412ed4ad751fa488ebd797d6715",
-  "baseline_note": "Clean post-merge baseline for release v1.4.26. Release PR #305 candidate #1425 and merge #1426 were fully green; mechanics-approval cleanup PR #306 candidate #1427 and canonical merge 24863c10a410e412ed4ad751fa488ebd797d6715 run #1428 were also fully green through EXE, packaged desktop intake, installer and install/uninstall smoke. Temporary mechanics approval is removed.",
+  "baseline_ref": "fdf8cfe4dafebcde2bdddf1109cfc38f97d63260",
+  "baseline_note": "Installer lifecycle regression candidate validated on Windows CI run #1436: downloaded Setup copy was deleted after Setup exit while the installed background intake agent remained alive; full Windows build, packaged desktop intake E2E, installer smoke, uninstall smoke, and artifact publication all passed.",
   "required_approval_evidence": [
     "ci_gate_lock",
     "patient_registry_regression"
