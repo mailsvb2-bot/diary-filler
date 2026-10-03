@@ -27,7 +27,7 @@
     "prod_audit.py": "590c820265bc53637b40247d9638ff48cada34f7",
     "pyproject.toml": "4c83b048151b4325ea3bef83d010983af7d345ed",
     "release_check.py": "8120a711b388bcf193f96e290033e1d373f4360d",
-    "tests/license_client_regression.py": "f82c989e9daa3b180a2192f53f232654846c127a",
+    "tests/license_client_regression.py": "2b56dd4c08030612f9b5432fd53b66d370e02628",
     "tests/windows_live_e2e_contract.py": "1ba8da2662e56e0fb8be834a66994313d96d7f0e",
     "tools/ci_gate_lock.py": "4a3a701b9c4402fd1e92c3626fa432a6ef0fb5bb",
     "tools/document_mechanics_change_approval.json": "bca7c2b533096abe704e33fc51ee7130d41be5be",
