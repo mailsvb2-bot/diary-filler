@@ -116,7 +116,9 @@ def _payment_flow(parent, config):
             already_paid = refresh_paid_order(config)
         except PaymentPendingError:
             already_paid = None
-        except PaymentTerminalError:
+        except (PaymentTerminalError, LicenseExpiredError):
+            # Only a server-confirmed terminal/expired previous order may be
+            # replaced with a fresh invoice.
             pending = None
             already_paid = None
         except LicenseError as exc:
