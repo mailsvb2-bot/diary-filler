@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "384822dad3fb802d324c7dd75ad10a42b4de1533",
-  "reason": "Replace fixed 31-day paid licenses with exact one-calendar-month issuance and verification, with leap-year and month-end regressions.",
+  "reason": "Replace fixed 31-day paid licenses with schema-v2 calendar-month issuance while preserving already-issued schema-v1 31-day licenses until their signed expiry.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -16,9 +16,9 @@
     "patient_registry_regression"
   ],
   "approved_blobs": {
-    "license_client.py": "fc0c5161ed77e25ee4cd9b8b015876d97c9f35c8",
-    "licensing_server/core.py": "62551f898e8bb501fe4f65e633d33be7ca6a15f0",
-    "tests/license_client_regression.py": "b3a67084a0b986ab2336a6babe398ed961dd4a33",
-    "tests/license_server_regression.py": "e9dc707c5ea38974395be26943556f50d93b3c1a"
+    "license_client.py": "7898f1f86af0dfb05a3e7b484cffeda0bbb7e649",
+    "licensing_server/core.py": "66ad4d0e2684eaa23b9dc3fae0038139c09ff497",
+    "tests/license_client_regression.py": "b978cbd88c042dfeb6f7c5c44f9a72c923c02914",
+    "tests/license_server_regression.py": "e7d561f793182d128c9a8262bb3f404df9276d6b"
   }
 }
