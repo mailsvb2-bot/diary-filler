@@ -323,12 +323,16 @@ def _historical_windows_license_fingerprints() -> set[str]:
         return set()
     machine_guid = _windows_machine_guid().strip().lower()
     install_id = _existing_install_id()
-    hostname = socket.gethostname().strip().lower()
-    if not machine_guid or not install_id or not hostname:
+    try:
+        hostname = socket.gethostname().strip().lower()
+        system_name = platform.system().strip().lower()
+    except Exception:
+        return set()
+    if not machine_guid or not install_id or not hostname or not system_name:
         return set()
     legacy_identity = "|".join(
         [
-            platform.system().strip().lower(),
+            system_name,
             hostname,
             machine_guid,
             install_id,
