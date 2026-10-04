@@ -30,7 +30,7 @@
     "prod_audit.py": "d702c5e863d83b206a22f55a8a7d854934d639e7",
     "pyproject.toml": "3c840d4f0e4ef1cfaf79ad2e702216c7831caded",
     "release_check.py": "86ae2344d3af11d0e7aa2c3145ec189356f732c8",
-    "tests/license_client_regression.py": "0e8261bfee9a6abfad1458f95936c82d3ec1d1c3",
+    "tests/license_client_regression.py": "f0ee59003a9d30dcbcbe27976762928fbe9bcd00",
     "tests/license_server_preflight_regression.py": "50ffb4a1efcf1115f11e861d30fa692bc3cab13b",
     "tests/license_server_regression.py": "5725695a353d4a061c4890e90476002fccaf6c4a",
     "tests/windows_ci_artifact_licensing_contract.py": "bfe4902cdac3e610a2c100e6db141c2c8cdf15cc",
