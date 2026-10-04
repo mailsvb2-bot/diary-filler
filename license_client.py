@@ -16,6 +16,7 @@ import math
 import os
 from pathlib import Path
 import platform
+import socket
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -297,6 +298,45 @@ def _derived_machine_fingerprint_candidates() -> tuple[set[str], bool]:
     return {hashlib.sha256(fallback_identity.encode("utf-8")).hexdigest()}, False
 
 
+def _existing_install_id() -> str:
+    """Read the historical install id without minting a new identity."""
+    try:
+        value = _install_id_path().read_text(encoding="utf-8").strip().lower()
+    except OSError:
+        return ""
+    if len(value) != 32 or any(ch not in "0123456789abcdef" for ch in value):
+        return ""
+    return value
+
+
+def _historical_windows_license_fingerprints() -> set[str]:
+    """Derive only historical fingerprints that still contain current MachineGuid.
+
+    The first production licensing client bound signed entitlements to
+    platform|hostname|MachineGuid|install-id. Recognizing that exact legacy
+    formula on the same machine is safe because the current authoritative
+    MachineGuid remains part of the SHA-256 preimage. This helper is deliberately
+    NOT used for cache validation or new activations, so copied/user-writable
+    install-id state cannot replace the canonical MachineGuid-only identity.
+    """
+    if not _is_windows_runtime():
+        return set()
+    machine_guid = _windows_machine_guid().strip().lower()
+    install_id = _existing_install_id()
+    hostname = socket.gethostname().strip().lower()
+    if not machine_guid or not install_id or not hostname:
+        return set()
+    legacy_identity = "|".join(
+        [
+            platform.system().strip().lower(),
+            hostname,
+            machine_guid,
+            install_id,
+        ]
+    )
+    return {hashlib.sha256(legacy_identity.encode("utf-8")).hexdigest()}
+
+
 def _decode_protected_machine_fingerprint_cache(raw: str) -> str:
     try:
         payload = json.loads(raw)
@@ -460,6 +500,11 @@ def _machine_allowed_by_payload(allowed: object) -> bool:
     # machine binding: only identities independently derivable on this machine
     # may match the signed allowed_machines list.
     candidates, _machine_guid_available = _derived_machine_fingerprint_candidates()
+    # Signed licenses issued by the original production algorithm remain valid
+    # on the same Windows machine. Historical formulas are used only for
+    # entitlement matching; canonical cache/new-activation identity stays
+    # MachineGuid-only.
+    candidates.update(_historical_windows_license_fingerprints())
     matches = sorted(allowed_set.intersection(candidates))
     if matches:
         _cache_machine_fingerprint(matches[0])
