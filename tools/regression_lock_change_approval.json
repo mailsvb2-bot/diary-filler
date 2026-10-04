@@ -22,7 +22,7 @@
     "BUILD_WINDOWS_INSTALLER.bat": "38d49da8b29d78fb19bb1410c66e8baecca80cd7",
     "app_config.py": "b5874e23dbfb988b9abe2c224faf28e16fb418b3",
     "installer/MedicalDiaryAutofill.iss": "33be485fcf82799470e59cddd37d8dc5a84e2db2",
-    "license_client.py": "b6a5f7096d7412d6c52cc40efa2ee38074ea3ce4",
+    "license_client.py": "7762f53c7f4adf5381037fdad921538d3afd953f",
     "licensing_server/app.py": "81230c6be847d85298ce633f773f2b7fe230c8f0",
     "licensing_server/store.py": "2a44794862bb14c24f9060a806d00ac04fdcb5bb",
     "prod_audit.py": "d702c5e863d83b206a22f55a8a7d854934d639e7",
