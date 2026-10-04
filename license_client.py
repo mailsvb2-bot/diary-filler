@@ -500,14 +500,19 @@ def _machine_allowed_by_payload(allowed: object) -> bool:
     # machine binding: only identities independently derivable on this machine
     # may match the signed allowed_machines list.
     candidates, _machine_guid_available = _derived_machine_fingerprint_candidates()
-    # Signed licenses issued by the original production algorithm remain valid
-    # on the same Windows machine. Historical formulas are used only for
-    # entitlement matching; canonical cache/new-activation identity stays
-    # MachineGuid-only.
-    candidates.update(_historical_windows_license_fingerprints())
     matches = sorted(allowed_set.intersection(candidates))
     if matches:
         _cache_machine_fingerprint(matches[0])
+        return True
+
+    # Signed licenses issued by the original production algorithm remain valid
+    # on the same Windows machine. Historical formulas are used only for
+    # entitlement matching; canonical cache/new-activation identity stays
+    # MachineGuid-only and is never replaced by a legacy hash.
+    historical_matches = allowed_set.intersection(
+        _historical_windows_license_fingerprints()
+    )
+    if historical_matches:
         return True
     if identity_error is not None:
         raise identity_error
