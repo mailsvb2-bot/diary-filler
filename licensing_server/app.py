@@ -76,10 +76,18 @@ def _config() -> dict:
         "DIARY_FILLER_LICENSE_DB",
         str(Path.home() / ".medical-diary-license-server" / "licenses.sqlite3"),
     )
+    backup_db_path = os.environ.get("DIARY_FILLER_LICENSE_BACKUP_DB", "").strip()
+    if not backup_db_path:
+        raise RuntimeError(
+            "DIARY_FILLER_LICENSE_BACKUP_DB is required and must point to a separate persistent backup path"
+        )
+    if Path(db_path).resolve() == Path(backup_db_path).resolve():
+        raise RuntimeError("DIARY_FILLER_LICENSE_BACKUP_DB must differ from DIARY_FILLER_LICENSE_DB")
     return {
         "price": price,
         "private_key": private_key,
         "db_path": db_path,
+        "backup_db_path": backup_db_path,
         "shop_id": os.environ.get("YOOKASSA_SHOP_ID", ""),
         "secret_key": os.environ.get("YOOKASSA_SECRET_KEY", ""),
         "return_url": os.environ.get("DIARY_FILLER_PAYMENT_RETURN_URL", ""),
@@ -88,7 +96,10 @@ def _config() -> dict:
 
 def create_app() -> FastAPI:
     config = _config()
-    store = LicenseStore(config["db_path"])
+    store = LicenseStore(
+        config["db_path"],
+        backup_path=config["backup_db_path"],
+    )
     # Refuse accidental private-key rotation before the server can create or
     # reconcile payment orders. Existing released clients trust this identity.
     store.pin_issuer_public_key(public_key_b64(config["private_key"]))
@@ -125,7 +136,13 @@ def create_app() -> FastAPI:
 
     @app.get("/health")
     def health() -> dict:
-        return {"status": "ok", "product_id": "diary_filler", "public_key_b64": public_key_b64(config["private_key"])}
+        durability = store.durability_status()
+        return {
+            "status": "ok" if durability["status"] == "ok" else "degraded",
+            "product_id": "diary_filler",
+            "public_key_b64": public_key_b64(config["private_key"]),
+            "durability": durability,
+        }
 
     @app.get("/payment-return", response_class=HTMLResponse)
     def payment_return() -> str:
