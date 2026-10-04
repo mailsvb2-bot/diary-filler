@@ -268,6 +268,68 @@ def main() -> None:
         lc._cache_machine_fingerprint(machine)
 
         paid = signed_document(private, payload(machine))
+
+        # All paid-license persistence tiers must be independently writable.
+        # A LocalAppData failure must still leave a usable Roaming/AppData copy
+        # instead of blocking a doctor who has already paid.
+        primary_paths = {
+            lc.license_path(),
+            lc._clock_path(),
+            lc._pending_order_path(),
+            lc._active_order_path(),
+        }
+        all_resilience_paths = (
+            lc.license_path(),
+            lc._license_backup_path(),
+            lc._clock_path(),
+            lc._clock_backup_path(),
+            lc._pending_order_path(),
+            lc._pending_order_backup_path(),
+            lc._active_order_path(),
+            lc._active_order_backup_path(),
+        )
+        for path in all_resilience_paths:
+            path.unlink(missing_ok=True)
+
+        old_atomic_write = lc._atomic_write_text
+        def _fail_primary_only(path, text):
+            if path in primary_paths:
+                raise OSError("simulated LocalAppData write failure")
+            return old_atomic_write(path, text)
+
+        resilience_order = {
+            "order_id": "00000000-0000-0000-0000-000000000088",
+            "order_access_token": "B" * 48,
+            "payment_url": "https://pay.example.com/redundant-storage",
+            "amount_rub": 100,
+        }
+        lc._atomic_write_text = _fail_primary_only
+        try:
+            lc._write_license_document(paid)
+            assert not lc.license_path().exists()
+            assert lc._license_backup_path().exists()
+            assert lc._load_license_document() == paid
+
+            clock_now = datetime.now(timezone.utc)
+            lc._record_clock(clock_now)
+            assert not lc._clock_path().exists()
+            assert lc._clock_backup_path().exists()
+            assert lc._read_clock_state() is not None
+
+            lc._save_pending_order(resilience_order)
+            assert not lc._pending_order_path().exists()
+            assert lc._pending_order_backup_path().exists()
+            assert lc._load_pending_order()["order_id"] == resilience_order["order_id"]
+
+            lc._save_active_order(resilience_order)
+            assert not lc._active_order_path().exists()
+            assert lc._active_order_backup_path().exists()
+            assert lc._load_active_order()["order_id"] == resilience_order["order_id"]
+        finally:
+            lc._atomic_write_text = old_atomic_write
+            for path in all_resilience_paths:
+                path.unlink(missing_ok=True)
+
         assert lc.save_license(paid, config).active
         assert lc.current_status(config).mode == "paid"
         assert lc._license_backup_path().exists()
