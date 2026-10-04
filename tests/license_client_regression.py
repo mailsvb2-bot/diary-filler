@@ -175,6 +175,17 @@ def main() -> None:
         )
         assert migrated_primary["schema"] == 2
 
+        # A readable MachineGuid is sufficient to validate a legitimate
+        # legacy cache even if install-id persistence is temporarily broken.
+        old_install_for_failure = lc._install_id
+        lc._install_id = lambda: (_ for _ in ()).throw(OSError("read-only LocalAppData"))
+        try:
+            candidates_without_install, guid_available = lc._derived_machine_fingerprint_candidates()
+            assert guid_available
+            assert legacy_local in candidates_without_install
+        finally:
+            lc._install_id = old_install_for_failure
+
         # A copied/foreign legacy cache must never become the machine identity.
         lc._machine_fingerprint_cache_path().write_text(
             json.dumps({"schema": 1, "fingerprint": "f" * 64}),
