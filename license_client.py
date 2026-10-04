@@ -45,6 +45,22 @@ class OwnerReactivationRequired(LicenseError):
     pass
 
 
+class PaymentPendingError(LicenseError):
+    pass
+
+
+class PaymentTerminalError(LicenseError):
+    pass
+
+
+class LicenseExpiredError(LicenseError):
+    pass
+
+
+class PaidLicenseRecoveryError(LicenseError):
+    pass
+
+
 @dataclass(frozen=True)
 class LicenseRuntimeConfig:
     server_url: str
@@ -114,6 +130,22 @@ def _pending_order_path() -> Path:
     return _runtime_dir() / "license-order.json"
 
 
+def _pending_order_backup_path() -> Path:
+    base = os.environ.get("APPDATA", "").strip()
+    root = Path(base) if base else _runtime_dir().parent
+    return root / "MedicalDiaryAutofill" / "pending-payment-recovery.json"
+
+
+def _active_order_path() -> Path:
+    return _runtime_dir() / "license-active-order.json"
+
+
+def _active_order_backup_path() -> Path:
+    base = os.environ.get("APPDATA", "").strip()
+    root = Path(base) if base else _runtime_dir().parent
+    return root / "MedicalDiaryAutofill" / "paid-entitlement-recovery.json"
+
+
 def _clock_path() -> Path:
     return _runtime_dir() / "license-clock.json"
 
@@ -126,6 +158,10 @@ def _owner_marker_path() -> Path:
 
 def _install_id_path() -> Path:
     return _runtime_dir() / "license-install-id.txt"
+
+
+def _machine_fingerprint_cache_path() -> Path:
+    return _runtime_dir() / "license-machine-fingerprint.json"
 
 
 def _atomic_write_text(path: Path, text: str) -> None:
@@ -169,17 +205,45 @@ def _windows_machine_guid() -> str:
         return ""
 
 
+def _read_cached_machine_fingerprint() -> str:
+    try:
+        payload = json.loads(_machine_fingerprint_cache_path().read_text(encoding="utf-8"))
+        value = str(payload.get("fingerprint") or "").strip().lower()
+        if payload.get("schema") == 1 and len(value) == 64 and all(ch in "0123456789abcdef" for ch in value):
+            return value
+    except Exception:
+        pass
+    return ""
+
+
+def _cache_machine_fingerprint(value: str) -> None:
+    try:
+        _atomic_write_text(
+            _machine_fingerprint_cache_path(),
+            json.dumps({"schema": 1, "fingerprint": value}, sort_keys=True) + "\n",
+        )
+    except OSError:
+        pass
+
+
 def machine_fingerprint() -> str:
     machine_guid = _windows_machine_guid().strip().lower()
     if machine_guid:
         identity = f"windows-machine-guid-v1|{machine_guid}"
-    else:
-        identity = (
-            "portable-install-v1|"
-            + platform.system().strip().lower()
-            + "|"
-            + _install_id().strip().lower()
-        )
+        fingerprint = hashlib.sha256(identity.encode("utf-8")).hexdigest()
+        _cache_machine_fingerprint(fingerprint)
+        return fingerprint
+
+    cached = _read_cached_machine_fingerprint()
+    if cached:
+        return cached
+
+    identity = (
+        "portable-install-v1|"
+        + platform.system().strip().lower()
+        + "|"
+        + _install_id().strip().lower()
+    )
     return hashlib.sha256(identity.encode("utf-8")).hexdigest()
 
 
@@ -187,7 +251,10 @@ def _parse_utc(value: str) -> datetime:
     raw = str(value or "").strip()
     if raw.endswith("Z"):
         raw = raw[:-1] + "+00:00"
-    result = datetime.fromisoformat(raw)
+    try:
+        result = datetime.fromisoformat(raw)
+    except (TypeError, ValueError) as exc:
+        raise LicenseError("license timestamp is invalid") from exc
     if result.tzinfo is None:
         raise LicenseError("license timestamp has no timezone")
     return result.astimezone(timezone.utc)
@@ -446,7 +513,8 @@ def _evaluate_document(
             True,
         )
 
-    _validate_clock(now, require_initialized=not allow_uninitialized_clock)
+    if not allow_uninitialized_clock:
+        _validate_clock(now, require_initialized=True)
     valid_from = _parse_utc(str(payload.get("valid_from") or ""))
     valid_until = _parse_utc(str(payload.get("valid_until") or ""))
     if now < valid_from:
@@ -457,6 +525,11 @@ def _evaluate_document(
         raise LicenseError("license is not valid for this computer")
 
     _validate_paid_calendar_period(str(document.get("schema") or ""), payload, valid_until)
+    if allow_uninitialized_clock:
+        try:
+            _clock_path().unlink(missing_ok=True)
+        except OSError:
+            pass
     _record_clock(now)
     return LicenseStatus(
         True,
@@ -483,15 +556,32 @@ def current_status(config: LicenseRuntimeConfig | None = None) -> LicenseStatus:
             return _owner_reactivation_status(
                 "Требуется повторная активация лицензии"
             )
+        if _has_active_order_credentials():
+            return _paid_recovery_status(
+                "Требуется восстановить уже оплаченную лицензию"
+            )
         return LicenseStatus(False, "missing", "Лицензия не активирована")
     except Exception:
         if owner_marker:
             return _owner_reactivation_status(
                 "Требуется повторная активация лицензии"
             )
+        if _has_active_order_credentials():
+            return _paid_recovery_status(
+                "Требуется восстановить уже оплаченную лицензию"
+            )
         return LicenseStatus(False, "invalid", "Файл лицензии повреждён")
     try:
-        return _evaluate_document(document, config)
+        status = _evaluate_document(document, config)
+        if (
+            not status.active
+            and status.mode == "expired"
+            and _has_active_order_credentials()
+        ):
+            return _paid_recovery_status(
+                "Требуется проверить срок уже оплаченной лицензии"
+            )
+        return status
     except OwnerReactivationRequired as exc:
         return _owner_reactivation_status(str(exc))
     except LicenseError as exc:
@@ -499,13 +589,32 @@ def current_status(config: LicenseRuntimeConfig | None = None) -> LicenseStatus:
             return _owner_reactivation_status(
                 "Требуется повторная активация лицензии"
             )
+        if _has_active_order_credentials():
+            return _paid_recovery_status(
+                "Требуется проверить уже оплаченную лицензию"
+            )
         return LicenseStatus(False, "invalid", str(exc))
 
 
-def save_license(document: dict, config: LicenseRuntimeConfig | None = None) -> LicenseStatus:
+def save_license(
+    document: dict,
+    config: LicenseRuntimeConfig | None = None,
+    *,
+    trusted_now: datetime | None = None,
+) -> LicenseStatus:
     config = config or runtime_config()
-    status = _evaluate_document(document, config, allow_uninitialized_clock=True)
+    # This entry point is used only for a freshly server-returned signed
+    # entitlement. It may rebuild damaged local anti-rollback state, but all
+    # signature/product/machine/period checks still run before the file is saved.
+    status = _evaluate_document(
+        document,
+        config,
+        now=trusted_now,
+        allow_uninitialized_clock=True,
+    )
     if not status.active:
+        if status.mode == "expired":
+            raise LicenseExpiredError(status.message)
         raise LicenseError(status.message)
     _atomic_write_text(
         license_path(),
@@ -533,7 +642,7 @@ def _unprotect_order_token(value: str) -> str:
         raise LicenseError("saved order token is damaged") from exc
 
 
-def _save_pending_order(payload: dict) -> None:
+def _store_order_credentials(path: Path, payload: dict, *, include_payment: bool) -> None:
     token = str(payload.get("order_access_token") or "").strip()
     order_id = str(payload.get("order_id") or "").strip()
     if not token or not order_id:
@@ -542,22 +651,149 @@ def _save_pending_order(payload: dict) -> None:
         "schema": 1,
         "order_id": order_id,
         "order_access_token": _protect_order_token(token),
-        "payment_url": str(payload.get("payment_url") or ""),
-        "amount_rub": int(payload.get("amount_rub") or 0),
-        "created_at": datetime.now(timezone.utc).isoformat(),
+        "saved_at": datetime.now(timezone.utc).isoformat(),
     }
-    _atomic_write_text(_pending_order_path(), json.dumps(stored, ensure_ascii=False, indent=2) + "\n")
+    if include_payment:
+        stored["payment_url"] = str(payload.get("payment_url") or "")
+        stored["amount_rub"] = int(payload.get("amount_rub") or 0)
+    _atomic_write_text(path, json.dumps(stored, ensure_ascii=False, indent=2) + "\n")
+
+
+def _load_order_credentials(path: Path, missing_message: str) -> dict:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        raise LicenseError(missing_message) from exc
+    if payload.get("schema") != 1:
+        raise LicenseError("Сохранённые данные лицензии имеют неизвестный формат")
+    payload["order_access_token"] = _unprotect_order_token(str(payload.get("order_access_token") or ""))
+    return payload
+
+
+def _pending_order_paths() -> tuple[Path, Path]:
+    return (_pending_order_path(), _pending_order_backup_path())
+
+
+def _save_pending_order(payload: dict) -> None:
+    _store_order_credentials(_pending_order_path(), payload, include_payment=True)
+    try:
+        _store_order_credentials(
+            _pending_order_backup_path(),
+            payload,
+            include_payment=True,
+        )
+    except (LicenseError, OSError):
+        # Primary LocalAppData state is enough to continue; the roaming copy is
+        # a second chance if local state is later lost/corrupted before license claim.
+        pass
 
 
 def _load_pending_order() -> dict:
+    errors = []
+    found = False
+    for path in _pending_order_paths():
+        try:
+            if path.is_file():
+                found = True
+        except OSError:
+            found = True
+        try:
+            order = _load_order_credentials(
+                path,
+                "Нет сохранённого заказа на оплату",
+            )
+            if path != _pending_order_path():
+                try:
+                    _store_order_credentials(
+                        _pending_order_path(),
+                        order,
+                        include_payment=True,
+                    )
+                except (LicenseError, OSError):
+                    pass
+            return order
+        except LicenseError as exc:
+            errors.append(exc)
+    if not found:
+        raise LicenseError("Нет сохранённого заказа на оплату")
+    raise LicenseError(
+        "Сохранённые данные уже созданного счёта повреждены. Новый платёж не создан."
+    ) from (errors[-1] if errors else None)
+
+
+def _clear_pending_order_best_effort() -> None:
+    for path in _pending_order_paths():
+        try:
+            path.unlink(missing_ok=True)
+        except OSError:
+            pass
+
+
+def _save_active_order(order: dict) -> None:
+    _store_order_credentials(_active_order_path(), order, include_payment=False)
     try:
-        payload = json.loads(_pending_order_path().read_text(encoding="utf-8"))
-    except Exception as exc:
-        raise LicenseError("Нет сохранённого заказа на оплату") from exc
-    if payload.get("schema") != 1:
-        raise LicenseError("Сохранённый заказ имеет неизвестный формат")
-    payload["order_access_token"] = _unprotect_order_token(str(payload.get("order_access_token") or ""))
-    return payload
+        _store_order_credentials(
+            _active_order_backup_path(),
+            order,
+            include_payment=False,
+        )
+    except (LicenseError, OSError):
+        # The LocalAppData copy is authoritative for the current installation;
+        # the roaming copy is resilience against ordinary app reinstall/cleanup.
+        pass
+
+
+def _load_active_order() -> dict:
+    errors = []
+    for path in (_active_order_path(), _active_order_backup_path()):
+        try:
+            return _load_order_credentials(
+                path,
+                "Нет данных для восстановления оплаченной лицензии",
+            )
+        except LicenseError as exc:
+            errors.append(exc)
+    raise LicenseError("Нет читаемых данных для восстановления оплаченной лицензии") from (
+        errors[-1] if errors else None
+    )
+
+
+def _has_active_order_credentials() -> bool:
+    # Existence is enough to suppress a new charge. If DPAPI/JSON is damaged,
+    # recovery will fail safely and tell the user to retry/support rather than
+    # silently treating an already-paid order as nonexistent.
+    for path in (_active_order_path(), _active_order_backup_path()):
+        try:
+            if path.is_file():
+                return True
+        except OSError:
+            pass
+    return False
+
+
+def _paid_recovery_status(message: str) -> LicenseStatus:
+    return LicenseStatus(
+        False,
+        "paid_recovery",
+        message,
+        "doctor_start",
+        None,
+        False,
+    )
+
+
+def _discard_active_order_if_matches(order_id: str) -> None:
+    try:
+        active = _load_active_order()
+    except LicenseError:
+        return
+    if str(active.get("order_id") or "") != str(order_id):
+        return
+    for path in (_active_order_path(), _active_order_backup_path()):
+        try:
+            path.unlink(missing_ok=True)
+        except OSError:
+            pass
 
 
 def _json_request(
@@ -616,11 +852,16 @@ def refresh_paid_order(config: LicenseRuntimeConfig | None = None) -> LicenseSta
     token = str(order["order_access_token"])
     status = _json_request(config, "GET", f"/api/orders/{order_id}/status", bearer=token)
     order_status = str(status.get("status") or "").strip().lower()
+    trusted_now = None
+    try:
+        trusted_now = _parse_utc(str(status.get("server_time") or ""))
+    except LicenseError:
+        pass
     if order_status in {"cancelled", "canceled", "expired", "failed", "refunded"}:
         discard_pending_order()
-        raise LicenseError("Предыдущий счёт больше недействителен. Создайте новый.")
+        raise PaymentTerminalError("Предыдущий счёт больше недействителен. Создайте новый.")
     if order_status not in {"paid", "license_issued"}:
-        raise LicenseError("Оплата ещё не подтверждена")
+        raise PaymentPendingError("Оплата ещё не подтверждена")
     machine = machine_fingerprint()
     try:
         _json_request(
@@ -640,12 +881,75 @@ def refresh_paid_order(config: LicenseRuntimeConfig | None = None) -> LicenseSta
         body={"machine_hash": machine},
         bearer=token,
     )
-    result = save_license(document, config)
+    # Persist the recovery credential before local license state. If a disk or
+    # clock-state error happens after payment, the user can retry without paying again.
+    _save_active_order(order)
     try:
-        _pending_order_path().unlink(missing_ok=True)
-    except OSError:
-        pass
+        result = save_license(document, config, trusted_now=trusted_now)
+    except LicenseExpiredError:
+        # This can happen when an old paid order file survived a previous
+        # successful activation. Server-confirmed expiry is the one safe case
+        # where the stale order may be cleared and renewal may proceed.
+        discard_pending_order()
+        _discard_active_order_if_matches(order_id)
+        raise
+    _clear_pending_order_best_effort()
     return result
+
+
+def recover_paid_license(config: LicenseRuntimeConfig | None = None) -> LicenseStatus:
+    config = config or runtime_config()
+    order = _load_active_order()
+    order_id = str(order["order_id"])
+    token = str(order["order_access_token"])
+    try:
+        status = _json_request(
+            config,
+            "GET",
+            f"/api/orders/{order_id}/status",
+            bearer=token,
+        )
+        order_status = str(status.get("status") or "").strip().lower()
+        trusted_now = None
+        try:
+            trusted_now = _parse_utc(str(status.get("server_time") or ""))
+        except LicenseError:
+            pass
+        if order_status not in {"paid", "license_issued"}:
+            raise PaidLicenseRecoveryError(
+                "Сервер не подтвердил действующую оплаченную лицензию"
+            )
+        machine = machine_fingerprint()
+        document = _json_request(
+            config,
+            "POST",
+            f"/api/orders/{order_id}/license",
+            body={"machine_hash": machine},
+            bearer=token,
+        )
+        try:
+            return save_license(document, config, trusted_now=trusted_now)
+        except LicenseExpiredError:
+            # The server confirmed the old entitlement itself, so it is safe to
+            # persist that signed expired state and allow a genuinely new payment.
+            _atomic_write_text(
+                license_path(),
+                json.dumps(document, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+            )
+            for path in (_active_order_path(), _active_order_backup_path()):
+                try:
+                    path.unlink(missing_ok=True)
+                except OSError:
+                    pass
+            raise
+    except LicenseExpiredError:
+        raise
+    except PaidLicenseRecoveryError:
+        raise
+    except LicenseError as exc:
+        raise PaidLicenseRecoveryError(
+            "Не удалось восстановить уже оплаченную лицензию. Повторная оплата не требуется."
+        ) from exc
 
 
 def activate_owner(bootstrap_code: str, config: LicenseRuntimeConfig | None = None) -> LicenseStatus:
@@ -663,19 +967,43 @@ def activate_owner(bootstrap_code: str, config: LicenseRuntimeConfig | None = No
 
 
 def discard_pending_order() -> None:
-    try:
-        _pending_order_path().unlink(missing_ok=True)
-    except OSError as exc:
-        raise LicenseError("Не удалось удалить старый заказ") from exc
+    errors = []
+    for path in _pending_order_paths():
+        try:
+            path.unlink(missing_ok=True)
+        except OSError as exc:
+            errors.append(exc)
+    if errors:
+        raise LicenseError("Не удалось удалить старый заказ") from errors[-1]
 
 
 def pending_payment_details() -> dict | None:
-    try:
-        payload = json.loads(_pending_order_path().read_text(encoding="utf-8"))
-    except Exception:
+    exists = False
+    for path in _pending_order_paths():
+        try:
+            if path.is_file():
+                exists = True
+                break
+        except OSError:
+            exists = True
+            break
+    if not exists:
         return None
+    try:
+        payload = _load_pending_order()
+        order_id = str(payload.get("order_id") or "").strip()
+        payment_url = str(payload.get("payment_url") or "").strip()
+        amount_rub = int(payload.get("amount_rub") or 0)
+        if not order_id or not payment_url or amount_rub <= 0:
+            raise ValueError("incomplete order")
+    except Exception as exc:
+        if isinstance(exc, LicenseError):
+            raise
+        raise LicenseError(
+            "Сохранённый счёт повреждён. Новый платёж не создан, чтобы исключить повторную оплату."
+        ) from exc
     return {
-        "order_id": str(payload.get("order_id") or ""),
-        "payment_url": str(payload.get("payment_url") or ""),
-        "amount_rub": int(payload.get("amount_rub") or 0),
+        "order_id": order_id,
+        "payment_url": payment_url,
+        "amount_rub": amount_rub,
     }

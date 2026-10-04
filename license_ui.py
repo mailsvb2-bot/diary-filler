@@ -7,11 +7,16 @@ from tkinter import messagebox, simpledialog
 
 from license_client import (
     LicenseError,
+    LicenseExpiredError,
+    PaidLicenseRecoveryError,
+    PaymentPendingError,
+    PaymentTerminalError,
     activate_owner,
     begin_monthly_payment,
     current_status,
     discard_pending_order,
     pending_payment_details,
+    recover_paid_license,
     refresh_paid_order,
     runtime_config,
 )
@@ -36,6 +41,7 @@ def _manager_state(status) -> dict:
             "details": "Доступ активирован.",
             "show_payment": False,
             "show_activation": False,
+            "show_recovery": False,
         }
     if status.active:
         details = (
@@ -48,6 +54,7 @@ def _manager_state(status) -> dict:
             "details": details,
             "show_payment": False,
             "show_activation": True,
+            "show_recovery": False,
         }
     if status.mode == "owner_reactivation":
         return {
@@ -55,12 +62,22 @@ def _manager_state(status) -> dict:
             "details": "Введите код активации для этого компьютера.",
             "show_payment": False,
             "show_activation": True,
+            "show_recovery": False,
+        }
+    if status.mode == "paid_recovery":
+        return {
+            "title": "Требуется проверка лицензии",
+            "details": "Повторная оплата не требуется. Проверьте уже оплаченную лицензию.",
+            "show_payment": False,
+            "show_activation": False,
+            "show_recovery": True,
         }
     return {
         "title": "Лицензия не активна",
         "details": _format_status(status),
         "show_payment": True,
         "show_activation": True,
+        "show_recovery": False,
     }
 
 
@@ -83,21 +100,53 @@ def _activate_code(parent, config, *, prompt: str = "Введите код ак�
 
 
 def _payment_flow(parent, config):
-    pending = pending_payment_details()
     try:
-        if pending and pending.get("payment_url"):
-            reuse = messagebox.askyesno(
-                "Незавершённая оплата",
-                "Найден предыдущий счёт.\n\n"
-                "Да — продолжить прошлую оплату.\n"
-                "Нет — отменить локально старый счёт и создать новый.",
+        pending = pending_payment_details()
+    except LicenseError as exc:
+        messagebox.showwarning(
+            "Проверка оплаты",
+            str(exc)
+            + "\n\nНовый счёт не создан, чтобы исключить повторную оплату.",
+            parent=parent,
+        )
+        return None
+
+    if pending:
+        try:
+            already_paid = refresh_paid_order(config)
+        except PaymentPendingError:
+            already_paid = None
+        except (PaymentTerminalError, LicenseExpiredError):
+            # Only a server-confirmed terminal/expired previous order may be
+            # replaced with a fresh invoice.
+            pending = None
+            already_paid = None
+        except LicenseError as exc:
+            messagebox.showwarning(
+                "Проверка оплаты",
+                str(exc)
+                + "\n\nНовый счёт не создан, чтобы исключить повторную оплату. "
+                + "Повторите проверку позже.",
                 parent=parent,
             )
-            if reuse:
-                payment = pending
-            else:
-                discard_pending_order()
-                payment = begin_monthly_payment(config)
+            return None
+        if already_paid is not None and already_paid.active:
+            messagebox.showinfo("Лицензия", _format_status(already_paid), parent=parent)
+            return already_paid
+
+    try:
+        if pending and pending.get("payment_url"):
+            # A pending status is not proof that money was not captured:
+            # provider reconciliation may simply be temporarily unavailable.
+            # Never create a second invoice until the old one is terminal.
+            payment = pending
+            messagebox.showinfo(
+                "Незавершённая оплата",
+                "Предыдущий счёт ещё не имеет окончательного статуса.\n\n"
+                "Программа продолжит именно этот счёт и не создаст новый, "
+                "чтобы исключить двойную оплату.",
+                parent=parent,
+            )
         else:
             payment = begin_monthly_payment(config)
     except LicenseError as exc:
@@ -120,10 +169,18 @@ def _payment_flow(parent, config):
     )
     try:
         status = refresh_paid_order(config)
-    except LicenseError as exc:
+    except PaymentPendingError as exc:
         messagebox.showwarning(
             "Оплата пока не подтверждена",
             str(exc) + "\n\nПроверку можно повторить из окна «Лицензия».",
+            parent=parent,
+        )
+        return None
+    except LicenseError as exc:
+        messagebox.showwarning(
+            "Проверка лицензии",
+            str(exc)
+            + "\n\nНовый платёж не требуется. Повторите проверку позже.",
             parent=parent,
         )
         return None
@@ -210,6 +267,12 @@ def show_license_manager(parent) -> None:
                 lambda: activate_and_refresh(),
                 accent=not state["show_payment"],
             ).pack(side="left", padx=(0, 8))
+        if state.get("show_recovery"):
+            button(
+                "Проверить лицензию",
+                lambda: recover_and_refresh(),
+                accent=True,
+            ).pack(side="left", padx=(0, 8))
         if state["show_payment"]:
             button(
                 "Оплатить лицензию",
@@ -221,6 +284,25 @@ def show_license_manager(parent) -> None:
     def activate_and_refresh() -> None:
         if _activate_code(window, config) is not None:
             refresh()
+
+    def recover_and_refresh() -> None:
+        try:
+            status = recover_paid_license(config)
+        except LicenseExpiredError:
+            messagebox.showinfo(
+                "Лицензия",
+                "Срок предыдущей лицензии истёк. Можно оформить новый период.",
+                parent=window,
+            )
+        except LicenseError as exc:
+            messagebox.showwarning(
+                "Проверка лицензии",
+                str(exc) + "\n\nПовторная оплата не требуется. Повторите проверку позже.",
+                parent=window,
+            )
+        else:
+            messagebox.showinfo("Лицензия", _format_status(status), parent=window)
+        refresh()
 
     def pay_and_refresh() -> None:
         _payment_flow(window, config)
@@ -240,6 +322,22 @@ def ensure_license(parent, *, interactive: bool = True) -> bool:
         return True
     if not interactive:
         return False
+
+    if status.mode == "paid_recovery":
+        try:
+            recovered = recover_paid_license(config)
+        except LicenseExpiredError:
+            status = current_status(config)
+        except LicenseError as exc:
+            messagebox.showwarning(
+                "Проверка лицензии",
+                str(exc)
+                + "\n\nПовторная оплата не требуется. Повторите проверку позже.",
+                parent=parent,
+            )
+            return False
+        else:
+            return bool(recovered.active)
 
     # A previously signed privileged entitlement never enters paid UX.
     if status.mode == "owner_reactivation":

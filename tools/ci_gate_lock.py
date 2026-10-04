@@ -39,13 +39,14 @@ WINDOWS_REQUIRED_IN_ORDER = (
     "python verify_built_exe.py",
     "./tools/windows_desktop_intake_e2e.ps1 -AppPath ./dist/MedicalDiaryAutofill.exe",
     "BUILD_WINDOWS_INSTALLER.bat",
-    "./tools/windows_installer_smoke.ps1 -InstallerPath ./dist/MedicalDiaryAutofill-Setup-1.4.30.exe",
+    "./tools/windows_installer_smoke.ps1 -InstallerPath ./dist/MedicalDiaryAutofill-Setup-1.4.31.exe",
 )
 
 RELEASE_REQUIRED_IN_ORDER = (
     "Checkout exact release candidate",
     "Guard production licensing configuration",
     "Resolve and guard release target",
+    "Verify live license server trust anchor",
     "python tools/regression_lock_check.py",
     "python tools/ci_gate_lock.py",
     "python tests/regression_surface_inventory.py",
@@ -69,7 +70,7 @@ RELEASE_REQUIRED_IN_ORDER = (
     "python verify_built_exe.py",
     "./tools/windows_desktop_intake_e2e.ps1 -AppPath ./dist/MedicalDiaryAutofill.exe",
     "BUILD_WINDOWS_INSTALLER.bat",
-    "./tools/windows_installer_smoke.ps1 -InstallerPath ./dist/MedicalDiaryAutofill-Setup-1.4.30.exe",
+    "./tools/windows_installer_smoke.ps1 -InstallerPath ./dist/MedicalDiaryAutofill-Setup-1.4.31.exe",
     "python make_release_zip.py",
     "Create guarded release tag",
     "gh release create",
@@ -98,6 +99,8 @@ REQUIRED_REPOSITORY_FILES = (
     "tools/install_windows_live_runner.cmd",
     "tools/install_windows11_live_runner.ps1",
     "tools/document_mechanics_guard.py",
+    "tools/license_server_preflight.py",
+    "tests/license_server_preflight_regression.py",
     "tools/main_branch_policy.py",
     "tools/full_patient_replay_check.py",
     "tools/docx_block_boundary_regression.py",
@@ -144,16 +147,18 @@ def main() -> None:
     for required in (
         "workflow_dispatch:",
         "push:",
-        "branches: [production-v1.4.30]",
+        "branches: [production-v1.4.31]",
         "Checkout exact release candidate",
         "Resolve and guard release target",
-        "refs/heads/production-v1.4.30",
+        "refs/heads/production-v1.4.31",
         "git/ref/heads/main",
         "Tag $tag already exists at a different SHA; refusing to move or overwrite it.",
         '"RELEASE_TAG=$tag"',
         "fetch-depth: 0",
         "Create guarded release tag",
         "Guard production licensing configuration",
+        "Verify live license server trust anchor",
+        "python tools/license_server_preflight.py",
         'MEDICAL_AUTOFILL_LICENSE_REQUIRED: "1"',
         "MEDICAL_AUTOFILL_LICENSE_SERVER_URL",
         "MEDICAL_AUTOFILL_LICENSE_PUBLIC_KEY_B64",
@@ -169,6 +174,7 @@ def main() -> None:
         "branches: [main, master]",
         "pip install -r licensing_server/requirements.txt",
         "python tests/license_server_regression.py",
+        "python tests/license_server_preflight_regression.py",
         "Import FastAPI server with production-shaped configuration",
         "LICENSE SERVER HTTP IMPORT OK",
     ):
@@ -198,7 +204,7 @@ def main() -> None:
     release_create = release[publish_release:]
     for asset in (
         r"dist\MedicalDiaryAutofill.exe",
-        r"dist\MedicalDiaryAutofill-Setup-1.4.30.exe",
+        r"dist\MedicalDiaryAutofill-Setup-1.4.31.exe",
         r"release\MedicalDiaryAutofill_PRODUCTION_SOURCE.zip",
     ):
         if asset not in release_create:

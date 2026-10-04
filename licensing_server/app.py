@@ -89,16 +89,25 @@ def _config() -> dict:
 def create_app() -> FastAPI:
     config = _config()
     store = LicenseStore(config["db_path"])
+    # Refuse accidental private-key rotation before the server can create or
+    # reconcile payment orders. Existing released clients trust this identity.
+    store.pin_issuer_public_key(public_key_b64(config["private_key"]))
     provider = YooKassaClient(config["shop_id"], config["secret_key"], config["return_url"])
     owner_limiter = SlidingLimiter(10, timedelta(hours=1))
-    order_limiter = SlidingLimiter(30, timedelta(hours=1))
+    order_machine_limiter = SlidingLimiter(30, timedelta(hours=1))
+    # A broad source-address cap prevents a caller from bypassing the
+    # per-machine bucket by inventing machine hashes. It is deliberately much
+    # higher so a reverse proxy/NAT shared by legitimate doctors is not the
+    # primary limiter.
+    order_source_limiter = SlidingLimiter(300, timedelta(hours=1))
 
     app = FastAPI(title="MedicalDiaryAutofill License Server", docs_url=None, redoc_url=None)
     app.state.store = store
     app.state.provider = provider
     app.state.config = config
     app.state.owner_limiter = owner_limiter
-    app.state.order_limiter = order_limiter
+    app.state.order_machine_limiter = order_machine_limiter
+    app.state.order_source_limiter = order_source_limiter
 
     def client_ip(request: Request) -> str:
         return request.client.host if request.client else "unknown"
@@ -126,12 +135,15 @@ def create_app() -> FastAPI:
     def create_order(req: OrderRequest, request: Request) -> dict:
         if req.plan != "doctor_start":
             raise HTTPException(400, "unsupported plan")
-        if not order_limiter.allow(client_ip(request)):
-            raise HTTPException(429, "too many orders")
         try:
             machine = validate_machine_hash(req.machine_hash)
         except LicensingServerError as exc:
             raise HTTPException(400, str(exc)) from exc
+        source = client_ip(request)
+        if not order_source_limiter.allow(source):
+            raise HTTPException(429, "too many orders from this source")
+        if not order_machine_limiter.allow(f"{source}|{machine}"):
+            raise HTTPException(429, "too many orders for this computer")
         order_id = str(uuid.uuid4())
         access_token = new_order_access_token()
         try:
@@ -183,7 +195,12 @@ def create_app() -> FastAPI:
     def order_status(order_id: str, authorization: str | None = Header(default=None)) -> dict:
         row = authorized_order(order_id, authorization)
         row = reconcile_payment(row)
-        return {"order_id": order_id, "status": row["status"], "amount_rub": row["amount_rub"]}
+        return {
+            "order_id": order_id,
+            "status": row["status"],
+            "amount_rub": row["amount_rub"],
+            "server_time": datetime.now(timezone.utc).isoformat(),
+        }
 
     @app.post("/api/orders/{order_id}/activate-machine")
     def activate_machine(order_id: str, req: MachineRequest, authorization: str | None = Header(default=None)) -> dict:

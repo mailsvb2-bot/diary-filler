@@ -74,6 +74,12 @@ def main() -> None:
     assert "def reconcile_payment(row: dict)" in app_source
     assert "row = reconcile_payment(row)" in app_source
     assert "provider.get_payment" in app_source
+    assert '"server_time": datetime.now(timezone.utc).isoformat()' in app_source
+    assert "order_source_limiter = SlidingLimiter(300, timedelta(hours=1))" in app_source
+    assert "order_machine_limiter = SlidingLimiter(30, timedelta(hours=1))" in app_source
+    assert "order_source_limiter.allow(source)" in app_source
+    assert 'order_machine_limiter.allow(f"{source}|{machine}")' in app_source
+    assert "store.pin_issuer_public_key(public_key_b64(config[\"private_key\"]))" in app_source
 
     token = new_order_access_token()
     digest = order_token_hash(token)
@@ -88,6 +94,18 @@ def main() -> None:
 
     with tempfile.TemporaryDirectory() as td:
         store = LicenseStore(Path(td) / "licenses.sqlite3")
+        store.pin_issuer_public_key(public_b64)
+        store.pin_issuer_public_key(public_b64)
+        different_private = Ed25519PrivateKey.generate()
+        different_public = different_private.public_key().public_bytes(
+            encoding=serialization.Encoding.Raw,
+            format=serialization.PublicFormat.Raw,
+        )
+        different_public_b64 = base64.b64encode(different_public).decode("ascii")
+        # Before any paid order exists, bootstrap configuration can still be
+        # corrected without trapping a fresh deployment on a typo.
+        store.pin_issuer_public_key(different_public_b64)
+
         store.create_order(
             order_id="order-1",
             token_hash=digest,
@@ -100,6 +118,17 @@ def main() -> None:
         assert row and row["status"] == "pending"
         store.mark_paid("order-1")
         assert store.get_order("order-1")["status"] == "paid"
+
+        third_private = Ed25519PrivateKey.generate()
+        third_public = third_private.public_key().public_bytes(
+            encoding=serialization.Encoding.Raw,
+            format=serialization.PublicFormat.Raw,
+        )
+        try:
+            store.pin_issuer_public_key(base64.b64encode(third_public).decode("ascii"))
+            raise AssertionError("issuer key rotation was accepted after a paid order")
+        except ValueError:
+            pass
 
         paid = issue_license(
             private_b64,

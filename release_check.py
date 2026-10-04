@@ -47,6 +47,8 @@ REQUIRED_FILES = [
     "licensing_server/requirements.txt",
     "tests/license_client_regression.py",
     "tests/license_server_regression.py",
+    "tests/license_server_preflight_regression.py",
+    "tools/license_server_preflight.py",
     "tests/patient_registry_regression.py",
     "tools/docx_block_boundary_regression.py",
     "safety_integrity_check.py",
@@ -215,12 +217,14 @@ def _assert_build_contract() -> None:
         "python tools/generation_performance_profile.py --runs 3",
         "python verify_built_exe.py",
         "./tools/windows_desktop_intake_e2e.ps1 -AppPath ./dist/MedicalDiaryAutofill.exe",
-        "./tools/windows_installer_smoke.ps1 -InstallerPath ./dist/MedicalDiaryAutofill-Setup-1.4.30.exe",
+        "./tools/windows_installer_smoke.ps1 -InstallerPath ./dist/MedicalDiaryAutofill-Setup-1.4.31.exe",
         "Create guarded release tag",
         "MEDICAL_AUTOFILL_LICENSE_REQUIRED",
         "MEDICAL_AUTOFILL_LICENSE_SERVER_URL",
         "MEDICAL_AUTOFILL_LICENSE_PUBLIC_KEY_B64",
         "Guard production licensing configuration",
+        "Verify live license server trust anchor",
+        "python tools/license_server_preflight.py",
         "gh release create",
         "--verify-tag",
     ]:
@@ -438,6 +442,9 @@ def main() -> None:
 
     _print_step("License server issuance and persistence")
     _run([sys.executable, "tests/license_server_regression.py"], timeout=60)
+
+    _print_step("License server release trust preflight contract")
+    _run([sys.executable, "tests/license_server_preflight_regression.py"], timeout=60)
 
     _print_step("Smoke tests")
     # smoke_test.py is the canonical executable entrypoint and delegates to the
