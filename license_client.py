@@ -170,6 +170,12 @@ def _machine_fingerprint_cache_path() -> Path:
     return _runtime_dir() / "license-machine-fingerprint.json"
 
 
+def _machine_fingerprint_backup_path() -> Path:
+    base = os.environ.get("APPDATA", "").strip()
+    root = Path(base) if base else _runtime_dir().parent
+    return root / "MedicalDiaryAutofill" / "license-machine-fingerprint-backup.json"
+
+
 def _atomic_write_text(path: Path, text: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(path.suffix + ".tmp")
@@ -211,46 +217,87 @@ def _windows_machine_guid() -> str:
         return ""
 
 
-def _read_cached_machine_fingerprint() -> str:
+def _decode_machine_fingerprint_cache(raw: str) -> str:
     try:
-        payload = json.loads(_machine_fingerprint_cache_path().read_text(encoding="utf-8"))
-        value = str(payload.get("fingerprint") or "").strip().lower()
-        if payload.get("schema") == 1 and len(value) == 64 and all(ch in "0123456789abcdef" for ch in value):
+        payload = json.loads(raw)
+        if payload.get("schema") == 2:
+            clear = _unprotect_local_blob(
+                str(payload.get("protected") or ""),
+                "MedicalDiaryAutofill machine fingerprint",
+            )
+            protected_payload = json.loads(clear.decode("utf-8"))
+            value = str(protected_payload.get("fingerprint") or "").strip().lower()
+        elif payload.get("schema") == 1:
+            # One-time compatibility with already-installed builds. A valid
+            # legacy value is immediately rewritten as DPAPI/HMAC-protected v2.
+            value = str(payload.get("fingerprint") or "").strip().lower()
+        else:
+            return ""
+        if len(value) == 64 and all(ch in "0123456789abcdef" for ch in value):
             return value
     except Exception:
         pass
     return ""
 
 
+def _read_cached_machine_fingerprint() -> str:
+    primary = _machine_fingerprint_cache_path()
+    for path in (primary, _machine_fingerprint_backup_path()):
+        try:
+            raw = path.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        value = _decode_machine_fingerprint_cache(raw)
+        if not value:
+            continue
+        # Always migrate/heal both copies into protected schema v2.
+        _cache_machine_fingerprint(value)
+        return value
+    return ""
+
+
 def _cache_machine_fingerprint(value: str) -> None:
+    clear = json.dumps(
+        {"fingerprint": value},
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    protected = _protect_local_blob(clear, "MedicalDiaryAutofill machine fingerprint")
+    encoded = json.dumps(
+        {"schema": 2, "protected": protected},
+        sort_keys=True,
+    ) + "\n"
     try:
-        _atomic_write_text(
-            _machine_fingerprint_cache_path(),
-            json.dumps({"schema": 1, "fingerprint": value}, sort_keys=True) + "\n",
-        )
+        _atomic_write_text(_machine_fingerprint_cache_path(), encoded)
+    except OSError:
+        pass
+    try:
+        _atomic_write_text(_machine_fingerprint_backup_path(), encoded)
     except OSError:
         pass
 
 
 def machine_fingerprint() -> str:
-    machine_guid = _windows_machine_guid().strip().lower()
-    if machine_guid:
-        identity = f"windows-machine-guid-v1|{machine_guid}"
-        fingerprint = hashlib.sha256(identity.encode("utf-8")).hexdigest()
-        _cache_machine_fingerprint(fingerprint)
-        return fingerprint
-
+    # Once an installation/user profile has chosen an identity, keep it stable.
+    # This prevents a transient MachineGuid read failure on first payment from
+    # turning into a different "computer" on the next launch.
     cached = _read_cached_machine_fingerprint()
     if cached:
         return cached
 
-    identity = (
-        "portable-install-v1|"
-        + platform.system().strip().lower()
-        + "|"
-        + _install_id().strip().lower()
-    )
-    return hashlib.sha256(identity.encode("utf-8")).hexdigest()
+    machine_guid = _windows_machine_guid().strip().lower()
+    if machine_guid:
+        identity = f"windows-machine-guid-v1|{machine_guid}"
+    else:
+        identity = (
+            "portable-install-v1|"
+            + platform.system().strip().lower()
+            + "|"
+            + _install_id().strip().lower()
+        )
+    fingerprint = hashlib.sha256(identity.encode("utf-8")).hexdigest()
+    _cache_machine_fingerprint(fingerprint)
+    return fingerprint
 
 
 def _parse_utc(value: str) -> datetime:
@@ -564,10 +611,11 @@ def _evaluate_document(
 
     _validate_paid_calendar_period(str(document.get("schema") or ""), payload, valid_until)
     if allow_uninitialized_clock:
-        try:
-            _clock_path().unlink(missing_ok=True)
-        except OSError:
-            pass
+        for path in (_clock_path(), _clock_backup_path()):
+            try:
+                path.unlink(missing_ok=True)
+            except OSError:
+                pass
     _record_clock(now)
     return LicenseStatus(
         True,
@@ -682,14 +730,21 @@ def current_status(config: LicenseRuntimeConfig | None = None) -> LicenseStatus:
         return LicenseStatus(False, "invalid", "Файл лицензии повреждён")
     try:
         status = _evaluate_document(document, config)
-        if (
-            not status.active
-            and status.mode == "expired"
-            and _has_active_order_credentials()
-        ):
-            return _paid_recovery_status(
-                "Требуется проверить срок уже оплаченной лицензии"
-            )
+        if not status.active and status.mode == "expired":
+            if _locally_trusted_paid_document(document, config):
+                try:
+                    # Never trust a possibly-wrong workstation clock to decide
+                    # that another payment is due. Confirm expiry against the
+                    # configured HTTPS license server first.
+                    return _repair_paid_clock_from_server(document, config)
+                except LicenseError:
+                    return _paid_recovery_status(
+                        "Не удалось подтвердить срок уже оплаченной лицензии. Новый платёж не нужен."
+                    )
+            if _has_active_order_credentials():
+                return _paid_recovery_status(
+                    "Требуется проверить срок уже оплаченной лицензии"
+                )
         return status
     except OwnerReactivationRequired as exc:
         return _owner_reactivation_status(str(exc))
