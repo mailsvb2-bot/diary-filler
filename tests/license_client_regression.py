@@ -331,6 +331,117 @@ def main() -> None:
         lc._machine_fingerprint_backup_path().unlink(missing_ok=True)
         lc._cache_machine_fingerprint(machine)
 
+        # Hardware-clone guard: a copied installation that reproduces the
+        # source MachineGuid but runs on different SMBIOS hardware must derive a
+        # different current machine identity. This is the exact "copy the whole
+        # installed folder + spoof MachineGuid" attack that v2 binding blocks.
+        clone_saved_windows_runtime = lc._is_windows_runtime
+        clone_saved_guid = lc._windows_machine_guid
+        clone_saved_smbios = lc._windows_smbios_uuid
+        try:
+            lc._is_windows_runtime = lambda: True
+            lc._windows_machine_guid = lambda: "cloned-guid"
+            lc._windows_smbios_uuid = lambda: "00112233445566778899aabbccddeeff"
+            lc._machine_fingerprint_cache_path().unlink(missing_ok=True)
+            lc._machine_fingerprint_backup_path().unlink(missing_ok=True)
+            source_machine = lc.machine_fingerprint()
+            assert source_machine == lc._machine_hardware_fingerprint(
+                "cloned-guid",
+                "00112233445566778899aabbccddeeff",
+            )
+
+            source_license = signed_document(private, payload(source_machine))
+            source_clear = json.dumps(
+                {"fingerprint": source_machine},
+                sort_keys=True,
+                separators=(",", ":"),
+            ).encode("utf-8")
+            copied_cache = json.dumps(
+                {
+                    "schema": 2,
+                    "protected": lc._protect_local_blob(
+                        source_clear,
+                        "MedicalDiaryAutofill machine fingerprint",
+                    ),
+                },
+                sort_keys=True,
+            )
+            lc._machine_fingerprint_cache_path().write_text(copied_cache, encoding="utf-8")
+            lc._machine_fingerprint_backup_path().write_text(copied_cache, encoding="utf-8")
+
+            # Destination machine: attacker copied every app/license/cache file
+            # and even spoofed MachineGuid, but cannot make different hardware
+            # derive the source v2 fingerprint.
+            lc._windows_smbios_uuid = lambda: "ffeeddccbbaa99887766554433221100"
+            destination_machine = lc.machine_fingerprint()
+            assert destination_machine != source_machine
+            assert destination_machine == lc._machine_hardware_fingerprint(
+                "cloned-guid",
+                "ffeeddccbbaa99887766554433221100",
+            )
+            try:
+                lc._evaluate_document(
+                    source_license,
+                    config,
+                    allow_uninitialized_clock=True,
+                )
+                raise AssertionError(
+                    "cloned v2 license survived different SMBIOS hardware"
+                )
+            except lc.LicenseError:
+                pass
+
+            # If a machine has already established a v2 identity, a temporary
+            # firmware-table read failure must fail closed rather than silently
+            # downgrade it to the older MachineGuid-only identity.
+            lc._windows_smbios_uuid = lambda: "00112233445566778899aabbccddeeff"
+            lc._machine_fingerprint_cache_path().unlink(missing_ok=True)
+            lc._machine_fingerprint_backup_path().unlink(missing_ok=True)
+            assert lc.machine_fingerprint() == source_machine
+            lc._windows_smbios_uuid = lambda: ""
+            try:
+                lc.machine_fingerprint()
+                raise AssertionError(
+                    "v2 machine identity silently downgraded when SMBIOS became unavailable"
+                )
+            except lc.MachineIdentityUnavailableError:
+                pass
+
+            # A fresh activation/payment request always emits the stronger v2
+            # identity when the hardware anchor is available.
+            lc._windows_smbios_uuid = lambda: "00112233445566778899aabbccddeeff"
+            lc._machine_fingerprint_cache_path().unlink(missing_ok=True)
+            lc._machine_fingerprint_backup_path().unlink(missing_ok=True)
+            captured = {}
+            old_json_request_for_clone = lc._json_request
+            old_save_pending_for_clone = lc._save_pending_order
+            try:
+                def _capture_new_order(_config, method, path, *, body=None, bearer=""):
+                    assert method == "POST" and path == "/api/orders"
+                    captured["machine_hash"] = body["machine_hash"]
+                    return {
+                        "order_id": "00000000-0000-0000-0000-000000000055",
+                        "order_access_token": "C" * 48,
+                        "payment_url": "https://pay.example.com/clone-guard",
+                        "amount_rub": 100,
+                    }
+
+                lc._json_request = _capture_new_order
+                lc._save_pending_order = lambda _payload: None
+                lc.begin_monthly_payment(config)
+            finally:
+                lc._json_request = old_json_request_for_clone
+                lc._save_pending_order = old_save_pending_for_clone
+            assert captured["machine_hash"] == source_machine
+            assert captured["machine_hash"] != lc._machine_guid_fingerprint("cloned-guid")
+        finally:
+            lc._is_windows_runtime = clone_saved_windows_runtime
+            lc._windows_machine_guid = clone_saved_guid
+            lc._windows_smbios_uuid = clone_saved_smbios
+            lc._machine_fingerprint_cache_path().unlink(missing_ok=True)
+            lc._machine_fingerprint_backup_path().unlink(missing_ok=True)
+            lc._cache_machine_fingerprint(machine)
+
         # Legacy schema-1 fingerprint migration is allowed only when the
         # unprotected value can be independently derived on this machine.
         lc._machine_fingerprint_cache_path().unlink(missing_ok=True)
@@ -1137,6 +1248,57 @@ def main() -> None:
             raise AssertionError("annual paid license bypassed monthly contract")
         except lc.LicenseError:
             pass
+
+        # Existing paid orders created before hardware-v2 used the
+        # MachineGuid-only server hash. After upgrading, recovery first tries
+        # the current v2 identity and then the exact legacy identity derivable
+        # on this same computer; it never invents or accepts a copied hash.
+        fallback_saved_windows_runtime = lc._is_windows_runtime
+        fallback_saved_guid = lc._windows_machine_guid
+        fallback_saved_smbios = lc._windows_smbios_uuid
+        fallback_saved_json = lc._json_request
+        fallback_saved_cache = []
+        try:
+            lc._is_windows_runtime = lambda: True
+            lc._windows_machine_guid = lambda: "upgrade-order-guid"
+            lc._windows_smbios_uuid = lambda: "0123456789abcdeffedcba9876543210"
+            lc._machine_fingerprint_cache_path().unlink(missing_ok=True)
+            lc._machine_fingerprint_backup_path().unlink(missing_ok=True)
+            current_v2 = lc.machine_fingerprint()
+            old_v1 = lc._machine_guid_fingerprint("upgrade-order-guid")
+            assert current_v2 != old_v1
+
+            calls = []
+            def _legacy_order_server(_config, method, path, *, body=None, bearer=""):
+                calls.append((method, path, dict(body or {})))
+                if body and body.get("machine_hash") == current_v2:
+                    raise lc.LicenseError("Сервер лицензий вернул HTTP 409")
+                if body and body.get("machine_hash") == old_v1:
+                    return signed_document(private, payload(old_v1))
+                raise AssertionError((method, path, body))
+
+            lc._json_request = _legacy_order_server
+            recovered_document = lc._fetch_paid_order_license(
+                config,
+                "00000000-0000-0000-0000-000000000056",
+                "D" * 48,
+                activate=False,
+            )
+            assert recovered_document["license"]["payload"]["allowed_machines"] == [old_v1]
+            attempted_hashes = [
+                body["machine_hash"]
+                for _method, _path, body in calls
+                if body and "machine_hash" in body
+            ]
+            assert attempted_hashes[:2] == [current_v2, old_v1]
+        finally:
+            lc._json_request = fallback_saved_json
+            lc._is_windows_runtime = fallback_saved_windows_runtime
+            lc._windows_machine_guid = fallback_saved_guid
+            lc._windows_smbios_uuid = fallback_saved_smbios
+            lc._machine_fingerprint_cache_path().unlink(missing_ok=True)
+            lc._machine_fingerprint_backup_path().unlink(missing_ok=True)
+            lc._cache_machine_fingerprint(machine)
 
         # Successful payment must leave a DPAPI/HMAC-protected recovery
         # credential so local license/clock damage never forces a second charge.
