@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "b28ae7af842c00e6a9b3fd2a44f61d57090b1e8a",
-  "baseline_note": "v1.4.31 paid-license recovery hardening validated on merge commit b28ae7af842c00e6a9b3fd2a44f61d57090b1e8a: License Server CI #73 and Windows EXE Build #1556 passed. Already-paid access is recovered before any new charge, pending and active order credentials have redundant DPAPI-protected recovery copies, malformed/missing server timestamps do not abort activation, stale expired invoices are cleared safely, payment-order rate limiting is layered by source and machine, issuer trust is pinned, and the full medical/golden DOCX/packaged EXE/installer contour remained green.",
+  "baseline_ref": "87c69f42a2c23e70ab9af8b6eb9460d1643bee4f",
+  "baseline_note": "v1.4.32 licensing hardening validated on candidate commit 87c69f42a2c23e70ab9af8b6eb9460d1643bee4f: License Server CI #125 and Windows EXE Build #1608 passed. Validation covered forged fingerprint-cache rejection, locally applicable redundant-license selection, trusted server-time offline continuity, expiry rollback resistance, bounded license-server rate-limit keys, the full medical/golden DOCX regression contour, packaged EXE desktop-intake E2E, and Windows installer/uninstall smoke.",
   "required_approval_evidence": [
     "ci_gate_lock",
     "patient_registry_regression"
