@@ -437,22 +437,33 @@ def _historical_windows_license_fingerprints() -> set[str]:
     return {hashlib.sha256(legacy_identity.encode("utf-8")).hexdigest()}
 
 
-def _decode_protected_machine_fingerprint_cache(raw: str) -> str:
+def _decode_protected_machine_fingerprint_cache_record(raw: str) -> tuple[str, bool]:
     try:
         payload = json.loads(raw)
-        if payload.get("schema") != 2:
-            return ""
+        schema = payload.get("schema")
+        if schema not in {2, 3}:
+            return "", False
         clear = _unprotect_local_blob(
             str(payload.get("protected") or ""),
             "MedicalDiaryAutofill machine fingerprint",
         )
         protected_payload = json.loads(clear.decode("utf-8"))
         value = str(protected_payload.get("fingerprint") or "").strip().lower()
-        if _valid_machine_fingerprint(value):
-            return value
+        if not _valid_machine_fingerprint(value):
+            return "", False
+        requires_hardware = (
+            bool(protected_payload.get("requires_hardware"))
+            if schema == 3
+            else False
+        )
+        return value, requires_hardware
     except Exception:
-        pass
-    return ""
+        return "", False
+
+
+def _decode_protected_machine_fingerprint_cache(raw: str) -> str:
+    value, _requires_hardware = _decode_protected_machine_fingerprint_cache_record(raw)
+    return value
 
 
 def _decode_legacy_primary_machine_fingerprint(raw: str) -> tuple[str, bool]:
@@ -483,7 +494,9 @@ def _read_cached_machine_fingerprint() -> str:
 
     # DPAPI/HMAC proves local storage integrity, not that an arbitrary cached
     # fingerprint was derived from this computer. Re-derive trusted machine
-    # evidence and accept schema 2 only when the value matches it.
+    # evidence and accept protected schema-2/3 caches only when the value
+    # matches it. Schema 3 additionally records whether hardware evidence is
+    # mandatory, allowing fail-closed behavior without misclassifying old caches.
     candidates, _machine_guid_available = _derived_machine_fingerprint_candidates()
     legacy_windows = ""
     if _is_windows_runtime():
@@ -498,35 +511,37 @@ def _read_cached_machine_fingerprint() -> str:
         if strengthened_candidates
         else legacy_windows
     )
-    protected_values: list[str] = []
+    protected_records: list[tuple[str, bool]] = []
     for path in (primary, backup):
         try:
             raw = path.read_text(encoding="utf-8")
         except OSError:
             continue
-        value = _decode_protected_machine_fingerprint_cache(raw)
+        value, requires_hardware = _decode_protected_machine_fingerprint_cache_record(raw)
         if value:
-            protected_values.append(value)
-        if not value or value not in candidates:
+            protected_records.append((value, requires_hardware))
+
+    if (
+        _is_windows_runtime()
+        and _machine_guid_available
+        and not strengthened_candidates
+        and any(requires_hardware for _value, requires_hardware in protected_records)
+    ):
+        # A schema-3 v2 cache explicitly records that this installation was
+        # hardware-strengthened. If SMBIOS evidence is temporarily unreadable,
+        # fail closed rather than falling back to a legacy MachineGuid cache.
+        raise MachineIdentityUnavailableError(
+            "Не удалось проверить аппаратную привязку этого компьютера. Повторите проверку лицензии."
+        )
+
+    for value, _requires_hardware in protected_records:
+        if value not in candidates:
             continue
         # Upgrade a legacy MachineGuid-only cache to the stronger current
         # hardware identity as soon as the SMBIOS UUID is available.
         selected = preferred if preferred and preferred in candidates else value
         _cache_machine_fingerprint(selected)
         return selected
-
-    if (
-        _is_windows_runtime()
-        and _machine_guid_available
-        and not strengthened_candidates
-        and protected_values
-        and all(value not in candidates for value in protected_values)
-    ):
-        # A v2 cache exists but the hardware anchor is temporarily unreadable.
-        # Do not silently downgrade this installation to MachineGuid-only.
-        raise MachineIdentityUnavailableError(
-            "Не удалось проверить аппаратную привязку этого компьютера. Повторите проверку лицензии."
-        )
 
     # Legacy schema-1 migration is allowed only from the local primary cache and
     # only when its fingerprint can be independently derived on this machine.
@@ -556,8 +571,17 @@ def _read_cached_machine_fingerprint() -> str:
 
 
 def _cache_machine_fingerprint(value: str) -> None:
+    requires_hardware = False
+    if _is_windows_runtime():
+        legacy = _machine_guid_fingerprint(
+            _windows_machine_guid().strip().lower()
+        )
+        requires_hardware = bool(legacy and value != legacy)
     clear = json.dumps(
-        {"fingerprint": value},
+        {
+            "fingerprint": value,
+            "requires_hardware": requires_hardware,
+        },
         sort_keys=True,
         separators=(",", ":"),
     ).encode("utf-8")
@@ -569,7 +593,7 @@ def _cache_machine_fingerprint(value: str) -> None:
         # unusable one while a valid MachineGuid/fallback identity is available.
         return
     encoded = json.dumps(
-        {"schema": 2, "protected": protected},
+        {"schema": 3, "protected": protected},
         sort_keys=True,
     ) + "\n"
     try:
