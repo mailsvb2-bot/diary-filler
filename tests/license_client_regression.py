@@ -172,8 +172,19 @@ def main() -> None:
             "amount_rub": 1,
         })
         assert lc.pending_payment_details() is not None
+        assert lc._pending_order_backup_path().exists()
+        # Losing or corrupting the primary order file before license claim must
+        # recover the same already-created invoice from the roaming DPAPI backup.
+        lc._pending_order_path().unlink()
+        recovered_pending = lc.pending_payment_details()
+        assert recovered_pending and recovered_pending["order_id"] == "00000000-0000-0000-0000-000000000099"
+        assert lc._pending_order_path().exists()
+        lc._pending_order_path().write_text("{broken", encoding="utf-8")
+        recovered_pending = lc.pending_payment_details()
+        assert recovered_pending and recovered_pending["order_id"] == "00000000-0000-0000-0000-000000000099"
         lc.discard_pending_order()
         assert lc.pending_payment_details() is None
+        assert not lc._pending_order_backup_path().exists()
         lc._pending_order_path().write_text("{broken", encoding="utf-8")
         try:
             lc.pending_payment_details()
@@ -260,6 +271,7 @@ def main() -> None:
             assert lc._active_order_path().exists()
             assert lc._active_order_backup_path().exists()
             assert not lc._pending_order_path().exists()
+            assert not lc._pending_order_backup_path().exists()
 
             active_primary = lc._active_order_path().read_text(encoding="utf-8")
             lc._active_order_path().unlink()
@@ -429,6 +441,7 @@ def main() -> None:
             except lc.LicenseExpiredError:
                 pass
             assert not lc._pending_order_path().exists()
+            assert not lc._pending_order_backup_path().exists()
             assert not lc._active_order_path().exists()
         finally:
             lc._json_request = old_json_request
