@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import base64
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import os
 from pathlib import Path
 import tempfile
@@ -82,6 +82,8 @@ def main() -> None:
     assert "order_machine_limiter = SlidingLimiter(30, timedelta(hours=1))" in app_source
     assert "order_source_limiter.allow(source)" in app_source
     assert 'order_machine_limiter.allow(f"{source}|{machine}")' in app_source
+    assert "self._sweep_stale_locked(cutoff)" in app_source
+    assert "self._events.pop(stored_key, None)" in app_source
     assert "store.pin_issuer_public_key(public_key_b64(config[\"private_key\"]))" in app_source
 
     token = new_order_access_token()
@@ -96,6 +98,28 @@ def main() -> None:
     assert _scrypt_code("test-owner-code") != OWNER_CODE_SCRYPT_HEX
 
     with tempfile.TemporaryDirectory() as td:
+        # Import the HTTP server only after supplying production-shaped
+        # configuration; app.py creates its FastAPI application at import time.
+        os.environ["DIARY_FILLER_MONTHLY_PRICE_RUB"] = "100"
+        os.environ["DIARY_FILLER_LICENSE_PRIVATE_KEY_B64"] = private_b64
+        os.environ["DIARY_FILLER_LICENSE_DB"] = str(Path(td) / "http-licenses.sqlite3")
+        os.environ["YOOKASSA_SHOP_ID"] = "regression-shop"
+        os.environ["YOOKASSA_SECRET_KEY"] = "regression-secret"
+        os.environ["DIARY_FILLER_PAYMENT_RETURN_URL"] = "https://licenses.example.test/payment-return"
+        from licensing_server.app import SlidingLimiter
+
+        # Unique machine keys must expire from the limiter store instead of
+        # accumulating forever under sustained traffic.
+        limiter = SlidingLimiter(30, timedelta(hours=1))
+        base_time = datetime(2026, 1, 1, tzinfo=timezone.utc)
+        limiter._now = lambda: base_time
+        for index in range(500):
+            assert limiter.allow(f"source|machine-{index}")
+        assert len(limiter._events) == 500
+        limiter._now = lambda: base_time + timedelta(hours=1, minutes=1)
+        assert limiter.allow("source|fresh-machine")
+        assert set(limiter._events) == {"source|fresh-machine"}
+
         store = LicenseStore(Path(td) / "licenses.sqlite3")
         store.pin_issuer_public_key(public_b64)
         store.pin_issuer_public_key(public_b64)
