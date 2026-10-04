@@ -261,6 +261,7 @@ def _is_windows_runtime() -> bool:
 
 
 def _machine_guid_fingerprint(machine_guid: str) -> str:
+    """Legacy Windows binding kept only for already-issued licenses/orders."""
     normalized = str(machine_guid or "").strip().lower()
     if not normalized:
         return ""
@@ -269,17 +270,112 @@ def _machine_guid_fingerprint(machine_guid: str) -> str:
     ).hexdigest()
 
 
+def _parse_raw_smbios_uuid(raw: bytes) -> str:
+    """Extract the raw 16-byte SMBIOS System Information UUID.
+
+    Raw bytes are hashed as-is, so SMBIOS version-specific UUID byte ordering
+    cannot change the local identity representation.
+    """
+    if len(raw) < 8:
+        return ""
+    table_length = int.from_bytes(raw[4:8], "little", signed=False)
+    if table_length <= 0 or 8 + table_length > len(raw):
+        return ""
+    table = raw[8 : 8 + table_length]
+    offset = 0
+    while offset + 4 <= len(table):
+        structure_type = table[offset]
+        structure_length = table[offset + 1]
+        if structure_length < 4 or offset + structure_length > len(table):
+            return ""
+        if structure_type == 1 and structure_length >= 24:
+            value = table[offset + 8 : offset + 24]
+            if len(value) == 16 and value not in {b"\x00" * 16, b"\xff" * 16}:
+                return value.hex()
+
+        strings = offset + structure_length
+        end = strings
+        while end + 1 < len(table) and table[end : end + 2] != b"\x00\x00":
+            end += 1
+        if end + 1 >= len(table):
+            return ""
+        offset = end + 2
+        if structure_type == 127:
+            break
+    return ""
+
+
+def _windows_smbios_uuid() -> str:
+    """Read a hardware-backed UUID without WMI/PowerShell dependencies."""
+    if not _is_windows_runtime():
+        return ""
+    try:
+        import ctypes
+
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        get_table = kernel32.GetSystemFirmwareTable
+        get_table.argtypes = [
+            ctypes.c_uint32,
+            ctypes.c_uint32,
+            ctypes.c_void_p,
+            ctypes.c_uint32,
+        ]
+        get_table.restype = ctypes.c_uint32
+        provider = int.from_bytes(b"RSMB", "little", signed=False)
+        size = int(get_table(provider, 0, None, 0))
+        if size < 8 or size > 16 * 1024 * 1024:
+            return ""
+        buffer = ctypes.create_string_buffer(size)
+        written = int(get_table(provider, 0, buffer, size))
+        if written < 8 or written > size:
+            return ""
+        return _parse_raw_smbios_uuid(buffer.raw[:written])
+    except Exception:
+        return ""
+
+
+def _machine_hardware_fingerprint(machine_guid: str, smbios_uuid: str) -> str:
+    guid = str(machine_guid or "").strip().lower()
+    hardware = str(smbios_uuid or "").strip().lower()
+    if not guid or len(hardware) != 32 or any(ch not in "0123456789abcdef" for ch in hardware):
+        return ""
+    return hashlib.sha256(
+        f"windows-hardware-v2|{guid}|smbios:{hardware}".encode("utf-8")
+    ).hexdigest()
+
+
+def _preferred_windows_machine_fingerprint() -> str:
+    machine_guid = _windows_machine_guid().strip().lower()
+    if not machine_guid:
+        return ""
+    smbios_uuid = _windows_smbios_uuid()
+    if smbios_uuid:
+        strengthened = _machine_hardware_fingerprint(machine_guid, smbios_uuid)
+        if strengthened:
+            return strengthened
+    return _machine_guid_fingerprint(machine_guid)
+
+
 def _derived_machine_fingerprint_candidates() -> tuple[set[str], bool]:
     """Return identities independently derivable on the current machine.
 
-    On Windows, MachineGuid is the authoritative non-user-controlled machine
-    evidence. A user-writable install-id must never validate a cached Windows
-    fingerprint because that would let a copied license be rebound locally.
-    Non-Windows fallback identity is retained only for development portability.
+    Current Windows activations prefer a hardware-strengthened identity derived
+    from both MachineGuid and the SMBIOS system UUID. The old MachineGuid-only
+    digest remains a compatibility candidate for licenses/orders that were
+    genuinely issued before this hardening. A copied v2 entitlement therefore
+    does not become valid merely by copying files and spoofing MachineGuid.
     """
     machine_guid = _windows_machine_guid().strip().lower()
     if machine_guid:
-        return {_machine_guid_fingerprint(machine_guid)}, True
+        legacy = _machine_guid_fingerprint(machine_guid)
+        candidates = {legacy}
+        strengthened = _machine_hardware_fingerprint(
+            machine_guid,
+            _windows_smbios_uuid(),
+        )
+        if strengthened:
+            candidates.add(strengthened)
+        return candidates, True
     if _is_windows_runtime():
         return set(), False
 
@@ -389,16 +485,36 @@ def _read_cached_machine_fingerprint() -> str:
     # fingerprint was derived from this computer. Re-derive trusted machine
     # evidence and accept schema 2 only when the value matches it.
     candidates, _machine_guid_available = _derived_machine_fingerprint_candidates()
+    preferred = _preferred_windows_machine_fingerprint() if _is_windows_runtime() else ""
+    protected_values: list[str] = []
     for path in (primary, backup):
         try:
             raw = path.read_text(encoding="utf-8")
         except OSError:
             continue
         value = _decode_protected_machine_fingerprint_cache(raw)
+        if value:
+            protected_values.append(value)
         if not value or value not in candidates:
             continue
-        _cache_machine_fingerprint(value)
-        return value
+        # Upgrade a legacy MachineGuid-only cache to the stronger current
+        # hardware identity as soon as the SMBIOS UUID is available.
+        selected = preferred if preferred and preferred in candidates else value
+        _cache_machine_fingerprint(selected)
+        return selected
+
+    if (
+        _is_windows_runtime()
+        and _machine_guid_available
+        and not _windows_smbios_uuid()
+        and protected_values
+        and all(value not in candidates for value in protected_values)
+    ):
+        # A v2 cache exists but the hardware anchor is temporarily unreadable.
+        # Do not silently downgrade this installation to MachineGuid-only.
+        raise MachineIdentityUnavailableError(
+            "Не удалось проверить аппаратную привязку этого компьютера. Повторите проверку лицензии."
+        )
 
     # Legacy schema-1 migration is allowed only from the local primary cache and
     # only when its fingerprint can be independently derived on this machine.
@@ -464,7 +580,7 @@ def machine_fingerprint() -> str:
 
     machine_guid = _windows_machine_guid().strip().lower()
     if machine_guid:
-        fingerprint = _machine_guid_fingerprint(machine_guid)
+        fingerprint = _preferred_windows_machine_fingerprint()
     else:
         if _is_windows_runtime():
             raise MachineIdentityUnavailableError(
@@ -1575,6 +1691,62 @@ def _json_request(
     return payload
 
 
+def _server_machine_hash_candidates() -> list[str]:
+    """Ordered machine hashes for current activation plus legacy recovery.
+
+    New orders always use the first (strongest) value. Existing paid orders may
+    have been created by older releases, so recovery may retry exact historical
+    identities derivable from this same computer after a 409 machine mismatch.
+    """
+    current = machine_fingerprint()
+    result = [current]
+    if _is_windows_runtime():
+        machine_guid = _windows_machine_guid().strip().lower()
+        legacy = _machine_guid_fingerprint(machine_guid)
+        if legacy and legacy not in result:
+            result.append(legacy)
+        for historical in sorted(_historical_windows_license_fingerprints()):
+            if historical not in result:
+                result.append(historical)
+    return result
+
+
+def _fetch_paid_order_license(
+    config: LicenseRuntimeConfig,
+    order_id: str,
+    token: str,
+    *,
+    activate: bool,
+) -> dict:
+    last_conflict: LicenseError | None = None
+    for machine in _server_machine_hash_candidates():
+        try:
+            if activate:
+                _json_request(
+                    config,
+                    "POST",
+                    f"/api/orders/{order_id}/activate-machine",
+                    body={"machine_hash": machine},
+                    bearer=token,
+                )
+            return _json_request(
+                config,
+                "POST",
+                f"/api/orders/{order_id}/license",
+                body={"machine_hash": machine},
+                bearer=token,
+            )
+        except LicenseError as exc:
+            if "HTTP 409" not in str(exc):
+                raise
+            last_conflict = exc
+    if last_conflict is not None:
+        raise last_conflict
+    raise MachineIdentityUnavailableError(
+        "Не удалось надёжно определить этот компьютер для восстановления лицензии"
+    )
+
+
 def begin_monthly_payment(config: LicenseRuntimeConfig | None = None) -> dict:
     config = config or runtime_config()
     payload = _json_request(
@@ -1604,24 +1776,11 @@ def refresh_paid_order(config: LicenseRuntimeConfig | None = None) -> LicenseSta
         raise PaymentTerminalError("Предыдущий счёт больше недействителен. Создайте новый.")
     if order_status not in {"paid", "license_issued"}:
         raise PaymentPendingError("Оплата ещё не подтверждена")
-    machine = machine_fingerprint()
-    try:
-        _json_request(
-            config,
-            "POST",
-            f"/api/orders/{order_id}/activate-machine",
-            body={"machine_hash": machine},
-            bearer=token,
-        )
-    except LicenseError as exc:
-        if "HTTP 409" not in str(exc):
-            raise
-    document = _json_request(
+    document = _fetch_paid_order_license(
         config,
-        "POST",
-        f"/api/orders/{order_id}/license",
-        body={"machine_hash": machine},
-        bearer=token,
+        order_id,
+        token,
+        activate=True,
     )
     # Persist a long-lived recovery credential if Windows allows it, but never
     # make an already-captured payment depend on a transient DPAPI/disk failure.
@@ -1692,13 +1851,11 @@ def recover_paid_license(config: LicenseRuntimeConfig | None = None) -> LicenseS
             raise PaidLicenseRecoveryError(
                 "Сервер не подтвердил действующую оплаченную лицензию"
             )
-        machine = machine_fingerprint()
-        document = _json_request(
+        document = _fetch_paid_order_license(
             config,
-            "POST",
-            f"/api/orders/{order_id}/license",
-            body={"machine_hash": machine},
-            bearer=token,
+            order_id,
+            token,
+            activate=False,
         )
         try:
             return save_license(document, config, trusted_now=trusted_now)
