@@ -311,6 +311,95 @@ def main() -> None:
             lc._windows_machine_guid = old_guid
         lc._cache_machine_fingerprint(machine)
 
+        # Upgrade compatibility with the original production fingerprint
+        # (platform|hostname|MachineGuid|install-id). A signed v1 entitlement
+        # created by the first licensing release must remain usable on the same
+        # Windows machine, while new activations still use MachineGuid-only.
+        saved_windows_runtime = lc._is_windows_runtime
+        saved_guid_provider = lc._windows_machine_guid
+        saved_hostname_provider = lc.socket.gethostname
+        saved_json_request = lc._json_request
+        historical_install_id = "1" * 32
+        historical_guid = "original-production-guid"
+        historical_hostname = "original-production-host"
+        try:
+            lc._is_windows_runtime = lambda: True
+            lc._windows_machine_guid = lambda: historical_guid
+            lc.socket.gethostname = lambda: historical_hostname
+            lc._install_id_path().parent.mkdir(parents=True, exist_ok=True)
+            lc._install_id_path().write_text(historical_install_id + "\n", encoding="utf-8")
+            lc._machine_fingerprint_cache_path().unlink(missing_ok=True)
+            lc._machine_fingerprint_backup_path().unlink(missing_ok=True)
+
+            historical_material = "|".join(
+                [
+                    lc.platform.system().strip().lower(),
+                    historical_hostname,
+                    historical_guid,
+                    historical_install_id,
+                ]
+            )
+            historical_fingerprint = __import__("hashlib").sha256(
+                historical_material.encode("utf-8")
+            ).hexdigest()
+            canonical_fingerprint = lc._machine_guid_fingerprint(historical_guid)
+            assert historical_fingerprint != canonical_fingerprint
+            assert historical_fingerprint in lc._historical_windows_license_fingerprints()
+
+            original_release_paid = signed_document(
+                private,
+                payload(historical_fingerprint, days=31),
+                schema=lc.LEGACY_LICENSE_SCHEMA,
+            )
+            lc.license_path().write_text(
+                json.dumps(original_release_paid, ensure_ascii=False),
+                encoding="utf-8",
+            )
+            lc._license_backup_path().unlink(missing_ok=True)
+            # The original release used unprotected clock schema 1. It is not
+            # trusted directly after the security upgrade; one trusted HTTPS
+            # time check migrates it into the protected current clock format.
+            lc._clock_path().write_text(
+                json.dumps(
+                    {
+                        "schema": 1,
+                        "last_seen_utc": datetime.now(timezone.utc).isoformat(),
+                    }
+                ),
+                encoding="utf-8",
+            )
+            lc._clock_backup_path().unlink(missing_ok=True)
+            lc._json_request = lambda _config, method, path, **kwargs: (
+                {
+                    "status": "ok",
+                    "product_id": lc.PRODUCT_ID,
+                    "public_key_b64": config.public_key_b64,
+                    "server_time": datetime.now(timezone.utc).isoformat(),
+                }
+                if method == "GET" and path == "/health"
+                else (_ for _ in ()).throw(AssertionError((method, path)))
+            )
+            upgraded_original = lc.current_status(config)
+            assert upgraded_original.active and upgraded_original.mode == "paid"
+            assert json.loads(lc._clock_path().read_text(encoding="utf-8"))["schema"] == 3
+            # Historical entitlement matching must never pin the old formula as
+            # the identity for future activations.
+            assert lc.machine_fingerprint() == canonical_fingerprint
+        finally:
+            lc._is_windows_runtime = saved_windows_runtime
+            lc._windows_machine_guid = saved_guid_provider
+            lc.socket.gethostname = saved_hostname_provider
+            lc._json_request = saved_json_request
+            for path in (
+                lc.license_path(),
+                lc._license_backup_path(),
+                lc._clock_path(),
+                lc._clock_backup_path(),
+                lc._machine_fingerprint_cache_path(),
+                lc._machine_fingerprint_backup_path(),
+            ):
+                path.unlink(missing_ok=True)
+
         # Restore the real platform identity functions before the paid-license
         # scenarios. The identity tests above intentionally replace them with
         # failing/forged lambdas; leaking those stubs into the next section
