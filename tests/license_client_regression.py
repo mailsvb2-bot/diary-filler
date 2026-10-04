@@ -150,6 +150,23 @@ def main() -> None:
         lc._install_id = old_install
         lc._cache_machine_fingerprint(machine)
 
+        # Fingerprint persistence is best-effort resilience. A transient local
+        # protection failure must not make machine_fingerprint unusable.
+        old_protect_local_blob = lc._protect_local_blob
+        lc._machine_fingerprint_cache_path().unlink(missing_ok=True)
+        lc._machine_fingerprint_backup_path().unlink(missing_ok=True)
+        lc._windows_machine_guid = lambda: "stable-guid-for-dpapi-failure"
+        try:
+            lc._protect_local_blob = lambda *args, **kwargs: (_ for _ in ()).throw(
+                lc.LicenseError("simulated DPAPI failure")
+            )
+            transient_fingerprint = lc.machine_fingerprint()
+            assert len(transient_fingerprint) == 64
+        finally:
+            lc._protect_local_blob = old_protect_local_blob
+            lc._windows_machine_guid = old_guid
+        lc._cache_machine_fingerprint(machine)
+
         paid = signed_document(private, payload(machine))
         assert lc.save_license(paid, config).active
         assert lc.current_status(config).mode == "paid"
@@ -349,6 +366,44 @@ def main() -> None:
             assert lc._active_order_backup_path().exists()
             assert not lc._pending_order_path().exists()
             assert not lc._pending_order_backup_path().exists()
+
+            # Once payment is confirmed, a transient failure while promoting
+            # the order token into long-lived recovery storage must not block
+            # the signed license itself. Keep the pending token instead.
+            local_storage_order = {
+                "order_id": "00000000-0000-0000-0000-000000000010",
+                "order_access_token": "V" * 48,
+                "payment_url": "https://pay.example.com/local-storage",
+                "amount_rub": 100,
+            }
+            lc._save_pending_order(local_storage_order)
+            old_save_active = lc._save_active_order
+            try:
+                lc._save_active_order = lambda _order: (_ for _ in ()).throw(
+                    lc.LicenseError("simulated DPAPI failure")
+                )
+
+                def _storage_request(_config, method, path, *, body=None, bearer=""):
+                    if method == "GET" and path.endswith("/status"):
+                        return {
+                            "status": "paid",
+                            "amount_rub": 100,
+                            "server_time": paid["license"]["payload"]["issued_at"],
+                        }
+                    if method == "POST" and path.endswith("/activate-machine"):
+                        return {"activated": True, "machine_hash": machine}
+                    if method == "POST" and path.endswith("/license"):
+                        return paid
+                    raise AssertionError((method, path, body, bearer))
+
+                lc._json_request = _storage_request
+                storage_status = lc.refresh_paid_order(config)
+                assert storage_status.active and storage_status.mode == "paid"
+                assert lc.pending_payment_details()["order_id"] == local_storage_order["order_id"]
+            finally:
+                lc._save_active_order = old_save_active
+                lc._json_request = _paid_request
+            lc.discard_pending_order()
 
             active_primary = lc._active_order_path().read_text(encoding="utf-8")
             lc._active_order_path().unlink()
