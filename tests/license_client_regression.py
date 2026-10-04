@@ -993,11 +993,42 @@ def main() -> None:
             lc.machine_fingerprint = old_machine_fingerprint
         assert owner_activation_calls
         assert owner_status.active and owner_status.owner_unlimited and owner_status.mode == "owner"
+        assert lc._owner_marker_local_path().exists()
         assert lc._owner_marker_path().exists()
 
-        # The owner marker lives outside the install-local license file and
-        # never grants access by itself. It only forces owner-only reactivation
-        # if the signed license file is lost or damaged.
+        owner_marker_local = lc._owner_marker_local_path().read_text(encoding="utf-8")
+        owner_marker_roaming = lc._owner_marker_path().read_text(encoding="utf-8")
+        lc._owner_marker_local_path().unlink()
+        assert lc._has_owner_marker()
+        lc._owner_marker_local_path().write_text(owner_marker_local, encoding="utf-8")
+        lc._owner_marker_path().unlink()
+        assert lc._has_owner_marker()
+        lc._owner_marker_path().write_text(owner_marker_roaming, encoding="utf-8")
+
+        # Owner-marker persistence is redundant too. If LocalAppData is
+        # temporarily unwritable, the Roaming/AppData copy alone must preserve
+        # owner-only reactivation semantics instead of ever exposing payment.
+        old_atomic_write = lc._atomic_write_text
+        lc._owner_marker_local_path().unlink(missing_ok=True)
+        lc._owner_marker_path().unlink(missing_ok=True)
+        try:
+            def _fail_local_owner_marker(path, text):
+                if path == lc._owner_marker_local_path():
+                    raise OSError("simulated LocalAppData owner-marker failure")
+                return old_atomic_write(path, text)
+
+            lc._atomic_write_text = _fail_local_owner_marker
+            lc._write_owner_marker()
+            assert not lc._owner_marker_local_path().exists()
+            assert lc._owner_marker_path().exists()
+            assert lc._has_owner_marker()
+        finally:
+            lc._atomic_write_text = old_atomic_write
+            lc._owner_marker_local_path().write_text(owner_marker_local, encoding="utf-8")
+            lc._owner_marker_path().write_text(owner_marker_roaming, encoding="utf-8")
+
+        # The owner marker never grants access by itself. It only forces
+        # owner-only reactivation if both signed license copies are lost or damaged.
         owner_license_text = lc.license_path().read_text(encoding="utf-8")
         owner_backup_text = lc._license_backup_path().read_text(encoding="utf-8")
 
