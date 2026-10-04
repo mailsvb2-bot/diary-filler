@@ -95,6 +95,19 @@ def main() -> None:
         )
 
     for required_item in (
+        "Assert-CiLicenseStatePresent -Stage 'immediately after provisioning'",
+        "Assert-CiLicenseStatePresent -Stage 'after installation'",
+        "Assert-CiLicenseStatePresent -Stage 'after uninstall'",
+        "license-backup.json",
+        "owner-entitlement.marker",
+    ):
+        if required_item not in installer_smoke:
+            raise SystemExit(
+                "WINDOWS BINARY LICENSING CONTRACT FAILED: installer smoke no longer proves "
+                "signed license persistence across install/uninstall: " + required_item
+            )
+
+    for required_item in (
         'os.environ.get("GITHUB_ACTIONS"',
         "lc.activate_owner(",
         "lc.current_status(",
