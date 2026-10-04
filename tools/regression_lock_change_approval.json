@@ -25,14 +25,14 @@
     "app_config.py": "b5874e23dbfb988b9abe2c224faf28e16fb418b3",
     "installer/MedicalDiaryAutofill.iss": "33be485fcf82799470e59cddd37d8dc5a84e2db2",
     "license_client.py": "3e09d5bd9fd2571e84b654e2750367f1d860c017",
-    "licensing_server/app.py": "de74beacdade941f126ad7bcb552cba735013401",
+    "licensing_server/app.py": "e5a6bb8f83276a30a64f248a01c1d43e8d8b7355",
     "licensing_server/store.py": "2a44794862bb14c24f9060a806d00ac04fdcb5bb",
     "prod_audit.py": "d702c5e863d83b206a22f55a8a7d854934d639e7",
     "pyproject.toml": "3c840d4f0e4ef1cfaf79ad2e702216c7831caded",
     "release_check.py": "86ae2344d3af11d0e7aa2c3145ec189356f732c8",
     "tests/license_client_regression.py": "c1df39f3bb54ffe152a04d56708f4d9d28360380",
     "tests/license_server_preflight_regression.py": "50ffb4a1efcf1115f11e861d30fa692bc3cab13b",
-    "tests/license_server_regression.py": "5725695a353d4a061c4890e90476002fccaf6c4a",
+    "tests/license_server_regression.py": "9922fd417e02ef26fd80fce11591d06078fba18d",
     "tests/windows_ci_artifact_licensing_contract.py": "bfe4902cdac3e610a2c100e6db141c2c8cdf15cc",
     "tests/windows_live_e2e_contract.py": "cd92ff9cfabc83252385f9465612e53abd942485",
     "tools/ci_gate_lock.py": "74bc208a623be21d897d4bb977d280042dc19eea",
@@ -41,6 +41,7 @@
     "tools/provision_ci_license.py": "d7ca04a5b599f334f9432bbe86da1e4bb6d810b3",
     "tools/windows_desktop_intake_e2e.ps1": "7521a8eaefd59e7561d7b4434d99b27281bf564e",
     "tools/windows_installer_smoke.ps1": "de6e489b0d9606a90e24939726ea41178a1e119c",
-    "version_info.txt": "ee87b2f31e8547e0cf86ee09e1a2037b2f52a783"
+    "version_info.txt": "ee87b2f31e8547e0cf86ee09e1a2037b2f52a783",
+    "licensing_server/core.py": "71a36f395ebf1345b5f41204380d707d849a2ad6"
   }
 }
