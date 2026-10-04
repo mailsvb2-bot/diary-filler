@@ -22,9 +22,14 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 35
     env:
-      MEDICAL_AUTOFILL_LICENSE_REQUIRED: "1"
-      MEDICAL_AUTOFILL_LICENSE_SERVER_URL: ${{ vars.MEDICAL_AUTOFILL_LICENSE_SERVER_URL }}
-      MEDICAL_AUTOFILL_LICENSE_PUBLIC_KEY_B64: ${{ vars.MEDICAL_AUTOFILL_LICENSE_PUBLIC_KEY_B64 }}
+      # Temporary distribution policy: ship a fully working build without
+      # licensing while the production license server is intentionally frozen.
+      # The complete licensing implementation stays in the repository and can
+      # be re-enabled by an explicit reviewed policy change.
+      MEDICAL_AUTOFILL_RELEASE_LICENSE_MODE: "unlicensed"
+      MEDICAL_AUTOFILL_LICENSE_REQUIRED: "0"
+      MEDICAL_AUTOFILL_LICENSE_SERVER_URL: ""
+      MEDICAL_AUTOFILL_LICENSE_PUBLIC_KEY_B64: ""
     steps:
       - name: Checkout exact release candidate
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -32,18 +37,22 @@ jobs:
           ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.sha }}
           fetch-depth: 0
 
-      - name: Guard production licensing configuration
+      - name: Guard temporary unlicensed release configuration
         shell: pwsh
         run: |
-          if ($env:MEDICAL_AUTOFILL_LICENSE_REQUIRED -ne "1") {
-            throw "Official release must enforce licensing."
+          if ($env:MEDICAL_AUTOFILL_RELEASE_LICENSE_MODE -ne "unlicensed") {
+            throw "Temporary release policy must be explicitly set to unlicensed."
           }
-          if ([string]::IsNullOrWhiteSpace($env:MEDICAL_AUTOFILL_LICENSE_SERVER_URL)) {
-            throw "MEDICAL_AUTOFILL_LICENSE_SERVER_URL repository variable is required."
+          if ($env:MEDICAL_AUTOFILL_LICENSE_REQUIRED -ne "0") {
+            throw "Temporary unlicensed release must embed LICENSE_REQUIRED=0."
           }
-          if ([string]::IsNullOrWhiteSpace($env:MEDICAL_AUTOFILL_LICENSE_PUBLIC_KEY_B64)) {
-            throw "MEDICAL_AUTOFILL_LICENSE_PUBLIC_KEY_B64 repository variable is required."
+          if (-not [string]::IsNullOrWhiteSpace($env:MEDICAL_AUTOFILL_LICENSE_SERVER_URL)) {
+            throw "Temporary unlicensed release must not embed a license server URL."
           }
+          if (-not [string]::IsNullOrWhiteSpace($env:MEDICAL_AUTOFILL_LICENSE_PUBLIC_KEY_B64)) {
+            throw "Temporary unlicensed release must not embed a license public key."
+          }
+          Write-Host "Temporary release policy verified: licensing is disabled in this binary."
 
       - name: Resolve and guard release target
         id: release_target
@@ -125,6 +134,7 @@ jobs:
           python -m pip install -r requirements_build.txt
 
       - name: Verify live license server trust anchor
+        if: env.MEDICAL_AUTOFILL_LICENSE_REQUIRED == '1'
         run: python tools/license_server_preflight.py
 
       - name: Lock known-good production and test surface
