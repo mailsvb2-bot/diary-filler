@@ -12,6 +12,7 @@ import calendar
 import hashlib
 import hmac
 import json
+import math
 import os
 from pathlib import Path
 import platform
@@ -621,24 +622,36 @@ def _owner_reactivation_status(message: str) -> LicenseStatus:
     )
 
 
-def _decode_clock_state(raw: str) -> datetime:
+def _decode_clock_record(raw: str) -> tuple[datetime, timedelta]:
     try:
         outer = json.loads(raw)
-        if outer.get("schema") != 2:
+        schema = outer.get("schema")
+        if schema not in {2, 3}:
             raise ValueError("unsupported clock schema")
         clear = _unprotect_local_blob(
             str(outer.get("protected") or ""),
             "MedicalDiaryAutofill license clock",
         )
         payload = json.loads(clear.decode("utf-8"))
-        return _parse_utc(str(payload.get("last_seen_utc") or ""))
+        last_seen = _parse_utc(str(payload.get("last_seen_utc") or ""))
+        trusted_offset = timedelta(0)
+        if schema == 3:
+            seconds = float(payload.get("trusted_offset_seconds", 0))
+            if not math.isfinite(seconds) or abs(seconds) > 36525 * 24 * 60 * 60:
+                raise ValueError("trusted clock offset is invalid")
+            trusted_offset = timedelta(seconds=seconds)
+        return last_seen, trusted_offset
     except LicenseError:
         raise
     except Exception as exc:
         raise LicenseError("license clock state is damaged") from exc
 
 
-def _read_clock_state() -> datetime | None:
+def _decode_clock_state(raw: str) -> datetime:
+    return _decode_clock_record(raw)[0]
+
+
+def _read_clock_record() -> tuple[datetime, timedelta] | None:
     errors: list[Exception] = []
     found = False
     primary = _clock_path()
@@ -653,7 +666,7 @@ def _read_clock_state() -> datetime | None:
             errors.append(exc)
             continue
         try:
-            value = _decode_clock_state(raw)
+            value = _decode_clock_record(raw)
         except LicenseError as exc:
             errors.append(exc)
             continue
@@ -670,19 +683,45 @@ def _read_clock_state() -> datetime | None:
     )
 
 
-def _record_clock(now: datetime) -> None:
-    previous = _read_clock_state()
-    if previous is not None and previous > now:
+def _read_clock_state() -> datetime | None:
+    record = _read_clock_record()
+    return record[0] if record is not None else None
+
+
+def _effective_clock_now(local_now: datetime) -> datetime:
+    record = _read_clock_record()
+    if record is None:
+        return local_now
+    return local_now + record[1]
+
+
+def _record_clock(
+    now: datetime,
+    *,
+    trusted_local_now: datetime | None = None,
+) -> None:
+    previous_record = _read_clock_record()
+    previous = previous_record[0] if previous_record is not None else None
+    trusted_offset = previous_record[1] if previous_record is not None else timedelta(0)
+
+    if trusted_local_now is not None:
+        trusted_local_now = trusted_local_now.astimezone(timezone.utc)
+        trusted_offset = now - trusted_local_now
+    elif previous is not None and previous > now:
         now = previous
+
     clear = json.dumps(
-        {"last_seen_utc": now.isoformat()},
+        {
+            "last_seen_utc": now.isoformat(),
+            "trusted_offset_seconds": trusted_offset.total_seconds(),
+        },
         ensure_ascii=False,
         sort_keys=True,
         separators=(",", ":"),
     ).encode("utf-8")
     protected = _protect_local_blob(clear, "MedicalDiaryAutofill license clock")
     encoded = json.dumps(
-        {"schema": 2, "protected": protected},
+        {"schema": 3, "protected": protected},
         ensure_ascii=False,
     ) + "\n"
     _write_redundant_text(
@@ -737,7 +776,6 @@ def _evaluate_document(
     allow_uninitialized_clock: bool = False,
 ) -> LicenseStatus:
     _validate_config(config)
-    now = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
     payload = _verify_signature(document, config.public_key_b64)
     metadata = payload.get("metadata")
     if not isinstance(metadata, dict) or metadata.get("product_id") != config.product_id:
@@ -774,25 +812,41 @@ def _evaluate_document(
             True,
         )
 
-    if not allow_uninitialized_clock:
-        _validate_clock(now, require_initialized=True)
-    valid_from = _parse_utc(str(payload.get("valid_from") or ""))
-    valid_until = _parse_utc(str(payload.get("valid_until") or ""))
-    if now < valid_from:
-        raise LicenseError("license is not valid yet")
-    if now > valid_until:
-        return LicenseStatus(False, "expired", "Срок лицензии истёк", plan, valid_until)
     if not machine_allowed:
         raise LicenseError("license is not valid for this computer")
 
+    valid_from = _parse_utc(str(payload.get("valid_from") or ""))
+    valid_until = _parse_utc(str(payload.get("valid_until") or ""))
     _validate_paid_calendar_period(str(document.get("schema") or ""), payload, valid_until)
+
+    local_now = datetime.now(timezone.utc).astimezone(timezone.utc)
+    trusted_local_now: datetime | None = None
+    if now is None:
+        now = _effective_clock_now(local_now).astimezone(timezone.utc)
+    else:
+        now = now.astimezone(timezone.utc)
+        if allow_uninitialized_clock:
+            trusted_local_now = local_now
+
     if allow_uninitialized_clock:
         for path in (_clock_path(), _clock_backup_path()):
             try:
                 path.unlink(missing_ok=True)
             except OSError:
                 pass
-    _record_clock(now)
+    else:
+        _validate_clock(now, require_initialized=True)
+
+    if now < valid_from:
+        raise LicenseError("license is not valid yet")
+    if now > valid_until:
+        # Record verified post-expiry time before returning. Otherwise a user
+        # could observe expiry, roll the workstation clock back into the paid
+        # period, and regain access without changing protected state.
+        _record_clock(now, trusted_local_now=trusted_local_now)
+        return LicenseStatus(False, "expired", "Срок лицензии истёк", plan, valid_until)
+
+    _record_clock(now, trusted_local_now=trusted_local_now)
     return LicenseStatus(
         True,
         "paid",
