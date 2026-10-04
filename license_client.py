@@ -485,7 +485,19 @@ def _read_cached_machine_fingerprint() -> str:
     # fingerprint was derived from this computer. Re-derive trusted machine
     # evidence and accept schema 2 only when the value matches it.
     candidates, _machine_guid_available = _derived_machine_fingerprint_candidates()
-    preferred = _preferred_windows_machine_fingerprint() if _is_windows_runtime() else ""
+    legacy_windows = ""
+    if _is_windows_runtime():
+        legacy_windows = _machine_guid_fingerprint(
+            _windows_machine_guid().strip().lower()
+        )
+    strengthened_candidates = sorted(
+        value for value in candidates if value != legacy_windows
+    )
+    preferred = (
+        strengthened_candidates[0]
+        if strengthened_candidates
+        else legacy_windows
+    )
     protected_values: list[str] = []
     for path in (primary, backup):
         try:
@@ -506,7 +518,7 @@ def _read_cached_machine_fingerprint() -> str:
     if (
         _is_windows_runtime()
         and _machine_guid_available
-        and not _windows_smbios_uuid()
+        and not strengthened_candidates
         and protected_values
         and all(value not in candidates for value in protected_values)
     ):
@@ -622,7 +634,8 @@ def _machine_allowed_by_payload(allowed: object) -> bool:
     candidates, _machine_guid_available = _derived_machine_fingerprint_candidates()
     matches = sorted(allowed_set.intersection(candidates))
     if matches:
-        _cache_machine_fingerprint(matches[0])
+        # Compatibility candidates prove an already-issued entitlement, but
+        # they must never overwrite the stronger current machine identity.
         return True
 
     # Signed licenses issued by the original production algorithm remain valid
