@@ -974,7 +974,7 @@ def _write_license_document(document: dict) -> None:
 def _license_document_rank(
     document: dict,
     config: LicenseRuntimeConfig,
-) -> tuple[int, datetime, datetime]:
+) -> tuple[int, int, datetime, datetime]:
     payload = _verify_signature(document, config.public_key_b64)
     metadata = payload.get("metadata")
     if not isinstance(metadata, dict) or metadata.get("product_id") != config.product_id:
@@ -987,7 +987,19 @@ def _license_document_rank(
         and metadata.get("role") == "owner_superadmin"
         and metadata.get("access") == "unlimited"
     )
-    return (1 if owner else 0, issued_at, valid_until)
+    try:
+        local_applicable = _machine_allowed_by_payload(payload.get("allowed_machines"))
+    except MachineIdentityUnavailableError:
+        # Keep the document available so evaluation can report the real machine
+        # identity problem. Without current machine evidence neither redundant
+        # copy may claim the local-applicability priority.
+        local_applicable = False
+    return (
+        1 if local_applicable else 0,
+        1 if owner else 0,
+        issued_at,
+        valid_until,
+    )
 
 
 def _heal_license_copies(document: dict) -> None:
@@ -1015,7 +1027,7 @@ def _load_license_document(config: LicenseRuntimeConfig) -> dict:
     backup = _license_backup_path()
     errors: list[Exception] = []
     found = False
-    candidates: list[tuple[tuple[int, datetime, datetime], dict]] = []
+    candidates: list[tuple[tuple[int, int, datetime, datetime], dict]] = []
 
     for path in (primary, backup):
         try:
