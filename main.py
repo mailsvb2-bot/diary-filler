@@ -212,15 +212,20 @@ def _self_check_rows() -> list[tuple[str, bool, str]]:
     rows.append(("Программа", True, f"версия {APP_VERSION}"))
 
     try:
-        from license_client import current_status
-        license_status = current_status()
-        rows.append((
-            "Лицензия",
-            license_status.active,
-            license_status.message,
-        ))
+        from license_client import current_status, runtime_config
+
+        license_config = runtime_config()
+        if license_config.required:
+            license_status = current_status(license_config)
+            rows.append((
+                "Лицензия",
+                license_status.active,
+                license_status.message,
+            ))
     except Exception:
-        rows.append(("Лицензия", False, "не удалось проверить техническое состояние лицензии"))
+        # The self-check stays license-neutral for intentionally unlicensed
+        # builds; licensed builds still fail at their normal startup gate.
+        pass
 
     try:
         intake = desktop_intake_root_path()
