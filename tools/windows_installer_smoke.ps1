@@ -25,6 +25,23 @@ $onboardingMarker = Join-Path $installDir 'onboarding-required.flag'
 $installedFixtureName = 'Первичный_installed_intake_E2E.docx'
 $installedFixture = Join-Path $intakeDir $installedFixtureName
 $installedCreatedPatientFolder = $null
+$ciLicenseProvisioner = Join-Path $PSScriptRoot 'provision_ci_license.py'
+$ciLicenseProvisioned = $false
+
+function Provision-CiLicenseForCurrentProfile {
+    if ($env:MEDICAL_AUTOFILL_LICENSE_REQUIRED -ne '1') { return }
+    if ([string]::IsNullOrWhiteSpace($env:MEDICAL_AUTOFILL_CI_ACTIVATION_CODE)) {
+        throw 'Licensed installer E2E requires MEDICAL_AUTOFILL_CI_ACTIVATION_CODE GitHub Actions secret'
+    }
+    & python $ciLicenseProvisioner
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Could not provision a real signed license for installed E2E'
+    }
+    $script:ciLicenseProvisioned = $true
+    # The secret is required only by the provisioning subprocess. Never let
+    # Setup or the installed application inherit it.
+    Remove-Item Env:MEDICAL_AUTOFILL_CI_ACTIVATION_CODE -ErrorAction SilentlyContinue
+}
 
 function Stop-AppProcesses {
     Get-Process -Name 'MedicalDiaryAutofill' -ErrorAction SilentlyContinue | ForEach-Object {
@@ -70,6 +87,7 @@ function Wait-ForInstallerSelfDelete {
 }
 
 try {
+    Provision-CiLicenseForCurrentProfile
     Stop-AppProcesses
     New-Item -ItemType Directory -Path $installerProbeDir -Force | Out-Null
     Remove-Item -LiteralPath $installer -Force -ErrorAction SilentlyContinue
@@ -333,6 +351,12 @@ d.save(p)
 }
 finally {
     Stop-AppProcesses
+    if ($ciLicenseProvisioned) {
+        & python $ciLicenseProvisioner --cleanup
+        if ($LASTEXITCODE -ne 0) {
+            Write-Warning 'Could not clean the temporary CI license profile'
+        }
+    }
     Remove-Item -LiteralPath $installer -Force -ErrorAction SilentlyContinue
     Remove-Item -LiteralPath $selfDeleteHelper -Force -ErrorAction SilentlyContinue
     Remove-Item -LiteralPath $installerProbeDir -Recurse -Force -ErrorAction SilentlyContinue
