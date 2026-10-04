@@ -119,8 +119,10 @@ def main() -> None:
 
         # Windows identity must not depend on hostname or reinstall-local ID
         # when the stable MachineGuid is available.
-        old_guid = lc._windows_machine_guid
-        old_install = lc._install_id
+        original_windows_machine_guid = lc._windows_machine_guid
+        original_install_id = lc._install_id
+        old_guid = original_windows_machine_guid
+        old_install = original_install_id
         lc._windows_machine_guid = lambda: "stable-guid"
         lc._install_id = lambda: "install-a"
         stable_a = lc.machine_fingerprint()
@@ -308,6 +310,13 @@ def main() -> None:
             lc._protect_local_blob = old_protect_local_blob
             lc._windows_machine_guid = old_guid
         lc._cache_machine_fingerprint(machine)
+
+        # Restore the real platform identity functions before the paid-license
+        # scenarios. The identity tests above intentionally replace them with
+        # failing/forged lambdas; leaking those stubs into the next section
+        # would make Windows CI fail for the wrong reason.
+        lc._windows_machine_guid = original_windows_machine_guid
+        lc._install_id = original_install_id
 
         paid = signed_document(private, payload(machine))
 
