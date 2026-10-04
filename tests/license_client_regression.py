@@ -150,6 +150,78 @@ def main() -> None:
         lc._install_id = old_install
         lc._cache_machine_fingerprint(machine)
 
+        # Legacy schema-1 fingerprint migration is allowed only when the
+        # unprotected value can be independently derived on this machine.
+        lc._machine_fingerprint_cache_path().unlink(missing_ok=True)
+        lc._machine_fingerprint_backup_path().unlink(missing_ok=True)
+        lc._windows_machine_guid = lambda: "legacy-guid"
+        lc._install_id = lambda: "legacy-install-id"
+        legacy_candidates, legacy_guid_available = lc._derived_machine_fingerprint_candidates()
+        assert legacy_guid_available
+        legacy_local = next(
+            value
+            for value in legacy_candidates
+            if value == __import__("hashlib").sha256(
+                b"windows-machine-guid-v1|legacy-guid"
+            ).hexdigest()
+        )
+        lc._machine_fingerprint_cache_path().write_text(
+            json.dumps({"schema": 1, "fingerprint": legacy_local}),
+            encoding="utf-8",
+        )
+        assert lc.machine_fingerprint() == legacy_local
+        migrated_primary = json.loads(
+            lc._machine_fingerprint_cache_path().read_text(encoding="utf-8")
+        )
+        assert migrated_primary["schema"] == 2
+
+        # A copied/foreign legacy cache must never become the machine identity.
+        lc._machine_fingerprint_cache_path().write_text(
+            json.dumps({"schema": 1, "fingerprint": "f" * 64}),
+            encoding="utf-8",
+        )
+        lc._machine_fingerprint_backup_path().unlink(missing_ok=True)
+        foreign_result = lc.machine_fingerprint()
+        assert foreign_result in legacy_candidates
+        assert foreign_result != "f" * 64
+
+        # The roaming backup never accepts schema 1. This blocks copying a
+        # foreign legacy cache into the newly introduced backup location.
+        lc._machine_fingerprint_cache_path().unlink(missing_ok=True)
+        lc._machine_fingerprint_backup_path().write_text(
+            json.dumps({"schema": 1, "fingerprint": "e" * 64}),
+            encoding="utf-8",
+        )
+        backup_ignored = lc.machine_fingerprint()
+        assert backup_ignored in legacy_candidates
+        assert backup_ignored != "e" * 64
+
+        # If a legitimate legacy primary cannot be verified only because
+        # MachineGuid is temporarily unreadable, do not overwrite it and do not
+        # turn that transient condition into a fresh-payment path.
+        lc._machine_fingerprint_cache_path().write_text(
+            json.dumps({"schema": 1, "fingerprint": legacy_local}),
+            encoding="utf-8",
+        )
+        lc._machine_fingerprint_backup_path().unlink(missing_ok=True)
+        lc._windows_machine_guid = lambda: ""
+        lc._install_id = lambda: "different-fallback-id"
+        try:
+            lc.machine_fingerprint()
+            raise AssertionError("unverifiable legacy fingerprint was accepted")
+        except lc.MachineIdentityUnavailableError:
+            pass
+        preserved_legacy = json.loads(
+            lc._machine_fingerprint_cache_path().read_text(encoding="utf-8")
+        )
+        assert preserved_legacy == {"schema": 1, "fingerprint": legacy_local}
+
+        lc._windows_machine_guid = old_guid
+        lc._install_id = old_install
+        lc._machine_fingerprint_cache_path().unlink(missing_ok=True)
+        lc._machine_fingerprint_backup_path().unlink(missing_ok=True)
+        lc._cache_machine_fingerprint(machine)
+
         # Fingerprint persistence is best-effort resilience. A transient local
         # protection failure must not make machine_fingerprint unusable.
         old_protect_local_blob = lc._protect_local_blob
@@ -837,17 +909,35 @@ def main() -> None:
         # never grants access by itself. It only forces owner-only reactivation
         # if the signed license file is lost or damaged.
         owner_license_text = lc.license_path().read_text(encoding="utf-8")
+        owner_backup_text = lc._license_backup_path().read_text(encoding="utf-8")
+
+        # Losing only the primary signed license must heal transparently from
+        # the independent signed backup and keep owner access active.
         lc.license_path().unlink()
+        healed_owner = lc.current_status(config)
+        assert healed_owner.active
+        assert healed_owner.mode == "owner"
+        assert healed_owner.owner_unlimited
+        assert lc.license_path().exists()
+
+        # Owner reactivation is required only when both signed copies are gone
+        # (or both are unusable); it must never be confused with paid renewal.
+        lc.license_path().unlink(missing_ok=True)
+        lc._license_backup_path().unlink(missing_ok=True)
         lost_owner = lc.current_status(config)
         assert not lost_owner.active
         assert lost_owner.mode == "owner_reactivation"
         assert lost_owner.owner_unlimited
+
         lc.license_path().write_text("{broken", encoding="utf-8")
+        lc._license_backup_path().write_text("{broken", encoding="utf-8")
         damaged_owner = lc.current_status(config)
         assert not damaged_owner.active
         assert damaged_owner.mode == "owner_reactivation"
         assert damaged_owner.owner_unlimited
+
         lc.license_path().write_text(owner_license_text, encoding="utf-8")
+        lc._license_backup_path().write_text(owner_backup_text, encoding="utf-8")
 
         # Owner access is intentionally independent from the paid-license
         # anti-clock state. Missing/corrupt clock data must never send the
