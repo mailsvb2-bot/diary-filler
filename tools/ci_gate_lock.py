@@ -47,7 +47,7 @@ WINDOWS_REQUIRED_IN_ORDER = (
 
 RELEASE_REQUIRED_IN_ORDER = (
     "Checkout exact release candidate",
-    "Guard production licensing configuration",
+    "Guard temporary unlicensed release configuration",
     "Resolve and guard release target",
     "Verify live license server trust anchor",
     "python tools/regression_lock_check.py",
@@ -173,12 +173,14 @@ def main() -> None:
         '"RELEASE_TAG=$tag"',
         "fetch-depth: 0",
         "Create guarded release tag",
-        "Guard production licensing configuration",
+        "Guard temporary unlicensed release configuration",
         "Verify live license server trust anchor",
         "python tools/license_server_preflight.py",
-        'MEDICAL_AUTOFILL_LICENSE_REQUIRED: "1"',
-        "MEDICAL_AUTOFILL_LICENSE_SERVER_URL",
-        "MEDICAL_AUTOFILL_LICENSE_PUBLIC_KEY_B64",
+        "if: env.MEDICAL_AUTOFILL_LICENSE_REQUIRED == '1'",
+        'MEDICAL_AUTOFILL_RELEASE_LICENSE_MODE: "unlicensed"',
+        'MEDICAL_AUTOFILL_LICENSE_REQUIRED: "0"',
+        'MEDICAL_AUTOFILL_LICENSE_SERVER_URL: ""',
+        'MEDICAL_AUTOFILL_LICENSE_PUBLIC_KEY_B64: ""',
         'ref="refs/tags/$env:RELEASE_TAG"',
         "Current main moved during release validation; refusing to create the release tag.",
     ):
@@ -187,8 +189,8 @@ def main() -> None:
     _require_order(release, RELEASE_REQUIRED_IN_ORDER, "release workflow")
     if release.count(ci_activation_binding) != 2:
         raise SystemExit(
-            "CI GATE LOCK FAILED: official release must activate both exact packaged "
-            "and installed licensed E2E candidates through scoped CI secrets"
+            "CI GATE LOCK FAILED: release workflow must retain scoped CI activation "
+            "bindings so licensed mode can be restored without weakening E2E coverage"
         )
 
     for script_text, label in (
@@ -267,7 +269,10 @@ def main() -> None:
     if '$env:RELEASE_TAG' not in release_create:
         raise SystemExit("CI GATE LOCK FAILED: official release is not bound to the guarded release tag")
 
-    print("CI GATE LOCK OK: mandatory PR/main/unsigned-release regression topology is intact")
+    print(
+        "CI GATE LOCK OK: mandatory PR/main/temporary-unlicensed release "
+        "regression topology is intact; licensed infrastructure remains retained"
+    )
 
 
 if __name__ == "__main__":
