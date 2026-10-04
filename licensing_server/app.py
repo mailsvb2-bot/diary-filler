@@ -47,11 +47,33 @@ class SlidingLimiter:
         self.window = window
         self._events: dict[str, deque[datetime]] = defaultdict(deque)
         self._lock = threading.Lock()
+        self._last_sweep: datetime | None = None
+        self._sweep_interval = min(window, timedelta(minutes=5))
+
+    def _now(self) -> datetime:
+        return datetime.now(timezone.utc)
+
+    def _sweep_stale_locked(self, cutoff: datetime) -> None:
+        stale_keys: list[str] = []
+        for stored_key, events in self._events.items():
+            while events and events[0] < cutoff:
+                events.popleft()
+            if not events:
+                stale_keys.append(stored_key)
+        for stored_key in stale_keys:
+            self._events.pop(stored_key, None)
 
     def allow(self, key: str) -> bool:
-        now = datetime.now(timezone.utc)
+        now = self._now()
         cutoff = now - self.window
         with self._lock:
+            if (
+                self._last_sweep is None
+                or now - self._last_sweep >= self._sweep_interval
+            ):
+                self._sweep_stale_locked(cutoff)
+                self._last_sweep = now
+
             events = self._events[key]
             while events and events[0] < cutoff:
                 events.popleft()
