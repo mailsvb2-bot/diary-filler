@@ -26,8 +26,10 @@
     "main.py": "23392af37c077ce1ea0ba67e7fd413525486a462",
     "prod_audit.py": "9c59a8ee2d6862aa28456d2e2ae920db8fb16b36",
     "release_check.py": "7e3015fcd32c944181b355b0d8ace675e11ead50",
-    "tests/license_client_regression.py": "d2fa3d6abf2d46fe30109c431f4212e47a24c9de",
+    "tests/license_client_regression.py": "9c0053b7c5c810d1a5545c677820026cc3477b1f",
     "version_info.txt": "fed74d3b63432781ee6a47783c35c557cf1f5620",
-    "window_mixin.py": "3f073ef0199e4ce9bdf03e492f4ebf7f83615778"
+    "window_mixin.py": "3f073ef0199e4ce9bdf03e492f4ebf7f83615778",
+    "license_client.py": "3a1b08f344c81872e8381a41a86a5f715ad23f3d",
+    "tools/render_license_build_config.py": "262ed3d29c1e63f89aebc391b34d2e1d487c6597"
   }
 }
