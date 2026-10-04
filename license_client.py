@@ -45,6 +45,10 @@ class OwnerReactivationRequired(LicenseError):
     pass
 
 
+class MachineIdentityUnavailableError(LicenseError):
+    """Current machine identity cannot be safely derived yet."""
+
+
 class PaymentPendingError(LicenseError):
     pass
 
