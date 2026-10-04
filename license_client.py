@@ -822,7 +822,11 @@ def _evaluate_document(
     local_now = datetime.now(timezone.utc).astimezone(timezone.utc)
     trusted_local_now: datetime | None = None
     if now is None:
-        now = _effective_clock_now(local_now).astimezone(timezone.utc)
+        now = (
+            local_now
+            if allow_uninitialized_clock
+            else _effective_clock_now(local_now)
+        ).astimezone(timezone.utc)
     else:
         now = now.astimezone(timezone.utc)
         if allow_uninitialized_clock:
