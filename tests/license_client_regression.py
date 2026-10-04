@@ -131,23 +131,36 @@ def main() -> None:
         lc._install_id = lambda: "install-c"
         stable_c = lc.machine_fingerprint()
         assert stable_c == stable_a, "transient MachineGuid read failure changed paid-license identity"
-        # If the very first MachineGuid read fails, the chosen fallback
-        # identity is pinned and must not jump to a different fingerprint later
-        # when MachineGuid becomes readable.
+        # On Windows, a missing MachineGuid must fail closed instead of minting
+        # a user-controlled fallback identity. Once MachineGuid becomes readable,
+        # the canonical Windows fingerprint is derived and cached.
         lc._machine_fingerprint_cache_path().unlink(missing_ok=True)
         lc._machine_fingerprint_backup_path().unlink(missing_ok=True)
         old_guid = lc._windows_machine_guid
         old_install = lc._install_id
+        old_windows_runtime = lc._is_windows_runtime
+        lc._is_windows_runtime = lambda: True
         lc._windows_machine_guid = lambda: ""
         lc._install_id = lambda: "first-run-fallback"
-        first_fallback = lc.machine_fingerprint()
-        assert lc._machine_fingerprint_cache_path().exists()
-        assert lc._machine_fingerprint_backup_path().exists()
+        try:
+            lc.machine_fingerprint()
+            raise AssertionError("Windows accepted a user-controlled fallback machine identity")
+        except lc.MachineIdentityUnavailableError:
+            pass
+        assert not lc._machine_fingerprint_cache_path().exists()
+        assert not lc._machine_fingerprint_backup_path().exists()
+
         lc._windows_machine_guid = lambda: "guid-became-readable"
-        lc._install_id = lambda: "different-install-id"
-        assert lc.machine_fingerprint() == first_fallback
+        secure_windows_fingerprint = lc.machine_fingerprint()
+        expected_windows_fingerprint = __import__("hashlib").sha256(
+            b"windows-machine-guid-v1|guid-became-readable"
+        ).hexdigest()
+        assert secure_windows_fingerprint == expected_windows_fingerprint
         lc._windows_machine_guid = old_guid
         lc._install_id = old_install
+        lc._is_windows_runtime = old_windows_runtime
+        lc._machine_fingerprint_cache_path().unlink(missing_ok=True)
+        lc._machine_fingerprint_backup_path().unlink(missing_ok=True)
         lc._cache_machine_fingerprint(machine)
 
         # Legacy schema-1 fingerprint migration is allowed only when the
@@ -233,19 +246,41 @@ def main() -> None:
         lc._machine_fingerprint_backup_path().unlink(missing_ok=True)
         lc._cache_machine_fingerprint(machine)
 
-        # If both protected fingerprint caches disappear after a fallback-
-        # identity activation, the signed allowed_machines value plus locally
-        # derivable install-id must restore the same identity even when
-        # MachineGuid has since become readable.
+        # A locally forgeable schema-2 cache must not override current Windows
+        # MachineGuid evidence, even if the attacker can create a valid
+        # DPAPI/HMAC envelope containing a copied license fingerprint.
         lc._machine_fingerprint_cache_path().unlink(missing_ok=True)
         lc._machine_fingerprint_backup_path().unlink(missing_ok=True)
-        lc._windows_machine_guid = lambda: "guid-after-fallback-activation"
-        lc._install_id = lambda: "first-run-fallback"
-        assert lc._machine_allowed_by_payload([first_fallback])
-        assert lc.machine_fingerprint() == first_fallback
-
+        old_guid = lc._windows_machine_guid
+        old_install = lc._install_id
+        old_windows_runtime = lc._is_windows_runtime
+        lc._is_windows_runtime = lambda: True
+        lc._windows_machine_guid = lambda: "schema2-local-guid"
+        lc._install_id = lambda: "attacker-controlled-install-id"
+        forged_fingerprint = "d" * 64
+        forged_clear = json.dumps(
+            {"fingerprint": forged_fingerprint},
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+        forged_protected = lc._protect_local_blob(
+            forged_clear,
+            "MedicalDiaryAutofill machine fingerprint",
+        )
+        forged_cache = json.dumps(
+            {"schema": 2, "protected": forged_protected},
+            sort_keys=True,
+        )
+        lc._machine_fingerprint_cache_path().write_text(forged_cache, encoding="utf-8")
+        lc._machine_fingerprint_backup_path().write_text(forged_cache, encoding="utf-8")
+        expected_local_fingerprint = __import__("hashlib").sha256(
+            b"windows-machine-guid-v1|schema2-local-guid"
+        ).hexdigest()
+        assert lc.machine_fingerprint() == expected_local_fingerprint
+        assert lc.machine_fingerprint() != forged_fingerprint
         lc._windows_machine_guid = old_guid
         lc._install_id = old_install
+        lc._is_windows_runtime = old_windows_runtime
         lc._machine_fingerprint_cache_path().unlink(missing_ok=True)
         lc._machine_fingerprint_backup_path().unlink(missing_ok=True)
         lc._cache_machine_fingerprint(machine)
@@ -333,6 +368,31 @@ def main() -> None:
         assert lc.save_license(paid, config).active
         assert lc.current_status(config).mode == "paid"
         assert lc._license_backup_path().exists()
+
+        # A successful renewal may reach only the backup when LocalAppData is
+        # temporarily unwritable. A stale but valid signed primary must never
+        # hide the newer entitlement or reopen payment UX.
+        stale_paid = signed_document(
+            private,
+            payload(machine, issued_at=datetime.now(timezone.utc) - timedelta(days=60)),
+        )
+        renewed_paid = signed_document(
+            private,
+            payload(machine, issued_at=datetime.now(timezone.utc)),
+        )
+        lc.license_path().write_text(
+            json.dumps(stale_paid, ensure_ascii=False),
+            encoding="utf-8",
+        )
+        lc._license_backup_path().write_text(
+            json.dumps(renewed_paid, ensure_ascii=False),
+            encoding="utf-8",
+        )
+        reconciled = lc.current_status(config)
+        assert reconciled.active and reconciled.mode == "paid"
+        assert json.loads(lc.license_path().read_text(encoding="utf-8")) == renewed_paid
+        assert json.loads(lc._license_backup_path().read_text(encoding="utf-8")) == renewed_paid
+        assert lc.save_license(paid, config).active
 
         # The signed entitlement itself is redundant. Losing the primary copy
         # must heal it from the independent roaming backup without blocking an
