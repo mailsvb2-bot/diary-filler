@@ -148,6 +148,7 @@ def main() -> None:
         assert lc.machine_fingerprint() == first_fallback
         lc._windows_machine_guid = old_guid
         lc._install_id = old_install
+        lc._cache_machine_fingerprint(machine)
 
         paid = signed_document(private, payload(machine))
         assert lc.save_license(paid, config).active
