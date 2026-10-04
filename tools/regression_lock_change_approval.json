@@ -16,7 +16,7 @@
     "patient_registry_regression"
   ],
   "approved_blobs": {
-    "license_client.py": "fddec50a51a9882399ba2aa4e7d86386246f69d9",
-    "tests/license_client_regression.py": "4ab858f66cb3a08cb161bfc58018d1a7ad1f0779"
+    "license_client.py": "606752b6a3177b5902e3dee7030a4ee148bb82aa",
+    "tests/license_client_regression.py": "5d04caef1ca14a2c57da7883e5fe63da55b723cf"
   }
 }
