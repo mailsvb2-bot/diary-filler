@@ -390,6 +390,38 @@ def machine_fingerprint() -> str:
     return fingerprint
 
 
+def _machine_allowed_by_payload(allowed: object) -> bool:
+    if not isinstance(allowed, list):
+        return False
+    allowed_set = {
+        str(item).strip().lower()
+        for item in allowed
+        if _valid_machine_fingerprint(str(item).strip().lower())
+    }
+    if not allowed_set:
+        return False
+
+    identity_error: MachineIdentityUnavailableError | None = None
+    try:
+        current = machine_fingerprint()
+        if current in allowed_set:
+            return True
+    except MachineIdentityUnavailableError as exc:
+        identity_error = exc
+
+    # Recover from loss/staleness of both fingerprint caches without weakening
+    # machine binding: only identities independently derivable on this machine
+    # may match the signed allowed_machines list.
+    candidates, _machine_guid_available = _derived_machine_fingerprint_candidates()
+    matches = sorted(allowed_set.intersection(candidates))
+    if matches:
+        _cache_machine_fingerprint(matches[0])
+        return True
+    if identity_error is not None:
+        raise identity_error
+    return False
+
+
 def _parse_utc(value: str) -> datetime:
     raw = str(value or "").strip()
     if raw.endswith("Z"):
@@ -665,7 +697,7 @@ def _evaluate_document(
         and metadata.get("access") == "unlimited"
     )
     allowed = payload.get("allowed_machines")
-    machine_allowed = isinstance(allowed, list) and machine_fingerprint() in {str(item) for item in allowed}
+    machine_allowed = _machine_allowed_by_payload(allowed)
 
     if owner:
         if not machine_allowed:
@@ -736,7 +768,7 @@ def _locally_trusted_paid_document(
         if owner:
             return False
         allowed = payload.get("allowed_machines")
-        if not isinstance(allowed, list) or machine_fingerprint() not in {str(item) for item in allowed}:
+        if not _machine_allowed_by_payload(allowed):
             return False
         valid_until = _parse_utc(str(payload.get("valid_until") or ""))
         _validate_paid_calendar_period(str(document.get("schema") or ""), payload, valid_until)
