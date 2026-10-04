@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import base64
+from datetime import datetime, timezone
 from pathlib import Path
 import sys
 
@@ -15,18 +16,27 @@ from tools.license_server_preflight import validate_health
 def main() -> None:
     key = base64.b64encode(bytes(range(32))).decode("ascii")
     validate_health(
-        {"status": "ok", "product_id": "diary_filler", "public_key_b64": key},
+        {
+            "status": "ok",
+            "product_id": "diary_filler",
+            "public_key_b64": key,
+            "server_time": datetime.now(timezone.utc).isoformat(),
+        },
         key,
     )
 
     failures = [
-        {"status": "down", "product_id": "diary_filler", "public_key_b64": key},
-        {"status": "ok", "product_id": "other", "public_key_b64": key},
+        {"status": "down", "product_id": "diary_filler", "public_key_b64": key, "server_time": datetime.now(timezone.utc).isoformat()},
+        {"status": "ok", "product_id": "other", "public_key_b64": key, "server_time": datetime.now(timezone.utc).isoformat()},
         {
             "status": "ok",
             "product_id": "diary_filler",
             "public_key_b64": base64.b64encode(bytes(reversed(range(32)))).decode("ascii"),
+            "server_time": datetime.now(timezone.utc).isoformat(),
         },
+        {"status": "ok", "product_id": "diary_filler", "public_key_b64": key},
+        {"status": "ok", "product_id": "diary_filler", "public_key_b64": key, "server_time": "broken"},
+        {"status": "ok", "product_id": "diary_filler", "public_key_b64": key, "server_time": "2026-10-04T08:00:00"},
     ]
     for payload in failures:
         try:

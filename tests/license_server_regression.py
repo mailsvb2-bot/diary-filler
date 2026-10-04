@@ -75,6 +75,9 @@ def main() -> None:
     assert "row = reconcile_payment(row)" in app_source
     assert "provider.get_payment" in app_source
     assert '"server_time": datetime.now(timezone.utc).isoformat()' in app_source
+    health_anchor = app_source.index('@app.get("/health")')
+    health_block = app_source[health_anchor: health_anchor + 600]
+    assert '"server_time": datetime.now(timezone.utc).isoformat()' in health_block
     assert "order_source_limiter = SlidingLimiter(300, timedelta(hours=1))" in app_source
     assert "order_machine_limiter = SlidingLimiter(30, timedelta(hours=1))" in app_source
     assert "order_source_limiter.allow(source)" in app_source
@@ -102,9 +105,14 @@ def main() -> None:
             format=serialization.PublicFormat.Raw,
         )
         different_public_b64 = base64.b64encode(different_public).decode("ascii")
-        # Before any paid order exists, bootstrap configuration can still be
-        # corrected without trapping a fresh deployment on a typo.
-        store.pin_issuer_public_key(different_public_b64)
+        # Once the database has pinned an issuer key, accidental rotation is
+        # forbidden even before the first payment. Old installed clients embed
+        # this trust anchor and must never receive licenses signed by another key.
+        try:
+            store.pin_issuer_public_key(different_public_b64)
+            raise AssertionError("issuer key rotation was accepted after initial pin")
+        except ValueError:
+            pass
 
         store.create_order(
             order_id="order-1",

@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "base_sha": "c02a7aafe8a061e1c9d6fe77006f4c501471d40a",
-  "reason": "Bump APP_VERSION to v1.4.31 for paid-license recovery hardening only; medical parsing, rendering, templates and document-generation semantics are unchanged.",
+  "base_sha": "8604dc6715e57cf259e7ce85951b7249c7ab89f0",
+  "reason": "Bump APP_VERSION to v1.4.32 for paid-license false-block resilience only; medical parsing, rendering, templates and document-generation semantics are unchanged.",
   "approved_blobs": {
-    "app_config.py": "65555a7a3637dcb69b0ba23546c1c42453185f6a"
+    "app_config.py": "b5874e23dbfb988b9abe2c224faf28e16fb418b3"
   }
 }

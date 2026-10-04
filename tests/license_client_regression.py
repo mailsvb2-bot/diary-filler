@@ -131,12 +131,229 @@ def main() -> None:
         lc._install_id = lambda: "install-c"
         stable_c = lc.machine_fingerprint()
         assert stable_c == stable_a, "transient MachineGuid read failure changed paid-license identity"
+        # If the very first MachineGuid read fails, the chosen fallback
+        # identity is pinned and must not jump to a different fingerprint later
+        # when MachineGuid becomes readable.
+        lc._machine_fingerprint_cache_path().unlink(missing_ok=True)
+        lc._machine_fingerprint_backup_path().unlink(missing_ok=True)
+        old_guid = lc._windows_machine_guid
+        old_install = lc._install_id
+        lc._windows_machine_guid = lambda: ""
+        lc._install_id = lambda: "first-run-fallback"
+        first_fallback = lc.machine_fingerprint()
+        assert lc._machine_fingerprint_cache_path().exists()
+        assert lc._machine_fingerprint_backup_path().exists()
+        lc._windows_machine_guid = lambda: "guid-became-readable"
+        lc._install_id = lambda: "different-install-id"
+        assert lc.machine_fingerprint() == first_fallback
         lc._windows_machine_guid = old_guid
         lc._install_id = old_install
+        lc._cache_machine_fingerprint(machine)
+
+        # Legacy schema-1 fingerprint migration is allowed only when the
+        # unprotected value can be independently derived on this machine.
+        lc._machine_fingerprint_cache_path().unlink(missing_ok=True)
+        lc._machine_fingerprint_backup_path().unlink(missing_ok=True)
+        lc._windows_machine_guid = lambda: "legacy-guid"
+        lc._install_id = lambda: "legacy-install-id"
+        legacy_candidates, legacy_guid_available = lc._derived_machine_fingerprint_candidates()
+        assert legacy_guid_available
+        legacy_local = next(
+            value
+            for value in legacy_candidates
+            if value == __import__("hashlib").sha256(
+                b"windows-machine-guid-v1|legacy-guid"
+            ).hexdigest()
+        )
+        lc._machine_fingerprint_cache_path().write_text(
+            json.dumps({"schema": 1, "fingerprint": legacy_local}),
+            encoding="utf-8",
+        )
+        assert lc.machine_fingerprint() == legacy_local
+        migrated_primary = json.loads(
+            lc._machine_fingerprint_cache_path().read_text(encoding="utf-8")
+        )
+        assert migrated_primary["schema"] == 2
+
+        # A readable MachineGuid is sufficient to validate a legitimate
+        # legacy cache even if install-id persistence is temporarily broken.
+        old_install_for_failure = lc._install_id
+        lc._install_id = lambda: (_ for _ in ()).throw(OSError("read-only LocalAppData"))
+        try:
+            candidates_without_install, guid_available = lc._derived_machine_fingerprint_candidates()
+            assert guid_available
+            assert legacy_local in candidates_without_install
+        finally:
+            lc._install_id = old_install_for_failure
+
+        # A copied/foreign legacy cache must never become the machine identity.
+        lc._machine_fingerprint_cache_path().write_text(
+            json.dumps({"schema": 1, "fingerprint": "f" * 64}),
+            encoding="utf-8",
+        )
+        lc._machine_fingerprint_backup_path().unlink(missing_ok=True)
+        foreign_result = lc.machine_fingerprint()
+        assert foreign_result in legacy_candidates
+        assert foreign_result != "f" * 64
+
+        # The roaming backup never accepts schema 1. This blocks copying a
+        # foreign legacy cache into the newly introduced backup location.
+        lc._machine_fingerprint_cache_path().unlink(missing_ok=True)
+        lc._machine_fingerprint_backup_path().write_text(
+            json.dumps({"schema": 1, "fingerprint": "e" * 64}),
+            encoding="utf-8",
+        )
+        backup_ignored = lc.machine_fingerprint()
+        assert backup_ignored in legacy_candidates
+        assert backup_ignored != "e" * 64
+
+        # If a legitimate legacy primary cannot be verified only because
+        # MachineGuid is temporarily unreadable, do not overwrite it and do not
+        # turn that transient condition into a fresh-payment path.
+        lc._machine_fingerprint_cache_path().write_text(
+            json.dumps({"schema": 1, "fingerprint": legacy_local}),
+            encoding="utf-8",
+        )
+        lc._machine_fingerprint_backup_path().unlink(missing_ok=True)
+        lc._windows_machine_guid = lambda: ""
+        lc._install_id = lambda: "different-fallback-id"
+        try:
+            lc.machine_fingerprint()
+            raise AssertionError("unverifiable legacy fingerprint was accepted")
+        except lc.MachineIdentityUnavailableError:
+            pass
+        preserved_legacy = json.loads(
+            lc._machine_fingerprint_cache_path().read_text(encoding="utf-8")
+        )
+        assert preserved_legacy == {"schema": 1, "fingerprint": legacy_local}
+
+        lc._windows_machine_guid = old_guid
+        lc._install_id = old_install
+        lc._machine_fingerprint_cache_path().unlink(missing_ok=True)
+        lc._machine_fingerprint_backup_path().unlink(missing_ok=True)
+        lc._cache_machine_fingerprint(machine)
+
+        # If both protected fingerprint caches disappear after a fallback-
+        # identity activation, the signed allowed_machines value plus locally
+        # derivable install-id must restore the same identity even when
+        # MachineGuid has since become readable.
+        lc._machine_fingerprint_cache_path().unlink(missing_ok=True)
+        lc._machine_fingerprint_backup_path().unlink(missing_ok=True)
+        lc._windows_machine_guid = lambda: "guid-after-fallback-activation"
+        lc._install_id = lambda: "first-run-fallback"
+        assert lc._machine_allowed_by_payload([first_fallback])
+        assert lc.machine_fingerprint() == first_fallback
+
+        lc._windows_machine_guid = old_guid
+        lc._install_id = old_install
+        lc._machine_fingerprint_cache_path().unlink(missing_ok=True)
+        lc._machine_fingerprint_backup_path().unlink(missing_ok=True)
+        lc._cache_machine_fingerprint(machine)
+
+        # Fingerprint persistence is best-effort resilience. A transient local
+        # protection failure must not make machine_fingerprint unusable.
+        old_protect_local_blob = lc._protect_local_blob
+        lc._machine_fingerprint_cache_path().unlink(missing_ok=True)
+        lc._machine_fingerprint_backup_path().unlink(missing_ok=True)
+        lc._windows_machine_guid = lambda: "stable-guid-for-dpapi-failure"
+        try:
+            lc._protect_local_blob = lambda *args, **kwargs: (_ for _ in ()).throw(
+                lc.LicenseError("simulated DPAPI failure")
+            )
+            transient_fingerprint = lc.machine_fingerprint()
+            assert len(transient_fingerprint) == 64
+        finally:
+            lc._protect_local_blob = old_protect_local_blob
+            lc._windows_machine_guid = old_guid
+        lc._cache_machine_fingerprint(machine)
 
         paid = signed_document(private, payload(machine))
+
+        # All paid-license persistence tiers must be independently writable.
+        # A LocalAppData failure must still leave a usable Roaming/AppData copy
+        # instead of blocking a doctor who has already paid.
+        primary_paths = {
+            lc.license_path(),
+            lc._clock_path(),
+            lc._pending_order_path(),
+            lc._active_order_path(),
+        }
+        all_resilience_paths = (
+            lc.license_path(),
+            lc._license_backup_path(),
+            lc._clock_path(),
+            lc._clock_backup_path(),
+            lc._pending_order_path(),
+            lc._pending_order_backup_path(),
+            lc._active_order_path(),
+            lc._active_order_backup_path(),
+        )
+        for path in all_resilience_paths:
+            path.unlink(missing_ok=True)
+
+        old_atomic_write = lc._atomic_write_text
+        def _fail_primary_only(path, text):
+            if path in primary_paths:
+                raise OSError("simulated LocalAppData write failure")
+            return old_atomic_write(path, text)
+
+        resilience_order = {
+            "order_id": "00000000-0000-0000-0000-000000000088",
+            "order_access_token": "B" * 48,
+            "payment_url": "https://pay.example.com/redundant-storage",
+            "amount_rub": 100,
+        }
+        lc._atomic_write_text = _fail_primary_only
+        try:
+            lc._write_license_document(paid)
+            assert not lc.license_path().exists()
+            assert lc._license_backup_path().exists()
+            assert lc._load_license_document() == paid
+
+            clock_now = datetime.now(timezone.utc)
+            lc._record_clock(clock_now)
+            assert not lc._clock_path().exists()
+            assert lc._clock_backup_path().exists()
+            assert lc._read_clock_state() is not None
+
+            lc._save_pending_order(resilience_order)
+            assert not lc._pending_order_path().exists()
+            assert lc._pending_order_backup_path().exists()
+            assert lc._load_pending_order()["order_id"] == resilience_order["order_id"]
+
+            lc._save_active_order(resilience_order)
+            assert not lc._active_order_path().exists()
+            assert lc._active_order_backup_path().exists()
+            assert lc._load_active_order()["order_id"] == resilience_order["order_id"]
+        finally:
+            lc._atomic_write_text = old_atomic_write
+            for path in all_resilience_paths:
+                path.unlink(missing_ok=True)
+
         assert lc.save_license(paid, config).active
         assert lc.current_status(config).mode == "paid"
+        assert lc._license_backup_path().exists()
+
+        # The signed entitlement itself is redundant. Losing the primary copy
+        # must heal it from the independent roaming backup without blocking an
+        # already-paid doctor.
+        lc.license_path().unlink()
+        healed_license = lc.current_status(config)
+        assert healed_license.active and healed_license.mode == "paid"
+        assert lc.license_path().exists()
+
+        # A primary file can remain valid JSON while its signed payload is
+        # damaged. Ed25519 failure must make the client fall back to the signed
+        # backup rather than treating a paid user as unlicensed.
+        tampered_primary = json.loads(lc.license_path().read_text(encoding="utf-8"))
+        tampered_primary["license"]["payload"]["document_limit_month"] = 999999
+        lc.license_path().write_text(
+            json.dumps(tampered_primary, ensure_ascii=False),
+            encoding="utf-8",
+        )
+        healed_license = lc.current_status(config)
+        assert healed_license.active and healed_license.mode == "paid"
+        assert json.loads(lc.license_path().read_text(encoding="utf-8")) == paid
 
         # Existing v1 licenses were sold as fixed 31-day periods. They must
         # remain usable until their originally signed expiration after upgrade.
@@ -148,21 +365,82 @@ def main() -> None:
         legacy_status = lc._evaluate_document(legacy_v1, config)
         assert legacy_status.active and legacy_status.mode == "paid"
 
-        # Removing or corrupting the anti-rollback state after activation must
-        # fail closed rather than reset the clock guard.
-        clock_backup = lc._clock_path().read_text(encoding="utf-8")
+        # Paid anti-rollback state is redundant. Losing/corrupting one copy
+        # must transparently heal from the other without blocking the doctor.
+        clock_primary = lc._clock_path().read_text(encoding="utf-8")
+        assert lc._clock_backup_path().exists()
         lc._clock_path().unlink()
-        assert not lc.current_status(config).active
-        lc._clock_path().write_text(clock_backup, encoding="utf-8")
+        healed = lc.current_status(config)
+        assert healed.active and healed.mode == "paid"
+        assert lc._clock_path().exists()
+
         lc._clock_path().write_text("{broken", encoding="utf-8")
-        assert not lc.current_status(config).active
-        lc._clock_path().write_text(clock_backup, encoding="utf-8")
-        forged = json.loads(clock_backup)
-        protected = str(forged["protected"])
-        forged["protected"] = protected[:-1] + ("A" if protected[-1:] != "A" else "B")
-        lc._clock_path().write_text(json.dumps(forged), encoding="utf-8")
-        assert not lc.current_status(config).active
-        lc._clock_path().write_text(clock_backup, encoding="utf-8")
+        healed = lc.current_status(config)
+        assert healed.active and healed.mode == "paid"
+
+        # If both clock copies are lost, a valid signed paid entitlement can
+        # repair itself from trusted server time without any order/recovery token.
+        for path in (
+            lc._clock_path(),
+            lc._clock_backup_path(),
+            lc._active_order_path(),
+            lc._active_order_backup_path(),
+        ):
+            path.unlink(missing_ok=True)
+        old_json_request = lc._json_request
+        old_machine_fingerprint = lc.machine_fingerprint
+        health_calls = []
+        try:
+            lc.machine_fingerprint = lambda: machine
+
+            def _health_request(_config, method, path, *, body=None, bearer=""):
+                health_calls.append((method, path, body, bearer))
+                if method == "GET" and path == "/health":
+                    return {
+                        "status": "ok",
+                        "product_id": lc.PRODUCT_ID,
+                        "public_key_b64": config.public_key_b64,
+                        "server_time": datetime.now(timezone.utc).isoformat(),
+                    }
+                raise AssertionError((method, path, body, bearer))
+
+            lc._json_request = _health_request
+            repaired = lc.current_status(config)
+            assert repaired.active and repaired.mode == "paid"
+            assert lc._clock_path().exists()
+            assert lc._clock_backup_path().exists()
+        finally:
+            lc._json_request = old_json_request
+            lc.machine_fingerprint = old_machine_fingerprint
+        assert health_calls == [("GET", "/health", None, "")]
+
+        # If both clock copies are gone and the server is temporarily offline,
+        # the signed paid entitlement suppresses new-payment UX instead of being
+        # treated as a fresh unlicensed installation.
+        lc._clock_path().unlink(missing_ok=True)
+        lc._clock_backup_path().unlink(missing_ok=True)
+        old_json_request = lc._json_request
+        old_machine_fingerprint = lc.machine_fingerprint
+        try:
+            lc.machine_fingerprint = lambda: machine
+
+            def _offline_health(*args, **kwargs):
+                raise lc.LicenseError("server temporarily unavailable")
+
+            lc._json_request = _offline_health
+            recovery = lc.current_status(config)
+            assert not recovery.active
+            assert recovery.mode == "paid_recovery"
+            manager = lui._manager_state(recovery)
+            assert not manager["show_payment"]
+            assert manager["show_recovery"]
+        finally:
+            lc._json_request = old_json_request
+            lc.machine_fingerprint = old_machine_fingerprint
+
+        # Restore ordinary clock state for independent regressions below.
+        lc._clock_path().write_text(clock_primary, encoding="utf-8")
+        lc._clock_backup_path().write_text(clock_primary, encoding="utf-8")
 
         # A stale local payment order can always be discarded and replaced.
         lc._save_pending_order({
@@ -273,6 +551,44 @@ def main() -> None:
             assert not lc._pending_order_path().exists()
             assert not lc._pending_order_backup_path().exists()
 
+            # Once payment is confirmed, a transient failure while promoting
+            # the order token into long-lived recovery storage must not block
+            # the signed license itself. Keep the pending token instead.
+            local_storage_order = {
+                "order_id": "00000000-0000-0000-0000-000000000010",
+                "order_access_token": "V" * 48,
+                "payment_url": "https://pay.example.com/local-storage",
+                "amount_rub": 100,
+            }
+            lc._save_pending_order(local_storage_order)
+            old_save_active = lc._save_active_order
+            try:
+                lc._save_active_order = lambda _order: (_ for _ in ()).throw(
+                    lc.LicenseError("simulated DPAPI failure")
+                )
+
+                def _storage_request(_config, method, path, *, body=None, bearer=""):
+                    if method == "GET" and path.endswith("/status"):
+                        return {
+                            "status": "paid",
+                            "amount_rub": 100,
+                            "server_time": paid["license"]["payload"]["issued_at"],
+                        }
+                    if method == "POST" and path.endswith("/activate-machine"):
+                        return {"activated": True, "machine_hash": machine}
+                    if method == "POST" and path.endswith("/license"):
+                        return paid
+                    raise AssertionError((method, path, body, bearer))
+
+                lc._json_request = _storage_request
+                storage_status = lc.refresh_paid_order(config)
+                assert storage_status.active and storage_status.mode == "paid"
+                assert lc.pending_payment_details()["order_id"] == local_storage_order["order_id"]
+            finally:
+                lc._save_active_order = old_save_active
+                lc._json_request = _paid_request
+            lc.discard_pending_order()
+
             active_primary = lc._active_order_path().read_text(encoding="utf-8")
             lc._active_order_path().unlink()
             backup_loaded = lc._load_active_order()
@@ -282,8 +598,20 @@ def main() -> None:
             assert backup_loaded["order_id"] == recovery_order["order_id"]
             lc._active_order_path().write_text(active_primary, encoding="utf-8")
 
+            # One damaged license/clock primary copy must heal from the
+            # independent signed/protected backups with no user-visible block.
             lc.license_path().write_text("{broken", encoding="utf-8")
             lc._clock_path().write_text("{broken", encoding="utf-8")
+            automatically_healed = lc.current_status(config)
+            assert automatically_healed.active
+            assert automatically_healed.mode == "paid"
+
+            # If both signed license copies are damaged, the already-saved
+            # active order credential becomes the next recovery tier.
+            lc.license_path().write_text("{broken", encoding="utf-8")
+            lc._license_backup_path().write_text("{broken", encoding="utf-8")
+            lc._clock_path().write_text("{broken", encoding="utf-8")
+            lc._clock_backup_path().write_text("{broken", encoding="utf-8")
             recovery_needed = lc.current_status(config)
             assert not recovery_needed.active
             assert recovery_needed.mode == "paid_recovery"
@@ -665,23 +993,72 @@ def main() -> None:
             lc.machine_fingerprint = old_machine_fingerprint
         assert owner_activation_calls
         assert owner_status.active and owner_status.owner_unlimited and owner_status.mode == "owner"
+        assert lc._owner_marker_local_path().exists()
         assert lc._owner_marker_path().exists()
 
-        # The owner marker lives outside the install-local license file and
-        # never grants access by itself. It only forces owner-only reactivation
-        # if the signed license file is lost or damaged.
+        owner_marker_local = lc._owner_marker_local_path().read_text(encoding="utf-8")
+        owner_marker_roaming = lc._owner_marker_path().read_text(encoding="utf-8")
+        lc._owner_marker_local_path().unlink()
+        assert lc._has_owner_marker()
+        lc._owner_marker_local_path().write_text(owner_marker_local, encoding="utf-8")
+        lc._owner_marker_path().unlink()
+        assert lc._has_owner_marker()
+        lc._owner_marker_path().write_text(owner_marker_roaming, encoding="utf-8")
+
+        # Owner-marker persistence is redundant too. If LocalAppData is
+        # temporarily unwritable, the Roaming/AppData copy alone must preserve
+        # owner-only reactivation semantics instead of ever exposing payment.
+        old_atomic_write = lc._atomic_write_text
+        lc._owner_marker_local_path().unlink(missing_ok=True)
+        lc._owner_marker_path().unlink(missing_ok=True)
+        try:
+            def _fail_local_owner_marker(path, text):
+                if path == lc._owner_marker_local_path():
+                    raise OSError("simulated LocalAppData owner-marker failure")
+                return old_atomic_write(path, text)
+
+            lc._atomic_write_text = _fail_local_owner_marker
+            lc._write_owner_marker()
+            assert not lc._owner_marker_local_path().exists()
+            assert lc._owner_marker_path().exists()
+            assert lc._has_owner_marker()
+        finally:
+            lc._atomic_write_text = old_atomic_write
+            lc._owner_marker_local_path().write_text(owner_marker_local, encoding="utf-8")
+            lc._owner_marker_path().write_text(owner_marker_roaming, encoding="utf-8")
+
+        # The owner marker never grants access by itself. It only forces
+        # owner-only reactivation if both signed license copies are lost or damaged.
         owner_license_text = lc.license_path().read_text(encoding="utf-8")
+        owner_backup_text = lc._license_backup_path().read_text(encoding="utf-8")
+
+        # Losing only the primary signed license must heal transparently from
+        # the independent signed backup and keep owner access active.
         lc.license_path().unlink()
+        healed_owner = lc.current_status(config)
+        assert healed_owner.active
+        assert healed_owner.mode == "owner"
+        assert healed_owner.owner_unlimited
+        assert lc.license_path().exists()
+
+        # Owner reactivation is required only when both signed copies are gone
+        # (or both are unusable); it must never be confused with paid renewal.
+        lc.license_path().unlink(missing_ok=True)
+        lc._license_backup_path().unlink(missing_ok=True)
         lost_owner = lc.current_status(config)
         assert not lost_owner.active
         assert lost_owner.mode == "owner_reactivation"
         assert lost_owner.owner_unlimited
+
         lc.license_path().write_text("{broken", encoding="utf-8")
+        lc._license_backup_path().write_text("{broken", encoding="utf-8")
         damaged_owner = lc.current_status(config)
         assert not damaged_owner.active
         assert damaged_owner.mode == "owner_reactivation"
         assert damaged_owner.owner_unlimited
+
         lc.license_path().write_text(owner_license_text, encoding="utf-8")
+        lc._license_backup_path().write_text(owner_backup_text, encoding="utf-8")
 
         # Owner access is intentionally independent from the paid-license
         # anti-clock state. Missing/corrupt clock data must never send the
@@ -879,6 +1256,7 @@ def main() -> None:
         installer_text = (ROOT / "installer" / "MedicalDiaryAutofill.iss").read_text(encoding="utf-8")
         assert "DefaultDirName={localappdata}\\MedicalDiaryAutofill" in installer_text
         assert "license.json" not in installer_text
+        assert "license-backup.json" not in installer_text
         assert "license-clock.json" not in installer_text
         assert "license-active-order.json" not in installer_text
         assert "license-machine-fingerprint.json" not in installer_text

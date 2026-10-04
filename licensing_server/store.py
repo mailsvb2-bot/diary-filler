@@ -72,24 +72,9 @@ class LicenseStore:
                 con.execute("COMMIT")
                 return
             if str(row["value"]) != value:
-                protected = con.execute(
-                    """
-                    SELECT COUNT(*) AS count
-                      FROM license_orders
-                     WHERE status IN ('paid', 'license_issued')
-                        OR license_json IS NOT NULL
-                    """
-                ).fetchone()
-                if int(protected["count"] or 0) == 0:
-                    con.execute(
-                        "UPDATE license_meta SET value = ? WHERE key = 'issuer_public_key_b64'",
-                        (value,),
-                    )
-                    con.execute("COMMIT")
-                    return
                 con.execute("ROLLBACK")
                 raise ValueError(
-                    "issuer public key changed after paid licenses already exist"
+                    "issuer public key is immutable once the license database is initialized"
                 )
             con.execute("COMMIT")
 
