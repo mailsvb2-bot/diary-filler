@@ -125,7 +125,12 @@ def create_app() -> FastAPI:
 
     @app.get("/health")
     def health() -> dict:
-        return {"status": "ok", "product_id": "diary_filler", "public_key_b64": public_key_b64(config["private_key"])}
+        return {
+            "status": "ok",
+            "product_id": "diary_filler",
+            "public_key_b64": public_key_b64(config["private_key"]),
+            "server_time": datetime.now(timezone.utc).isoformat(),
+        }
 
     @app.get("/payment-return", response_class=HTMLResponse)
     def payment_return() -> str:
