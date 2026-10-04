@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "853962bacee8843bfe094e6b646d9611d95a7245",
+  "reason": "Hardware clone hardening: bind new Windows activations to MachineGuid plus SMBIOS UUID, reject copied v2 entitlements on different hardware even when MachineGuid and local files are cloned, preserve legacy paid-order recovery without duplicate payment, and fail closed instead of silently downgrading when a v2 hardware anchor becomes unreadable.",
+  "required_evidence": [
+    "document_mechanics_guard",
+    "full_patient_replay",
+    "golden_docx",
+    "staff_profile_regression",
+    "gender_generation_matrix",
+    "desktop_intake_contract",
+    "intake_lifecycle_regression",
+    "packaged_desktop_intake_e2e",
+    "installer_uninstall_smoke",
+    "ci_gate_lock",
+    "patient_registry_regression"
+  ],
+  "approved_blobs": {
+    "license_client.py": "fddec50a51a9882399ba2aa4e7d86386246f69d9",
+    "tests/license_client_regression.py": "4ab858f66cb3a08cb161bfc58018d1a7ad1f0779"
+  }
+}
