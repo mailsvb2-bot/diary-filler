@@ -150,6 +150,12 @@ def _clock_path() -> Path:
     return _runtime_dir() / "license-clock.json"
 
 
+def _clock_backup_path() -> Path:
+    base = os.environ.get("APPDATA", "").strip()
+    root = Path(base) if base else _runtime_dir().parent
+    return root / "MedicalDiaryAutofill" / "license-clock-backup.json"
+
+
 def _owner_marker_path() -> Path:
     base = os.environ.get("APPDATA", "").strip()
     root = Path(base) if base else _runtime_dir().parent
@@ -391,14 +397,7 @@ def _owner_reactivation_status(message: str) -> LicenseStatus:
     )
 
 
-def _read_clock_state() -> datetime | None:
-    path = _clock_path()
-    try:
-        raw = path.read_text(encoding="utf-8")
-    except FileNotFoundError:
-        return None
-    except OSError as exc:
-        raise LicenseError("license clock state is unreadable") from exc
+def _decode_clock_state(raw: str) -> datetime:
     try:
         outer = json.loads(raw)
         if outer.get("schema") != 2:
@@ -415,6 +414,38 @@ def _read_clock_state() -> datetime | None:
         raise LicenseError("license clock state is damaged") from exc
 
 
+def _read_clock_state() -> datetime | None:
+    errors: list[Exception] = []
+    found = False
+    primary = _clock_path()
+    for path in (primary, _clock_backup_path()):
+        try:
+            raw = path.read_text(encoding="utf-8")
+            found = True
+        except FileNotFoundError:
+            continue
+        except OSError as exc:
+            found = True
+            errors.append(exc)
+            continue
+        try:
+            value = _decode_clock_state(raw)
+        except LicenseError as exc:
+            errors.append(exc)
+            continue
+        if path != primary:
+            try:
+                _atomic_write_text(primary, raw)
+            except OSError:
+                pass
+        return value
+    if not found:
+        return None
+    raise LicenseError("license clock state is unreadable or damaged") from (
+        errors[-1] if errors else None
+    )
+
+
 def _record_clock(now: datetime) -> None:
     previous = _read_clock_state()
     if previous is not None and previous > now:
@@ -426,10 +457,17 @@ def _record_clock(now: datetime) -> None:
         separators=(",", ":"),
     ).encode("utf-8")
     protected = _protect_local_blob(clear, "MedicalDiaryAutofill license clock")
-    _atomic_write_text(
-        _clock_path(),
-        json.dumps({"schema": 2, "protected": protected}, ensure_ascii=False) + "\n",
-    )
+    encoded = json.dumps(
+        {"schema": 2, "protected": protected},
+        ensure_ascii=False,
+    ) + "\n"
+    _atomic_write_text(_clock_path(), encoded)
+    try:
+        _atomic_write_text(_clock_backup_path(), encoded)
+    except OSError:
+        # The LocalAppData copy remains authoritative; the roaming copy is
+        # resilience against accidental cleanup/corruption.
+        pass
 
 
 def _validate_clock(now: datetime, *, require_initialized: bool) -> None:
