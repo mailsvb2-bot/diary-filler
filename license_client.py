@@ -254,34 +254,46 @@ def _valid_machine_fingerprint(value: str) -> bool:
     return len(value) == 64 and all(ch in "0123456789abcdef" for ch in value)
 
 
-def _derived_machine_fingerprint_candidates() -> tuple[set[str], bool]:
-    """Return fingerprints independently derivable on this machine.
+def _is_windows_runtime() -> bool:
+    return os.name == "nt"
 
-    The boolean reports whether Windows MachineGuid was available. The fallback
-    install identity is included for compatibility with legitimate legacy
-    activations that happened while MachineGuid was temporarily unreadable.
+
+def _machine_guid_fingerprint(machine_guid: str) -> str:
+    normalized = str(machine_guid or "").strip().lower()
+    if not normalized:
+        return ""
+    return hashlib.sha256(
+        f"windows-machine-guid-v1|{normalized}".encode("utf-8")
+    ).hexdigest()
+
+
+def _derived_machine_fingerprint_candidates() -> tuple[set[str], bool]:
+    """Return identities independently derivable on the current machine.
+
+    On Windows, MachineGuid is the authoritative non-user-controlled machine
+    evidence. A user-writable install-id must never validate a cached Windows
+    fingerprint because that would let a copied license be rebound locally.
+    Non-Windows fallback identity is retained only for development portability.
     """
-    candidates: set[str] = set()
     machine_guid = _windows_machine_guid().strip().lower()
     if machine_guid:
-        candidates.add(
-            hashlib.sha256(
-                f"windows-machine-guid-v1|{machine_guid}".encode("utf-8")
-            ).hexdigest()
-        )
+        return {_machine_guid_fingerprint(machine_guid)}, True
+    if _is_windows_runtime():
+        return set(), False
+
     try:
         install_id = _install_id().strip().lower()
     except OSError:
         install_id = ""
-    if install_id:
-        fallback_identity = (
-            "portable-install-v1|"
-            + platform.system().strip().lower()
-            + "|"
-            + install_id
-        )
-        candidates.add(hashlib.sha256(fallback_identity.encode("utf-8")).hexdigest())
-    return candidates, bool(machine_guid)
+    if not install_id:
+        return set(), False
+    fallback_identity = (
+        "portable-install-v1|"
+        + platform.system().strip().lower()
+        + "|"
+        + install_id
+    )
+    return {hashlib.sha256(fallback_identity.encode("utf-8")).hexdigest()}, False
 
 
 def _decode_protected_machine_fingerprint_cache(raw: str) -> str:
@@ -328,14 +340,17 @@ def _read_cached_machine_fingerprint() -> str:
     primary = _machine_fingerprint_cache_path()
     backup = _machine_fingerprint_backup_path()
 
-    # Protected schema-2 caches are trusted through DPAPI/HMAC integrity.
+    # DPAPI/HMAC proves local storage integrity, not that an arbitrary cached
+    # fingerprint was derived from this computer. Re-derive trusted machine
+    # evidence and accept schema 2 only when the value matches it.
+    candidates, _machine_guid_available = _derived_machine_fingerprint_candidates()
     for path in (primary, backup):
         try:
             raw = path.read_text(encoding="utf-8")
         except OSError:
             continue
         value = _decode_protected_machine_fingerprint_cache(raw)
-        if not value:
+        if not value or value not in candidates:
             continue
         _cache_machine_fingerprint(value)
         return value
@@ -404,15 +419,19 @@ def machine_fingerprint() -> str:
 
     machine_guid = _windows_machine_guid().strip().lower()
     if machine_guid:
-        identity = f"windows-machine-guid-v1|{machine_guid}"
+        fingerprint = _machine_guid_fingerprint(machine_guid)
     else:
+        if _is_windows_runtime():
+            raise MachineIdentityUnavailableError(
+                "Не удалось надёжно определить этот компьютер. Повторите проверку лицензии."
+            )
         identity = (
             "portable-install-v1|"
             + platform.system().strip().lower()
             + "|"
             + _install_id().strip().lower()
         )
-    fingerprint = hashlib.sha256(identity.encode("utf-8")).hexdigest()
+        fingerprint = hashlib.sha256(identity.encode("utf-8")).hexdigest()
     _cache_machine_fingerprint(fingerprint)
     return fingerprint
 
@@ -894,11 +913,53 @@ def _write_license_document(document: dict) -> None:
     )
 
 
-def _load_license_document() -> dict:
+def _license_document_rank(
+    document: dict,
+    config: LicenseRuntimeConfig,
+) -> tuple[int, datetime, datetime]:
+    payload = _verify_signature(document, config.public_key_b64)
+    metadata = payload.get("metadata")
+    if not isinstance(metadata, dict) or metadata.get("product_id") != config.product_id:
+        raise LicenseError("license belongs to another product")
+    issued_at = _parse_utc(str(payload.get("issued_at") or ""))
+    valid_until = _parse_utc(str(payload.get("valid_until") or ""))
+    owner = (
+        str(payload.get("plan") or "") == "vip"
+        and payload.get("order_id") is None
+        and metadata.get("role") == "owner_superadmin"
+        and metadata.get("access") == "unlimited"
+    )
+    return (1 if owner else 0, issued_at, valid_until)
+
+
+def _heal_license_copies(document: dict) -> None:
+    encoded = json.dumps(
+        document,
+        ensure_ascii=False,
+        indent=2,
+        sort_keys=True,
+    ) + "\n"
+    for path in (license_path(), _license_backup_path()):
+        try:
+            current = path.read_text(encoding="utf-8")
+        except OSError:
+            current = ""
+        if current == encoded:
+            continue
+        try:
+            _atomic_write_text(path, encoded)
+        except OSError:
+            pass
+
+
+def _load_license_document(config: LicenseRuntimeConfig) -> dict:
     primary = license_path()
+    backup = _license_backup_path()
     errors: list[Exception] = []
     found = False
-    for path in (primary, _license_backup_path()):
+    candidates: list[tuple[tuple[int, datetime, datetime], dict]] = []
+
+    for path in (primary, backup):
         try:
             raw = path.read_text(encoding="utf-8")
             found = True
@@ -912,18 +973,19 @@ def _load_license_document() -> dict:
             document = json.loads(raw)
             if not isinstance(document, dict):
                 raise ValueError("license document is not an object")
+            rank = _license_document_rank(document, config)
         except Exception as exc:
             errors.append(exc)
             continue
-        if path != primary:
-            try:
-                _atomic_write_text(primary, raw if raw.endswith("\n") else raw + "\n")
-            except OSError:
-                pass
-        return document
-    if not found:
-        raise FileNotFoundError(str(primary))
-    raise LicenseError("Файл лицензии повреждён") from (errors[-1] if errors else None)
+        candidates.append((rank, document))
+
+    if not candidates:
+        if not found:
+            raise FileNotFoundError(str(primary))
+        raise LicenseError("Файл лицензии повреждён") from (errors[-1] if errors else None)
+
+    _rank, document = max(candidates, key=lambda item: item[0])
+    return document
 
 
 def current_status(config: LicenseRuntimeConfig | None = None) -> LicenseStatus:
@@ -935,7 +997,7 @@ def current_status(config: LicenseRuntimeConfig | None = None) -> LicenseStatus:
         return LicenseStatus(True, "development", "Лицензирование пока не включено в этой сборке")
     owner_marker = _has_owner_marker()
     try:
-        document = _load_license_document()
+        document = _load_license_document(config)
     except FileNotFoundError:
         if owner_marker:
             return _owner_reactivation_status(
@@ -964,7 +1026,10 @@ def current_status(config: LicenseRuntimeConfig | None = None) -> LicenseStatus:
                     # Never trust a possibly-wrong workstation clock to decide
                     # that another payment is due. Confirm expiry against the
                     # configured HTTPS license server first.
-                    return _repair_paid_clock_from_server(document, config)
+                    repaired = _repair_paid_clock_from_server(document, config)
+                    if repaired.active:
+                        _heal_license_copies(document)
+                    return repaired
                 except LicenseError:
                     return _paid_recovery_status(
                         "Не удалось подтвердить срок уже оплаченной лицензии. Новый платёж не нужен."
@@ -973,6 +1038,8 @@ def current_status(config: LicenseRuntimeConfig | None = None) -> LicenseStatus:
                 return _paid_recovery_status(
                     "Требуется проверить срок уже оплаченной лицензии"
                 )
+        if status.active:
+            _heal_license_copies(document)
         return status
     except OwnerReactivationRequired as exc:
         return _owner_reactivation_status(str(exc))
@@ -1371,13 +1438,14 @@ def recover_paid_license(config: LicenseRuntimeConfig | None = None) -> LicenseS
     # legitimate paid user from being asked to pay again after local clock
     # state damage.
     try:
-        document = _load_license_document()
+        document = _load_license_document(config)
     except (FileNotFoundError, LicenseError):
         document = None
     if isinstance(document, dict) and _locally_trusted_paid_document(document, config):
         try:
             repaired = _repair_paid_clock_from_server(document, config)
             if repaired.active:
+                _heal_license_copies(document)
                 return repaired
         except LicenseError:
             pass
