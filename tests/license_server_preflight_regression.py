@@ -15,17 +15,50 @@ from tools.license_server_preflight import validate_health
 def main() -> None:
     key = base64.b64encode(bytes(range(32))).decode("ascii")
     validate_health(
-        {"status": "ok", "product_id": "diary_filler", "public_key_b64": key},
+        {
+            "status": "ok",
+            "product_id": "diary_filler",
+            "public_key_b64": key,
+            "durability": {
+                "status": "ok",
+                "backup_configured": True,
+                "primary_integrity": "ok",
+                "backup_integrity": "ok",
+                "restored_from_backup": False,
+            },
+        },
         key,
     )
 
     failures = [
-        {"status": "down", "product_id": "diary_filler", "public_key_b64": key},
-        {"status": "ok", "product_id": "other", "public_key_b64": key},
+        {
+            "status": "down",
+            "product_id": "diary_filler",
+            "public_key_b64": key,
+            "durability": {"status": "ok", "backup_configured": True, "primary_integrity": "ok", "backup_integrity": "ok"},
+        },
+        {
+            "status": "ok",
+            "product_id": "other",
+            "public_key_b64": key,
+            "durability": {"status": "ok", "backup_configured": True, "primary_integrity": "ok", "backup_integrity": "ok"},
+        },
         {
             "status": "ok",
             "product_id": "diary_filler",
             "public_key_b64": base64.b64encode(bytes(reversed(range(32)))).decode("ascii"),
+            "durability": {"status": "ok", "backup_configured": True, "primary_integrity": "ok", "backup_integrity": "ok"},
+        },
+        {
+            "status": "degraded",
+            "product_id": "diary_filler",
+            "public_key_b64": key,
+            "durability": {"status": "degraded", "backup_configured": True, "primary_integrity": "ok", "backup_integrity": "failed"},
+        },
+        {
+            "status": "ok",
+            "product_id": "diary_filler",
+            "public_key_b64": key,
         },
     ]
     for payload in failures:
