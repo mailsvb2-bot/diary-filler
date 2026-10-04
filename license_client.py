@@ -541,6 +541,34 @@ def _evaluate_document(
     )
 
 
+def _locally_trusted_paid_document(
+    document: dict,
+    config: LicenseRuntimeConfig,
+) -> bool:
+    try:
+        payload = _verify_signature(document, config.public_key_b64)
+        metadata = payload.get("metadata")
+        if not isinstance(metadata, dict) or metadata.get("product_id") != config.product_id:
+            return False
+        plan = str(payload.get("plan") or "")
+        owner = (
+            plan == "vip"
+            and payload.get("order_id") is None
+            and metadata.get("role") == "owner_superadmin"
+            and metadata.get("access") == "unlimited"
+        )
+        if owner:
+            return False
+        allowed = payload.get("allowed_machines")
+        if not isinstance(allowed, list) or machine_fingerprint() not in {str(item) for item in allowed}:
+            return False
+        valid_until = _parse_utc(str(payload.get("valid_until") or ""))
+        _validate_paid_calendar_period(str(document.get("schema") or ""), payload, valid_until)
+        return True
+    except LicenseError:
+        return False
+
+
 def _trusted_server_time(config: LicenseRuntimeConfig) -> datetime:
     payload = _json_request(config, "GET", "/health")
     if str(payload.get("status") or "") != "ok":
@@ -548,7 +576,12 @@ def _trusted_server_time(config: LicenseRuntimeConfig) -> datetime:
     if str(payload.get("product_id") or "") != config.product_id:
         raise LicenseError("license server product_id mismatch")
     actual_key = str(payload.get("public_key_b64") or "").strip()
-    if not hmac.compare_digest(actual_key, config.public_key_b64.strip()):
+    try:
+        actual_raw = base64.b64decode(actual_key, validate=True)
+        expected_raw = base64.b64decode(config.public_key_b64.strip(), validate=True)
+    except Exception as exc:
+        raise LicenseError("license server public key is invalid") from exc
+    if len(actual_raw) != 32 or len(expected_raw) != 32 or not hmac.compare_digest(actual_raw, expected_raw):
         raise LicenseError("license server public key mismatch")
     return _parse_utc(str(payload.get("server_time") or ""))
 
@@ -631,12 +664,18 @@ def current_status(config: LicenseRuntimeConfig | None = None) -> LicenseStatus:
         # anti-rollback clock state disappeared/corrupted, do not force a
         # second payment. Rebuild that local state from trusted HTTPS server
         # time after re-verifying signature/product/machine/period.
-        try:
-            repaired = _repair_paid_clock_from_server(document, config)
-            if repaired.active:
-                return repaired
-        except LicenseError:
-            pass
+        if _locally_trusted_paid_document(document, config):
+            try:
+                repaired = _repair_paid_clock_from_server(document, config)
+                if repaired.active:
+                    return repaired
+            except LicenseError:
+                # A cryptographically valid paid entitlement must never fall
+                # through to a fresh invoice just because clock recovery or
+                # the network is temporarily unavailable.
+                return _paid_recovery_status(
+                    "Уже оплаченная лицензия требует повторной проверки. Новый платёж не нужен."
+                )
         if _has_active_order_credentials():
             return _paid_recovery_status(
                 "Требуется проверить уже оплаченную лицензию"
@@ -947,7 +986,29 @@ def refresh_paid_order(config: LicenseRuntimeConfig | None = None) -> LicenseSta
 
 def recover_paid_license(config: LicenseRuntimeConfig | None = None) -> LicenseStatus:
     config = config or runtime_config()
-    order = _load_active_order()
+
+    # First recover directly from the signed local entitlement. This path does
+    # not require a surviving order token and exists specifically to prevent a
+    # legitimate paid user from being asked to pay again after local clock
+    # state damage.
+    try:
+        document = json.loads(license_path().read_text(encoding="utf-8"))
+    except Exception:
+        document = None
+    if isinstance(document, dict) and _locally_trusted_paid_document(document, config):
+        try:
+            repaired = _repair_paid_clock_from_server(document, config)
+            if repaired.active:
+                return repaired
+        except LicenseError:
+            pass
+
+    try:
+        order = _load_active_order()
+    except LicenseError as exc:
+        raise PaidLicenseRecoveryError(
+            "Не удалось проверить уже оплаченную лицензию. Новый платёж не нужен; повторите проверку позже."
+        ) from exc
     order_id = str(order["order_id"])
     token = str(order["order_access_token"])
     try:
