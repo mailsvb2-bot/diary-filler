@@ -708,6 +708,38 @@ def main() -> None:
         expired_local = lc.current_status(config)
         assert not expired_local.active
         assert expired_local.mode == "paid_recovery"
+
+        # Observing a cryptographically valid expired license must advance the
+        # protected rollback state. Rolling Windows time back into the old paid
+        # period must not resurrect the entitlement.
+        guard_now = datetime.now(timezone.utc)
+        rollback_payload = payload(
+            machine,
+            issued_at=guard_now - timedelta(days=60),
+        )
+        rollback_document = signed_document(private, rollback_payload)
+        lc._clock_path().unlink(missing_ok=True)
+        lc._clock_backup_path().unlink(missing_ok=True)
+        expired_guard = lc._evaluate_document(
+            rollback_document,
+            config,
+            now=guard_now,
+            allow_uninitialized_clock=True,
+        )
+        assert not expired_guard.active and expired_guard.mode == "expired"
+        recorded_expiry = lc._read_clock_state()
+        assert recorded_expiry is not None
+        assert abs((recorded_expiry - guard_now).total_seconds()) < 1
+        try:
+            lc._evaluate_document(
+                rollback_document,
+                config,
+                now=guard_now - timedelta(days=45),
+            )
+            raise AssertionError("clock rollback resurrected an expired paid license")
+        except lc.LicenseError as exc:
+            assert "rollback" in str(exc)
+
         assert lc.save_license(paid, config).active
 
         # Trusted server time must let a freshly paid entitlement activate even
@@ -745,6 +777,18 @@ def main() -> None:
             lc._json_request = _future_request
             future_status = lc.refresh_paid_order(config)
             assert future_status.active and future_status.mode == "paid"
+            stored_clock = json.loads(lc._clock_path().read_text(encoding="utf-8"))
+            assert stored_clock["schema"] == 3
+
+            # The successful server-time check must establish a durable trusted
+            # time basis. A paid user with a badly wrong Windows clock must not
+            # require the server again on every launch.
+            lc._json_request = lambda *args, **kwargs: (_ for _ in ()).throw(
+                AssertionError("trusted-time activation required another online check")
+            )
+            offline_after_trusted_time = lc.current_status(config)
+            assert offline_after_trusted_time.active
+            assert offline_after_trusted_time.mode == "paid"
         finally:
             lc._json_request = old_json_request
             lc.machine_fingerprint = old_machine_fingerprint
