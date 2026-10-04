@@ -190,6 +190,54 @@ def main() -> None:
             lui.messagebox.askyesnocancel = old_ui_chooser
             lui.begin_monthly_payment = old_ui_payment
 
+        # The public unlicensed build must keep the self-check license-neutral,
+        # while a future licensed build must surface diagnostic failures instead
+        # of silently dropping the license row.
+        import main as main_module
+
+        old_main_runtime_config = lc.runtime_config
+        old_main_current_status = lc.current_status
+        try:
+            lc.runtime_config = lambda: unlicensed
+            lc.current_status = lambda *_args, **_kwargs: (_ for _ in ()).throw(
+                AssertionError("unlicensed self-check touched entitlement status")
+            )
+            unlicensed_rows = main_module._self_check_rows()
+            assert not any(name == "Лицензия" for name, _ok, _message in unlicensed_rows)
+
+            licensed_diagnostic = lc.LicenseRuntimeConfig(
+                server_url="https://licenses.example.com",
+                public_key_b64=config.public_key_b64,
+                required=True,
+            )
+            lc.runtime_config = lambda: licensed_diagnostic
+            lc.current_status = lambda *_args, **_kwargs: (_ for _ in ()).throw(
+                RuntimeError("simulated entitlement diagnostic failure")
+            )
+            failed_status_rows = main_module._self_check_rows()
+            assert [
+                row for row in failed_status_rows if row[0] == "Лицензия"
+            ] == [(
+                "Лицензия",
+                False,
+                "не удалось проверить техническое состояние лицензии",
+            )]
+
+            lc.runtime_config = lambda: (_ for _ in ()).throw(
+                RuntimeError("simulated license configuration failure")
+            )
+            failed_config_rows = main_module._self_check_rows()
+            assert [
+                row for row in failed_config_rows if row[0] == "Лицензия"
+            ] == [(
+                "Лицензия",
+                False,
+                "не удалось проверить техническое состояние лицензии",
+            )]
+        finally:
+            lc.runtime_config = old_main_runtime_config
+            lc.current_status = old_main_current_status
+
         # Windows identity must not depend on hostname or reinstall-local ID
         # when the stable MachineGuid is available.
         original_windows_machine_guid = lc._windows_machine_guid
