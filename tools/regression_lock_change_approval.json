@@ -16,8 +16,8 @@
     "patient_registry_regression"
   ],
   "approved_blobs": {
-    "license_client.py": "3a7514f20e0b98eae11a76413ddc385f4a6ab31a",
-    "tests/license_client_regression.py": "69d694052206de87db94115ef3205bc8ca8b8370",
+    "license_client.py": "36693c64cf0a948e84e40e399c72a64153ab8567",
+    "tests/license_client_regression.py": "6f977568e7155c978f5bb74be21cd4a167b0d37a",
     "tests/windows_ci_artifact_licensing_contract.py": "004f05814523482b321a58e81e61e2d722f6987a",
     "tools/windows_installer_smoke.ps1": "8057eb8d22d7a6a8faee611474e9d0dc1bed17ed"
   }
