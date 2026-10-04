@@ -350,7 +350,7 @@ def main() -> None:
             lc._write_license_document(paid)
             assert not lc.license_path().exists()
             assert lc._license_backup_path().exists()
-            assert lc._load_license_document() == paid
+            assert lc._load_license_document(config) == paid
 
             clock_now = datetime.now(timezone.utc)
             lc._record_clock(clock_now)
@@ -399,6 +399,34 @@ def main() -> None:
         assert reconciled.active and reconciled.mode == "paid"
         assert json.loads(lc.license_path().read_text(encoding="utf-8")) == renewed_paid
         assert json.loads(lc._license_backup_path().read_text(encoding="utf-8")) == renewed_paid
+
+        # A newer roaming copy issued for another computer must never shadow a
+        # valid local entitlement merely because its issued_at is later.
+        local_paid = signed_document(
+            private,
+            payload(machine, issued_at=datetime.now(timezone.utc)),
+        )
+        foreign_machine = "e" * 64
+        foreign_newer = signed_document(
+            private,
+            payload(
+                foreign_machine,
+                issued_at=datetime.now(timezone.utc) + timedelta(hours=1),
+            ),
+        )
+        lc.license_path().write_text(
+            json.dumps(local_paid, ensure_ascii=False),
+            encoding="utf-8",
+        )
+        lc._license_backup_path().write_text(
+            json.dumps(foreign_newer, ensure_ascii=False),
+            encoding="utf-8",
+        )
+        local_wins = lc.current_status(config)
+        assert local_wins.active and local_wins.mode == "paid"
+        assert json.loads(lc.license_path().read_text(encoding="utf-8")) == local_paid
+        assert json.loads(lc._license_backup_path().read_text(encoding="utf-8")) == local_paid
+
         assert lc.save_license(paid, config).active
 
         # The signed entitlement itself is redundant. Losing the primary copy
