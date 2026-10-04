@@ -75,7 +75,10 @@ def main() -> None:
     assert "row = reconcile_payment(row)" in app_source
     assert "provider.get_payment" in app_source
     assert '"server_time": datetime.now(timezone.utc).isoformat()' in app_source
-    assert 'order_limiter.allow(f"{client_ip(request)}|{machine}")' in app_source
+    assert "order_source_limiter = SlidingLimiter(300, timedelta(hours=1))" in app_source
+    assert "order_machine_limiter = SlidingLimiter(30, timedelta(hours=1))" in app_source
+    assert "order_source_limiter.allow(source)" in app_source
+    assert 'order_machine_limiter.allow(f"{source}|{machine}")' in app_source
     assert "store.pin_issuer_public_key(public_key_b64(config[\"private_key\"]))" in app_source
 
     token = new_order_access_token()
