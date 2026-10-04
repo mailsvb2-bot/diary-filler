@@ -12,6 +12,9 @@ ROOT = Path(__file__).resolve().parents[1]
 WINDOWS_WORKFLOW = ROOT / ".github" / "workflows" / "windows-build.yml"
 RELEASE_WORKFLOW = ROOT / ".github" / "workflows" / "release.yml"
 LICENSE_SERVER_WORKFLOW = ROOT / ".github" / "workflows" / "license-server-ci.yml"
+DESKTOP_E2E = ROOT / "tools" / "windows_desktop_intake_e2e.ps1"
+INSTALLER_SMOKE = ROOT / "tools" / "windows_installer_smoke.ps1"
+CI_LICENSE_PROVISIONER = ROOT / "tools" / "provision_ci_license.py"
 
 WINDOWS_REQUIRED_IN_ORDER = (
     "python tools/main_branch_policy.py",
@@ -110,6 +113,7 @@ REQUIRED_REPOSITORY_FILES = (
     "tools/generation_performance_profile.py",
     "tools/windows_desktop_intake_e2e.ps1",
     "tools/windows_installer_smoke.ps1",
+    "tools/provision_ci_license.py",
     "tools/regression_lock_check.py",
     "tools/ci_gate_lock.py",
     "tools/run_regression_suite.py",
@@ -135,6 +139,9 @@ def main() -> None:
     windows = WINDOWS_WORKFLOW.read_text(encoding="utf-8")
     release = RELEASE_WORKFLOW.read_text(encoding="utf-8")
     license_server = LICENSE_SERVER_WORKFLOW.read_text(encoding="utf-8")
+    desktop_e2e = DESKTOP_E2E.read_text(encoding="utf-8")
+    installer_smoke = INSTALLER_SMOKE.read_text(encoding="utf-8")
+    ci_license_provisioner = CI_LICENSE_PROVISIONER.read_text(encoding="utf-8")
 
     for required in ("pull_request:", "workflow_dispatch:", "branches: [main, master]", "fetch-depth: 0", "pull-requests: read"):
         if required not in windows:
@@ -143,6 +150,16 @@ def main() -> None:
 
     if windows.count("if-no-files-found: error") < 5:
         raise SystemExit("CI GATE LOCK FAILED: Windows workflow artifacts are no longer fail-closed")
+
+    ci_activation_binding = (
+        "MEDICAL_AUTOFILL_CI_ACTIVATION_CODE: "
+        "${{ secrets.MEDICAL_AUTOFILL_CI_ACTIVATION_CODE }}"
+    )
+    if windows.count(ci_activation_binding) != 2:
+        raise SystemExit(
+            "CI GATE LOCK FAILED: licensed Windows packaged/installer E2E must each "
+            "receive the activation secret only in their own step"
+        )
 
     for required in (
         "workflow_dispatch:",
@@ -168,6 +185,43 @@ def main() -> None:
         if required not in release:
             raise SystemExit(f"CI GATE LOCK FAILED: release workflow lost release-safety contract: {required}")
     _require_order(release, RELEASE_REQUIRED_IN_ORDER, "release workflow")
+    if release.count(ci_activation_binding) != 2:
+        raise SystemExit(
+            "CI GATE LOCK FAILED: official release must activate both exact packaged "
+            "and installed licensed E2E candidates through scoped CI secrets"
+        )
+
+    for script_text, label in (
+        (desktop_e2e, "packaged desktop intake E2E"),
+        (installer_smoke, "installer smoke"),
+    ):
+        for required in (
+            "provision_ci_license.py",
+            "MEDICAL_AUTOFILL_LICENSE_REQUIRED",
+            "MEDICAL_AUTOFILL_CI_ACTIVATION_CODE",
+        ):
+            if required not in script_text:
+                raise SystemExit(
+                    f"CI GATE LOCK FAILED: {label} lost signed-license provisioning: {required}"
+                )
+
+    for required in (
+        "GITHUB_ACTIONS",
+        "activate_owner(",
+        "current_status(",
+        "refusing to overwrite pre-existing license state",
+    ):
+        if required not in ci_license_provisioner:
+            raise SystemExit(
+                "CI GATE LOCK FAILED: CI license provisioner lost fail-closed "
+                f"activation contract: {required}"
+            )
+    for forbidden in ("required=False", "LicenseStatus(True"):
+        if forbidden in ci_license_provisioner:
+            raise SystemExit(
+                "CI GATE LOCK FAILED: CI license provisioner contains a licensing bypass: "
+                + forbidden
+            )
 
     for required in (
         "pull_request:",

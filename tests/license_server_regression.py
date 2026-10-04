@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import base64
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import os
 from pathlib import Path
 import tempfile
@@ -18,6 +18,7 @@ if str(ROOT) not in sys.path:
 import license_client as client
 from licensing_server.core import (
     OWNER_CODE_SCRYPT_HEX,
+    SlidingLimiter,
     _scrypt_code,
     issue_license,
     new_order_access_token,
@@ -82,6 +83,9 @@ def main() -> None:
     assert "order_machine_limiter = SlidingLimiter(30, timedelta(hours=1))" in app_source
     assert "order_source_limiter.allow(source)" in app_source
     assert 'order_machine_limiter.allow(f"{source}|{machine}")' in app_source
+    core_source = (ROOT / "licensing_server" / "core.py").read_text(encoding="utf-8")
+    assert "self._sweep_stale_locked(cutoff)" in core_source
+    assert "self._events.pop(stored_key, None)" in core_source
     assert "store.pin_issuer_public_key(public_key_b64(config[\"private_key\"]))" in app_source
 
     token = new_order_access_token()
@@ -96,6 +100,18 @@ def main() -> None:
     assert _scrypt_code("test-owner-code") != OWNER_CODE_SCRYPT_HEX
 
     with tempfile.TemporaryDirectory() as td:
+        # Unique machine keys must expire from the limiter store instead of
+        # accumulating forever under sustained traffic.
+        limiter = SlidingLimiter(30, timedelta(hours=1))
+        base_time = datetime(2026, 1, 1, tzinfo=timezone.utc)
+        limiter._now = lambda: base_time
+        for index in range(500):
+            assert limiter.allow(f"source|machine-{index}")
+        assert len(limiter._events) == 500
+        limiter._now = lambda: base_time + timedelta(hours=1, minutes=1)
+        assert limiter.allow("source|fresh-machine")
+        assert set(limiter._events) == {"source|fresh-machine"}
+
         store = LicenseStore(Path(td) / "licenses.sqlite3")
         store.pin_issuer_public_key(public_b64)
         store.pin_issuer_public_key(public_b64)

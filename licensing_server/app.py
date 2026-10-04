@@ -1,12 +1,10 @@
 """FastAPI service for MedicalDiaryAutofill monthly licenses."""
 from __future__ import annotations
 
-from collections import defaultdict, deque
 from datetime import datetime, timedelta, timezone
 import json
 import os
 from pathlib import Path
-import threading
 import uuid
 
 from fastapi import FastAPI, Header, HTTPException, Request
@@ -15,6 +13,7 @@ from pydantic import BaseModel
 
 from .core import (
     LicensingServerError,
+    SlidingLimiter,
     issue_license,
     new_order_access_token,
     order_token_hash,
@@ -39,26 +38,6 @@ class MachineRequest(BaseModel):
 class OwnerRequest(BaseModel):
     bootstrap_code: str
     machine_hash: str
-
-
-class SlidingLimiter:
-    def __init__(self, limit: int, window: timedelta):
-        self.limit = limit
-        self.window = window
-        self._events: dict[str, deque[datetime]] = defaultdict(deque)
-        self._lock = threading.Lock()
-
-    def allow(self, key: str) -> bool:
-        now = datetime.now(timezone.utc)
-        cutoff = now - self.window
-        with self._lock:
-            events = self._events[key]
-            while events and events[0] < cutoff:
-                events.popleft()
-            if len(events) >= self.limit:
-                return False
-            events.append(now)
-            return True
 
 
 def _config() -> dict:

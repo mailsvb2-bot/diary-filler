@@ -3,12 +3,14 @@ from __future__ import annotations
 
 import base64
 import calendar
+from collections import defaultdict, deque
 from datetime import datetime, timedelta, timezone
 import hashlib
 import hmac
 import json
 import re
 import secrets
+import threading
 import uuid
 
 from cryptography.hazmat.primitives import serialization
@@ -37,6 +39,50 @@ def _add_calendar_month(value: datetime) -> datetime:
 
 class LicensingServerError(RuntimeError):
     pass
+
+
+class SlidingLimiter:
+    """Thread-safe sliding-window limiter with bounded stale-key storage."""
+
+    def __init__(self, limit: int, window: timedelta):
+        self.limit = limit
+        self.window = window
+        self._events: dict[str, deque[datetime]] = defaultdict(deque)
+        self._lock = threading.Lock()
+        self._last_sweep: datetime | None = None
+        self._sweep_interval = min(window, timedelta(minutes=5))
+
+    def _now(self) -> datetime:
+        return datetime.now(timezone.utc)
+
+    def _sweep_stale_locked(self, cutoff: datetime) -> None:
+        stale_keys: list[str] = []
+        for stored_key, events in self._events.items():
+            while events and events[0] < cutoff:
+                events.popleft()
+            if not events:
+                stale_keys.append(stored_key)
+        for stored_key in stale_keys:
+            self._events.pop(stored_key, None)
+
+    def allow(self, key: str) -> bool:
+        now = self._now()
+        cutoff = now - self.window
+        with self._lock:
+            if (
+                self._last_sweep is None
+                or now - self._last_sweep >= self._sweep_interval
+            ):
+                self._sweep_stale_locked(cutoff)
+                self._last_sweep = now
+
+            events = self._events[key]
+            while events and events[0] < cutoff:
+                events.popleft()
+            if len(events) >= self.limit:
+                return False
+            events.append(now)
+            return True
 
 
 def canonical_payload(payload: dict) -> bytes:

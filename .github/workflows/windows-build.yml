@@ -195,6 +195,8 @@ jobs:
 
       - name: Run packaged desktop intake auto-launch E2E
         shell: pwsh
+        env:
+          MEDICAL_AUTOFILL_CI_ACTIVATION_CODE: ${{ secrets.MEDICAL_AUTOFILL_CI_ACTIVATION_CODE }}
         run: ./tools/windows_desktop_intake_e2e.ps1 -AppPath ./dist/MedicalDiaryAutofill.exe
 
       - name: Ensure Inno Setup 6
@@ -214,6 +216,8 @@ jobs:
 
       - name: Smoke installed and uninstalled application
         shell: pwsh
+        env:
+          MEDICAL_AUTOFILL_CI_ACTIVATION_CODE: ${{ secrets.MEDICAL_AUTOFILL_CI_ACTIVATION_CODE }}
         run: ./tools/windows_installer_smoke.ps1 -InstallerPath ./dist/MedicalDiaryAutofill-Setup-1.4.32.exe
 
       - name: Build clean source archive

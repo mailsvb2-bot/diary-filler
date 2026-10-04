@@ -14,6 +14,27 @@ $agentLog = Join-Path $runtimeDir 'desktop-intake-agent.log'
 $startupScript = Join-Path $appData 'Microsoft\Windows\Start Menu\Programs\Startup\MedicalDiaryAutofill Intake.vbs'
 $runKeyPath = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run'
 $runValueName = 'MedicalDiaryAutofill Intake'
+$ciLicenseProvisioner = Join-Path $PSScriptRoot 'provision_ci_license.py'
+
+function Provision-CiLicenseForIsolatedProfile {
+    if ($env:MEDICAL_AUTOFILL_LICENSE_REQUIRED -ne '1') { return }
+    if ([string]::IsNullOrWhiteSpace($env:MEDICAL_AUTOFILL_CI_ACTIVATION_CODE)) {
+        throw 'Licensed packaged E2E requires MEDICAL_AUTOFILL_CI_ACTIVATION_CODE GitHub Actions secret'
+    }
+    $oldAppData = $env:APPDATA
+    $oldLocalAppData = $env:LOCALAPPDATA
+    try {
+        $env:APPDATA = $appData
+        $env:LOCALAPPDATA = $localAppData
+        & python $ciLicenseProvisioner
+        if ($LASTEXITCODE -ne 0) {
+            throw 'Could not provision a real signed license for isolated packaged E2E'
+        }
+    } finally {
+        $env:APPDATA = $oldAppData
+        $env:LOCALAPPDATA = $oldLocalAppData
+    }
+}
 
 function Resolve-DesktopPath {
     try {
@@ -115,6 +136,7 @@ function Start-IsolatedApp {
     $psi.UseShellExecute = $false
     $null = $psi.Environment.Remove('CI')
     $null = $psi.Environment.Remove('MEDICAL_AUTOFILL_DISABLE_DESKTOP_INTAKE')
+    $null = $psi.Environment.Remove('MEDICAL_AUTOFILL_CI_ACTIVATION_CODE')
     $psi.Environment['APPDATA'] = $appData
     $psi.Environment['LOCALAPPDATA'] = $localAppData
     foreach ($arg in $Arguments) { $psi.ArgumentList.Add($arg) }
@@ -140,6 +162,9 @@ try {
     New-Item -ItemType Directory -Path $settingsDir -Force | Out-Null
     New-Item -ItemType Directory -Path $intakeRoot -Force | Out-Null
     Remove-Item -LiteralPath $fixture -Force -ErrorAction SilentlyContinue
+
+    Provision-CiLicenseForIsolatedProfile
+    Remove-Item Env:MEDICAL_AUTOFILL_CI_ACTIVATION_CODE -ErrorAction SilentlyContinue
 
     $settings = @{
         desktop_intake_enabled = $true
