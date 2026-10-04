@@ -17,6 +17,15 @@ def validate_health(payload: dict, expected_public_key_b64: str) -> None:
         raise RuntimeError("license server health status is not ok")
     if payload.get("product_id") != EXPECTED_PRODUCT_ID:
         raise RuntimeError("license server product_id does not match diary_filler")
+    durability = payload.get("durability")
+    if not isinstance(durability, dict):
+        raise RuntimeError("license server durability status is missing")
+    if durability.get("status") != "ok":
+        raise RuntimeError("license server durable backup is degraded")
+    if durability.get("backup_configured") is not True:
+        raise RuntimeError("license server backup is not configured")
+    if durability.get("primary_integrity") != "ok" or durability.get("backup_integrity") != "ok":
+        raise RuntimeError("license server database integrity is not healthy")
     actual = str(payload.get("public_key_b64") or "").strip()
     expected = str(expected_public_key_b64 or "").strip()
     try:
