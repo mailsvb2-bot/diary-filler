@@ -253,6 +253,7 @@ def main() -> None:
         legacy_guid_fingerprint = lc._machine_guid_fingerprint(clone_guid)
         lc._windows_smbios_uuid = lambda: target_hardware
         assert lc._machine_allowed_by_payload([legacy_guid_fingerprint])
+        assert lc.machine_fingerprint() == target_fingerprint
         recovery_candidates = lc._server_machine_hash_candidates()
         assert recovery_candidates[0] == target_fingerprint
         assert legacy_guid_fingerprint in recovery_candidates
