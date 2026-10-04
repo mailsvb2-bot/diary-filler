@@ -170,6 +170,28 @@ def main() -> None:
         paid = signed_document(private, payload(machine))
         assert lc.save_license(paid, config).active
         assert lc.current_status(config).mode == "paid"
+        assert lc._license_backup_path().exists()
+
+        # The signed entitlement itself is redundant. Losing the primary copy
+        # must heal it from the independent roaming backup without blocking an
+        # already-paid doctor.
+        lc.license_path().unlink()
+        healed_license = lc.current_status(config)
+        assert healed_license.active and healed_license.mode == "paid"
+        assert lc.license_path().exists()
+
+        # A primary file can remain valid JSON while its signed payload is
+        # damaged. Ed25519 failure must make the client fall back to the signed
+        # backup rather than treating a paid user as unlicensed.
+        tampered_primary = json.loads(lc.license_path().read_text(encoding="utf-8"))
+        tampered_primary["license"]["payload"]["document_limit_month"] = 999999
+        lc.license_path().write_text(
+            json.dumps(tampered_primary, ensure_ascii=False),
+            encoding="utf-8",
+        )
+        healed_license = lc.current_status(config)
+        assert healed_license.active and healed_license.mode == "paid"
+        assert json.loads(lc.license_path().read_text(encoding="utf-8")) == paid
 
         # Existing v1 licenses were sold as fixed 31-day periods. They must
         # remain usable until their originally signed expiration after upgrade.
@@ -1011,6 +1033,7 @@ def main() -> None:
         installer_text = (ROOT / "installer" / "MedicalDiaryAutofill.iss").read_text(encoding="utf-8")
         assert "DefaultDirName={localappdata}\\MedicalDiaryAutofill" in installer_text
         assert "license.json" not in installer_text
+        assert "license-backup.json" not in installer_text
         assert "license-clock.json" not in installer_text
         assert "license-active-order.json" not in installer_text
         assert "license-machine-fingerprint.json" not in installer_text
