@@ -28,6 +28,9 @@ LEGACY_LICENSE_SCHEMA = "dokkomplekt.license.v1"
 LICENSE_SCHEMA = "dokkomplekt.license.v2"
 SUPPORTED_LICENSE_SCHEMAS = {LEGACY_LICENSE_SCHEMA, LICENSE_SCHEMA}
 CLOCK_ROLLBACK_TOLERANCE = timedelta(minutes=15)
+# Win32 GetSystemFirmwareTable expects the C multi-character provider
+# signature 'RSMB', whose DWORD value under MSVC is 0x52534D42.
+_RSMB_PROVIDER_SIGNATURE = 0x52534D42
 
 
 def _add_calendar_month(value: datetime) -> datetime:
@@ -321,7 +324,7 @@ def _windows_smbios_uuid() -> str:
             ctypes.c_uint32,
         ]
         get_table.restype = ctypes.c_uint32
-        provider = int.from_bytes(b"RSMB", "little", signed=False)
+        provider = _RSMB_PROVIDER_SIGNATURE
         size = int(get_table(provider, 0, None, 0))
         if size < 8 or size > 16 * 1024 * 1024:
             return ""
