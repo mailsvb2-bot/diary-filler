@@ -382,6 +382,23 @@ def main() -> None:
             upgraded_original = lc.current_status(config)
             assert upgraded_original.active and upgraded_original.mode == "paid"
             assert json.loads(lc._clock_path().read_text(encoding="utf-8"))["schema"] == 3
+
+            # The first-release unlimited owner entitlement used the same old
+            # fingerprint formula. It must remain unlimited on the same machine
+            # and must never be routed through monthly-payment clock logic.
+            original_release_owner = signed_document(
+                private,
+                payload(historical_fingerprint, days=3650, owner=True),
+                schema=lc.LEGACY_LICENSE_SCHEMA,
+            )
+            historical_owner_status = lc._evaluate_document(
+                original_release_owner,
+                config,
+            )
+            assert historical_owner_status.active
+            assert historical_owner_status.mode == "owner"
+            assert historical_owner_status.owner_unlimited
+
             # Historical entitlement matching must never pin the old formula as
             # the identity for future activations.
             assert lc.machine_fingerprint() == canonical_fingerprint
