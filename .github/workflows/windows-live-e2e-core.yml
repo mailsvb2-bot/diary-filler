@@ -195,7 +195,7 @@ jobs:
 
       - name: Smoke installed and uninstalled application
         shell: powershell
-        run: ./tools/windows_installer_smoke.ps1 -InstallerPath ./dist/MedicalDiaryAutofill-Setup-1.4.32.exe
+        run: ./tools/windows_installer_smoke.ps1 -InstallerPath ./dist/MedicalDiaryAutofill-Setup-1.4.33.exe
 
       - name: Capture desktop evidence on failure
         if: failure()
