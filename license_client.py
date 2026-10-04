@@ -541,6 +541,44 @@ def _evaluate_document(
     )
 
 
+def _trusted_server_time(config: LicenseRuntimeConfig) -> datetime:
+    payload = _json_request(config, "GET", "/health")
+    if str(payload.get("status") or "") != "ok":
+        raise LicenseError("license server health status is not ok")
+    if str(payload.get("product_id") or "") != config.product_id:
+        raise LicenseError("license server product_id mismatch")
+    actual_key = str(payload.get("public_key_b64") or "").strip()
+    if not hmac.compare_digest(actual_key, config.public_key_b64.strip()):
+        raise LicenseError("license server public key mismatch")
+    return _parse_utc(str(payload.get("server_time") or ""))
+
+
+def _repair_paid_clock_from_server(
+    document: dict,
+    config: LicenseRuntimeConfig,
+) -> LicenseStatus:
+    payload = _verify_signature(document, config.public_key_b64)
+    metadata = payload.get("metadata")
+    if not isinstance(metadata, dict) or metadata.get("product_id") != config.product_id:
+        raise LicenseError("license belongs to another product")
+    plan = str(payload.get("plan") or "")
+    owner = (
+        plan == "vip"
+        and payload.get("order_id") is None
+        and metadata.get("role") == "owner_superadmin"
+        and metadata.get("access") == "unlimited"
+    )
+    if owner:
+        raise LicenseError("owner entitlements do not use paid clock recovery")
+    trusted_now = _trusted_server_time(config)
+    return _evaluate_document(
+        document,
+        config,
+        now=trusted_now,
+        allow_uninitialized_clock=True,
+    )
+
+
 def current_status(config: LicenseRuntimeConfig | None = None) -> LicenseStatus:
     config = config or runtime_config()
     configured = bool(config.server_url and config.public_key_b64)
@@ -589,6 +627,16 @@ def current_status(config: LicenseRuntimeConfig | None = None) -> LicenseStatus:
             return _owner_reactivation_status(
                 "Требуется повторная активация лицензии"
             )
+        # If the signed paid license is otherwise intact but the local
+        # anti-rollback clock state disappeared/corrupted, do not force a
+        # second payment. Rebuild that local state from trusted HTTPS server
+        # time after re-verifying signature/product/machine/period.
+        try:
+            repaired = _repair_paid_clock_from_server(document, config)
+            if repaired.active:
+                return repaired
+        except LicenseError:
+            pass
         if _has_active_order_credentials():
             return _paid_recovery_status(
                 "Требуется проверить уже оплаченную лицензию"
