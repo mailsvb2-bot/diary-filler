@@ -710,6 +710,30 @@ def _repair_paid_clock_from_server(
     )
 
 
+def _load_backup_license_document() -> dict:
+    try:
+        raw = _license_backup_path().read_text(encoding="utf-8")
+        document = json.loads(raw)
+    except Exception as exc:
+        raise LicenseError("Резервная копия лицензии повреждена") from exc
+    if not isinstance(document, dict):
+        raise LicenseError("Резервная копия лицензии повреждена")
+    return document
+
+
+def _heal_primary_license_from_backup(document: dict) -> None:
+    encoded = json.dumps(
+        document,
+        ensure_ascii=False,
+        indent=2,
+        sort_keys=True,
+    ) + "\n"
+    try:
+        _atomic_write_text(license_path(), encoded)
+    except OSError:
+        pass
+
+
 def _write_license_document(document: dict) -> None:
     encoded = json.dumps(
         document,
@@ -809,6 +833,36 @@ def current_status(config: LicenseRuntimeConfig | None = None) -> LicenseStatus:
     except OwnerReactivationRequired as exc:
         return _owner_reactivation_status(str(exc))
     except LicenseError as exc:
+        # A syntactically valid primary file may still be truncated/tampered at
+        # the signed payload level. Try the independent signed backup before
+        # deciding that a legitimately paid entitlement is invalid.
+        try:
+            backup_document = _load_backup_license_document()
+        except LicenseError:
+            backup_document = None
+        if isinstance(backup_document, dict) and backup_document != document:
+            try:
+                backup_status = _evaluate_document(backup_document, config)
+            except OwnerReactivationRequired as backup_exc:
+                _heal_primary_license_from_backup(backup_document)
+                return _owner_reactivation_status(str(backup_exc))
+            except LicenseError:
+                if _locally_trusted_paid_document(backup_document, config):
+                    try:
+                        backup_status = _repair_paid_clock_from_server(
+                            backup_document,
+                            config,
+                        )
+                    except LicenseError:
+                        return _paid_recovery_status(
+                            "Резервная копия подтверждает уже оплаченную лицензию. Новый платёж не нужен."
+                        )
+                    if backup_status.active:
+                        _heal_primary_license_from_backup(backup_document)
+                        return backup_status
+            else:
+                _heal_primary_license_from_backup(backup_document)
+                return backup_status
         if owner_marker:
             return _owner_reactivation_status(
                 "Требуется повторная активация лицензии"
