@@ -1219,15 +1219,23 @@ def main() -> None:
 
         # If Windows/MachineGuid changes, a valid signed owner entitlement is
         # recognized as owner reactivation rather than a missing paid license.
-        old_fingerprint = lc.machine_fingerprint
-        lc.machine_fingerprint = lambda: "f" * 64
+        # Simulate the authoritative Windows identity source itself, not only
+        # machine_fingerprint(), because redundant-copy selection deliberately
+        # re-derives MachineGuid evidence independently.
+        old_guid_provider = lc._windows_machine_guid
+        lc._machine_fingerprint_cache_path().unlink(missing_ok=True)
+        lc._machine_fingerprint_backup_path().unlink(missing_ok=True)
+        lc._windows_machine_guid = lambda: "owner-moved-to-another-machine"
         try:
             reactivation = lc.current_status(config)
             assert not reactivation.active
             assert reactivation.mode == "owner_reactivation"
             assert reactivation.owner_unlimited
         finally:
-            lc.machine_fingerprint = old_fingerprint
+            lc._windows_machine_guid = old_guid_provider
+            lc._machine_fingerprint_cache_path().unlink(missing_ok=True)
+            lc._machine_fingerprint_backup_path().unlink(missing_ok=True)
+            lc._cache_machine_fingerprint(machine)
 
         # An already-active owner must bypass every licensing dialog and
         # every payment function on ordinary startup/generation checks.
