@@ -575,10 +575,70 @@ def main() -> None:
             json.dumps(legacy_identity_paid, ensure_ascii=False),
             encoding="utf-8",
         )
-        legacy_identity_status = lc.current_status(config)
-        assert not legacy_identity_status.active
-        assert legacy_identity_status.mode == "paid_recovery"
-        assert "Новый платёж не нужен" in legacy_identity_status.message
+        old_json_request = lc._json_request
+        try:
+            lc._json_request = lambda _config, method, path, **kwargs: (
+                {
+                    "status": "ok",
+                    "product_id": lc.PRODUCT_ID,
+                    "public_key_b64": config.public_key_b64,
+                    "server_time": datetime.now(timezone.utc).isoformat(),
+                }
+                if method == "GET" and path == "/health"
+                else (_ for _ in ()).throw(AssertionError((method, path)))
+            )
+            legacy_identity_status = lc.current_status(config)
+            assert not legacy_identity_status.active
+            assert legacy_identity_status.mode == "paid_recovery"
+            assert "Новый платёж не нужен" in legacy_identity_status.message
+
+            # The same mismatch must not suppress a legitimate renewal forever
+            # after the old signed period has actually expired. Only trusted
+            # server time may make this transition into ordinary expired UX.
+            expired_legacy_identity = signed_document(
+                private,
+                payload(
+                    foreign_machine,
+                    days=31,
+                    issued_at=datetime.now(timezone.utc) - timedelta(days=60),
+                ),
+                schema=lc.LEGACY_LICENSE_SCHEMA,
+            )
+            lc.license_path().write_text(
+                json.dumps(expired_legacy_identity, ensure_ascii=False),
+                encoding="utf-8",
+            )
+            lc._license_backup_path().write_text(
+                json.dumps(expired_legacy_identity, ensure_ascii=False),
+                encoding="utf-8",
+            )
+            confirmed_expired = lc.current_status(config)
+            assert not confirmed_expired.active
+            assert confirmed_expired.mode == "expired"
+        finally:
+            lc._json_request = old_json_request
+
+        # If trusted server time is unavailable, even an apparently old signed
+        # entitlement must stay in paid recovery rather than risking a duplicate
+        # charge based only on the workstation clock.
+        lc.license_path().write_text(
+            json.dumps(legacy_identity_paid, ensure_ascii=False),
+            encoding="utf-8",
+        )
+        lc._license_backup_path().write_text(
+            json.dumps(legacy_identity_paid, ensure_ascii=False),
+            encoding="utf-8",
+        )
+        old_json_request = lc._json_request
+        try:
+            lc._json_request = lambda *args, **kwargs: (_ for _ in ()).throw(
+                lc.LicenseError("offline")
+            )
+            offline_identity_status = lc.current_status(config)
+            assert not offline_identity_status.active
+            assert offline_identity_status.mode == "paid_recovery"
+        finally:
+            lc._json_request = old_json_request
 
         assert lc.save_license(paid, config).active
 
