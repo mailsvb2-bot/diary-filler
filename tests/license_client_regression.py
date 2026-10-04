@@ -318,7 +318,15 @@ def main() -> None:
         saved_windows_runtime = lc._is_windows_runtime
         saved_guid_provider = lc._windows_machine_guid
         saved_hostname_provider = lc.socket.gethostname
+        saved_platform_system = lc.platform.system
         saved_json_request = lc._json_request
+        install_id_path = lc._install_id_path()
+        install_id_existed = install_id_path.exists()
+        install_id_before = (
+            install_id_path.read_text(encoding="utf-8")
+            if install_id_existed
+            else ""
+        )
         historical_install_id = "1" * 32
         historical_guid = "original-production-guid"
         historical_hostname = "original-production-host"
@@ -326,8 +334,9 @@ def main() -> None:
             lc._is_windows_runtime = lambda: True
             lc._windows_machine_guid = lambda: historical_guid
             lc.socket.gethostname = lambda: historical_hostname
-            lc._install_id_path().parent.mkdir(parents=True, exist_ok=True)
-            lc._install_id_path().write_text(historical_install_id + "\n", encoding="utf-8")
+            lc.platform.system = lambda: "Windows"
+            install_id_path.parent.mkdir(parents=True, exist_ok=True)
+            install_id_path.write_text(historical_install_id + "\n", encoding="utf-8")
             lc._machine_fingerprint_cache_path().unlink(missing_ok=True)
             lc._machine_fingerprint_backup_path().unlink(missing_ok=True)
 
@@ -412,7 +421,12 @@ def main() -> None:
             lc._is_windows_runtime = saved_windows_runtime
             lc._windows_machine_guid = saved_guid_provider
             lc.socket.gethostname = saved_hostname_provider
+            lc.platform.system = saved_platform_system
             lc._json_request = saved_json_request
+            if install_id_existed:
+                install_id_path.write_text(install_id_before, encoding="utf-8")
+            else:
+                install_id_path.unlink(missing_ok=True)
             for path in (
                 lc.license_path(),
                 lc._license_backup_path(),
