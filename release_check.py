@@ -217,7 +217,7 @@ def _assert_build_contract() -> None:
         "python tools/generation_performance_profile.py --runs 3",
         "python verify_built_exe.py",
         "./tools/windows_desktop_intake_e2e.ps1 -AppPath ./dist/MedicalDiaryAutofill.exe",
-        "./tools/windows_installer_smoke.ps1 -InstallerPath ./dist/MedicalDiaryAutofill-Setup-1.4.31.exe",
+        "./tools/windows_installer_smoke.ps1 -InstallerPath ./dist/MedicalDiaryAutofill-Setup-1.4.32.exe",
         "Create guarded release tag",
         "MEDICAL_AUTOFILL_LICENSE_REQUIRED",
         "MEDICAL_AUTOFILL_LICENSE_SERVER_URL",
