@@ -5,6 +5,7 @@ import argparse
 import base64
 import json
 import os
+from datetime import datetime, timezone
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -28,6 +29,16 @@ def validate_health(payload: dict, expected_public_key_b64: str) -> None:
         raise RuntimeError("license server/client Ed25519 public key must be 32 bytes")
     if actual_raw != expected_raw:
         raise RuntimeError("license server public key does not match the key embedded in the client")
+    raw_time = str(payload.get("server_time") or "").strip()
+    if raw_time.endswith("Z"):
+        raw_time = raw_time[:-1] + "+00:00"
+    try:
+        server_time = datetime.fromisoformat(raw_time)
+    except (TypeError, ValueError) as exc:
+        raise RuntimeError("license server health is missing a valid server_time") from exc
+    if server_time.tzinfo is None:
+        raise RuntimeError("license server health server_time has no timezone")
+    server_time.astimezone(timezone.utc)
 
 
 def fetch_health(server_url: str) -> dict:
