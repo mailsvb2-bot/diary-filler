@@ -30,6 +30,7 @@
     "version_info.txt": "fed74d3b63432781ee6a47783c35c557cf1f5620",
     "window_mixin.py": "3f073ef0199e4ce9bdf03e492f4ebf7f83615778",
     "license_client.py": "3a1b08f344c81872e8381a41a86a5f715ad23f3d",
-    "tools/render_license_build_config.py": "262ed3d29c1e63f89aebc391b34d2e1d487c6597"
+    "tools/render_license_build_config.py": "262ed3d29c1e63f89aebc391b34d2e1d487c6597",
+    "tools/ci_gate_lock.py": "fd82982b19fb438193ec7f8d942640707ba24c57"
   }
 }
