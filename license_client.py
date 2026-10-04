@@ -1227,6 +1227,26 @@ def current_status(config: LicenseRuntimeConfig | None = None) -> LicenseStatus:
                     "Уже оплаченная лицензия требует повторной проверки. Новый платёж не нужен."
                 )
         if _signed_paid_document_for_product(document, config):
+            # A historical machine-binding mismatch must not force a second
+            # payment while the signed period may still be active. Conversely,
+            # an actually expired old entitlement must not trap the user in
+            # recovery forever. Only trusted HTTPS server time may distinguish
+            # those cases; a network failure stays fail-safe in paid recovery.
+            try:
+                trusted_now = _trusted_server_time(config)
+                payload = _verify_signature(document, config.public_key_b64)
+                valid_until = _parse_utc(str(payload.get("valid_until") or ""))
+                if trusted_now > valid_until:
+                    return LicenseStatus(
+                        False,
+                        "expired",
+                        "Срок лицензии истёк",
+                        str(payload.get("plan") or ""),
+                        valid_until,
+                        False,
+                    )
+            except LicenseError:
+                pass
             return _paid_recovery_status(
                 "Подписанная оплаченная лицензия требует проверки привязки к этому компьютеру. Новый платёж не нужен."
             )
