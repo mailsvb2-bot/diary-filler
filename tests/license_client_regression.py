@@ -736,10 +736,9 @@ def main() -> None:
             issued_at=datetime.now(timezone.utc) - timedelta(days=60),
         )
         expired_document = signed_document(private, expired_payload)
-        lc.license_path().write_text(
-            json.dumps(expired_document, ensure_ascii=False),
-            encoding="utf-8",
-        )
+        expired_text = json.dumps(expired_document, ensure_ascii=False)
+        lc.license_path().write_text(expired_text, encoding="utf-8")
+        lc._license_backup_path().write_text(expired_text, encoding="utf-8")
         lc._clock_path().unlink(missing_ok=True)
         lc._record_clock(datetime.now(timezone.utc))
         expired_local = lc.current_status(config)
