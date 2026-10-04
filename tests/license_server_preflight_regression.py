@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import base64
+from datetime import datetime, timezone
 from pathlib import Path
 import sys
 
@@ -15,7 +16,12 @@ from tools.license_server_preflight import validate_health
 def main() -> None:
     key = base64.b64encode(bytes(range(32))).decode("ascii")
     validate_health(
-        {"status": "ok", "product_id": "diary_filler", "public_key_b64": key},
+        {
+            "status": "ok",
+            "product_id": "diary_filler",
+            "public_key_b64": key,
+            "server_time": datetime.now(timezone.utc).isoformat(),
+        },
         key,
     )
 
