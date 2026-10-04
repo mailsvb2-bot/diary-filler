@@ -73,6 +73,11 @@ class LicenseStore:
             finally:
                 destination.close()
                 source.close()
+            for suffix in ("-wal", "-shm"):
+                try:
+                    Path(str(destination_path) + suffix).unlink(missing_ok=True)
+                except OSError:
+                    pass
             os.replace(temp, destination_path)
         finally:
             try:
