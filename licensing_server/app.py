@@ -152,6 +152,11 @@ def create_app() -> FastAPI:
     def create_order(req: OrderRequest, request: Request) -> dict:
         if req.plan != "doctor_start":
             raise HTTPException(400, "unsupported plan")
+        if store.durability_status()["status"] != "ok":
+            # Refuse to create a new monetary obligation while backup storage
+            # is known degraded. Existing paid orders remain recoverable from
+            # the healthy primary database.
+            raise HTTPException(503, "license storage durability is degraded")
         try:
             machine = validate_machine_hash(req.machine_hash)
         except LicensingServerError as exc:
