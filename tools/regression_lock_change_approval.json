@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "853962bacee8843bfe094e6b646d9611d95a7245",
-  "reason": "Hardware clone hardening with backward-compatible Windows license recovery",
+  "baseline_ref": "a6403cd8fa2ed89541fe5551642b6d22c2ab9607",
+  "reason": "Extend hardware-clone regression coverage on the validated clone-guard baseline",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -17,7 +17,6 @@
     "license_client_regression"
   ],
   "approved_blobs": {
-    "license_client.py": "7ff59c09bdc2834213216ca7505fddb7f2704eae",
     "tests/license_client_regression.py": "2686217831750b14238054698a50b109b5436767"
   }
 }
