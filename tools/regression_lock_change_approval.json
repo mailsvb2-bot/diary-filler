@@ -17,7 +17,7 @@
   ],
   "approved_blobs": {
     "license_client.py": "abc18c5503ec2c8cc60ef61e18b27ba62a64673c",
-    "tests/license_client_regression.py": "54a79f6630b65adfe928f3b8144f8a1cb84dd661",
+    "tests/license_client_regression.py": "531b0158f6691d47de058f765a06004d5f61a2f0",
     "tests/windows_ci_artifact_licensing_contract.py": "004f05814523482b321a58e81e61e2d722f6987a",
     "tools/windows_installer_smoke.ps1": "8057eb8d22d7a6a8faee611474e9d0dc1bed17ed"
   }
