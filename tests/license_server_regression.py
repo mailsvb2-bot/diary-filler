@@ -80,6 +80,9 @@ def main() -> None:
     assert "order_source_limiter.allow(source)" in app_source
     assert 'order_machine_limiter.allow(f"{source}|{machine}")' in app_source
     assert "store.pin_issuer_public_key(public_key_b64(config[\"private_key\"]))" in app_source
+    assert 'backup_path=config["backup_db_path"]' in app_source
+    assert 'store.durability_status()["status"] != "ok"' in app_source
+    assert '"durability": durability' in app_source
 
     token = new_order_access_token()
     digest = order_token_hash(token)
@@ -93,7 +96,13 @@ def main() -> None:
     assert _scrypt_code("test-owner-code") != OWNER_CODE_SCRYPT_HEX
 
     with tempfile.TemporaryDirectory() as td:
-        store = LicenseStore(Path(td) / "licenses.sqlite3")
+        root = Path(td)
+        primary_db = root / "primary" / "licenses.sqlite3"
+        backup_db = root / "backup" / "licenses.sqlite3"
+        store = LicenseStore(primary_db, backup_path=backup_db)
+        assert store.durability_status()["status"] == "ok"
+        assert backup_db.is_file()
+
         store.pin_issuer_public_key(public_b64)
         store.pin_issuer_public_key(public_b64)
         different_private = Ed25519PrivateKey.generate()
@@ -140,6 +149,77 @@ def main() -> None:
         store.save_license("order-1", paid)
         assert store.get_order("order-1")["status"] == "license_issued"
         assert store.load_license("order-1") == paid
+        assert store.durability_status()["status"] == "ok"
+
+        # The secondary SQLite copy must contain the exact paid entitlement.
+        backup_reader = LicenseStore(backup_db)
+        assert backup_reader.get_order("order-1")["status"] == "license_issued"
+        assert backup_reader.load_license("order-1") == paid
+
+        # Losing the primary database restores it from the consistent backup.
+        primary_db.unlink()
+        for suffix in ("-wal", "-shm"):
+            Path(str(primary_db) + suffix).unlink(missing_ok=True)
+        restored = LicenseStore(primary_db, backup_path=backup_db)
+        assert restored.durability_status()["status"] == "ok"
+        assert restored.durability_status()["restored_from_backup"] is True
+        assert restored.load_license("order-1") == paid
+
+        # A corrupt primary is also restored from a valid backup.
+        primary_db.write_bytes(b"not-a-sqlite-database")
+        restored_corrupt = LicenseStore(primary_db, backup_path=backup_db)
+        assert restored_corrupt.durability_status()["restored_from_backup"] is True
+        assert restored_corrupt.load_license("order-1") == paid
+
+        # A corrupt backup is rebuilt from a healthy authoritative primary.
+        backup_db.write_bytes(b"broken-backup")
+        rebuilt = LicenseStore(primary_db, backup_path=backup_db)
+        assert rebuilt.durability_status()["status"] == "ok"
+        backup_reader = LicenseStore(backup_db)
+        assert backup_reader.load_license("order-1") == paid
+
+        # Runtime backup-volume failure must not roll back a successful paid
+        # state change or surface as a second-charge trigger.
+        degraded_primary = root / "degraded-primary" / "licenses.sqlite3"
+        degraded_backup = root / "degraded-backup" / "licenses.sqlite3"
+        degraded = LicenseStore(degraded_primary, backup_path=degraded_backup)
+        degraded.create_order(
+            order_id="degraded-order",
+            token_hash=digest,
+            machine_hash=machine,
+            amount_rub=100,
+            provider_payment_id="degraded-payment",
+            payment_url="https://pay.example/degraded",
+        )
+        original_snapshot = degraded._snapshot_backup_required
+        degraded._snapshot_backup_required = lambda: (_ for _ in ()).throw(
+            OSError("simulated backup outage")
+        )
+        degraded.mark_paid("degraded-order")
+        assert degraded.get_order("degraded-order")["status"] == "paid"
+        assert degraded.durability_status()["status"] == "degraded"
+        degraded._snapshot_backup_required = original_snapshot
+        degraded.mark_paid("degraded-order")
+        assert degraded.durability_status()["status"] == "ok"
+
+        # If both copies are corrupt, fail closed rather than silently creating
+        # an empty database that forgets paid users.
+        primary_db.write_bytes(b"broken-primary")
+        backup_db.write_bytes(b"broken-backup")
+        try:
+            LicenseStore(primary_db, backup_path=backup_db)
+            raise AssertionError("dual database corruption was accepted")
+        except RuntimeError:
+            pass
+
+        try:
+            LicenseStore(
+                root / "same.sqlite3",
+                backup_path=root / "same.sqlite3",
+            )
+            raise AssertionError("identical primary/backup path was accepted")
+        except ValueError:
+            pass
 
         payload = paid["license"]["payload"]
         assert payload["metadata"]["product_id"] == "diary_filler"
