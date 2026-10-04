@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "87c69f42a2c23e70ab9af8b6eb9460d1643bee4f",
+  "reason": "Deep licensing compatibility audit: reconcile divergent redundant clock/order state and suppress repeat-payment UX for genuine signed historical paid entitlements without weakening machine binding.",
+  "required_evidence": [
+    "document_mechanics_guard",
+    "full_patient_replay",
+    "golden_docx",
+    "staff_profile_regression",
+    "gender_generation_matrix",
+    "desktop_intake_contract",
+    "intake_lifecycle_regression",
+    "packaged_desktop_intake_e2e",
+    "installer_uninstall_smoke",
+    "ci_gate_lock",
+    "patient_registry_regression"
+  ],
+  "approved_blobs": {
+    "license_client.py": "3a7514f20e0b98eae11a76413ddc385f4a6ab31a",
+    "tests/license_client_regression.py": "69d694052206de87db94115ef3205bc8ca8b8370"
+  }
+}
