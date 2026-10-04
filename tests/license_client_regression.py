@@ -129,8 +129,15 @@ def main() -> None:
         assert stable_a == stable_b
         lc._windows_machine_guid = lambda: ""
         lc._install_id = lambda: "install-c"
-        stable_c = lc.machine_fingerprint()
-        assert stable_c == stable_a, "transient MachineGuid read failure changed paid-license identity"
+        old_windows_runtime = lc._is_windows_runtime
+        lc._is_windows_runtime = lambda: True
+        try:
+            lc.machine_fingerprint()
+            raise AssertionError("Windows trusted a cached fingerprint without current MachineGuid evidence")
+        except lc.MachineIdentityUnavailableError:
+            pass
+        finally:
+            lc._is_windows_runtime = old_windows_runtime
         # On Windows, a missing MachineGuid must fail closed instead of minting
         # a user-controlled fallback identity. Once MachineGuid becomes readable,
         # the canonical Windows fingerprint is derived and cached.
