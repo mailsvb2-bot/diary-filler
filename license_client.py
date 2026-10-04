@@ -242,13 +242,18 @@ def _derived_machine_fingerprint_candidates() -> tuple[set[str], bool]:
                 f"windows-machine-guid-v1|{machine_guid}".encode("utf-8")
             ).hexdigest()
         )
-    fallback_identity = (
-        "portable-install-v1|"
-        + platform.system().strip().lower()
-        + "|"
-        + _install_id().strip().lower()
-    )
-    candidates.add(hashlib.sha256(fallback_identity.encode("utf-8")).hexdigest())
+    try:
+        install_id = _install_id().strip().lower()
+    except OSError:
+        install_id = ""
+    if install_id:
+        fallback_identity = (
+            "portable-install-v1|"
+            + platform.system().strip().lower()
+            + "|"
+            + install_id
+        )
+        candidates.add(hashlib.sha256(fallback_identity.encode("utf-8")).hexdigest())
     return candidates, bool(machine_guid)
 
 
