@@ -346,6 +346,12 @@ def main() -> None:
             assert historical_fingerprint != canonical_fingerprint
             assert historical_fingerprint in lc._historical_windows_license_fingerprints()
 
+            # A transient hostname read failure must only disable legacy
+            # matching; it may never crash normal licensing/status checks.
+            lc.socket.gethostname = lambda: (_ for _ in ()).throw(OSError("hostname unavailable"))
+            assert lc._historical_windows_license_fingerprints() == set()
+            lc.socket.gethostname = lambda: historical_hostname
+
             original_release_paid = signed_document(
                 private,
                 payload(historical_fingerprint, days=31),
