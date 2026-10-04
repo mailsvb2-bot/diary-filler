@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "base_sha": "b28ae7af842c00e6a9b3fd2a44f61d57090b1e8a",
+  "base_sha": "8604dc6715e57cf259e7ce85951b7249c7ab89f0",
   "reason": "Bump APP_VERSION to v1.4.32 for paid-license false-block resilience only; medical parsing, rendering, templates and document-generation semantics are unchanged.",
   "approved_blobs": {
     "app_config.py": "b5874e23dbfb988b9abe2c224faf28e16fb418b3"
