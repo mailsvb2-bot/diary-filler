@@ -193,6 +193,25 @@ def _atomic_write_text(path: Path, text: str) -> None:
     os.replace(tmp, path)
 
 
+def _write_redundant_text(
+    primary: Path,
+    backup: Path,
+    text: str,
+    *,
+    error_message: str,
+) -> None:
+    errors: list[Exception] = []
+    written = False
+    for path in (primary, backup):
+        try:
+            _atomic_write_text(path, text)
+            written = True
+        except OSError as exc:
+            errors.append(exc)
+    if not written:
+        raise LicenseError(error_message) from (errors[-1] if errors else None)
+
+
 def _install_id() -> str:
     path = _install_id_path()
     try:
@@ -634,13 +653,12 @@ def _record_clock(now: datetime) -> None:
         {"schema": 2, "protected": protected},
         ensure_ascii=False,
     ) + "\n"
-    _atomic_write_text(_clock_path(), encoded)
-    try:
-        _atomic_write_text(_clock_backup_path(), encoded)
-    except OSError:
-        # The LocalAppData copy remains authoritative; the roaming copy is
-        # resilience against accidental cleanup/corruption.
-        pass
+    _write_redundant_text(
+        _clock_path(),
+        _clock_backup_path(),
+        encoded,
+        error_message="Не удалось сохранить состояние времени лицензии",
+    )
 
 
 def _validate_clock(now: datetime, *, require_initialized: bool) -> None:
@@ -855,13 +873,12 @@ def _write_license_document(document: dict) -> None:
         indent=2,
         sort_keys=True,
     ) + "\n"
-    _atomic_write_text(license_path(), encoded)
-    try:
-        _atomic_write_text(_license_backup_path(), encoded)
-    except OSError:
-        # Primary LocalAppData copy remains authoritative. The signed roaming
-        # copy is only resilience against accidental local cleanup/corruption.
-        pass
+    _write_redundant_text(
+        license_path(),
+        _license_backup_path(),
+        encoded,
+        error_message="Не удалось сохранить подписанную лицензию",
+    )
 
 
 def _load_license_document() -> dict:
@@ -1101,17 +1118,18 @@ def _pending_order_paths() -> tuple[Path, Path]:
 
 
 def _save_pending_order(payload: dict) -> None:
-    _store_order_credentials(_pending_order_path(), payload, include_payment=True)
-    try:
-        _store_order_credentials(
-            _pending_order_backup_path(),
-            payload,
-            include_payment=True,
-        )
-    except (LicenseError, OSError):
-        # Primary LocalAppData state is enough to continue; the roaming copy is
-        # a second chance if local state is later lost/corrupted before license claim.
-        pass
+    errors: list[Exception] = []
+    written = False
+    for path in _pending_order_paths():
+        try:
+            _store_order_credentials(path, payload, include_payment=True)
+            written = True
+        except (LicenseError, OSError) as exc:
+            errors.append(exc)
+    if not written:
+        raise LicenseError(
+            "Не удалось безопасно сохранить созданный счёт. Оплата не открыта."
+        ) from (errors[-1] if errors else None)
 
 
 def _load_pending_order() -> dict:
@@ -1156,17 +1174,18 @@ def _clear_pending_order_best_effort() -> None:
 
 
 def _save_active_order(order: dict) -> None:
-    _store_order_credentials(_active_order_path(), order, include_payment=False)
-    try:
-        _store_order_credentials(
-            _active_order_backup_path(),
-            order,
-            include_payment=False,
-        )
-    except (LicenseError, OSError):
-        # The LocalAppData copy is authoritative for the current installation;
-        # the roaming copy is resilience against ordinary app reinstall/cleanup.
-        pass
+    errors: list[Exception] = []
+    written = False
+    for path in (_active_order_path(), _active_order_backup_path()):
+        try:
+            _store_order_credentials(path, order, include_payment=False)
+            written = True
+        except (LicenseError, OSError) as exc:
+            errors.append(exc)
+    if not written:
+        raise LicenseError(
+            "Не удалось сохранить данные восстановления оплаченной лицензии"
+        ) from (errors[-1] if errors else None)
 
 
 def _load_active_order() -> dict:
