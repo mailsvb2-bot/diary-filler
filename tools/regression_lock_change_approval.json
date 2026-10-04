@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "87c69f42a2c23e70ab9af8b6eb9460d1643bee4f",
-  "reason": "Deep licensing compatibility audit: reconcile divergent redundant clock/order state and suppress repeat-payment UX for genuine signed historical paid entitlements without weakening machine binding.",
+  "reason": "Deep licensing compatibility audit: reconcile divergent redundant clock/order state, suppress repeat-payment UX for genuine signed historical paid entitlements without weakening machine binding, and prove signed license state survives install/uninstall.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -17,6 +17,8 @@
   ],
   "approved_blobs": {
     "license_client.py": "3a7514f20e0b98eae11a76413ddc385f4a6ab31a",
-    "tests/license_client_regression.py": "69d694052206de87db94115ef3205bc8ca8b8370"
+    "tests/license_client_regression.py": "69d694052206de87db94115ef3205bc8ca8b8370",
+    "tests/windows_ci_artifact_licensing_contract.py": "004f05814523482b321a58e81e61e2d722f6987a",
+    "tools/windows_installer_smoke.ps1": "8057eb8d22d7a6a8faee611474e9d0dc1bed17ed"
   }
 }
