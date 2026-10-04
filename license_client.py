@@ -262,7 +262,13 @@ def _cache_machine_fingerprint(value: str) -> None:
         sort_keys=True,
         separators=(",", ":"),
     ).encode("utf-8")
-    protected = _protect_local_blob(clear, "MedicalDiaryAutofill machine fingerprint")
+    try:
+        protected = _protect_local_blob(clear, "MedicalDiaryAutofill machine fingerprint")
+    except LicenseError:
+        # Fingerprint persistence is resilience, not an activation prerequisite.
+        # A transient DPAPI failure must not turn the current computer into an
+        # unusable one while a valid MachineGuid/fallback identity is available.
+        return
     encoded = json.dumps(
         {"schema": 2, "protected": protected},
         sort_keys=True,
@@ -1061,9 +1067,16 @@ def refresh_paid_order(config: LicenseRuntimeConfig | None = None) -> LicenseSta
         body={"machine_hash": machine},
         bearer=token,
     )
-    # Persist the recovery credential before local license state. If a disk or
-    # clock-state error happens after payment, the user can retry without paying again.
-    _save_active_order(order)
+    # Persist a long-lived recovery credential if Windows allows it, but never
+    # make an already-captured payment depend on a transient DPAPI/disk failure.
+    # The pending order token remains untouched until active recovery storage
+    # succeeds, so there is always at least one retry path.
+    active_recovery_saved = False
+    try:
+        _save_active_order(order)
+        active_recovery_saved = True
+    except (LicenseError, OSError):
+        pass
     try:
         result = save_license(document, config, trusted_now=trusted_now)
     except LicenseExpiredError:
@@ -1073,7 +1086,8 @@ def refresh_paid_order(config: LicenseRuntimeConfig | None = None) -> LicenseSta
         discard_pending_order()
         _discard_active_order_if_matches(order_id)
         raise
-    _clear_pending_order_best_effort()
+    if active_recovery_saved:
+        _clear_pending_order_best_effort()
     return result
 
 
