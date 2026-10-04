@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "b7b517b3bfe1412d47c6e585b0da177f9cc92ade",
-  "baseline_note": "v1.4.29 owner/superadmin hardening validated on merge commit b7b517b3bfe1412d47c6e585b0da177f9cc92ade: License Server CI #32 and Windows EXE Build #1515 passed. Active signed owner access bypasses all licensing/payment UI, owner access survives missing/corrupt anti-clock state, MachineGuid mismatch routes only to owner reactivation, DPAPI owner recovery prevents fallback to monthly payment, server/client owner contract is covered, and the full medical/golden DOCX/packaged EXE/installer regression contour remained green.",
+  "baseline_ref": "b28ae7af842c00e6a9b3fd2a44f61d57090b1e8a",
+  "baseline_note": "v1.4.31 paid-license recovery hardening validated on merge commit b28ae7af842c00e6a9b3fd2a44f61d57090b1e8a: License Server CI #73 and Windows EXE Build #1556 passed. Already-paid access is recovered before any new charge, pending and active order credentials have redundant DPAPI-protected recovery copies, malformed/missing server timestamps do not abort activation, stale expired invoices are cleared safely, payment-order rate limiting is layered by source and machine, issuer trust is pinned, and the full medical/golden DOCX/packaged EXE/installer contour remained green.",
   "required_approval_evidence": [
     "ci_gate_lock",
     "patient_registry_regression"
