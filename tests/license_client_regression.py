@@ -576,6 +576,34 @@ def main() -> None:
         legacy_clock_record = lc._decode_clock_record(legacy_clock_raw)
         assert legacy_clock_record == (repaired_clock_time, timedelta(0), 0)
 
+        # The first production client stored pending orders with created_at
+        # and no saved_at/backup. Such an unfinished real invoice must survive
+        # upgrade and be migrated instead of silently opening a second payment.
+        legacy_pending_token = "L" * 48
+        legacy_pending_raw = {
+            "schema": 1,
+            "order_id": "00000000-0000-0000-0000-000000000080",
+            "order_access_token": lc._protect_order_token(legacy_pending_token),
+            "payment_url": "https://pay.example.com/original-client",
+            "amount_rub": 100,
+            "created_at": (datetime.now(timezone.utc) - timedelta(days=1)).isoformat(),
+        }
+        lc._pending_order_path().write_text(
+            json.dumps(legacy_pending_raw, ensure_ascii=False),
+            encoding="utf-8",
+        )
+        lc._pending_order_backup_path().unlink(missing_ok=True)
+        migrated_legacy_pending = lc._load_pending_order()
+        assert migrated_legacy_pending["order_id"] == legacy_pending_raw["order_id"]
+        assert migrated_legacy_pending["order_access_token"] == legacy_pending_token
+        assert lc._pending_order_backup_path().exists()
+        healed_legacy_pending = lc._load_order_credentials(
+            lc._pending_order_backup_path(),
+            "missing",
+        )
+        assert healed_legacy_pending["order_id"] == legacy_pending_raw["order_id"]
+        assert healed_legacy_pending.get("saved_at")
+
         # Pending-payment copies can also diverge if one storage tier rejects a
         # renewal write. Always continue the newest saved invoice; otherwise a
         # stale readable primary could unlock an accidental second payment.
