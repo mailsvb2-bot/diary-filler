@@ -342,6 +342,48 @@ def main() -> None:
             lc._json_request = old_json_request
             lc.machine_fingerprint = old_machine_fingerprint
 
+        # Rolling deployment / malformed server timestamp must never crash
+        # activation after money has already been captured. Missing or invalid
+        # server_time falls back safely instead of escaping as ValueError.
+        for server_time_value in (None, "", "not-a-timestamp"):
+            fallback_order = {
+                "order_id": "00000000-0000-0000-0000-000000000020",
+                "order_access_token": "U" * 48,
+                "payment_url": "https://pay.example.com/fallback",
+                "amount_rub": 100,
+            }
+            lc._save_pending_order(fallback_order)
+            old_json_request = lc._json_request
+            old_machine_fingerprint = lc.machine_fingerprint
+            try:
+                lc.machine_fingerprint = lambda: machine
+
+                def _fallback_request(_config, method, path, *, body=None, bearer=""):
+                    if method == "GET" and path.endswith("/status"):
+                        response = {"status": "paid", "amount_rub": 100}
+                        if server_time_value is not None:
+                            response["server_time"] = server_time_value
+                        return response
+                    if method == "POST" and path.endswith("/activate-machine"):
+                        return {"activated": True, "machine_hash": machine}
+                    if method == "POST" and path.endswith("/license"):
+                        return paid
+                    raise AssertionError((method, path, body, bearer))
+
+                lc._json_request = _fallback_request
+                fallback_status = lc.refresh_paid_order(config)
+                assert fallback_status.active and fallback_status.mode == "paid"
+            finally:
+                lc._json_request = old_json_request
+                lc.machine_fingerprint = old_machine_fingerprint
+            lc._pending_order_path().unlink(missing_ok=True)
+
+        try:
+            lc._parse_utc("not-a-timestamp")
+            raise AssertionError("malformed timestamp escaped normalized LicenseError handling")
+        except lc.LicenseError:
+            pass
+
         # Restore ordinary current-time paid state for the remaining regressions.
         lc._active_order_path().unlink(missing_ok=True)
         lc._clock_path().unlink(missing_ok=True)
