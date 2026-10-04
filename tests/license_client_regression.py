@@ -120,9 +120,15 @@ def main() -> None:
         # Windows identity must not depend on hostname or reinstall-local ID
         # when the stable MachineGuid is available.
         original_windows_machine_guid = lc._windows_machine_guid
+        original_windows_smbios_uuid = lc._windows_smbios_uuid
         original_install_id = lc._install_id
         old_guid = original_windows_machine_guid
         old_install = original_install_id
+        # Keep the pre-existing MachineGuid-only regression cases deterministic;
+        # dedicated clone-guard coverage below exercises SMBIOS-backed v2.
+        lc._windows_smbios_uuid = lambda: ""
+        lc._machine_fingerprint_cache_path().unlink(missing_ok=True)
+        lc._machine_fingerprint_backup_path().unlink(missing_ok=True)
         lc._windows_machine_guid = lambda: "stable-guid"
         lc._install_id = lambda: "install-a"
         stable_a = lc.machine_fingerprint()
@@ -165,6 +171,159 @@ def main() -> None:
             b"windows-machine-guid-v1|guid-became-readable"
         ).hexdigest()
         assert secure_windows_fingerprint == expected_windows_fingerprint
+
+        # Win32's C literal 'RSMB' is DWORD 0x52534D42. Lock the exact
+        # provider value so a byte-order reversal cannot silently disable the
+        # hardware anchor on every real Windows machine.
+        assert lc._RSMB_PROVIDER_SIGNATURE == 0x52534D42
+        if os.name == "nt":
+            live_smbios_uuid = original_windows_smbios_uuid()
+            assert len(live_smbios_uuid) == 32
+            assert all(ch in "0123456789abcdef" for ch in live_smbios_uuid)
+
+        # Parse SMBIOS System Information (type 1) without depending on WMI.
+        synthetic_uuid = bytes.fromhex("00112233445566778899aabbccddeeff")
+        synthetic_type1 = (
+            bytes([1, 24, 0, 0])
+            + bytes([1, 2, 3, 4])
+            + synthetic_uuid
+            + b"\x00\x00"
+        )
+        synthetic_raw = (
+            bytes([0, 3, 2, 0])
+            + len(synthetic_type1).to_bytes(4, "little")
+            + synthetic_type1
+        )
+        assert lc._parse_raw_smbios_uuid(synthetic_raw) == synthetic_uuid.hex()
+        zero_uuid_type1 = (
+            bytes([1, 24, 0, 0])
+            + bytes([1, 2, 3, 4])
+            + b"\x00" * 16
+            + b"\x00\x00"
+        )
+        zero_uuid_raw = (
+            bytes([0, 3, 2, 0])
+            + len(zero_uuid_type1).to_bytes(4, "little")
+            + zero_uuid_type1
+        )
+        assert lc._parse_raw_smbios_uuid(zero_uuid_raw) == ""
+
+        # Clone attack: copying every local licensing file and spoofing the old
+        # MachineGuid must not make a newly-issued v2 entitlement valid on
+        # different physical hardware.
+        clone_guid = "copied-machine-guid"
+        source_hardware = "10" * 16
+        target_hardware = "20" * 16
+        lc._windows_machine_guid = lambda: clone_guid
+        lc._windows_smbios_uuid = lambda: source_hardware
+        lc._machine_fingerprint_cache_path().unlink(missing_ok=True)
+        lc._machine_fingerprint_backup_path().unlink(missing_ok=True)
+        source_fingerprint = lc.machine_fingerprint()
+        assert source_fingerprint == lc._machine_hardware_fingerprint(
+            clone_guid,
+            source_hardware,
+        )
+        assert source_fingerprint != lc._machine_guid_fingerprint(clone_guid)
+        copied_v2_license = signed_document(private, payload(source_fingerprint))
+        source_cache_value, source_cache_requires_hardware = (
+            lc._decode_protected_machine_fingerprint_cache_record(
+                lc._machine_fingerprint_cache_path().read_text(encoding="utf-8")
+            )
+        )
+        assert source_cache_value == source_fingerprint
+        assert source_cache_requires_hardware
+
+        # Keep the source cache files in place: this represents copying the
+        # complete installed/runtime folder to the target computer.
+        lc._windows_smbios_uuid = lambda: target_hardware
+        target_fingerprint = lc.machine_fingerprint()
+        assert target_fingerprint == lc._machine_hardware_fingerprint(
+            clone_guid,
+            target_hardware,
+        )
+        assert target_fingerprint != source_fingerprint
+        try:
+            lc._evaluate_document(
+                copied_v2_license,
+                config,
+                allow_uninitialized_clock=True,
+            )
+            raise AssertionError(
+                "copied v2 license survived same-MachineGuid hardware clone"
+            )
+        except lc.LicenseError:
+            pass
+
+        # The stronger cache may never silently downgrade to MachineGuid-only
+        # if SMBIOS evidence becomes temporarily unreadable.
+        lc._windows_smbios_uuid = lambda: ""
+        try:
+            lc.machine_fingerprint()
+            raise AssertionError("v2 hardware binding silently downgraded")
+        except lc.MachineIdentityUnavailableError:
+            pass
+
+        # Existing pre-v2 licenses/orders remain compatible. This candidate is
+        # accepted only because it is independently derived from the current
+        # MachineGuid; new activations use the stronger v2 hash above.
+        legacy_guid_fingerprint = lc._machine_guid_fingerprint(clone_guid)
+        lc._windows_smbios_uuid = lambda: target_hardware
+        assert lc._machine_allowed_by_payload([legacy_guid_fingerprint])
+        assert lc.machine_fingerprint() == target_fingerprint
+        recovery_candidates = lc._server_machine_hash_candidates()
+        assert recovery_candidates[0] == target_fingerprint
+        assert legacy_guid_fingerprint in recovery_candidates
+
+        # A paid order created by the previous release must still recover after
+        # upgrade: v2 is attempted first, then the exact legacy binding after a
+        # server-side 409 machine mismatch. No second payment is created.
+        compatibility_document = signed_document(
+            private,
+            payload(legacy_guid_fingerprint),
+        )
+        compatibility_calls = []
+        old_json_request_for_clone = lc._json_request
+        try:
+            def _compatibility_request(
+                _config,
+                method,
+                path,
+                *,
+                body=None,
+                bearer="",
+            ):
+                machine_hash = str((body or {}).get("machine_hash") or "")
+                compatibility_calls.append((method, path, machine_hash, bearer))
+                if method != "POST":
+                    raise AssertionError((method, path))
+                if machine_hash == target_fingerprint:
+                    raise lc.LicenseError("Сервер лицензий вернул HTTP 409")
+                assert machine_hash == legacy_guid_fingerprint
+                if path.endswith("/activate-machine"):
+                    return {"activated": True, "machine_hash": machine_hash}
+                if path.endswith("/license"):
+                    return compatibility_document
+                raise AssertionError(path)
+
+            lc._json_request = _compatibility_request
+            recovered_legacy_document = lc._fetch_paid_order_license(
+                config,
+                "00000000-0000-0000-0000-000000000077",
+                "C" * 48,
+                activate=True,
+            )
+            assert recovered_legacy_document == compatibility_document
+            assert compatibility_calls[0][2] == target_fingerprint
+            assert any(
+                call[2] == legacy_guid_fingerprint
+                for call in compatibility_calls
+            )
+        finally:
+            lc._json_request = old_json_request_for_clone
+
+        for path in (lc._clock_path(), lc._clock_backup_path()):
+            path.unlink(missing_ok=True)
+        lc._windows_smbios_uuid = lambda: ""
         lc._windows_machine_guid = old_guid
         lc._install_id = old_install
         lc._is_windows_runtime = old_windows_runtime
@@ -195,7 +354,7 @@ def main() -> None:
         migrated_primary = json.loads(
             lc._machine_fingerprint_cache_path().read_text(encoding="utf-8")
         )
-        assert migrated_primary["schema"] == 2
+        assert migrated_primary["schema"] == 3
 
         # A readable MachineGuid is sufficient to validate a legitimate
         # legacy cache even if install-id persistence is temporarily broken.
@@ -255,8 +414,9 @@ def main() -> None:
         lc._machine_fingerprint_backup_path().unlink(missing_ok=True)
         lc._cache_machine_fingerprint(machine)
 
-        # A locally forgeable schema-2 cache must not override current Windows
-        # MachineGuid evidence, even if the attacker can create a valid
+        # A legacy schema-2 cache remains readable for compatibility, but a
+        # locally forgeable foreign value must not override current Windows
+        # MachineGuid evidence even if the attacker can create a valid
         # DPAPI/HMAC envelope containing a copied license fingerprint.
         lc._machine_fingerprint_cache_path().unlink(missing_ok=True)
         lc._machine_fingerprint_backup_path().unlink(missing_ok=True)
@@ -314,7 +474,8 @@ def main() -> None:
         # Upgrade compatibility with the original production fingerprint
         # (platform|hostname|MachineGuid|install-id). A signed v1 entitlement
         # created by the first licensing release must remain usable on the same
-        # Windows machine, while new activations still use MachineGuid-only.
+        # Windows machine, while new activations use the strongest available
+        # hardware-backed identity.
         saved_windows_runtime = lc._is_windows_runtime
         saved_guid_provider = lc._windows_machine_guid
         saved_hostname_provider = lc.socket.gethostname
@@ -442,6 +603,7 @@ def main() -> None:
         # failing/forged lambdas; leaking those stubs into the next section
         # would make Windows CI fail for the wrong reason.
         lc._windows_machine_guid = original_windows_machine_guid
+        lc._windows_smbios_uuid = original_windows_smbios_uuid
         lc._install_id = original_install_id
 
         paid = signed_document(private, payload(machine))
