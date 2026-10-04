@@ -172,6 +172,11 @@ def main() -> None:
         ).hexdigest()
         assert secure_windows_fingerprint == expected_windows_fingerprint
 
+        # Win32's C literal 'RSMB' is DWORD 0x52534D42. Lock the exact
+        # provider value so a byte-order reversal cannot silently disable the
+        # hardware anchor on every real Windows machine.
+        assert lc._RSMB_PROVIDER_SIGNATURE == 0x52534D42
+
         # Parse SMBIOS System Information (type 1) without depending on WMI.
         synthetic_uuid = bytes.fromhex("00112233445566778899aabbccddeeff")
         synthetic_type1 = (
