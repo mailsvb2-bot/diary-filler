@@ -233,6 +233,23 @@ def main() -> None:
         lc._machine_fingerprint_backup_path().unlink(missing_ok=True)
         lc._cache_machine_fingerprint(machine)
 
+        # If both protected fingerprint caches disappear after a fallback-
+        # identity activation, the signed allowed_machines value plus locally
+        # derivable install-id must restore the same identity even when
+        # MachineGuid has since become readable.
+        lc._machine_fingerprint_cache_path().unlink(missing_ok=True)
+        lc._machine_fingerprint_backup_path().unlink(missing_ok=True)
+        lc._windows_machine_guid = lambda: "guid-after-fallback-activation"
+        lc._install_id = lambda: "first-run-fallback"
+        assert lc._machine_allowed_by_payload([first_fallback])
+        assert lc.machine_fingerprint() == first_fallback
+
+        lc._windows_machine_guid = old_guid
+        lc._install_id = old_install
+        lc._machine_fingerprint_cache_path().unlink(missing_ok=True)
+        lc._machine_fingerprint_backup_path().unlink(missing_ok=True)
+        lc._cache_machine_fingerprint(machine)
+
         # Fingerprint persistence is best-effort resilience. A transient local
         # protection failure must not make machine_fingerprint unusable.
         old_protect_local_blob = lc._protect_local_blob
