@@ -166,6 +166,10 @@ def _clock_backup_path() -> Path:
     return root / "MedicalDiaryAutofill" / "license-clock-backup.json"
 
 
+def _owner_marker_local_path() -> Path:
+    return _runtime_dir() / "owner-entitlement.marker"
+
+
 def _owner_marker_path() -> Path:
     base = os.environ.get("APPDATA", "").strip()
     root = Path(base) if base else _runtime_dir().parent
@@ -557,25 +561,34 @@ def _write_owner_marker() -> None:
         separators=(",", ":"),
     ).encode("utf-8")
     protected = _protect_local_blob(clear, "MedicalDiaryAutofill owner marker")
-    _atomic_write_text(
+    encoded = json.dumps(
+        {"schema": 1, "protected": protected},
+        ensure_ascii=False,
+    ) + "\n"
+    _write_redundant_text(
+        _owner_marker_local_path(),
         _owner_marker_path(),
-        json.dumps({"schema": 1, "protected": protected}, ensure_ascii=False) + "\n",
+        encoded,
+        error_message="Не удалось сохранить признак активации владельца",
     )
 
 
 def _has_owner_marker() -> bool:
-    try:
-        outer = json.loads(_owner_marker_path().read_text(encoding="utf-8"))
-        if outer.get("schema") != 1:
-            return False
-        clear = _unprotect_local_blob(
-            str(outer.get("protected") or ""),
-            "MedicalDiaryAutofill owner marker",
-        )
-        payload = json.loads(clear.decode("utf-8"))
-        return payload == {"owner": True, "schema": 1}
-    except Exception:
-        return False
+    for path in (_owner_marker_local_path(), _owner_marker_path()):
+        try:
+            outer = json.loads(path.read_text(encoding="utf-8"))
+            if outer.get("schema") != 1:
+                continue
+            clear = _unprotect_local_blob(
+                str(outer.get("protected") or ""),
+                "MedicalDiaryAutofill owner marker",
+            )
+            payload = json.loads(clear.decode("utf-8"))
+            if payload == {"owner": True, "schema": 1}:
+                return True
+        except Exception:
+            continue
+    return False
 
 
 def _owner_reactivation_status(message: str) -> LicenseStatus:
