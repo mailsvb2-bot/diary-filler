@@ -381,6 +381,125 @@ def main() -> None:
             for path in all_resilience_paths:
                 path.unlink(missing_ok=True)
 
+        # A partial write can leave both redundant clock files valid but at
+        # different generations. The newest monotonic revision must win even
+        # when the stale LocalAppData copy contains a later wall-clock value.
+        stale_clock_time = datetime.now(timezone.utc) + timedelta(days=3)
+        repaired_clock_time = datetime.now(timezone.utc)
+        stale_clock_clear = json.dumps(
+            {
+                "last_seen_utc": stale_clock_time.isoformat(),
+                "trusted_offset_seconds": 0,
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+        repaired_clock_clear = json.dumps(
+            {
+                "last_seen_utc": repaired_clock_time.isoformat(),
+                "trusted_offset_seconds": -300,
+                "revision": 1,
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+        stale_clock_raw = json.dumps(
+            {
+                "schema": 3,
+                "protected": lc._protect_local_blob(
+                    stale_clock_clear,
+                    "MedicalDiaryAutofill license clock",
+                ),
+            }
+        ) + "\n"
+        repaired_clock_raw = json.dumps(
+            {
+                "schema": 3,
+                "protected": lc._protect_local_blob(
+                    repaired_clock_clear,
+                    "MedicalDiaryAutofill license clock",
+                ),
+            }
+        ) + "\n"
+        lc._clock_path().write_text(stale_clock_raw, encoding="utf-8")
+        lc._clock_backup_path().write_text(repaired_clock_raw, encoding="utf-8")
+        reconciled_clock = lc._read_clock_record()
+        assert reconciled_clock is not None
+        assert reconciled_clock[0] == repaired_clock_time
+        assert reconciled_clock[1] == timedelta(seconds=-300)
+        assert reconciled_clock[2] == 1
+        assert lc._clock_path().read_text(encoding="utf-8") == repaired_clock_raw
+        assert lc._clock_backup_path().read_text(encoding="utf-8") == repaired_clock_raw
+
+        # Legacy schema-2 clock state remains readable after the revision field
+        # was added to schema 3.
+        legacy_clock_clear = json.dumps(
+            {"last_seen_utc": repaired_clock_time.isoformat()},
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+        legacy_clock_raw = json.dumps(
+            {
+                "schema": 2,
+                "protected": lc._protect_local_blob(
+                    legacy_clock_clear,
+                    "MedicalDiaryAutofill license clock",
+                ),
+            }
+        )
+        legacy_clock_record = lc._decode_clock_record(legacy_clock_raw)
+        assert legacy_clock_record == (repaired_clock_time, timedelta(0), 0)
+
+        # Pending-payment copies can also diverge if one storage tier rejects a
+        # renewal write. Always continue the newest saved invoice; otherwise a
+        # stale readable primary could unlock an accidental second payment.
+        older_pending = {
+            "order_id": "00000000-0000-0000-0000-000000000081",
+            "order_access_token": "O" * 48,
+            "payment_url": "https://pay.example.com/older",
+            "amount_rub": 100,
+            "saved_at": (datetime.now(timezone.utc) - timedelta(hours=2)).isoformat(),
+        }
+        newer_pending = {
+            "order_id": "00000000-0000-0000-0000-000000000082",
+            "order_access_token": "N" * 48,
+            "payment_url": "https://pay.example.com/newer",
+            "amount_rub": 100,
+            "saved_at": (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat(),
+        }
+        lc._store_order_credentials(lc._pending_order_path(), older_pending, include_payment=True)
+        lc._store_order_credentials(lc._pending_order_backup_path(), newer_pending, include_payment=True)
+        loaded_pending = lc._load_pending_order()
+        assert loaded_pending["order_id"] == newer_pending["order_id"]
+        assert lc._load_order_credentials(
+            lc._pending_order_path(),
+            "missing",
+        )["order_id"] == newer_pending["order_id"]
+
+        # The same newest-copy rule is required for paid recovery credentials.
+        older_active = dict(older_pending)
+        older_active["order_id"] = "00000000-0000-0000-0000-000000000083"
+        newer_active = dict(newer_pending)
+        newer_active["order_id"] = "00000000-0000-0000-0000-000000000084"
+        lc._store_order_credentials(lc._active_order_path(), older_active, include_payment=False)
+        lc._store_order_credentials(lc._active_order_backup_path(), newer_active, include_payment=False)
+        loaded_active = lc._load_active_order()
+        assert loaded_active["order_id"] == newer_active["order_id"]
+        assert lc._load_order_credentials(
+            lc._active_order_path(),
+            "missing",
+        )["order_id"] == newer_active["order_id"]
+
+        for path in (
+            lc._pending_order_path(),
+            lc._pending_order_backup_path(),
+            lc._active_order_path(),
+            lc._active_order_backup_path(),
+            lc._clock_path(),
+            lc._clock_backup_path(),
+        ):
+            path.unlink(missing_ok=True)
+
         assert lc.save_license(paid, config).active
         assert lc.current_status(config).mode == "paid"
         assert lc._license_backup_path().exists()
@@ -435,6 +554,31 @@ def main() -> None:
         assert local_wins.active and local_wins.mode == "paid"
         assert json.loads(lc.license_path().read_text(encoding="utf-8")) == local_paid
         assert json.loads(lc._license_backup_path().read_text(encoding="utf-8")) == local_paid
+
+        # A cryptographically genuine historical paid entitlement whose signed
+        # machine identity no longer matches must never fall through to the
+        # "buy again" path. Access still stays closed; only paid recovery is
+        # offered. This protects legacy fallback identities across upgrades
+        # without weakening current MachineGuid binding.
+        for path in (lc._active_order_path(), lc._active_order_backup_path()):
+            path.unlink(missing_ok=True)
+        legacy_identity_paid = signed_document(
+            private,
+            payload(foreign_machine, days=31),
+            schema=lc.LEGACY_LICENSE_SCHEMA,
+        )
+        lc.license_path().write_text(
+            json.dumps(legacy_identity_paid, ensure_ascii=False),
+            encoding="utf-8",
+        )
+        lc._license_backup_path().write_text(
+            json.dumps(legacy_identity_paid, ensure_ascii=False),
+            encoding="utf-8",
+        )
+        legacy_identity_status = lc.current_status(config)
+        assert not legacy_identity_status.active
+        assert legacy_identity_status.mode == "paid_recovery"
+        assert "Новый платёж не нужен" in legacy_identity_status.message
 
         assert lc.save_license(paid, config).active
 
