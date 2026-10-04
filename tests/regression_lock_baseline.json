@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "d6fb8900429e7b04e8752b24db3d1dda36c03479",
-  "baseline_note": "v1.4.32 temporary unlicensed distribution candidate d6fb8900429e7b04e8752b24db3d1dda36c03479 validated by License Server CI #174 and Windows EXE Build #1657. Validation retained the complete licensing client/server regression surface while explicitly embedding LICENSE_REQUIRED=0 with no server URL/public key, and covered release/prod gates, full patient replay and golden DOCX, clinical roundtrip, full user journey, Windows E1 matrix, staff/gender/diagnosis/diary regressions, real Tk GUI wiring, packaged EXE startup/TkDND, desktop intake E2E, installer build, and install/uninstall smoke.",
+  "baseline_ref": "2868f8a40b395fc9bd3c09b1fe667c4f6ba57a24",
+  "baseline_note": "v1.4.33 clean-unlicensed candidate 2868f8a40b395fc9bd3c09b1fe667c4f6ba57a24 validated by License Server CI #188 and Windows EXE Build #1671. Public runtime embeds an authoritative unlicensed policy that ignores environment attempts to resurrect licensing, hides the License UI/self-check row, and bypasses entitlement/payment/network checks at startup and generation. Full validation covered release/prod gates, document-mechanics approval, full patient replay and golden DOCX, clinical roundtrip, full user journey, Windows E1 matrix, staff/gender/diagnosis/diary regressions, real Tk GUI wiring, packaged EXE startup/TkDND, desktop intake E2E, installer build, and install/uninstall smoke; dormant licensing client/server regressions remain green.",
   "required_approval_evidence": [
     "ci_gate_lock",
     "patient_registry_regression"

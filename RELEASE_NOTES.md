@@ -1,11 +1,21 @@
+# Release notes — v1.4.33
+
+## Clean unlicensed distribution
+
+- `v1.4.33` выпускается без license-server и без обязательной лицензии: release build фиксирует `MEDICAL_AUTOFILL_LICENSE_REQUIRED=0`, пустой server URL и пустой Ed25519 public key.
+- В unlicensed-build полностью скрыта кнопка «Лицензия», self-check не показывает лицензионный статус, а startup/generation gate немедленно разрешает работу без чтения entitlement-state, платёжного UX или сетевого обращения к license-server.
+- Добавлена regression-защита, которая ломает CI, если unlicensed-mode снова попытается открыть окно лицензии, запросить статус entitlement или начать оплату.
+- Полный license-client/license-server, machine binding, YooKassa и owner-recovery код не удаляется и продолжает тестироваться отдельно; его повторное включение требует явного `LICENSE_REQUIRED=1`.
+- Медицинская генерация, дневники, desktop-intake, «Мои пациенты», packaged EXE и installer остаются под полным CI/E2E-контуром.
+
 # Release notes — v1.4.32
 
 ## Temporary unlicensed distribution policy
 
-- Текущий `v1.4.32` выпускается без license-server и без обязательной лицензии: сборка фиксирует `MEDICAL_AUTOFILL_LICENSE_REQUIRED=0`, пустой server URL и пустой Ed25519 public key.
+- `v1.4.32` впервые переключён на распространение без license-server и без обязательной лицензии: сборка фиксирует `MEDICAL_AUTOFILL_LICENSE_REQUIRED=0`, пустой server URL и пустой Ed25519 public key.
 - Медицинская генерация и все пользовательские сценарии остаются под тем же полным CI/E2E-контуром; отключается только требование лицензии.
 - Код license-client/license-server, защита machine binding, YooKassa и тесты лицензирования не удаляются. Они остаются готовыми для последующего отдельного включения.
-- Release workflow fail-closed проверяет именно временный `unlicensed`-режим, чтобы лицензирование нельзя было случайно включить частично или с неполной конфигурацией.
+- Release workflow fail-closed проверяет именно `unlicensed`-режим, чтобы лицензирование нельзя было случайно включить частично или с неполной конфигурацией.
 
 ## v1.4.32
 

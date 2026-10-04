@@ -15,8 +15,8 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
-TARGET_VERSION = "1.4.32"
-TARGET_VERSION_LABEL = "v1.4.32"
+TARGET_VERSION = "1.4.33"
+TARGET_VERSION_LABEL = "v1.4.33"
 # Two cohesive patient-registry modules are intentional production architecture:
 # one pure scanner/model and one GUI integration layer. The budget remains exact
 # so unrelated future modules cannot accumulate silently.
@@ -404,7 +404,7 @@ def _assert_final_user_flow_gate_contract() -> None:
         (release_workflow, "python tools/generation_performance_profile.py --runs 3", "official release must enforce generation performance budget"),
         (release_workflow, "python verify_built_exe.py", "official release must verify the exact packaged EXE"),
         (release_workflow, "./tools/windows_desktop_intake_e2e.ps1 -AppPath ./dist/MedicalDiaryAutofill.exe", "official release must exercise packaged desktop intake"),
-        (release_workflow, "./tools/windows_installer_smoke.ps1 -InstallerPath ./dist/MedicalDiaryAutofill-Setup-1.4.32.exe", "official release must smoke-test install/uninstall"),
+        (release_workflow, "./tools/windows_installer_smoke.ps1 -InstallerPath ./dist/MedicalDiaryAutofill-Setup-1.4.33.exe", "official release must smoke-test install/uninstall"),
         (release_workflow, 'MEDICAL_AUTOFILL_RELEASE_LICENSE_MODE: "unlicensed"', "current release must explicitly declare temporary unlicensed mode"),
         (release_workflow, 'MEDICAL_AUTOFILL_LICENSE_REQUIRED: "0"', "current release must explicitly disable license enforcement"),
         (release_workflow, 'MEDICAL_AUTOFILL_LICENSE_SERVER_URL: ""', "current unlicensed release must not embed a license server URL"),

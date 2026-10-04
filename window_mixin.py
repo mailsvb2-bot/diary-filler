@@ -354,16 +354,27 @@ class WindowMixin:
             font=self._font(9 if self._compact_ui else 10), cursor="hand2",
         )
         staff_button.grid(row=0, column=3, padx=(0, self._px(4, 3)))
-        license_button = tk.Button(
-            controls, text="Лицензия", command=self._show_license_manager,
-            bg=DEEP, fg=MUTED, activebackground=BG_2, activeforeground=ACCENT,
-            relief="flat", bd=0, padx=self._px(8, 5),
-            font=self._font(9 if self._compact_ui else 10), cursor="hand2",
-        )
-        license_button.grid(row=0, column=4, padx=(0, self._px(8, 4)))
-        self._window_control_button(controls, "−", self._minimize_window).grid(row=0, column=5)
-        self._window_control_button(controls, "□", self._toggle_maximize).grid(row=0, column=6)
-        self._window_control_button(controls, "×", self._request_close, danger=True).grid(row=0, column=7)
+        control_column = 4
+        try:
+            from license_client import runtime_config
+
+            license_ui_enabled = bool(runtime_config().required)
+        except Exception:
+            # A future licensed build must not lose its recovery entry point
+            # merely because the config probe failed unexpectedly.
+            license_ui_enabled = True
+        if license_ui_enabled:
+            license_button = tk.Button(
+                controls, text="Лицензия", command=self._show_license_manager,
+                bg=DEEP, fg=MUTED, activebackground=BG_2, activeforeground=ACCENT,
+                relief="flat", bd=0, padx=self._px(8, 5),
+                font=self._font(9 if self._compact_ui else 10), cursor="hand2",
+            )
+            license_button.grid(row=0, column=control_column, padx=(0, self._px(8, 4)))
+            control_column += 1
+        self._window_control_button(controls, "−", self._minimize_window).grid(row=0, column=control_column)
+        self._window_control_button(controls, "□", self._toggle_maximize).grid(row=0, column=control_column + 1)
+        self._window_control_button(controls, "×", self._request_close, danger=True).grid(row=0, column=control_column + 2)
 
     def _header_icon_button(self, parent, text: str, command) -> tk.Button:
         return tk.Button(

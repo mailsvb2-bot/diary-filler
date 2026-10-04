@@ -42,7 +42,7 @@ WINDOWS_REQUIRED_IN_ORDER = (
     "python verify_built_exe.py",
     "./tools/windows_desktop_intake_e2e.ps1 -AppPath ./dist/MedicalDiaryAutofill.exe",
     "BUILD_WINDOWS_INSTALLER.bat",
-    "./tools/windows_installer_smoke.ps1 -InstallerPath ./dist/MedicalDiaryAutofill-Setup-1.4.32.exe",
+    "./tools/windows_installer_smoke.ps1 -InstallerPath ./dist/MedicalDiaryAutofill-Setup-1.4.33.exe",
 )
 
 RELEASE_REQUIRED_IN_ORDER = (
@@ -73,7 +73,7 @@ RELEASE_REQUIRED_IN_ORDER = (
     "python verify_built_exe.py",
     "./tools/windows_desktop_intake_e2e.ps1 -AppPath ./dist/MedicalDiaryAutofill.exe",
     "BUILD_WINDOWS_INSTALLER.bat",
-    "./tools/windows_installer_smoke.ps1 -InstallerPath ./dist/MedicalDiaryAutofill-Setup-1.4.32.exe",
+    "./tools/windows_installer_smoke.ps1 -InstallerPath ./dist/MedicalDiaryAutofill-Setup-1.4.33.exe",
     "python make_release_zip.py",
     "Create guarded release tag",
     "gh release create",
@@ -164,10 +164,10 @@ def main() -> None:
     for required in (
         "workflow_dispatch:",
         "push:",
-        "branches: [production-v1.4.32]",
+        "branches: [production-v1.4.33]",
         "Checkout exact release candidate",
         "Resolve and guard release target",
-        "refs/heads/production-v1.4.32",
+        "refs/heads/production-v1.4.33",
         "git/ref/heads/main",
         "Tag $tag already exists at a different SHA; refusing to move or overwrite it.",
         '"RELEASE_TAG=$tag"',
@@ -260,7 +260,7 @@ def main() -> None:
     release_create = release[publish_release:]
     for asset in (
         r"dist\MedicalDiaryAutofill.exe",
-        r"dist\MedicalDiaryAutofill-Setup-1.4.32.exe",
+        r"dist\MedicalDiaryAutofill-Setup-1.4.33.exe",
         r"release\MedicalDiaryAutofill_PRODUCTION_SOURCE.zip",
     ):
         if asset not in release_create:

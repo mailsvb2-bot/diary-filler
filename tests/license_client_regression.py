@@ -117,6 +117,79 @@ def main() -> None:
         os.environ.pop("MEDICAL_AUTOFILL_LICENSE_PUBLIC_KEY_B64", None)
         os.environ.pop("MEDICAL_AUTOFILL_LICENSE_REQUIRED", None)
 
+        # Official unlicensed packaging is also authoritative. Even hostile or
+        # stale machine-wide environment variables must not resurrect licensing
+        # in a binary deliberately published without it.
+        locked_unlicensed_module = types.SimpleNamespace(
+            LICENSE_SERVER_URL="",
+            LICENSE_PUBLIC_KEY_B64="",
+            LICENSE_REQUIRED=False,
+            LICENSE_POLICY_MODE="unlicensed",
+        )
+        sys.modules["license_build_config"] = locked_unlicensed_module
+        os.environ["MEDICAL_AUTOFILL_LICENSE_SERVER_URL"] = "https://attacker.invalid"
+        os.environ["MEDICAL_AUTOFILL_LICENSE_PUBLIC_KEY_B64"] = "A" * 44
+        os.environ["MEDICAL_AUTOFILL_LICENSE_REQUIRED"] = "1"
+        locked_unlicensed = lc.runtime_config()
+        assert not locked_unlicensed.required
+        assert locked_unlicensed.server_url == ""
+        assert locked_unlicensed.public_key_b64 == ""
+        if old_module is None:
+            sys.modules.pop("license_build_config", None)
+        else:
+            sys.modules["license_build_config"] = old_module
+        os.environ.pop("MEDICAL_AUTOFILL_LICENSE_SERVER_URL", None)
+        os.environ.pop("MEDICAL_AUTOFILL_LICENSE_PUBLIC_KEY_B64", None)
+        os.environ.pop("MEDICAL_AUTOFILL_LICENSE_REQUIRED", None)
+
+        renderer_source = (ROOT / "tools" / "render_license_build_config.py").read_text(
+            encoding="utf-8"
+        )
+        assert "MEDICAL_AUTOFILL_RELEASE_LICENSE_MODE" in renderer_source
+        assert "LICENSE_POLICY_MODE" in renderer_source
+        assert "unlicensed release policy requires LICENSE_REQUIRED=0" in renderer_source
+
+        # An explicitly unlicensed public build must be completely license-neutral:
+        # startup/generation are allowed immediately and no status, payment, or
+        # Tk licensing window may be touched.
+        unlicensed = lc.LicenseRuntimeConfig(
+            server_url="",
+            public_key_b64="",
+            required=False,
+        )
+        unlicensed_status = lc.current_status(unlicensed)
+        assert unlicensed_status.active
+        assert unlicensed_status.mode == "development"
+        old_ui_runtime_config = lui.runtime_config
+        old_ui_current_status = lui.current_status
+        old_ui_toplevel = lui.tk.Toplevel
+        old_ui_chooser = lui.messagebox.askyesnocancel
+        old_ui_payment = lui.begin_monthly_payment
+        try:
+            lui.runtime_config = lambda: unlicensed
+            lui.current_status = lambda *_args, **_kwargs: (_ for _ in ()).throw(
+                AssertionError("unlicensed build touched entitlement status")
+            )
+            lui.tk.Toplevel = lambda *_args, **_kwargs: (_ for _ in ()).throw(
+                AssertionError("unlicensed build opened licensing window")
+            )
+            lui.messagebox.askyesnocancel = lambda *_args, **_kwargs: (_ for _ in ()).throw(
+                AssertionError("unlicensed build opened licensing chooser")
+            )
+            lui.begin_monthly_payment = lambda *_args, **_kwargs: (_ for _ in ()).throw(
+                AssertionError("unlicensed build reached payment flow")
+            )
+            assert lui.ensure_license(None, interactive=False)
+            assert lui.ensure_license(None, interactive=True)
+            assert lui.ensure_generation_license(None)
+            assert lui.show_license_manager(None) is None
+        finally:
+            lui.runtime_config = old_ui_runtime_config
+            lui.current_status = old_ui_current_status
+            lui.tk.Toplevel = old_ui_toplevel
+            lui.messagebox.askyesnocancel = old_ui_chooser
+            lui.begin_monthly_payment = old_ui_payment
+
         # Windows identity must not depend on hostname or reinstall-local ID
         # when the stable MachineGuid is available.
         original_windows_machine_guid = lc._windows_machine_guid

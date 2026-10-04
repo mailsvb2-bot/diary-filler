@@ -190,6 +190,10 @@ def _payment_flow(parent, config):
 
 def show_license_manager(parent) -> None:
     config = runtime_config()
+    # The current public build can intentionally ship with licensing disabled.
+    # In that mode there must be no dormant payment/activation UI at all.
+    if not config.required:
+        return
     window = tk.Toplevel(parent)
     window.title("Лицензия")
     window.transient(parent)
@@ -317,6 +321,12 @@ def show_license_manager(parent) -> None:
 
 def ensure_license(parent, *, interactive: bool = True) -> bool:
     config = runtime_config()
+    # Explicit release switch: when licensing is disabled, neither startup nor
+    # generation may touch local entitlement state, open payment UI, or require
+    # a license server. The full licensing implementation remains intact for a
+    # future build that embeds LICENSE_REQUIRED=1.
+    if not config.required:
+        return True
     status = current_status(config)
     if status.active:
         return True
