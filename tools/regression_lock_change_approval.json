@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "853962bacee8843bfe094e6b646d9611d95a7245",
+  "reason": "Hardware clone hardening with backward-compatible Windows license recovery",
+  "required_evidence": [
+    "document_mechanics_guard",
+    "full_patient_replay",
+    "golden_docx",
+    "staff_profile_regression",
+    "gender_generation_matrix",
+    "desktop_intake_contract",
+    "intake_lifecycle_regression",
+    "packaged_desktop_intake_e2e",
+    "installer_uninstall_smoke",
+    "ci_gate_lock",
+    "patient_registry_regression",
+    "license_client_regression"
+  ],
+  "approved_blobs": {
+    "license_client.py": "7ff59c09bdc2834213216ca7505fddb7f2704eae",
+    "tests/license_client_regression.py": "2686217831750b14238054698a50b109b5436767"
+  }
+}
