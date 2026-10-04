@@ -126,6 +126,12 @@ def license_path() -> Path:
     return _runtime_dir() / "license.json"
 
 
+def _license_backup_path() -> Path:
+    base = os.environ.get("APPDATA", "").strip()
+    root = Path(base) if base else _runtime_dir().parent
+    return root / "MedicalDiaryAutofill" / "license-backup.json"
+
+
 def _pending_order_path() -> Path:
     return _runtime_dir() / "license-order.json"
 
@@ -704,6 +710,54 @@ def _repair_paid_clock_from_server(
     )
 
 
+def _write_license_document(document: dict) -> None:
+    encoded = json.dumps(
+        document,
+        ensure_ascii=False,
+        indent=2,
+        sort_keys=True,
+    ) + "\n"
+    _atomic_write_text(license_path(), encoded)
+    try:
+        _atomic_write_text(_license_backup_path(), encoded)
+    except OSError:
+        # Primary LocalAppData copy remains authoritative. The signed roaming
+        # copy is only resilience against accidental local cleanup/corruption.
+        pass
+
+
+def _load_license_document() -> dict:
+    primary = license_path()
+    errors: list[Exception] = []
+    found = False
+    for path in (primary, _license_backup_path()):
+        try:
+            raw = path.read_text(encoding="utf-8")
+            found = True
+        except FileNotFoundError:
+            continue
+        except OSError as exc:
+            found = True
+            errors.append(exc)
+            continue
+        try:
+            document = json.loads(raw)
+            if not isinstance(document, dict):
+                raise ValueError("license document is not an object")
+        except Exception as exc:
+            errors.append(exc)
+            continue
+        if path != primary:
+            try:
+                _atomic_write_text(primary, raw if raw.endswith("\n") else raw + "\n")
+            except OSError:
+                pass
+        return document
+    if not found:
+        raise FileNotFoundError(str(primary))
+    raise LicenseError("Файл лицензии повреждён") from (errors[-1] if errors else None)
+
+
 def current_status(config: LicenseRuntimeConfig | None = None) -> LicenseStatus:
     config = config or runtime_config()
     configured = bool(config.server_url and config.public_key_b64)
@@ -713,7 +767,7 @@ def current_status(config: LicenseRuntimeConfig | None = None) -> LicenseStatus:
         return LicenseStatus(True, "development", "Лицензирование пока не включено в этой сборке")
     owner_marker = _has_owner_marker()
     try:
-        document = json.loads(license_path().read_text(encoding="utf-8"))
+        document = _load_license_document()
     except FileNotFoundError:
         if owner_marker:
             return _owner_reactivation_status(
@@ -724,7 +778,7 @@ def current_status(config: LicenseRuntimeConfig | None = None) -> LicenseStatus:
                 "Требуется восстановить уже оплаченную лицензию"
             )
         return LicenseStatus(False, "missing", "Лицензия не активирована")
-    except Exception:
+    except LicenseError:
         if owner_marker:
             return _owner_reactivation_status(
                 "Требуется повторная активация лицензии"
@@ -802,10 +856,7 @@ def save_license(
         if status.mode == "expired":
             raise LicenseExpiredError(status.message)
         raise LicenseError(status.message)
-    _atomic_write_text(
-        license_path(),
-        json.dumps(document, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
-    )
+    _write_license_document(document)
     if status.owner_unlimited:
         _write_owner_marker()
     return status
@@ -1099,8 +1150,8 @@ def recover_paid_license(config: LicenseRuntimeConfig | None = None) -> LicenseS
     # legitimate paid user from being asked to pay again after local clock
     # state damage.
     try:
-        document = json.loads(license_path().read_text(encoding="utf-8"))
-    except Exception:
+        document = _load_license_document()
+    except (FileNotFoundError, LicenseError):
         document = None
     if isinstance(document, dict) and _locally_trusted_paid_document(document, config):
         try:
