@@ -26,13 +26,17 @@ def main() -> None:
     )
 
     failures = [
-        {"status": "down", "product_id": "diary_filler", "public_key_b64": key},
-        {"status": "ok", "product_id": "other", "public_key_b64": key},
+        {"status": "down", "product_id": "diary_filler", "public_key_b64": key, "server_time": datetime.now(timezone.utc).isoformat()},
+        {"status": "ok", "product_id": "other", "public_key_b64": key, "server_time": datetime.now(timezone.utc).isoformat()},
         {
             "status": "ok",
             "product_id": "diary_filler",
             "public_key_b64": base64.b64encode(bytes(reversed(range(32)))).decode("ascii"),
+            "server_time": datetime.now(timezone.utc).isoformat(),
         },
+        {"status": "ok", "product_id": "diary_filler", "public_key_b64": key},
+        {"status": "ok", "product_id": "diary_filler", "public_key_b64": key, "server_time": "broken"},
+        {"status": "ok", "product_id": "diary_filler", "public_key_b64": key, "server_time": "2026-10-04T08:00:00"},
     ]
     for payload in failures:
         try:
