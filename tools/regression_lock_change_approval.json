@@ -18,6 +18,7 @@
   "approved_blobs": {
     ".github/workflows/release.yml": "d27ea382154a5e14d183f3a4b8d3e195065b7126",
     "tools/ci_gate_lock.py": "9a33671d928523458de15ca663c6ae23650bfe33",
-    "prod_audit.py": "1487d299a4196554a72fc24e5234d3715f9bf384"
+    "prod_audit.py": "1487d299a4196554a72fc24e5234d3715f9bf384",
+    "release_check.py": "bd2a66b937e1ce60112b19da3f9b2de462e2c18f"
   }
 }
