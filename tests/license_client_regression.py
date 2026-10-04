@@ -131,6 +131,21 @@ def main() -> None:
         lc._install_id = lambda: "install-c"
         stable_c = lc.machine_fingerprint()
         assert stable_c == stable_a, "transient MachineGuid read failure changed paid-license identity"
+        # If the very first MachineGuid read fails, the chosen fallback
+        # identity is pinned and must not jump to a different fingerprint later
+        # when MachineGuid becomes readable.
+        lc._machine_fingerprint_cache_path().unlink(missing_ok=True)
+        lc._machine_fingerprint_backup_path().unlink(missing_ok=True)
+        old_guid = lc._windows_machine_guid
+        old_install = lc._install_id
+        lc._windows_machine_guid = lambda: ""
+        lc._install_id = lambda: "first-run-fallback"
+        first_fallback = lc.machine_fingerprint()
+        assert lc._machine_fingerprint_cache_path().exists()
+        assert lc._machine_fingerprint_backup_path().exists()
+        lc._windows_machine_guid = lambda: "guid-became-readable"
+        lc._install_id = lambda: "different-install-id"
+        assert lc.machine_fingerprint() == first_fallback
         lc._windows_machine_guid = old_guid
         lc._install_id = old_install
 
@@ -148,21 +163,82 @@ def main() -> None:
         legacy_status = lc._evaluate_document(legacy_v1, config)
         assert legacy_status.active and legacy_status.mode == "paid"
 
-        # Removing or corrupting the anti-rollback state after activation must
-        # fail closed rather than reset the clock guard.
-        clock_backup = lc._clock_path().read_text(encoding="utf-8")
+        # Paid anti-rollback state is redundant. Losing/corrupting one copy
+        # must transparently heal from the other without blocking the doctor.
+        clock_primary = lc._clock_path().read_text(encoding="utf-8")
+        assert lc._clock_backup_path().exists()
         lc._clock_path().unlink()
-        assert not lc.current_status(config).active
-        lc._clock_path().write_text(clock_backup, encoding="utf-8")
+        healed = lc.current_status(config)
+        assert healed.active and healed.mode == "paid"
+        assert lc._clock_path().exists()
+
         lc._clock_path().write_text("{broken", encoding="utf-8")
-        assert not lc.current_status(config).active
-        lc._clock_path().write_text(clock_backup, encoding="utf-8")
-        forged = json.loads(clock_backup)
-        protected = str(forged["protected"])
-        forged["protected"] = protected[:-1] + ("A" if protected[-1:] != "A" else "B")
-        lc._clock_path().write_text(json.dumps(forged), encoding="utf-8")
-        assert not lc.current_status(config).active
-        lc._clock_path().write_text(clock_backup, encoding="utf-8")
+        healed = lc.current_status(config)
+        assert healed.active and healed.mode == "paid"
+
+        # If both clock copies are lost, a valid signed paid entitlement can
+        # repair itself from trusted server time without any order/recovery token.
+        for path in (
+            lc._clock_path(),
+            lc._clock_backup_path(),
+            lc._active_order_path(),
+            lc._active_order_backup_path(),
+        ):
+            path.unlink(missing_ok=True)
+        old_json_request = lc._json_request
+        old_machine_fingerprint = lc.machine_fingerprint
+        health_calls = []
+        try:
+            lc.machine_fingerprint = lambda: machine
+
+            def _health_request(_config, method, path, *, body=None, bearer=""):
+                health_calls.append((method, path, body, bearer))
+                if method == "GET" and path == "/health":
+                    return {
+                        "status": "ok",
+                        "product_id": lc.PRODUCT_ID,
+                        "public_key_b64": config.public_key_b64,
+                        "server_time": datetime.now(timezone.utc).isoformat(),
+                    }
+                raise AssertionError((method, path, body, bearer))
+
+            lc._json_request = _health_request
+            repaired = lc.current_status(config)
+            assert repaired.active and repaired.mode == "paid"
+            assert lc._clock_path().exists()
+            assert lc._clock_backup_path().exists()
+        finally:
+            lc._json_request = old_json_request
+            lc.machine_fingerprint = old_machine_fingerprint
+        assert health_calls == [("GET", "/health", None, "")]
+
+        # If both clock copies are gone and the server is temporarily offline,
+        # the signed paid entitlement suppresses new-payment UX instead of being
+        # treated as a fresh unlicensed installation.
+        lc._clock_path().unlink(missing_ok=True)
+        lc._clock_backup_path().unlink(missing_ok=True)
+        old_json_request = lc._json_request
+        old_machine_fingerprint = lc.machine_fingerprint
+        try:
+            lc.machine_fingerprint = lambda: machine
+
+            def _offline_health(*args, **kwargs):
+                raise lc.LicenseError("server temporarily unavailable")
+
+            lc._json_request = _offline_health
+            recovery = lc.current_status(config)
+            assert not recovery.active
+            assert recovery.mode == "paid_recovery"
+            manager = lui._manager_state(recovery)
+            assert not manager["show_payment"]
+            assert manager["show_recovery"]
+        finally:
+            lc._json_request = old_json_request
+            lc.machine_fingerprint = old_machine_fingerprint
+
+        # Restore ordinary clock state for independent regressions below.
+        lc._clock_path().write_text(clock_primary, encoding="utf-8")
+        lc._clock_backup_path().write_text(clock_primary, encoding="utf-8")
 
         # A stale local payment order can always be discarded and replaced.
         lc._save_pending_order({
