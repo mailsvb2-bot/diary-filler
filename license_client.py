@@ -223,42 +223,115 @@ def _windows_machine_guid() -> str:
         return ""
 
 
-def _decode_machine_fingerprint_cache(raw: str) -> str:
+def _valid_machine_fingerprint(value: str) -> bool:
+    return len(value) == 64 and all(ch in "0123456789abcdef" for ch in value)
+
+
+def _derived_machine_fingerprint_candidates() -> tuple[set[str], bool]:
+    """Return fingerprints independently derivable on this machine.
+
+    The boolean reports whether Windows MachineGuid was available. The fallback
+    install identity is included for compatibility with legitimate legacy
+    activations that happened while MachineGuid was temporarily unreadable.
+    """
+    candidates: set[str] = set()
+    machine_guid = _windows_machine_guid().strip().lower()
+    if machine_guid:
+        candidates.add(
+            hashlib.sha256(
+                f"windows-machine-guid-v1|{machine_guid}".encode("utf-8")
+            ).hexdigest()
+        )
+    fallback_identity = (
+        "portable-install-v1|"
+        + platform.system().strip().lower()
+        + "|"
+        + _install_id().strip().lower()
+    )
+    candidates.add(hashlib.sha256(fallback_identity.encode("utf-8")).hexdigest())
+    return candidates, bool(machine_guid)
+
+
+def _decode_protected_machine_fingerprint_cache(raw: str) -> str:
     try:
         payload = json.loads(raw)
-        if payload.get("schema") == 2:
-            clear = _unprotect_local_blob(
-                str(payload.get("protected") or ""),
-                "MedicalDiaryAutofill machine fingerprint",
-            )
-            protected_payload = json.loads(clear.decode("utf-8"))
-            value = str(protected_payload.get("fingerprint") or "").strip().lower()
-        elif payload.get("schema") == 1:
-            # One-time compatibility with already-installed builds. A valid
-            # legacy value is immediately rewritten as DPAPI/HMAC-protected v2.
-            value = str(payload.get("fingerprint") or "").strip().lower()
-        else:
+        if payload.get("schema") != 2:
             return ""
-        if len(value) == 64 and all(ch in "0123456789abcdef" for ch in value):
+        clear = _unprotect_local_blob(
+            str(payload.get("protected") or ""),
+            "MedicalDiaryAutofill machine fingerprint",
+        )
+        protected_payload = json.loads(clear.decode("utf-8"))
+        value = str(protected_payload.get("fingerprint") or "").strip().lower()
+        if _valid_machine_fingerprint(value):
             return value
     except Exception:
         pass
     return ""
 
 
+def _decode_legacy_primary_machine_fingerprint(raw: str) -> tuple[str, bool]:
+    """Validate an old unprotected cache against current machine evidence.
+
+    Returns (value, identity_complete). A legacy value is never accepted merely
+    because it is well-formed; otherwise a copied license plus copied cache could
+    bypass machine binding. Roaming backup files never accept schema 1.
+    """
+    try:
+        payload = json.loads(raw)
+        if payload.get("schema") != 1:
+            return "", True
+        value = str(payload.get("fingerprint") or "").strip().lower()
+        if not _valid_machine_fingerprint(value):
+            return "", True
+        candidates, machine_guid_available = _derived_machine_fingerprint_candidates()
+        if value in candidates:
+            return value, True
+        return "", machine_guid_available
+    except Exception:
+        return "", True
+
+
 def _read_cached_machine_fingerprint() -> str:
     primary = _machine_fingerprint_cache_path()
-    for path in (primary, _machine_fingerprint_backup_path()):
+    backup = _machine_fingerprint_backup_path()
+
+    # Protected schema-2 caches are trusted through DPAPI/HMAC integrity.
+    for path in (primary, backup):
         try:
             raw = path.read_text(encoding="utf-8")
         except OSError:
             continue
-        value = _decode_machine_fingerprint_cache(raw)
+        value = _decode_protected_machine_fingerprint_cache(raw)
         if not value:
             continue
-        # Always migrate/heal both copies into protected schema v2.
         _cache_machine_fingerprint(value)
         return value
+
+    # Legacy schema-1 migration is allowed only from the local primary cache and
+    # only when its fingerprint can be independently derived on this machine.
+    try:
+        legacy_raw = primary.read_text(encoding="utf-8")
+    except OSError:
+        legacy_raw = ""
+    if legacy_raw:
+        value, identity_complete = _decode_legacy_primary_machine_fingerprint(legacy_raw)
+        if value:
+            _cache_machine_fingerprint(value)
+            return value
+        try:
+            legacy_payload = json.loads(legacy_raw)
+            legacy_value = str(legacy_payload.get("fingerprint") or "").strip().lower()
+            is_legacy = legacy_payload.get("schema") == 1 and _valid_machine_fingerprint(legacy_value)
+        except Exception:
+            is_legacy = False
+        if is_legacy and not identity_complete:
+            # Do not overwrite a potentially legitimate legacy identity while
+            # MachineGuid is transiently unavailable. Access stays closed, but
+            # the caller can suppress duplicate-payment UX and retry later.
+            raise MachineIdentityUnavailableError(
+                "Не удалось надёжно подтвердить этот компьютер. Повторите проверку лицензии."
+            )
     return ""
 
 
@@ -832,6 +905,27 @@ def current_status(config: LicenseRuntimeConfig | None = None) -> LicenseStatus:
         return status
     except OwnerReactivationRequired as exc:
         return _owner_reactivation_status(str(exc))
+    except MachineIdentityUnavailableError as exc:
+        # Never turn a transient identity-read failure into a fresh invoice.
+        try:
+            payload = _verify_signature(document, config.public_key_b64)
+            metadata = payload.get("metadata")
+            plan = str(payload.get("plan") or "")
+            owner = (
+                isinstance(metadata, dict)
+                and metadata.get("product_id") == config.product_id
+                and plan == "vip"
+                and payload.get("order_id") is None
+                and metadata.get("role") == "owner_superadmin"
+                and metadata.get("access") == "unlimited"
+            )
+        except LicenseError:
+            owner = False
+        if owner or owner_marker:
+            return _owner_reactivation_status(str(exc))
+        return _paid_recovery_status(
+            "Не удалось надёжно подтвердить этот компьютер для уже оплаченной лицензии. Новый платёж не нужен."
+        )
     except LicenseError as exc:
         # A syntactically valid primary file may still be truncated/tampered at
         # the signed payload level. Try the independent signed backup before
