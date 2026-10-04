@@ -130,6 +130,12 @@ def _pending_order_path() -> Path:
     return _runtime_dir() / "license-order.json"
 
 
+def _pending_order_backup_path() -> Path:
+    base = os.environ.get("APPDATA", "").strip()
+    root = Path(base) if base else _runtime_dir().parent
+    return root / "MedicalDiaryAutofill" / "pending-payment-recovery.json"
+
+
 def _active_order_path() -> Path:
     return _runtime_dir() / "license-active-order.json"
 
@@ -664,15 +670,63 @@ def _load_order_credentials(path: Path, missing_message: str) -> dict:
     return payload
 
 
+def _pending_order_paths() -> tuple[Path, Path]:
+    return (_pending_order_path(), _pending_order_backup_path())
+
+
 def _save_pending_order(payload: dict) -> None:
     _store_order_credentials(_pending_order_path(), payload, include_payment=True)
+    try:
+        _store_order_credentials(
+            _pending_order_backup_path(),
+            payload,
+            include_payment=True,
+        )
+    except (LicenseError, OSError):
+        # Primary LocalAppData state is enough to continue; the roaming copy is
+        # a second chance if local state is later lost/corrupted before license claim.
+        pass
 
 
 def _load_pending_order() -> dict:
-    return _load_order_credentials(
-        _pending_order_path(),
-        "Нет сохранённого заказа на оплату",
-    )
+    errors = []
+    found = False
+    for path in _pending_order_paths():
+        try:
+            if path.is_file():
+                found = True
+        except OSError:
+            found = True
+        try:
+            order = _load_order_credentials(
+                path,
+                "Нет сохранённого заказа на оплату",
+            )
+            if path != _pending_order_path():
+                try:
+                    _store_order_credentials(
+                        _pending_order_path(),
+                        order,
+                        include_payment=True,
+                    )
+                except (LicenseError, OSError):
+                    pass
+            return order
+        except LicenseError as exc:
+            errors.append(exc)
+    if not found:
+        raise LicenseError("Нет сохранённого заказа на оплату")
+    raise LicenseError(
+        "Сохранённые данные уже созданного счёта повреждены. Новый платёж не создан."
+    ) from (errors[-1] if errors else None)
+
+
+def _clear_pending_order_best_effort() -> None:
+    for path in _pending_order_paths():
+        try:
+            path.unlink(missing_ok=True)
+        except OSError:
+            pass
 
 
 def _save_active_order(order: dict) -> None:
@@ -836,16 +890,10 @@ def refresh_paid_order(config: LicenseRuntimeConfig | None = None) -> LicenseSta
         # This can happen when an old paid order file survived a previous
         # successful activation. Server-confirmed expiry is the one safe case
         # where the stale order may be cleared and renewal may proceed.
-        try:
-            _pending_order_path().unlink(missing_ok=True)
-        except OSError:
-            pass
+        discard_pending_order()
         _discard_active_order_if_matches(order_id)
         raise
-    try:
-        _pending_order_path().unlink(missing_ok=True)
-    except OSError:
-        pass
+    _clear_pending_order_best_effort()
     return result
 
 
@@ -919,32 +967,38 @@ def activate_owner(bootstrap_code: str, config: LicenseRuntimeConfig | None = No
 
 
 def discard_pending_order() -> None:
-    try:
-        _pending_order_path().unlink(missing_ok=True)
-    except OSError as exc:
-        raise LicenseError("Не удалось удалить старый заказ") from exc
+    errors = []
+    for path in _pending_order_paths():
+        try:
+            path.unlink(missing_ok=True)
+        except OSError as exc:
+            errors.append(exc)
+    if errors:
+        raise LicenseError("Не удалось удалить старый заказ") from errors[-1]
 
 
 def pending_payment_details() -> dict | None:
-    path = _pending_order_path()
-    try:
-        raw = path.read_text(encoding="utf-8")
-    except FileNotFoundError:
+    exists = False
+    for path in _pending_order_paths():
+        try:
+            if path.is_file():
+                exists = True
+                break
+        except OSError:
+            exists = True
+            break
+    if not exists:
         return None
-    except OSError as exc:
-        raise LicenseError(
-            "Не удалось прочитать сохранённый счёт. Новый платёж не создан."
-        ) from exc
     try:
-        payload = json.loads(raw)
-        if payload.get("schema") != 1:
-            raise ValueError("unsupported order schema")
+        payload = _load_pending_order()
         order_id = str(payload.get("order_id") or "").strip()
         payment_url = str(payload.get("payment_url") or "").strip()
         amount_rub = int(payload.get("amount_rub") or 0)
         if not order_id or not payment_url or amount_rub <= 0:
             raise ValueError("incomplete order")
     except Exception as exc:
+        if isinstance(exc, LicenseError):
+            raise
         raise LicenseError(
             "Сохранённый счёт повреждён. Новый платёж не создан, чтобы исключить повторную оплату."
         ) from exc
