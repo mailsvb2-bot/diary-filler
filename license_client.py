@@ -100,16 +100,25 @@ def runtime_config() -> LicenseRuntimeConfig:
     embedded_url = ""
     embedded_key = ""
     embedded_required = False
+    embedded_policy = ""
     try:
         import license_build_config as embedded  # type: ignore
 
         embedded_url = str(getattr(embedded, "LICENSE_SERVER_URL", "") or "")
         embedded_key = str(getattr(embedded, "LICENSE_PUBLIC_KEY_B64", "") or "")
         embedded_required = bool(getattr(embedded, "LICENSE_REQUIRED", False))
+        embedded_policy = str(getattr(embedded, "LICENSE_POLICY_MODE", "") or "").strip().lower()
     except Exception:
         pass
 
-    if embedded_required:
+    if embedded_policy == "unlicensed":
+        # Official unlicensed builds are immutable in this respect: a machine-
+        # wide/user environment variable must never resurrect payment/licensing
+        # UI in a binary intentionally published without licensing.
+        server_url = ""
+        public_key_b64 = ""
+        required = False
+    elif embedded_required:
         # A packaged production build must not let a local process environment
         # disable enforcement or replace the compiled trust anchor/server.
         server_url = embedded_url.strip().rstrip("/")
