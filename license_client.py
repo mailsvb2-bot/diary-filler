@@ -16,6 +16,7 @@ import math
 import os
 from pathlib import Path
 import platform
+import socket
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -297,6 +298,49 @@ def _derived_machine_fingerprint_candidates() -> tuple[set[str], bool]:
     return {hashlib.sha256(fallback_identity.encode("utf-8")).hexdigest()}, False
 
 
+def _existing_install_id() -> str:
+    """Read the historical install id without minting a new identity."""
+    try:
+        value = _install_id_path().read_text(encoding="utf-8").strip().lower()
+    except OSError:
+        return ""
+    if len(value) != 32 or any(ch not in "0123456789abcdef" for ch in value):
+        return ""
+    return value
+
+
+def _historical_windows_license_fingerprints() -> set[str]:
+    """Derive only historical fingerprints that still contain current MachineGuid.
+
+    The first production licensing client bound signed entitlements to
+    platform|hostname|MachineGuid|install-id. Recognizing that exact legacy
+    formula on the same machine is safe because the current authoritative
+    MachineGuid remains part of the SHA-256 preimage. This helper is deliberately
+    NOT used for cache validation or new activations, so copied/user-writable
+    install-id state cannot replace the canonical MachineGuid-only identity.
+    """
+    if not _is_windows_runtime():
+        return set()
+    machine_guid = _windows_machine_guid().strip().lower()
+    install_id = _existing_install_id()
+    try:
+        hostname = socket.gethostname().strip().lower()
+        system_name = platform.system().strip().lower()
+    except Exception:
+        return set()
+    if not machine_guid or not install_id or not hostname or not system_name:
+        return set()
+    legacy_identity = "|".join(
+        [
+            system_name,
+            hostname,
+            machine_guid,
+            install_id,
+        ]
+    )
+    return {hashlib.sha256(legacy_identity.encode("utf-8")).hexdigest()}
+
+
 def _decode_protected_machine_fingerprint_cache(raw: str) -> str:
     try:
         payload = json.loads(raw)
@@ -464,6 +508,16 @@ def _machine_allowed_by_payload(allowed: object) -> bool:
     if matches:
         _cache_machine_fingerprint(matches[0])
         return True
+
+    # Signed licenses issued by the original production algorithm remain valid
+    # on the same Windows machine. Historical formulas are used only for
+    # entitlement matching; canonical cache/new-activation identity stays
+    # MachineGuid-only and is never replaced by a legacy hash.
+    historical_matches = allowed_set.intersection(
+        _historical_windows_license_fingerprints()
+    )
+    if historical_matches:
+        return True
     if identity_error is not None:
         raise identity_error
     return False
@@ -622,7 +676,7 @@ def _owner_reactivation_status(message: str) -> LicenseStatus:
     )
 
 
-def _decode_clock_record(raw: str) -> tuple[datetime, timedelta]:
+def _decode_clock_record(raw: str) -> tuple[datetime, timedelta, int]:
     try:
         outer = json.loads(raw)
         schema = outer.get("schema")
@@ -635,12 +689,16 @@ def _decode_clock_record(raw: str) -> tuple[datetime, timedelta]:
         payload = json.loads(clear.decode("utf-8"))
         last_seen = _parse_utc(str(payload.get("last_seen_utc") or ""))
         trusted_offset = timedelta(0)
+        revision = 0
         if schema == 3:
             seconds = float(payload.get("trusted_offset_seconds", 0))
             if not math.isfinite(seconds) or abs(seconds) > 36525 * 24 * 60 * 60:
                 raise ValueError("trusted clock offset is invalid")
             trusted_offset = timedelta(seconds=seconds)
-        return last_seen, trusted_offset
+            revision = int(payload.get("revision", 0))
+            if revision < 0 or revision > 2**63 - 1:
+                raise ValueError("trusted clock revision is invalid")
+        return last_seen, trusted_offset, revision
     except LicenseError:
         raise
     except Exception as exc:
@@ -651,11 +709,13 @@ def _decode_clock_state(raw: str) -> datetime:
     return _decode_clock_record(raw)[0]
 
 
-def _read_clock_record() -> tuple[datetime, timedelta] | None:
+def _read_clock_record() -> tuple[datetime, timedelta, int] | None:
     errors: list[Exception] = []
     found = False
-    primary = _clock_path()
-    for path in (primary, _clock_backup_path()):
+    paths = (_clock_path(), _clock_backup_path())
+    candidates: list[tuple[tuple[int, datetime], tuple[datetime, timedelta, int], str]] = []
+
+    for path in paths:
         try:
             raw = path.read_text(encoding="utf-8")
             found = True
@@ -670,17 +730,32 @@ def _read_clock_record() -> tuple[datetime, timedelta] | None:
         except LicenseError as exc:
             errors.append(exc)
             continue
-        if path != primary:
-            try:
-                _atomic_write_text(primary, raw)
-            except OSError:
-                pass
-        return value
-    if not found:
-        return None
-    raise LicenseError("license clock state is unreadable or damaged") from (
-        errors[-1] if errors else None
-    )
+        candidates.append(((value[2], value[0]), value, raw))
+
+    if not candidates:
+        if not found:
+            return None
+        raise LicenseError("license clock state is unreadable or damaged") from (
+            errors[-1] if errors else None
+        )
+
+    _rank, value, raw = max(candidates, key=lambda item: item[0])
+    # A partial redundant write can leave one valid copy stale. Reconcile to
+    # the highest monotonic revision instead of trusting LocalAppData merely
+    # because it was readable first. Existing schema-2/3 records migrate with
+    # revision 0 and remain fully compatible.
+    for path in paths:
+        try:
+            current = path.read_text(encoding="utf-8")
+        except OSError:
+            current = ""
+        if current == raw:
+            continue
+        try:
+            _atomic_write_text(path, raw if raw.endswith("\n") else raw + "\n")
+        except OSError:
+            pass
+    return value
 
 
 def _read_clock_state() -> datetime | None:
@@ -703,6 +778,7 @@ def _record_clock(
     previous_record = _read_clock_record()
     previous = previous_record[0] if previous_record is not None else None
     trusted_offset = previous_record[1] if previous_record is not None else timedelta(0)
+    revision = (previous_record[2] if previous_record is not None else 0) + 1
 
     if trusted_local_now is not None:
         trusted_local_now = trusted_local_now.astimezone(timezone.utc)
@@ -714,6 +790,7 @@ def _record_clock(
         {
             "last_seen_utc": now.isoformat(),
             "trusted_offset_seconds": trusted_offset.total_seconds(),
+            "revision": revision,
         },
         ensure_ascii=False,
         sort_keys=True,
@@ -861,10 +938,17 @@ def _evaluate_document(
     )
 
 
-def _locally_trusted_paid_document(
+def _signed_paid_document_for_product(
     document: dict,
     config: LicenseRuntimeConfig,
 ) -> bool:
+    """Recognize a genuine paid entitlement without granting machine access.
+
+    This is intentionally weaker than _locally_trusted_paid_document: it exists
+    only to suppress a second-payment path when a signed historical entitlement
+    can no longer be matched to the current Windows identity after an upgrade or
+    hardware/OS identity change. It never activates the application.
+    """
     try:
         payload = _verify_signature(document, config.public_key_b64)
         metadata = payload.get("metadata")
@@ -877,14 +961,25 @@ def _locally_trusted_paid_document(
             and metadata.get("role") == "owner_superadmin"
             and metadata.get("access") == "unlimited"
         )
-        if owner:
-            return False
-        allowed = payload.get("allowed_machines")
-        if not _machine_allowed_by_payload(allowed):
+        if owner or not str(payload.get("order_id") or "").strip():
             return False
         valid_until = _parse_utc(str(payload.get("valid_until") or ""))
         _validate_paid_calendar_period(str(document.get("schema") or ""), payload, valid_until)
         return True
+    except LicenseError:
+        return False
+
+
+def _locally_trusted_paid_document(
+    document: dict,
+    config: LicenseRuntimeConfig,
+) -> bool:
+    if not _signed_paid_document_for_product(document, config):
+        return False
+    try:
+        payload = _verify_signature(document, config.public_key_b64)
+        allowed = payload.get("allowed_machines")
+        return _machine_allowed_by_payload(allowed)
     except LicenseError:
         return False
 
@@ -1185,6 +1280,30 @@ def current_status(config: LicenseRuntimeConfig | None = None) -> LicenseStatus:
                 return _paid_recovery_status(
                     "Уже оплаченная лицензия требует повторной проверки. Новый платёж не нужен."
                 )
+        if _signed_paid_document_for_product(document, config):
+            # A historical machine-binding mismatch must not force a second
+            # payment while the signed period may still be active. Conversely,
+            # an actually expired old entitlement must not trap the user in
+            # recovery forever. Only trusted HTTPS server time may distinguish
+            # those cases; a network failure stays fail-safe in paid recovery.
+            try:
+                trusted_now = _trusted_server_time(config)
+                payload = _verify_signature(document, config.public_key_b64)
+                valid_until = _parse_utc(str(payload.get("valid_until") or ""))
+                if trusted_now > valid_until:
+                    return LicenseStatus(
+                        False,
+                        "expired",
+                        "Срок лицензии истёк",
+                        str(payload.get("plan") or ""),
+                        valid_until,
+                        False,
+                    )
+            except LicenseError:
+                pass
+            return _paid_recovery_status(
+                "Подписанная оплаченная лицензия требует проверки привязки к этому компьютеру. Новый платёж не нужен."
+            )
         if _has_active_order_credentials():
             return _paid_recovery_status(
                 "Требуется проверить уже оплаченную лицензию"
@@ -1240,11 +1359,19 @@ def _store_order_credentials(path: Path, payload: dict, *, include_payment: bool
     order_id = str(payload.get("order_id") or "").strip()
     if not token or not order_id:
         raise LicenseError("license server returned an incomplete order")
+    saved_at = str(payload.get("saved_at") or "").strip()
+    if saved_at:
+        try:
+            saved_at = _parse_utc(saved_at).isoformat()
+        except LicenseError:
+            saved_at = ""
+    if not saved_at:
+        saved_at = datetime.now(timezone.utc).isoformat()
     stored = {
         "schema": 1,
         "order_id": order_id,
         "order_access_token": _protect_order_token(token),
-        "saved_at": datetime.now(timezone.utc).isoformat(),
+        "saved_at": saved_at,
     }
     if include_payment:
         stored["payment_url"] = str(payload.get("payment_url") or "")
@@ -1270,9 +1397,11 @@ def _pending_order_paths() -> tuple[Path, Path]:
 def _save_pending_order(payload: dict) -> None:
     errors: list[Exception] = []
     written = False
+    stamped = dict(payload)
+    stamped["saved_at"] = datetime.now(timezone.utc).isoformat()
     for path in _pending_order_paths():
         try:
-            _store_order_credentials(path, payload, include_payment=True)
+            _store_order_credentials(path, stamped, include_payment=True)
             written = True
         except (LicenseError, OSError) as exc:
             errors.append(exc)
@@ -1282,37 +1411,59 @@ def _save_pending_order(payload: dict) -> None:
         ) from (errors[-1] if errors else None)
 
 
-def _load_pending_order() -> dict:
-    errors = []
+def _order_saved_at_rank(order: dict) -> datetime:
+    try:
+        return _parse_utc(str(order.get("saved_at") or ""))
+    except LicenseError:
+        return datetime.min.replace(tzinfo=timezone.utc)
+
+
+def _load_redundant_order(
+    paths: tuple[Path, Path],
+    *,
+    missing_message: str,
+    damaged_message: str,
+    include_payment: bool,
+) -> dict:
+    errors: list[Exception] = []
     found = False
-    for path in _pending_order_paths():
+    candidates: list[tuple[datetime, dict]] = []
+    for path in paths:
         try:
             if path.is_file():
                 found = True
         except OSError:
             found = True
         try:
-            order = _load_order_credentials(
-                path,
-                "Нет сохранённого заказа на оплату",
-            )
-            if path != _pending_order_path():
-                try:
-                    _store_order_credentials(
-                        _pending_order_path(),
-                        order,
-                        include_payment=True,
-                    )
-                except (LicenseError, OSError):
-                    pass
-            return order
+            order = _load_order_credentials(path, missing_message)
+            candidates.append((_order_saved_at_rank(order), order))
         except LicenseError as exc:
             errors.append(exc)
-    if not found:
-        raise LicenseError("Нет сохранённого заказа на оплату")
-    raise LicenseError(
-        "Сохранённые данные уже созданного счёта повреждены. Новый платёж не создан."
-    ) from (errors[-1] if errors else None)
+
+    if not candidates:
+        if not found:
+            raise LicenseError(missing_message)
+        raise LicenseError(damaged_message) from (errors[-1] if errors else None)
+
+    _rank, order = max(candidates, key=lambda item: item[0])
+    # A newer order/recovery token can land only in one storage tier when the
+    # other path is temporarily unwritable. Never let a stale readable primary
+    # resurrect an older invoice or hide a newer paid-recovery credential.
+    for path in paths:
+        try:
+            _store_order_credentials(path, order, include_payment=include_payment)
+        except (LicenseError, OSError):
+            pass
+    return order
+
+
+def _load_pending_order() -> dict:
+    return _load_redundant_order(
+        _pending_order_paths(),
+        missing_message="Нет сохранённого заказа на оплату",
+        damaged_message="Сохранённые данные уже созданного счёта повреждены. Новый платёж не создан.",
+        include_payment=True,
+    )
 
 
 def _clear_pending_order_best_effort() -> None:
@@ -1326,9 +1477,11 @@ def _clear_pending_order_best_effort() -> None:
 def _save_active_order(order: dict) -> None:
     errors: list[Exception] = []
     written = False
+    stamped = dict(order)
+    stamped["saved_at"] = datetime.now(timezone.utc).isoformat()
     for path in (_active_order_path(), _active_order_backup_path()):
         try:
-            _store_order_credentials(path, order, include_payment=False)
+            _store_order_credentials(path, stamped, include_payment=False)
             written = True
         except (LicenseError, OSError) as exc:
             errors.append(exc)
@@ -1339,17 +1492,11 @@ def _save_active_order(order: dict) -> None:
 
 
 def _load_active_order() -> dict:
-    errors = []
-    for path in (_active_order_path(), _active_order_backup_path()):
-        try:
-            return _load_order_credentials(
-                path,
-                "Нет данных для восстановления оплаченной лицензии",
-            )
-        except LicenseError as exc:
-            errors.append(exc)
-    raise LicenseError("Нет читаемых данных для восстановления оплаченной лицензии") from (
-        errors[-1] if errors else None
+    return _load_redundant_order(
+        (_active_order_path(), _active_order_backup_path()),
+        missing_message="Нет данных для восстановления оплаченной лицензии",
+        damaged_message="Нет читаемых данных для восстановления оплаченной лицензии",
+        include_payment=False,
     )
 
 

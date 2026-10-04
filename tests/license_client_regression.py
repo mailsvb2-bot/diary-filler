@@ -311,6 +311,132 @@ def main() -> None:
             lc._windows_machine_guid = old_guid
         lc._cache_machine_fingerprint(machine)
 
+        # Upgrade compatibility with the original production fingerprint
+        # (platform|hostname|MachineGuid|install-id). A signed v1 entitlement
+        # created by the first licensing release must remain usable on the same
+        # Windows machine, while new activations still use MachineGuid-only.
+        saved_windows_runtime = lc._is_windows_runtime
+        saved_guid_provider = lc._windows_machine_guid
+        saved_hostname_provider = lc.socket.gethostname
+        saved_platform_system = lc.platform.system
+        saved_json_request = lc._json_request
+        install_id_path = lc._install_id_path()
+        install_id_existed = install_id_path.exists()
+        install_id_before = (
+            install_id_path.read_text(encoding="utf-8")
+            if install_id_existed
+            else ""
+        )
+        historical_install_id = "1" * 32
+        historical_guid = "original-production-guid"
+        historical_hostname = "original-production-host"
+        try:
+            lc._is_windows_runtime = lambda: True
+            lc._windows_machine_guid = lambda: historical_guid
+            lc.socket.gethostname = lambda: historical_hostname
+            lc.platform.system = lambda: "Windows"
+            install_id_path.parent.mkdir(parents=True, exist_ok=True)
+            install_id_path.write_text(historical_install_id + "\n", encoding="utf-8")
+            lc._machine_fingerprint_cache_path().unlink(missing_ok=True)
+            lc._machine_fingerprint_backup_path().unlink(missing_ok=True)
+
+            historical_material = "|".join(
+                [
+                    lc.platform.system().strip().lower(),
+                    historical_hostname,
+                    historical_guid,
+                    historical_install_id,
+                ]
+            )
+            historical_fingerprint = __import__("hashlib").sha256(
+                historical_material.encode("utf-8")
+            ).hexdigest()
+            canonical_fingerprint = lc._machine_guid_fingerprint(historical_guid)
+            assert historical_fingerprint != canonical_fingerprint
+            assert historical_fingerprint in lc._historical_windows_license_fingerprints()
+
+            # A transient hostname read failure must only disable legacy
+            # matching; it may never crash normal licensing/status checks.
+            lc.socket.gethostname = lambda: (_ for _ in ()).throw(OSError("hostname unavailable"))
+            assert lc._historical_windows_license_fingerprints() == set()
+            lc.socket.gethostname = lambda: historical_hostname
+
+            original_release_paid = signed_document(
+                private,
+                payload(historical_fingerprint, days=31),
+                schema=lc.LEGACY_LICENSE_SCHEMA,
+            )
+            lc.license_path().write_text(
+                json.dumps(original_release_paid, ensure_ascii=False),
+                encoding="utf-8",
+            )
+            lc._license_backup_path().unlink(missing_ok=True)
+            # The original release used unprotected clock schema 1. It is not
+            # trusted directly after the security upgrade; one trusted HTTPS
+            # time check migrates it into the protected current clock format.
+            lc._clock_path().write_text(
+                json.dumps(
+                    {
+                        "schema": 1,
+                        "last_seen_utc": datetime.now(timezone.utc).isoformat(),
+                    }
+                ),
+                encoding="utf-8",
+            )
+            lc._clock_backup_path().unlink(missing_ok=True)
+            lc._json_request = lambda _config, method, path, **kwargs: (
+                {
+                    "status": "ok",
+                    "product_id": lc.PRODUCT_ID,
+                    "public_key_b64": config.public_key_b64,
+                    "server_time": datetime.now(timezone.utc).isoformat(),
+                }
+                if method == "GET" and path == "/health"
+                else (_ for _ in ()).throw(AssertionError((method, path)))
+            )
+            upgraded_original = lc.current_status(config)
+            assert upgraded_original.active and upgraded_original.mode == "paid"
+            assert json.loads(lc._clock_path().read_text(encoding="utf-8"))["schema"] == 3
+
+            # The first-release unlimited owner entitlement used the same old
+            # fingerprint formula. It must remain unlimited on the same machine
+            # and must never be routed through monthly-payment clock logic.
+            original_release_owner = signed_document(
+                private,
+                payload(historical_fingerprint, days=3650, owner=True),
+                schema=lc.LEGACY_LICENSE_SCHEMA,
+            )
+            historical_owner_status = lc._evaluate_document(
+                original_release_owner,
+                config,
+            )
+            assert historical_owner_status.active
+            assert historical_owner_status.mode == "owner"
+            assert historical_owner_status.owner_unlimited
+
+            # Historical entitlement matching must never pin the old formula as
+            # the identity for future activations.
+            assert lc.machine_fingerprint() == canonical_fingerprint
+        finally:
+            lc._is_windows_runtime = saved_windows_runtime
+            lc._windows_machine_guid = saved_guid_provider
+            lc.socket.gethostname = saved_hostname_provider
+            lc.platform.system = saved_platform_system
+            lc._json_request = saved_json_request
+            if install_id_existed:
+                install_id_path.write_text(install_id_before, encoding="utf-8")
+            else:
+                install_id_path.unlink(missing_ok=True)
+            for path in (
+                lc.license_path(),
+                lc._license_backup_path(),
+                lc._clock_path(),
+                lc._clock_backup_path(),
+                lc._machine_fingerprint_cache_path(),
+                lc._machine_fingerprint_backup_path(),
+            ):
+                path.unlink(missing_ok=True)
+
         # Restore the real platform identity functions before the paid-license
         # scenarios. The identity tests above intentionally replace them with
         # failing/forged lambdas; leaking those stubs into the next section
@@ -381,6 +507,153 @@ def main() -> None:
             for path in all_resilience_paths:
                 path.unlink(missing_ok=True)
 
+        # A partial write can leave both redundant clock files valid but at
+        # different generations. The newest monotonic revision must win even
+        # when the stale LocalAppData copy contains a later wall-clock value.
+        stale_clock_time = datetime.now(timezone.utc) + timedelta(days=3)
+        repaired_clock_time = datetime.now(timezone.utc)
+        stale_clock_clear = json.dumps(
+            {
+                "last_seen_utc": stale_clock_time.isoformat(),
+                "trusted_offset_seconds": 0,
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+        repaired_clock_clear = json.dumps(
+            {
+                "last_seen_utc": repaired_clock_time.isoformat(),
+                "trusted_offset_seconds": -300,
+                "revision": 1,
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+        stale_clock_raw = json.dumps(
+            {
+                "schema": 3,
+                "protected": lc._protect_local_blob(
+                    stale_clock_clear,
+                    "MedicalDiaryAutofill license clock",
+                ),
+            }
+        ) + "\n"
+        repaired_clock_raw = json.dumps(
+            {
+                "schema": 3,
+                "protected": lc._protect_local_blob(
+                    repaired_clock_clear,
+                    "MedicalDiaryAutofill license clock",
+                ),
+            }
+        ) + "\n"
+        lc._clock_path().write_text(stale_clock_raw, encoding="utf-8")
+        lc._clock_backup_path().write_text(repaired_clock_raw, encoding="utf-8")
+        reconciled_clock = lc._read_clock_record()
+        assert reconciled_clock is not None
+        assert reconciled_clock[0] == repaired_clock_time
+        assert reconciled_clock[1] == timedelta(seconds=-300)
+        assert reconciled_clock[2] == 1
+        assert lc._clock_path().read_text(encoding="utf-8") == repaired_clock_raw
+        assert lc._clock_backup_path().read_text(encoding="utf-8") == repaired_clock_raw
+
+        # Legacy schema-2 clock state remains readable after the revision field
+        # was added to schema 3.
+        legacy_clock_clear = json.dumps(
+            {"last_seen_utc": repaired_clock_time.isoformat()},
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+        legacy_clock_raw = json.dumps(
+            {
+                "schema": 2,
+                "protected": lc._protect_local_blob(
+                    legacy_clock_clear,
+                    "MedicalDiaryAutofill license clock",
+                ),
+            }
+        )
+        legacy_clock_record = lc._decode_clock_record(legacy_clock_raw)
+        assert legacy_clock_record == (repaired_clock_time, timedelta(0), 0)
+
+        # The first production client stored pending orders with created_at
+        # and no saved_at/backup. Such an unfinished real invoice must survive
+        # upgrade and be migrated instead of silently opening a second payment.
+        legacy_pending_token = "L" * 48
+        legacy_pending_raw = {
+            "schema": 1,
+            "order_id": "00000000-0000-0000-0000-000000000080",
+            "order_access_token": lc._protect_order_token(legacy_pending_token),
+            "payment_url": "https://pay.example.com/original-client",
+            "amount_rub": 100,
+            "created_at": (datetime.now(timezone.utc) - timedelta(days=1)).isoformat(),
+        }
+        lc._pending_order_path().write_text(
+            json.dumps(legacy_pending_raw, ensure_ascii=False),
+            encoding="utf-8",
+        )
+        lc._pending_order_backup_path().unlink(missing_ok=True)
+        migrated_legacy_pending = lc._load_pending_order()
+        assert migrated_legacy_pending["order_id"] == legacy_pending_raw["order_id"]
+        assert migrated_legacy_pending["order_access_token"] == legacy_pending_token
+        assert lc._pending_order_backup_path().exists()
+        healed_legacy_pending = lc._load_order_credentials(
+            lc._pending_order_backup_path(),
+            "missing",
+        )
+        assert healed_legacy_pending["order_id"] == legacy_pending_raw["order_id"]
+        assert healed_legacy_pending.get("saved_at")
+
+        # Pending-payment copies can also diverge if one storage tier rejects a
+        # renewal write. Always continue the newest saved invoice; otherwise a
+        # stale readable primary could unlock an accidental second payment.
+        older_pending = {
+            "order_id": "00000000-0000-0000-0000-000000000081",
+            "order_access_token": "O" * 48,
+            "payment_url": "https://pay.example.com/older",
+            "amount_rub": 100,
+            "saved_at": (datetime.now(timezone.utc) - timedelta(hours=2)).isoformat(),
+        }
+        newer_pending = {
+            "order_id": "00000000-0000-0000-0000-000000000082",
+            "order_access_token": "N" * 48,
+            "payment_url": "https://pay.example.com/newer",
+            "amount_rub": 100,
+            "saved_at": (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat(),
+        }
+        lc._store_order_credentials(lc._pending_order_path(), older_pending, include_payment=True)
+        lc._store_order_credentials(lc._pending_order_backup_path(), newer_pending, include_payment=True)
+        loaded_pending = lc._load_pending_order()
+        assert loaded_pending["order_id"] == newer_pending["order_id"]
+        assert lc._load_order_credentials(
+            lc._pending_order_path(),
+            "missing",
+        )["order_id"] == newer_pending["order_id"]
+
+        # The same newest-copy rule is required for paid recovery credentials.
+        older_active = dict(older_pending)
+        older_active["order_id"] = "00000000-0000-0000-0000-000000000083"
+        newer_active = dict(newer_pending)
+        newer_active["order_id"] = "00000000-0000-0000-0000-000000000084"
+        lc._store_order_credentials(lc._active_order_path(), older_active, include_payment=False)
+        lc._store_order_credentials(lc._active_order_backup_path(), newer_active, include_payment=False)
+        loaded_active = lc._load_active_order()
+        assert loaded_active["order_id"] == newer_active["order_id"]
+        assert lc._load_order_credentials(
+            lc._active_order_path(),
+            "missing",
+        )["order_id"] == newer_active["order_id"]
+
+        for path in (
+            lc._pending_order_path(),
+            lc._pending_order_backup_path(),
+            lc._active_order_path(),
+            lc._active_order_backup_path(),
+            lc._clock_path(),
+            lc._clock_backup_path(),
+        ):
+            path.unlink(missing_ok=True)
+
         assert lc.save_license(paid, config).active
         assert lc.current_status(config).mode == "paid"
         assert lc._license_backup_path().exists()
@@ -435,6 +708,91 @@ def main() -> None:
         assert local_wins.active and local_wins.mode == "paid"
         assert json.loads(lc.license_path().read_text(encoding="utf-8")) == local_paid
         assert json.loads(lc._license_backup_path().read_text(encoding="utf-8")) == local_paid
+
+        # A cryptographically genuine historical paid entitlement whose signed
+        # machine identity no longer matches must never fall through to the
+        # "buy again" path. Access still stays closed; only paid recovery is
+        # offered. This protects legacy fallback identities across upgrades
+        # without weakening current MachineGuid binding.
+        for path in (lc._active_order_path(), lc._active_order_backup_path()):
+            path.unlink(missing_ok=True)
+        legacy_identity_paid = signed_document(
+            private,
+            payload(foreign_machine, days=31),
+            schema=lc.LEGACY_LICENSE_SCHEMA,
+        )
+        lc.license_path().write_text(
+            json.dumps(legacy_identity_paid, ensure_ascii=False),
+            encoding="utf-8",
+        )
+        lc._license_backup_path().write_text(
+            json.dumps(legacy_identity_paid, ensure_ascii=False),
+            encoding="utf-8",
+        )
+        old_json_request = lc._json_request
+        try:
+            lc._json_request = lambda _config, method, path, **kwargs: (
+                {
+                    "status": "ok",
+                    "product_id": lc.PRODUCT_ID,
+                    "public_key_b64": config.public_key_b64,
+                    "server_time": datetime.now(timezone.utc).isoformat(),
+                }
+                if method == "GET" and path == "/health"
+                else (_ for _ in ()).throw(AssertionError((method, path)))
+            )
+            legacy_identity_status = lc.current_status(config)
+            assert not legacy_identity_status.active
+            assert legacy_identity_status.mode == "paid_recovery"
+            assert "Новый платёж не нужен" in legacy_identity_status.message
+
+            # The same mismatch must not suppress a legitimate renewal forever
+            # after the old signed period has actually expired. Only trusted
+            # server time may make this transition into ordinary expired UX.
+            expired_legacy_identity = signed_document(
+                private,
+                payload(
+                    foreign_machine,
+                    days=31,
+                    issued_at=datetime.now(timezone.utc) - timedelta(days=60),
+                ),
+                schema=lc.LEGACY_LICENSE_SCHEMA,
+            )
+            lc.license_path().write_text(
+                json.dumps(expired_legacy_identity, ensure_ascii=False),
+                encoding="utf-8",
+            )
+            lc._license_backup_path().write_text(
+                json.dumps(expired_legacy_identity, ensure_ascii=False),
+                encoding="utf-8",
+            )
+            confirmed_expired = lc.current_status(config)
+            assert not confirmed_expired.active
+            assert confirmed_expired.mode == "expired"
+        finally:
+            lc._json_request = old_json_request
+
+        # If trusted server time is unavailable, even an apparently old signed
+        # entitlement must stay in paid recovery rather than risking a duplicate
+        # charge based only on the workstation clock.
+        lc.license_path().write_text(
+            json.dumps(legacy_identity_paid, ensure_ascii=False),
+            encoding="utf-8",
+        )
+        lc._license_backup_path().write_text(
+            json.dumps(legacy_identity_paid, ensure_ascii=False),
+            encoding="utf-8",
+        )
+        old_json_request = lc._json_request
+        try:
+            lc._json_request = lambda *args, **kwargs: (_ for _ in ()).throw(
+                lc.LicenseError("offline")
+            )
+            offline_identity_status = lc.current_status(config)
+            assert not offline_identity_status.active
+            assert offline_identity_status.mode == "paid_recovery"
+        finally:
+            lc._json_request = old_json_request
 
         assert lc.save_license(paid, config).active
 
