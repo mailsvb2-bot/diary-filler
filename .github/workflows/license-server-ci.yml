@@ -60,7 +60,8 @@ jobs:
           with tempfile.TemporaryDirectory() as td:
               os.environ["DIARY_FILLER_MONTHLY_PRICE_RUB"] = "100"
               os.environ["DIARY_FILLER_LICENSE_PRIVATE_KEY_B64"] = base64.b64encode(raw).decode("ascii")
-              os.environ["DIARY_FILLER_LICENSE_DB"] = td + "/licenses.sqlite3"
+              os.environ["DIARY_FILLER_LICENSE_DB"] = td + "/primary/licenses.sqlite3"
+              os.environ["DIARY_FILLER_LICENSE_BACKUP_DB"] = td + "/backup/licenses.sqlite3"
               os.environ["YOOKASSA_SHOP_ID"] = "ci-shop"
               os.environ["YOOKASSA_SECRET_KEY"] = "ci-secret"
               os.environ["DIARY_FILLER_PAYMENT_RETURN_URL"] = "https://licenses.example.test/payment-return"
