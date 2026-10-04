@@ -436,8 +436,20 @@ def main() -> None:
             assert backup_loaded["order_id"] == recovery_order["order_id"]
             lc._active_order_path().write_text(active_primary, encoding="utf-8")
 
+            # One damaged license/clock primary copy must heal from the
+            # independent signed/protected backups with no user-visible block.
             lc.license_path().write_text("{broken", encoding="utf-8")
             lc._clock_path().write_text("{broken", encoding="utf-8")
+            automatically_healed = lc.current_status(config)
+            assert automatically_healed.active
+            assert automatically_healed.mode == "paid"
+
+            # If both signed license copies are damaged, the already-saved
+            # active order credential becomes the next recovery tier.
+            lc.license_path().write_text("{broken", encoding="utf-8")
+            lc._license_backup_path().write_text("{broken", encoding="utf-8")
+            lc._clock_path().write_text("{broken", encoding="utf-8")
+            lc._clock_backup_path().write_text("{broken", encoding="utf-8")
             recovery_needed = lc.current_status(config)
             assert not recovery_needed.active
             assert recovery_needed.mode == "paid_recovery"
