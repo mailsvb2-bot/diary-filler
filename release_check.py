@@ -219,17 +219,19 @@ def _assert_build_contract() -> None:
         "./tools/windows_desktop_intake_e2e.ps1 -AppPath ./dist/MedicalDiaryAutofill.exe",
         "./tools/windows_installer_smoke.ps1 -InstallerPath ./dist/MedicalDiaryAutofill-Setup-1.4.32.exe",
         "Create guarded release tag",
-        "MEDICAL_AUTOFILL_LICENSE_REQUIRED",
-        "MEDICAL_AUTOFILL_LICENSE_SERVER_URL",
-        "MEDICAL_AUTOFILL_LICENSE_PUBLIC_KEY_B64",
-        "Guard production licensing configuration",
+        'MEDICAL_AUTOFILL_RELEASE_LICENSE_MODE: "unlicensed"',
+        'MEDICAL_AUTOFILL_LICENSE_REQUIRED: "0"',
+        'MEDICAL_AUTOFILL_LICENSE_SERVER_URL: ""',
+        'MEDICAL_AUTOFILL_LICENSE_PUBLIC_KEY_B64: ""',
+        "Guard temporary unlicensed release configuration",
         "Verify live license server trust anchor",
+        "if: env.MEDICAL_AUTOFILL_LICENSE_REQUIRED == '1'",
         "python tools/license_server_preflight.py",
         "gh release create",
         "--verify-tag",
     ]:
         if snippet not in release_workflow:
-            raise SystemExit(f"Unsigned release workflow misses fail-closed snippet: {snippet}")
+            raise SystemExit(f"Release workflow misses fail-closed policy snippet: {snippet}")
     verify_exe = (ROOT / "verify_built_exe.py").read_text(encoding="utf-8", errors="replace")
     for snippet in [
         "MEDICAL_AUTOFILL_STARTUP_PROBE",
