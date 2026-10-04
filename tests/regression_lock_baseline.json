@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "87c69f42a2c23e70ab9af8b6eb9460d1643bee4f",
-  "baseline_note": "v1.4.32 licensing hardening validated on candidate commit 87c69f42a2c23e70ab9af8b6eb9460d1643bee4f: License Server CI #125 and Windows EXE Build #1608 passed. Validation covered forged fingerprint-cache rejection, locally applicable redundant-license selection, trusted server-time offline continuity, expiry rollback resistance, bounded license-server rate-limit keys, the full medical/golden DOCX regression contour, packaged EXE desktop-intake E2E, and Windows installer/uninstall smoke.",
+  "baseline_ref": "853962bacee8843bfe094e6b646d9611d95a7245",
+  "baseline_note": "v1.4.32 deep licensing compatibility candidate 853962bacee8843bfe094e6b646d9611d95a7245 validated by License Server CI #149 and Windows EXE Build #1632. Validation covered original-production Windows fingerprint compatibility, MachineGuid-only canonical binding, divergent redundant clock/order reconciliation, duplicate-payment suppression with trusted expiry confirmation, legacy pending-order migration, full release gate, full patient replay/golden DOCX, complete clinical roundtrip, full user journey, Windows E1 matrix, packaged EXE intake E2E, installer build, and signed-license persistence across install/uninstall.",
   "required_approval_evidence": [
     "ci_gate_lock",
     "patient_registry_regression"
