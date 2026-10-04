@@ -176,6 +176,10 @@ def main() -> None:
         # provider value so a byte-order reversal cannot silently disable the
         # hardware anchor on every real Windows machine.
         assert lc._RSMB_PROVIDER_SIGNATURE == 0x52534D42
+        if os.name == "nt":
+            live_smbios_uuid = original_windows_smbios_uuid()
+            assert len(live_smbios_uuid) == 32
+            assert all(ch in "0123456789abcdef" for ch in live_smbios_uuid)
 
         # Parse SMBIOS System Information (type 1) without depending on WMI.
         synthetic_uuid = bytes.fromhex("00112233445566778899aabbccddeeff")
