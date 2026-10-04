@@ -27,6 +27,23 @@ $installedFixture = Join-Path $intakeDir $installedFixtureName
 $installedCreatedPatientFolder = $null
 $ciLicenseProvisioner = Join-Path $PSScriptRoot 'provision_ci_license.py'
 $ciLicenseProvisioned = $false
+$roamingLicenseDir = Join-Path $env:APPDATA 'MedicalDiaryAutofill'
+$ciLicenseStateFiles = @(
+    (Join-Path $runtimeDir 'license.json'),
+    (Join-Path $roamingLicenseDir 'license-backup.json'),
+    (Join-Path $runtimeDir 'owner-entitlement.marker'),
+    (Join-Path $roamingLicenseDir 'owner-entitlement.marker')
+)
+
+function Assert-CiLicenseStatePresent {
+    param([string]$Stage)
+    if (-not $script:ciLicenseProvisioned) { return }
+    foreach ($path in $ciLicenseStateFiles) {
+        if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
+            throw "Signed CI license state disappeared ($Stage): $path"
+        }
+    }
+}
 
 function Provision-CiLicenseForCurrentProfile {
     if ($env:MEDICAL_AUTOFILL_LICENSE_REQUIRED -ne '1') { return }
@@ -38,6 +55,7 @@ function Provision-CiLicenseForCurrentProfile {
         throw 'Could not provision a real signed license for installed E2E'
     }
     $script:ciLicenseProvisioned = $true
+    Assert-CiLicenseStatePresent -Stage 'immediately after provisioning'
     # The secret is required only by the provisioning subprocess. Never let
     # Setup or the installed application inherit it.
     Remove-Item Env:MEDICAL_AUTOFILL_CI_ACTIVATION_CODE -ErrorAction SilentlyContinue
@@ -118,6 +136,7 @@ try {
     if (-not (Test-Path $app)) {
         throw 'Installed MedicalDiaryAutofill.exe is missing'
     }
+    Assert-CiLicenseStatePresent -Stage 'after installation'
     $internalDir = Join-Path $installDir '_internal'
     if (-not (Test-Path -LiteralPath $internalDir -PathType Container)) {
         throw 'Installer did not deploy the fast PyInstaller onedir runtime'
@@ -346,6 +365,11 @@ d.save(p)
     if (-not (Test-Path -LiteralPath $preserveProbe -PathType Leaf)) {
         throw 'Uninstaller removed a user-owned file from Desktop\Выписанные пациенты'
     }
+
+    # Reinstall/update compatibility: the program lives in the same LocalAppData
+    # directory as user-owned licensing state. The uninstaller may remove files
+    # it installed, but it must never erase a signed entitlement or owner marker.
+    Assert-CiLicenseStatePresent -Stage 'after uninstall'
 
     Write-Host 'WINDOWS INSTALLER FAST ONEDIR WATCHER BOOTSTRAP AND UNINSTALL SMOKE OK'
 }
