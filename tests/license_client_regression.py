@@ -216,6 +216,13 @@ def main() -> None:
         )
         assert source_fingerprint != lc._machine_guid_fingerprint(clone_guid)
         copied_v2_license = signed_document(private, payload(source_fingerprint))
+        source_cache_value, source_cache_requires_hardware = (
+            lc._decode_protected_machine_fingerprint_cache_record(
+                lc._machine_fingerprint_cache_path().read_text(encoding="utf-8")
+            )
+        )
+        assert source_cache_value == source_fingerprint
+        assert source_cache_requires_hardware
 
         # Keep the source cache files in place: this represents copying the
         # complete installed/runtime folder to the target computer.
@@ -338,7 +345,7 @@ def main() -> None:
         migrated_primary = json.loads(
             lc._machine_fingerprint_cache_path().read_text(encoding="utf-8")
         )
-        assert migrated_primary["schema"] == 2
+        assert migrated_primary["schema"] == 3
 
         # A readable MachineGuid is sufficient to validate a legitimate
         # legacy cache even if install-id persistence is temporarily broken.
@@ -398,8 +405,9 @@ def main() -> None:
         lc._machine_fingerprint_backup_path().unlink(missing_ok=True)
         lc._cache_machine_fingerprint(machine)
 
-        # A locally forgeable schema-2 cache must not override current Windows
-        # MachineGuid evidence, even if the attacker can create a valid
+        # A legacy schema-2 cache remains readable for compatibility, but a
+        # locally forgeable foreign value must not override current Windows
+        # MachineGuid evidence even if the attacker can create a valid
         # DPAPI/HMAC envelope containing a copied license fingerprint.
         lc._machine_fingerprint_cache_path().unlink(missing_ok=True)
         lc._machine_fingerprint_backup_path().unlink(missing_ok=True)
