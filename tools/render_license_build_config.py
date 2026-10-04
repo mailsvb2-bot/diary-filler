@@ -20,6 +20,15 @@ def main() -> None:
     server_url = os.environ.get("MEDICAL_AUTOFILL_LICENSE_SERVER_URL", "").strip().rstrip("/")
     public_key = os.environ.get("MEDICAL_AUTOFILL_LICENSE_PUBLIC_KEY_B64", "").strip()
     required = _boolean(os.environ.get("MEDICAL_AUTOFILL_LICENSE_REQUIRED", "0"))
+    policy_mode = os.environ.get("MEDICAL_AUTOFILL_RELEASE_LICENSE_MODE", "").strip().lower()
+    if policy_mode not in {"", "unlicensed", "licensed"}:
+        raise SystemExit("unsupported release licensing policy")
+    if policy_mode == "unlicensed" and (required or server_url or public_key):
+        raise SystemExit(
+            "unlicensed release policy requires LICENSE_REQUIRED=0 and empty server/key"
+        )
+    if policy_mode == "licensed" and not required:
+        raise SystemExit("licensed release policy requires LICENSE_REQUIRED=1")
 
     if required:
         if not server_url or not public_key:
@@ -40,7 +49,8 @@ def main() -> None:
         "# generated; contains public licensing configuration only\n"
         + f"LICENSE_SERVER_URL = {server_url!r}\n"
         + f"LICENSE_PUBLIC_KEY_B64 = {public_key!r}\n"
-        + f"LICENSE_REQUIRED = {required!r}\n",
+        + f"LICENSE_REQUIRED = {required!r}\n"
+        + f"LICENSE_POLICY_MODE = {policy_mode!r}\n",
         encoding="utf-8",
     )
 
