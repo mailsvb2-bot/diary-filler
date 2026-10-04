@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "a6403cd8fa2ed89541fe5551642b6d22c2ab9607",
+  "reason": "Temporarily publish v1.4.32 without licensing while keeping the complete licensing implementation and regression coverage ready for later re-enablement.",
+  "required_evidence": [
+    "document_mechanics_guard",
+    "full_patient_replay",
+    "golden_docx",
+    "staff_profile_regression",
+    "gender_generation_matrix",
+    "desktop_intake_contract",
+    "intake_lifecycle_regression",
+    "packaged_desktop_intake_e2e",
+    "installer_uninstall_smoke",
+    "ci_gate_lock",
+    "patient_registry_regression"
+  ],
+  "approved_blobs": {
+    ".github/workflows/release.yml": "d27ea382154a5e14d183f3a4b8d3e195065b7126",
+    "tools/ci_gate_lock.py": "9a33671d928523458de15ca663c6ae23650bfe33"
+  }
+}
