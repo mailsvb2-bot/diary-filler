@@ -245,7 +245,10 @@ def _parse_utc(value: str) -> datetime:
     raw = str(value or "").strip()
     if raw.endswith("Z"):
         raw = raw[:-1] + "+00:00"
-    result = datetime.fromisoformat(raw)
+    try:
+        result = datetime.fromisoformat(raw)
+    except (TypeError, ValueError) as exc:
+        raise LicenseError("license timestamp is invalid") from exc
     if result.tzinfo is None:
         raise LicenseError("license timestamp has no timezone")
     return result.astimezone(timezone.utc)
