@@ -5,8 +5,11 @@ import importlib
 import os
 from pathlib import Path
 from tempfile import TemporaryDirectory
+import sys
 
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 
 def _assert_implementation_is_preserved() -> None:
@@ -73,7 +76,6 @@ def _assert_unlicensed_runtime_cannot_be_resurrected_by_environment() -> None:
             encoding="utf-8",
         )
 
-        import sys
         sys.path.insert(0, temp)
         saved = {
             name: os.environ.get(name)
