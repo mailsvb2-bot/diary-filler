@@ -527,9 +527,14 @@ class MedicalParserBlocksMixin:
                 # before the label and an F-code after it. Other strict clinical
                 # labels keep their existing separator behavior for compatibility.
                 if marker_norm == normalize_match("Диагноз"):
-                    return cls._is_safe_one_line_clinical_boundary(
-                        text, start, end, marker
-                    )
+                    inline_tail = normalize_match(after_on_line).lstrip(" :.-—–№#")
+                    # Inline current-diagnosis labels are accepted when they
+                    # immediately introduce an F-code, even in compact column
+                    # exports like "Лечение: терапия Диагноз: F41.2 ...".
+                    # Historical prose such as
+                    # "07.02.2013 Невролог. Диагноз: Неврозоподобный синдром"
+                    # has no F-code here and therefore remains inside anamnesis.
+                    return bool(re.match(r"[fф]\s*\d", inline_tail, flags=re.IGNORECASE))
                 return has_label_separator or cls._is_safe_one_line_clinical_boundary(
                     text, start, end, marker
                 )
