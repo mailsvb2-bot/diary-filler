@@ -1,9 +1,8 @@
 {
   "schema_version": 1,
-  "base_sha": "31eecb68c5c933534f64af8d98cd0d827463c494",
-  "reason": "Deep source-fidelity hardening: an explicitly historical 'был выставлен диагноз' phrase must never become the patient's current diagnosis or suppress the doctor diagnosis prompt; legitimate current diagnosis phrasing remains supported.",
+  "base_sha": "f918b2ae2e6e57882a530926ecf46eb1f73ce57f",
+  "reason": "Patient work source-fidelity fix: employment aliases in family/life anamnesis must not populate the patient's work organization or position and must not auto-select patient employment in expert/VK generation.",
   "approved_blobs": {
-    "medical_parser_blocks.py": "a5bef5ef1295c9398b2a69767aa955116ca6969d",
-    "medical_parser_core.py": "285f34b40433b4020d8b2f20426963cfb65011cc"
+    "medical_parser_inline.py": "e1dddff58f5fd06fa5a9a459c690c27ab86a5b21"
   }
 }
