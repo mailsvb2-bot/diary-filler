@@ -1,8 +1,9 @@
 {
   "schema_version": 1,
   "base_sha": "f918b2ae2e6e57882a530926ecf46eb1f73ce57f",
-  "reason": "Patient work source-fidelity fix: both inline and fallback employment parsing must reject relatives' work facts so they cannot become patient work defaults in expert/VK generation.",
+  "reason": "Patient work source-fidelity fix: inline, compact-demographic and fallback work parsing must all reject relatives' employment so family history cannot become patient expert/VK work defaults.",
   "approved_blobs": {
+    "medical_parser_demographics.py": "9393209b0a4e45e071a987225de53069b855a794",
     "medical_parser_inline.py": "c3c29e64a57a5b3da64c99e9de50d77cc2753431",
     "medical_parser_work.py": "0f364260348f7cc2b83864a3408332ab00c86d74"
   }
