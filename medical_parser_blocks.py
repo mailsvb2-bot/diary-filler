@@ -408,11 +408,48 @@ class MedicalParserBlocksMixin:
             return False
 
         line_start = text.rfind("\n", 0, start) + 1
-        prefix = text[line_start:start]
-        if not prefix.strip():
+        line_prefix = text[line_start:start]
+
+        # Use several local candidates instead of the whole physical paragraph.
+        # One-paragraph DOCX exports can contain the current document title,
+        # birth date and many later clinical sections on the same line. A date
+        # elsewhere in that long paragraph is not evidence that this marker is
+        # historical. Conversely, real chronology often looks like:
+        #   "Начало болезни. В 2013 году был выставлен диагноз: ..."
+        # or:
+        #   "07.02.2013 Невролог. Диагноз: ..."
+        # so inspect the recent sentence/event fragments too.
+        candidates: list[str] = []
+
+        def _append_candidates(value: str) -> None:
+            value = value.strip()
+            if not value:
+                return
+            candidates.append(value)
+            sentence_parts = [
+                part.strip()
+                for part in re.split(r"(?<=[.!?;])\s+", value)
+                if part.strip()
+            ]
+            candidates.extend(sentence_parts[-2:])
+
+        _append_candidates(line_prefix)
+
+        # A historical event header may occupy its own paragraph, with the
+        # first nested clinical label on the following line:
+        #   "07.02.2013 Невролог."
+        #   "Диагноз: F06.8 ..."
+        # Treat that first nested label as historical too. Document titles are
+        # rejected below, so "10.06.2026 Первичный осмотр\nДиагноз: ..." still
+        # remains a current top-level diagnosis.
+        if not line_prefix.strip() and line_start > 0:
+            previous_end = line_start - 1
+            previous_start = text.rfind("\n", 0, previous_end) + 1
+            _append_candidates(text[previous_start:previous_end])
+
+        if not candidates:
             return False
 
-        prefix_norm = normalize_match(prefix)
         document_title_signals = (
             "первичный осмотр",
             "выписной эпикриз",
@@ -422,28 +459,63 @@ class MedicalParserBlocksMixin:
             "вк на мсэ",
             "вк больничный",
         )
-        if any(signal in prefix_norm for signal in document_title_signals):
-            return False
-
-        numeric_date = re.match(
-            r"^\s*(?:от\s+)?\d{1,2}[./-]\d{1,2}[./-]\d{2,4}\b",
-            prefix,
-            flags=re.IGNORECASE,
-        )
-        month_year = re.match(
-            r"^\s*(?:в\s+|с\s+|от\s+)?"
+        month_name = (
             r"(?:январ[ьяе]|феврал[ьяе]|март(?:а|е)?|апрел[ьяе]|ма[йяе]|"
             r"июн[ьяе]|июл[ьяе]|август(?:а|е)?|сентябр[ьяе]|октябр[ьяе]|"
-            r"ноябр[ьяе]|декабр[ьяе])\s+(?:19|20)\d{2}(?:\s*г(?:ода|\.)?)?\b",
-            prefix,
-            flags=re.IGNORECASE,
+            r"ноябр[ьяе]|декабр[ьяе])"
         )
-        year_lead = re.match(
-            r"^\s*(?:в\s+|с\s+)?(?:19|20)\d{2}\s*г(?:ода|\.)?\b",
-            prefix,
-            flags=re.IGNORECASE,
-        )
-        return bool(numeric_date or month_year or year_lead)
+
+        for candidate in candidates:
+            candidate_norm = normalize_match(candidate)
+            if any(signal in candidate_norm for signal in document_title_signals):
+                continue
+
+            numeric_date = re.match(
+                r"^\s*(?:от\s+)?\d{1,2}[./-]\d{1,2}[./-]\d{2,4}\b",
+                candidate,
+                flags=re.IGNORECASE,
+            )
+            numeric_month_year = re.match(
+                r"^\s*(?:в\s+|с\s+|от\s+)?(?:0?[1-9]|1[0-2])[./-](?:19|20)\d{2}\b",
+                candidate,
+                flags=re.IGNORECASE,
+            )
+            textual_day_month_year = re.match(
+                rf"^\s*(?:от\s+)?\d{{1,2}}\s+{month_name}\s+(?:19|20)\d{{2}}"
+                r"(?:\s*г(?:ода|\.)?)?\b",
+                candidate,
+                flags=re.IGNORECASE,
+            )
+            month_year = re.match(
+                rf"^\s*(?:в\s+|с\s+|от\s+)?{month_name}\s+(?:19|20)\d{{2}}"
+                r"(?:\s*г(?:ода|\.)?)?\b",
+                candidate,
+                flags=re.IGNORECASE,
+            )
+            year_lead = re.match(
+                r"^\s*(?:в\s+|с\s+|от\s+)?(?:19|20)\d{2}\s*г(?:ода|\.)?\b",
+                candidate,
+                flags=re.IGNORECASE,
+            )
+            season_year = re.match(
+                r"^\s*(?:в\s+)?(?:весной|летом|осенью|зимой)\s+(?:19|20)\d{2}"
+                r"(?:\s*г(?:ода|\.)?)?\b",
+                candidate,
+                flags=re.IGNORECASE,
+            )
+            if any(
+                (
+                    numeric_date,
+                    numeric_month_year,
+                    textual_day_month_year,
+                    month_year,
+                    year_lead,
+                    season_year,
+                )
+            ):
+                return True
+
+        return False
 
     @classmethod
     def _is_safe_one_line_clinical_boundary(
@@ -575,9 +647,9 @@ class MedicalParserBlocksMixin:
             return explicit_colon or explicit_line_label
 
         if marker_norm in cls._STRICT_CLINICAL_BOUNDARY_MARKERS:
+            if cls._is_dated_historical_inline_occurrence(text, start, marker):
+                return False
             if not at_line_start:
-                if cls._is_dated_historical_inline_occurrence(text, start, marker):
-                    return False
                 # A colon alone is not enough to split a long clinical history.
                 # Real anamneses often contain historical inline facts such as
                 # "07.02.2013 Невролог. Диагноз: Неврозоподобный синдром".
@@ -632,7 +704,6 @@ class MedicalParserBlocksMixin:
             return True
         if (
             marker_norm in cls._STRICT_CLINICAL_BOUNDARY_MARKERS
-            and not at_line_start
             and cls._is_dated_historical_inline_occurrence(text, start, marker)
         ):
             return False
