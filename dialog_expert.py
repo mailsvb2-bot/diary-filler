@@ -237,15 +237,11 @@ class DialogExpertMixin:
             work_status = self._normalize_yes_no(self.expert_work_status_var.get())
             work_org, work_position = self._shared_work_defaults()
             if not work_status and hasattr(self, "data"):
-                raw_work = " ".join(
-                    part for part in [
-                        getattr(self.data, "work_org", ""),
-                        getattr(self.data, "position", ""),
-                    ]
-                    if part
-                ).lower().replace("ё", "е")
-                if "не работает" in raw_work:
-                    work_status = "нет"
+                parsed_work_status = self._normalize_yes_no(
+                    getattr(self.data, "expert_work_status", "")
+                )
+                if parsed_work_status:
+                    work_status = parsed_work_status
                 elif work_org or work_position:
                     work_status = "да"
             label = "Работает ли пациент"
@@ -500,6 +496,19 @@ class DialogExpertMixin:
 
     def _apply_primary_work_defaults(self, data: PatientData) -> None:
         """Автоматически заполнить popup-поля работой из первичного DOCX."""
+        parsed_status = self._normalize_yes_no(getattr(data, "expert_work_status", ""))
+        current_status = self._normalize_yes_no(self.expert_work_status_var.get())
+        if parsed_status and not current_status:
+            self.expert_work_status_var.set(parsed_status)
+            if parsed_status == "нет":
+                self.expert_work_org_var.set("")
+                self.expert_position_var.set("")
+                self.vk_mse_work_org_var.set("")
+                self.vk_mse_position_var.set("")
+                self.sick_leave_vk_work_org_var.set("")
+                self.sick_leave_vk_position_var.set("")
+                self.sick_leave_vk_work_position_var.set("")
+
         org, position = self._primary_work_pair_from_data(data)
         if not org and not position:
             return
@@ -534,6 +543,8 @@ class DialogExpertMixin:
         if not work_org and not position:
             work_org, position = self._primary_work_pair_from_data(data)
         work_status = self._normalize_yes_no(self.expert_work_status_var.get())
+        if not work_status:
+            work_status = self._normalize_yes_no(getattr(data, "expert_work_status", ""))
         if not work_status:
             work_status = "да" if work_org or position else ""
 
