@@ -138,6 +138,9 @@ class MedicalParserWorkMixin:
             if data.work_org and data.position:
                 break
 
+        if not data.expert_work_status and (data.work_org or data.position):
+            data.expert_work_status = "да"
+
     def _repair_life_anamnesis_from_free_style(self, data: PatientData, text: str) -> None:
         """Достать анамнез жизни из свободного/анкетного стиля.
 
