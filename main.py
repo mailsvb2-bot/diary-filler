@@ -211,30 +211,6 @@ def _self_check_rows() -> list[tuple[str, bool, str]]:
     rows: list[tuple[str, bool, str]] = []
     rows.append(("Программа", True, f"версия {APP_VERSION}"))
 
-    license_required: bool | None = None
-    try:
-        from license_client import current_status, runtime_config
-
-        license_config = runtime_config()
-        license_required = bool(license_config.required)
-        if license_required:
-            license_status = current_status(license_config)
-            rows.append((
-                "Лицензия",
-                license_status.active,
-                license_status.message,
-            ))
-    except Exception:
-        # Intentionally unlicensed builds stay license-neutral only after
-        # runtime_config() has positively established required=False. A broken
-        # licensed diagnostic must remain visible instead of silently passing.
-        if license_required is not False:
-            rows.append((
-                "Лицензия",
-                False,
-                "не удалось проверить техническое состояние лицензии",
-            ))
-
     try:
         intake = desktop_intake_root_path()
         rows.append(("Выписанные пациенты", intake.is_dir(), "папка доступна" if intake.is_dir() else "папка пока не создана"))
@@ -491,16 +467,9 @@ def _activate_root_for_intake(root) -> None:
 def _run_patient_summary_mode(*, start_in_tray: bool = False) -> None:
     """Open the independent daily patient summary host."""
     from app import CombinedMedicalDiaryApp
-    from license_ui import ensure_license
 
     root = _create_root()
     root.withdraw()
-    if not ensure_license(root, interactive=not start_in_tray):
-        try:
-            root.destroy()
-        except Exception:
-            pass
-        return
     app = CombinedMedicalDiaryApp(root)
     app.show_my_patients(startup_mode=True, start_in_tray=start_in_tray)
     try:
@@ -544,24 +513,10 @@ def main() -> None:
         intake_primary = _intake_primary_argument(sys.argv[1:]) or None
         direct_primary = _direct_primary_argument(sys.argv[1:]) or None
         root = _create_root()
-
-        # Claim the visible-GUI heartbeat immediately after creating the root,
-        # before importing/opening licensing or any other modal UI. Otherwise the
-        # hidden intake watcher can mistake a slow license check for "no GUI" and
-        # launch duplicate primary processes.
+        # Claim the visible-GUI heartbeat before imports and modal onboarding.
+        # Otherwise the hidden intake watcher can race a long folder chooser and
+        # launch a second GUI with an unrelated Word file.
         claim_desktop_gui_session()
-
-        # Licensing is checked only for a visible GUI. The hidden watcher remains
-        # lightweight and can wake the GUI, but document generation still has a
-        # second mandatory gate at the creation boundary.
-        from license_ui import ensure_license
-
-        if not ensure_license(root, interactive=True):
-            try:
-                root.destroy()
-            except Exception:
-                pass
-            return
 
         # Import the large GUI/document graph only for a real visible session.
         # The persistent --intake-agent stays lightweight and no longer pays the
