@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "4ea0ef0024c06e91f4621d2962d3c7b261c16532",
-  "baseline_note": "PR #334 source-fidelity E2E candidate 4ea0ef0024c06e91f4621d2962d3c7b261c16532 validated by License Server CI run 37281703316 and Windows EXE Build run 37281703300. This test-only hardening reproduces the real referral-to-discharge path: years of dated anamnesis containing inline historical Diagnosis phrases must survive exactly once and in order, and precise psychiatric-registration wording such as 'состоит с сентября 2024 года' must remain intact in the generated discharge epicrisis. Full validation covered release/prod gates, document mechanics, full patient replay/golden DOCX, long clinical blocks, complete clinical roundtrip, one-paragraph parsing, full user journey, Windows E1 matrix, staff/gender/diagnosis/diary regressions, performance profiles, packaged EXE, desktop intake E2E, installer build and install/uninstall smoke.",
+  "baseline_ref": "dc4a74893050ba996940916098628711b7e8f60d",
+  "baseline_note": "PR #335 no-sick-leave expert-anamnesis regression candidate dc4a74893050ba996940916098628711b7e8f60d validated by License Server CI run 37286697303 and Windows EXE Build run 37286697252. Test-only hardening proves the reported referral-to-discharge path keeps `Экспертный анамнез: Не работает. В выдаче ЛН не нуждается.` when sick leave is explicitly not needed, never invents a sick-leave opening date, preserves the full dated disease anamnesis and renders the current diagnosis exactly once. Full Windows validation covered release/prod gates, full patient replay/golden DOCX, long clinical blocks, clinical roundtrip, user journey/E1 matrices, staff/gender/diagnosis/diary regressions, packaged EXE, desktop intake E2E, installer and install/uninstall smoke.",
   "required_approval_evidence": [
     "ci_gate_lock",
     "patient_registry_regression"
