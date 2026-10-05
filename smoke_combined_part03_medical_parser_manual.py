@@ -82,6 +82,7 @@ _relative_work_only = service.parser.parse_text("""
 """)
 assert _relative_work_only.work_org == "", _relative_work_only.work_org
 assert _relative_work_only.position == "", _relative_work_only.position
+assert _relative_work_only.expert_work_status == "", _relative_work_only.expert_work_status
 
 _explicit_nonworking_with_family_jobs = service.parser.parse_text("""
 10.06.2026 Первичный осмотр
@@ -94,6 +95,7 @@ _explicit_nonworking_with_family_jobs = service.parser.parse_text("""
 """)
 assert _explicit_nonworking_with_family_jobs.work_org == "", _explicit_nonworking_with_family_jobs.work_org
 assert _explicit_nonworking_with_family_jobs.position == "", _explicit_nonworking_with_family_jobs.position
+assert _explicit_nonworking_with_family_jobs.expert_work_status == "нет", _explicit_nonworking_with_family_jobs.expert_work_status
 
 _explicit_patient_work = service.parser.parse_text("""
 10.06.2026 Первичный осмотр
@@ -107,6 +109,7 @@ _explicit_patient_work = service.parser.parse_text("""
 """)
 assert _explicit_patient_work.work_org == "ООО Пациент", _explicit_patient_work.work_org
 assert _explicit_patient_work.position == "инженер", _explicit_patient_work.position
+assert _explicit_patient_work.expert_work_status == "да", _explicit_patient_work.expert_work_status
 
 _patient_subject_work = service.parser.parse_text("""
 10.06.2026 Первичный осмотр
@@ -118,6 +121,7 @@ _patient_subject_work = service.parser.parse_text("""
 """)
 assert _patient_subject_work.work_org == "ООО Ромашка", _patient_subject_work.work_org
 assert _patient_subject_work.position == "слесарь", _patient_subject_work.position
+assert _patient_subject_work.expert_work_status == "да", _patient_subject_work.expert_work_status
 
 
 # Universal source regression: a discharge epicrisis is a first-class source.
