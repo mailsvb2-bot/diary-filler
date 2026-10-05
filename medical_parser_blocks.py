@@ -392,7 +392,7 @@ class MedicalParserBlocksMixin:
         start: int,
         marker: str,
     ) -> bool:
-        """Return True when a clinical label belongs to a dated historical event line.
+        """Return True when a clinical label belongs to historical event context.
 
         Referral anamneses often contain compact chronology rows such as
         "07.02.2013 Невролог. Диагноз: ..." or
@@ -503,6 +503,20 @@ class MedicalParserBlocksMixin:
                 candidate,
                 flags=re.IGNORECASE,
             )
+            historical_context = re.match(
+                r"^\s*(?:"
+                r"ранее\b|"
+                r"до\s+(?:настоящей\s+)?(?:госпитализации|поступления|обращения|лечения)\b|"
+                r"в\s+анамнезе\b|"
+                r"на\s+предыдущем\s+этапе\b|"
+                r"при\s+предыдущ(?:ей|ем)\s+(?:госпитализации|обращении|лечении)\b|"
+                r"в\s+детстве\b|"
+                r"в\s+подростковом\s+возрасте\b|"
+                r"амбулаторно\s+(?:ранее\s+)?(?:был|была|было|выставлен|установлен)\b"
+                r")",
+                candidate,
+                flags=re.IGNORECASE,
+            )
             if any(
                 (
                     numeric_date,
@@ -511,6 +525,7 @@ class MedicalParserBlocksMixin:
                     month_year,
                     year_lead,
                     season_year,
+                    historical_context,
                 )
             ):
                 return True
