@@ -344,6 +344,19 @@ def _assert_real_referral_to_discharge_roundtrip_keeps_full_dated_history() -> N
         assert len(created) == 1, created
         output_text = extract_docx_text(created[0])
 
+        # Identity/episode facts were already stable in the v1.4.19/v1.4.20
+        # production line. Keep that historical contract while hardening the
+        # richer clinical-source path.
+        for expected in (
+            "Выписной эпикриз № 353",
+            "Маркер Истории Тестовый",
+            "26.09.2008 г.р.",
+            "регистрация по адресу: Нижний Новгород, тестовый район, дом 24-12",
+            "с 09.05.2026 по 05.10.2026",
+            "В 3 отделение КДП поступает повторно",
+        ):
+            assert expected in output_text, (expected, output_text)
+
         positions = []
         for line in history:
             assert output_text.count(line) == 1, (
