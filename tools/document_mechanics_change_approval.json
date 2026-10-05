@@ -1,9 +1,10 @@
 {
   "schema_version": 1,
-  "base_sha": "31eecb68c5c933534f64af8d98cd0d827463c494",
-  "reason": "Deep source-fidelity hardening: an explicitly historical 'был выставлен диагноз' phrase must never become the patient's current diagnosis or suppress the doctor diagnosis prompt; legitimate current diagnosis phrasing remains supported.",
+  "base_sha": "f918b2ae2e6e57882a530926ecf46eb1f73ce57f",
+  "reason": "Patient work source-fidelity fix: inline, compact-demographic and fallback work parsing must all reject relatives' employment so family history cannot become patient expert/VK work defaults.",
   "approved_blobs": {
-    "medical_parser_blocks.py": "a5bef5ef1295c9398b2a69767aa955116ca6969d",
-    "medical_parser_core.py": "285f34b40433b4020d8b2f20426963cfb65011cc"
+    "medical_parser_demographics.py": "9393209b0a4e45e071a987225de53069b855a794",
+    "medical_parser_inline.py": "c3c29e64a57a5b3da64c99e9de50d77cc2753431",
+    "medical_parser_work.py": "0f364260348f7cc2b83864a3408332ab00c86d74"
   }
 }

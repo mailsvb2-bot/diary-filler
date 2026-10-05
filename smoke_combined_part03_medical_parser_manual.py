@@ -67,6 +67,59 @@ assert service.parser.parse_text(
     "Маркер Женская Тестовая, 24.07.1997, по адресу: Н. Новгород, ул. Тестовая, д. 1."
 ).admission_date == "30.09.2025"
 
+# Employment belongs to the patient, never to relatives mentioned in life history.
+# Generic aliases such as «работает», «место работы» and «должность» must not
+# turn a parent's job into the patient's expert/VK employment defaults.
+_relative_work_only = service.parser.parse_text("""
+10.06.2026 Первичный осмотр
+Ф.И.О.: Маркер Контекст Работы
+Анамнез жизни:
+Отец работает в ООО Чужой Завод, мать работает врачом.
+Место работы матери: школа.
+Должность отца: инженер.
+Психический статус: контактен
+Диагноз: F41.2 тест
+""")
+assert _relative_work_only.work_org == "", _relative_work_only.work_org
+assert _relative_work_only.position == "", _relative_work_only.position
+
+_explicit_nonworking_with_family_jobs = service.parser.parse_text("""
+10.06.2026 Первичный осмотр
+Ф.И.О.: Маркер НеРаботает Контрольный
+Место работы: не работает
+Анамнез жизни:
+Отец работает в ООО Чужой Завод, мать работает врачом.
+Психический статус: контактен
+Диагноз: F41.2 тест
+""")
+assert _explicit_nonworking_with_family_jobs.work_org == "", _explicit_nonworking_with_family_jobs.work_org
+assert _explicit_nonworking_with_family_jobs.position == "", _explicit_nonworking_with_family_jobs.position
+
+_explicit_patient_work = service.parser.parse_text("""
+10.06.2026 Первичный осмотр
+Ф.И.О.: Маркер Работающий Контрольный
+Место работы: ООО Пациент
+Должность: инженер
+Анамнез жизни:
+Отец работает в ООО Чужой Завод, мать работает врачом.
+Психический статус: контактен
+Диагноз: F41.2 тест
+""")
+assert _explicit_patient_work.work_org == "ООО Пациент", _explicit_patient_work.work_org
+assert _explicit_patient_work.position == "инженер", _explicit_patient_work.position
+
+_patient_subject_work = service.parser.parse_text("""
+10.06.2026 Первичный осмотр
+Ф.И.О.: Маркер Работающий Второй
+Анамнез жизни: без особенностей
+Пациент работает в ООО Ромашка, в должности слесарь.
+Психический статус: контактен
+Диагноз: F41.2 тест
+""")
+assert _patient_subject_work.work_org == "ООО Ромашка", _patient_subject_work.work_org
+assert _patient_subject_work.position == "слесарь", _patient_subject_work.position
+
+
 # Universal source regression: a discharge epicrisis is a first-class source.
 # Admission/discharge dates must come from the current treatment period, while
 # the header date remains the discharge date and never replaces admission.

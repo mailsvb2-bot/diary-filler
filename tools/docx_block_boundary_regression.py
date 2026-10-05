@@ -442,6 +442,7 @@ def _assert_real_referral_to_discharge_roundtrip_keeps_full_dated_history() -> N
         doc.add_paragraph("Анамнез заболевания:")
         history = [
             "Родился от 1 беременности, протекавшей без патологии. Роды срочные.",
+            "Отец работает в ООО Чужой Завод, мать работает врачом. Это сведения о семье, не о пациенте.",
             "07.02.2013 Невролог. Диагноз: Неврозоподобный синдром. Наблюдался амбулаторно.",
             "24.07.2015 Невролог. Диагноз: Неврозоподобный синдром. Состояние без ухудшения.",
             "25.01.2024 ЭПИ (ДО №4): находился на лечении, состояние стабилизировалось.",
@@ -476,6 +477,8 @@ def _assert_real_referral_to_discharge_roundtrip_keeps_full_dated_history() -> N
         assert parsed.treatment_plan == treatment, parsed.treatment_plan
         assert parsed.diagnosis == diagnosis, parsed.diagnosis
         assert parsed.psych_account == "состоит с сентября 2024 года", parsed.psych_account
+        assert parsed.work_org == "", parsed.work_org
+        assert parsed.position == "", parsed.position
 
         parsed.discharge_date = "05.10.2026"
         parsed.admission_occurrence = "повторно"

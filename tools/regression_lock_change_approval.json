@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "710c1e856426b8e2d7869dc51fc22628e129d9eb",
-  "reason": "Deep source-fidelity hardening: historical diagnosis wording must stay inside anamnesis and never populate current diagnosis when the source has no current diagnosis; legitimate current 'был выставлен диагноз' phrasing remains supported. Regression-lock diagnostics are also made safe for Cyrillic approval reasons on Windows code pages.",
+  "reason": "Patient work source-fidelity hardening: relatives' employment must be rejected consistently by inline, compact-demographic and fallback work parsing, while explicit patient work and explicit non-working status remain intact.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -18,8 +18,12 @@
   "approved_blobs": {
     "medical_parser_blocks.py": "a5bef5ef1295c9398b2a69767aa955116ca6969d",
     "medical_parser_core.py": "285f34b40433b4020d8b2f20426963cfb65011cc",
-    "tools/docx_block_boundary_regression.py": "9edf939a136d5da9faa1ceb2130dd097eb3e82af",
-    "tools/document_mechanics_change_approval.json": "dc247003fa6051809401c1e7889a2d9d403baeba",
+    "medical_parser_demographics.py": "9393209b0a4e45e071a987225de53069b855a794",
+    "medical_parser_inline.py": "c3c29e64a57a5b3da64c99e9de50d77cc2753431",
+    "medical_parser_work.py": "0f364260348f7cc2b83864a3408332ab00c86d74",
+    "smoke_combined_part03_medical_parser_manual.py": "491a5ea4411a74c8ebf77b5aef388a75124024b9",
+    "tools/docx_block_boundary_regression.py": "e0ad3941ffd46c8bf122f52bc0ebe2927f3a7d6c",
+    "tools/document_mechanics_change_approval.json": "affa0dfa7bf356b1e267c4e5bbdb00159ddf0265",
     "tools/regression_lock_check.py": "deea0121d9e26066c78b595afd72538b2191e580"
   }
 }
