@@ -82,6 +82,14 @@ def main() -> None:
 
     # J6: installer -> installed onedir -> watcher -> dropped primary -> visible GUI
     # -> preserved patient folder -> uninstall cleanup.
+    lifecycle = _read("tests/intake_lifecycle_regression.py")
+
+    _require(lifecycle, (
+        "assert_background_agent_spawn_stays_hidden",
+        "assert_gui_healthcheck_restarts_dead_agent",
+        "_desktop_schedule_agent_health(app)",
+    ), "J5b watcher invisibility and crash recovery")
+
     _require(installer, (
         "Installed application startup probe",
         "INSTALLED INTAKE drop-to-visible latency",
