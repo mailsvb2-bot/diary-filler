@@ -579,7 +579,10 @@ clinical_logic.rvk_military_commissariat_var = _FakeVar("")
 clinical_logic.epi_present_var = _FakeVar("")
 clinical_logic.epi_path_var = _FakeVar("")
 clinical_logic.admission_date_var = _FakeVar("10.06.2026")
-clinical_logic.data = PatientData(admission_date="10.06.2026")
+clinical_logic.data = PatientData(
+    admission_date="10.06.2026",
+    expert_work_status="нет",
+)
 clinical_logic._update_expert_sick_leave_display = lambda: None
 clinical_logic._normalize_date_for_ui = _main_module.CombinedMedicalDiaryApp._normalize_date_for_ui.__get__(clinical_logic, _main_module.CombinedMedicalDiaryApp)
 clinical_prompts = []
@@ -618,6 +621,8 @@ assert clinical_logic.epi_path_var.get() == ""
 assert clinical_logic.data.disability == "не нужно"
 assert [call[0] for call in clinical_prompts] == ["Дополнительные данные", "Учёт у психиатров", "Направление из РВК", "Место работы", "Больничный лист"]
 assert "С какого числа больничный лист" not in [label for label, _default in clinical_prompts[0][1]]
+_initial_clinical_defaults = dict(clinical_prompts[0][1])
+assert _initial_clinical_defaults["Работает ли пациент"] == "нет", _initial_clinical_defaults
 assert [label for label, _default in clinical_prompts[-1][1]] == ["С какого числа больничный лист"]
 assert clinical_logic.psych_account_status_var.get() == "да"
 assert clinical_logic.psych_account_since_year_var.get() == "2018"
