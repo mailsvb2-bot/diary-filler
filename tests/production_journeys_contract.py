@@ -55,7 +55,8 @@ def main() -> None:
         "smoke_test.py",
         "verify_golden",
         "FULL PATIENT REPLAY OK",
-        "Дневники.docx",
+        "snapshot_diary_output",
+        "дневники.docx",
     ), "J3 real DOCX replay")
 
     # J4: physical GUI -> visible preflight -> all 8 outputs -> real DOCX.
