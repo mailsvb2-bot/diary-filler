@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "dc4a74893050ba996940916098628711b7e8f60d",
-  "baseline_note": "PR #335 no-sick-leave expert-anamnesis regression candidate dc4a74893050ba996940916098628711b7e8f60d validated by License Server CI run 37286697303 and Windows EXE Build run 37286697252. Test-only hardening proves the reported referral-to-discharge path keeps `Экспертный анамнез: Не работает. В выдаче ЛН не нуждается.` when sick leave is explicitly not needed, never invents a sick-leave opening date, preserves the full dated disease anamnesis and renders the current diagnosis exactly once. Full Windows validation covered release/prod gates, full patient replay/golden DOCX, long clinical blocks, clinical roundtrip, user journey/E1 matrices, staff/gender/diagnosis/diary regressions, packaged EXE, desktop intake E2E, installer and install/uninstall smoke.",
+  "baseline_ref": "710c1e856426b8e2d7869dc51fc22628e129d9eb",
+  "baseline_note": "PR #336 cleanup candidate 710c1e856426b8e2d7869dc51fc22628e129d9eb validated by License Server CI run 37288655222 and Windows EXE Build run 37288655250. The only locked-surface change removes the consumed document-mechanics approval that was bound to the old pre-fix main. No production code or document-generation behavior changes; full Windows regression, packaged EXE, desktop intake, installer and install/uninstall smoke remained green.",
   "required_approval_evidence": [
     "ci_gate_lock",
     "patient_registry_regression"
