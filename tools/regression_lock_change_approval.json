@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "710c1e856426b8e2d7869dc51fc22628e129d9eb",
-  "reason": "Patient work source-fidelity hardening: relatives' employment must be rejected consistently by inline, compact-demographic and fallback work parsing, while explicit patient work and explicit non-working status remain intact.",
+  "reason": "Real referral generation fidelity hardening: a dated historical sentence must not swallow the following current mental-status section; life-anamnesis residence wording must survive; the current referral date must beat old examination periods; custom diagnosis wording must remain exact and dated referral prose must not leak into Diagnosis.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -16,14 +16,15 @@
     "patient_registry_regression"
   ],
   "approved_blobs": {
-    "medical_parser_blocks.py": "a5bef5ef1295c9398b2a69767aa955116ca6969d",
+    "medical_parser_blocks.py": "97e32e3b428873c6878729370dad249339000e0c",
     "medical_parser_core.py": "285f34b40433b4020d8b2f20426963cfb65011cc",
     "medical_parser_demographics.py": "9393209b0a4e45e071a987225de53069b855a794",
     "medical_parser_inline.py": "c3c29e64a57a5b3da64c99e9de50d77cc2753431",
     "medical_parser_work.py": "0f364260348f7cc2b83864a3408332ab00c86d74",
     "smoke_combined_part03_medical_parser_manual.py": "491a5ea4411a74c8ebf77b5aef388a75124024b9",
-    "tools/docx_block_boundary_regression.py": "e0ad3941ffd46c8bf122f52bc0ebe2927f3a7d6c",
-    "tools/document_mechanics_change_approval.json": "affa0dfa7bf356b1e267c4e5bbdb00159ddf0265",
-    "tools/regression_lock_check.py": "deea0121d9e26066c78b595afd72538b2191e580"
+    "tools/docx_block_boundary_regression.py": "f075ef313d2ee21bca197608f37d88d36dc82465",
+    "tools/document_mechanics_change_approval.json": "4a437e8eb74420298a7f5bce79780f45b2d52ecb",
+    "tools/regression_lock_check.py": "deea0121d9e26066c78b595afd72538b2191e580",
+    "medical_parser_sanitize.py": "bee1386208a4f79f3869a4c95347c48b44090c16"
   }
 }
