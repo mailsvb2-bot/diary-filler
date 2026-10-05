@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "base_sha": "bfec32ecd1b434dfc467695191c7872395212628",
-  "reason": "Historical production compatibility hardening: numeric, textual, month/year, split-line and explicit historical-context clinical labels inside disease anamnesis must remain historical evidence and must not become current top-level fields.",
+  "reason": "Historical production compatibility hardening: preserve dated and explicitly historical clinical sublabels inside disease anamnesis without suppressing a following real current section.",
   "approved_blobs": {
-    "medical_parser_blocks.py": "48c6c00046f94b2e8d2da755da0673c8e08aa5c7"
+    "medical_parser_blocks.py": "7206c466c9e7d1cd9d590369bd36a7eb087edc39"
   }
 }
