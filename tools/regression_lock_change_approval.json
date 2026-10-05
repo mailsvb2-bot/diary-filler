@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "710c1e856426b8e2d7869dc51fc22628e129d9eb",
+  "reason": "Harden referral-to-discharge source fidelity across every clinical payload, not only the long disease anamnesis: complaints, life anamnesis, mental status, somatic status, treatment and diagnosis must each survive exactly once.",
+  "required_evidence": [
+    "document_mechanics_guard",
+    "full_patient_replay",
+    "golden_docx",
+    "staff_profile_regression",
+    "gender_generation_matrix",
+    "desktop_intake_contract",
+    "intake_lifecycle_regression",
+    "packaged_desktop_intake_e2e",
+    "installer_uninstall_smoke",
+    "ci_gate_lock",
+    "patient_registry_regression"
+  ],
+  "approved_blobs": {
+    "tools/docx_block_boundary_regression.py": "ce3c6696465200068657e8af21367df1dd9d6731"
+  }
+}
