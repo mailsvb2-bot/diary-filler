@@ -82,13 +82,22 @@ class MedicalParserBlocksMixin:
             labels.update(normalize_match(alias) for alias in aliases if normalize_match(alias))
         return normalized in labels
 
-    def _extract_after_phrase(self, text: str, phrase_pattern: str) -> str:
-        m = re.search(phrase_pattern, text, flags=re.IGNORECASE)
-        if not m:
-            return ""
-        value_start = m.end()
-        value_end = self._find_next_marker_pos(text, value_start, ())
-        return clean_value(text[value_start:value_end])
+    def _extract_after_phrase(
+        self,
+        text: str,
+        phrase_pattern: str,
+        *,
+        historical_marker: str = "",
+    ) -> str:
+        for m in re.finditer(phrase_pattern, text, flags=re.IGNORECASE):
+            if historical_marker and self._is_dated_historical_inline_occurrence(
+                text, m.start(), historical_marker
+            ):
+                continue
+            value_start = m.end()
+            value_end = self._find_next_marker_pos(text, value_start, ())
+            return clean_value(text[value_start:value_end])
+        return ""
 
     def _extract_admission_date(self, text: str) -> str:
         """Извлечь дату поступления только из строки заголовка.
@@ -404,7 +413,11 @@ class MedicalParserBlocksMixin:
         so title-bearing prefixes are explicitly excluded from this rule.
         """
         marker_norm = normalize_match(marker)
-        if marker_norm not in cls._STRICT_CLINICAL_BOUNDARY_MARKERS:
+        historical_sensitive = (
+            marker_norm in cls._STRICT_CLINICAL_BOUNDARY_MARKERS
+            or marker_norm == normalize_match("был выставлен диагноз")
+        )
+        if not historical_sensitive:
             return False
 
         line_start = text.rfind("\n", 0, start) + 1
@@ -733,7 +746,10 @@ class MedicalParserBlocksMixin:
         if marker_norm.startswith("на основании"):
             return True
         if (
-            marker_norm in cls._STRICT_CLINICAL_BOUNDARY_MARKERS
+            (
+                marker_norm in cls._STRICT_CLINICAL_BOUNDARY_MARKERS
+                or marker_norm == normalize_match("был выставлен диагноз")
+            )
             and cls._is_dated_historical_inline_occurrence(text, start, marker)
         ):
             return False
