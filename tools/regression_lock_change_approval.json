@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "b9d2a3d30f3f49c99a1d90d03e87b43fdee53f0b",
+  "reason": "Add an end-to-end referral-to-discharge regression that reproduces the real dated historical-diagnosis truncation and locks exact psychiatric-account month plus year source fidelity.",
+  "required_evidence": [
+    "document_mechanics_guard",
+    "full_patient_replay",
+    "golden_docx",
+    "staff_profile_regression",
+    "gender_generation_matrix",
+    "desktop_intake_contract",
+    "intake_lifecycle_regression",
+    "packaged_desktop_intake_e2e",
+    "installer_uninstall_smoke",
+    "ci_gate_lock",
+    "patient_registry_regression"
+  ],
+  "approved_blobs": {
+    "tools/docx_block_boundary_regression.py": "573b87b07766cf0ae87b8244634d8c05c62afae5"
+  }
+}
