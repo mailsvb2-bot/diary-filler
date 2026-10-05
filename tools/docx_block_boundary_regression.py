@@ -221,6 +221,42 @@ F20.8 Другой тип шизофрении
     assert data.diagnosis == "F20.8 Другой тип шизофрении", data.diagnosis
 
 
+def _assert_dated_historical_clinical_sublabels_stay_inside_disease_anamnesis() -> None:
+    """Dated historical sublabels are event details, not current top-level sections."""
+    source = """Анамнез заболевания:
+Начало заболевания постепенное.
+07.02.2013 Невролог. Жалобы: головные боли. Психический статус: спокоен. Соматический статус: без особенностей. Лечение: магний.
+24.07.2015 Психиатр. Жалобы: тревога. Психический статус: напряжён. Лечение: амбулаторная терапия.
+25.01.2024 Контроль. Результаты обследований: ЭЭГ без отрицательной динамики.
+ФИНАЛ_ДАТИРОВАННОЙ_ИСТОРИИ_НЕ_ОБРЕЗАТЬ.
+Психический статус:
+Контактен, ориентирован, отвечает по существу.
+Соматический статус:
+Состояние удовлетворительное.
+План лечения:
+Рисперидон 2 мг вечером.
+Диагноз:
+F20.8 Другой тип шизофрении
+"""
+    data = MedicalTextParser().parse_text(source)
+    for required in (
+        "07.02.2013 Невролог. Жалобы: головные боли.",
+        "Психический статус: спокоен.",
+        "Соматический статус: без особенностей.",
+        "Лечение: магний.",
+        "24.07.2015 Психиатр. Жалобы: тревога.",
+        "Психический статус: напряжён.",
+        "Лечение: амбулаторная терапия.",
+        "25.01.2024 Контроль. Результаты обследований: ЭЭГ без отрицательной динамики.",
+        "ФИНАЛ_ДАТИРОВАННОЙ_ИСТОРИИ_НЕ_ОБРЕЗАТЬ.",
+    ):
+        assert required in data.disease_anamnesis, (required, data.disease_anamnesis)
+    assert data.mental_status == "Контактен, ориентирован, отвечает по существу.", data.mental_status
+    assert data.somatic_status == "Состояние удовлетворительное.", data.somatic_status
+    assert data.treatment_plan == "Рисперидон 2 мг вечером.", data.treatment_plan
+    assert data.diagnosis == "F20.8 Другой тип шизофрении", data.diagnosis
+
+
 def _assert_real_referral_to_discharge_roundtrip_keeps_full_dated_history() -> None:
     """Lock the exact parser -> PatientData -> discharge path behind PR #333.
 
@@ -1092,6 +1128,7 @@ def verify() -> None:
     _assert_alias_boundary_stops_destructive_span_deletion()
     _assert_long_source_block_is_not_cut_by_narrative_marker_words()
     _assert_dated_historical_diagnoses_stay_inside_disease_anamnesis()
+    _assert_dated_historical_clinical_sublabels_stay_inside_disease_anamnesis()
     _assert_real_referral_to_discharge_roundtrip_keeps_full_dated_history()
     _assert_narrative_marker_words_never_replace_target_fields()
     _assert_long_multiline_docx_roundtrip_preserves_full_tail()
