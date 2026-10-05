@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "4ea0ef0024c06e91f4621d2962d3c7b261c16532",
+  "reason": "Harden the real referral-to-discharge regression so a non-working patient with an explicit no-sick-leave decision always keeps the expert anamnesis and never receives an invented sick-leave opening date.",
+  "required_evidence": [
+    "document_mechanics_guard",
+    "full_patient_replay",
+    "golden_docx",
+    "staff_profile_regression",
+    "gender_generation_matrix",
+    "desktop_intake_contract",
+    "intake_lifecycle_regression",
+    "packaged_desktop_intake_e2e",
+    "installer_uninstall_smoke",
+    "ci_gate_lock",
+    "patient_registry_regression"
+  ],
+  "approved_blobs": {
+    "tools/docx_block_boundary_regression.py": "40b9bff6c7d8d6a8975ddff9f1b4d022df88f33a"
+  }
+}
