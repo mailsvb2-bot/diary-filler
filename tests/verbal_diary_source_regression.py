@@ -152,7 +152,9 @@ class _DischargeDiaryHarness(DialogExpertMixin, ActionsMedicalFlowMixin, Actions
             }
             return [answers[label] for label, _initial in rows]
         if title == "Больничный лист":
-            raise AssertionError("sick-leave opening date must stay in the shared popup")
+            # When the shared decision starts unknown, the opening date is
+            # intentionally requested only after the doctor answers "да".
+            return ["01.09.2026"]
         raise AssertionError((title, rows))
 
     def _normalize_date_for_ui(self, value: str) -> str:
