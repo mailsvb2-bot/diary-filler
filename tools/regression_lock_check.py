@@ -18,6 +18,7 @@ import fnmatch
 import json
 from pathlib import Path
 import subprocess
+import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 CONFIG_PATH = ROOT / "tests" / "regression_lock_baseline.json"
@@ -100,6 +101,22 @@ DEFAULT_REQUIRED_EVIDENCE = {
     "packaged_desktop_intake_e2e",
     "installer_uninstall_smoke",
 }
+
+
+def _console_safe(value: object) -> str:
+    """Return text that can be emitted even on legacy Windows code pages."""
+    text = str(value)
+    encoding = getattr(sys.stdout, "encoding", None) or "utf-8"
+    try:
+        text.encode(encoding)
+        return text
+    except (LookupError, UnicodeEncodeError):
+        try:
+            return text.encode(encoding, errors="backslashreplace").decode(
+                encoding, errors="replace"
+            )
+        except LookupError:
+            return text.encode("ascii", errors="backslashreplace").decode("ascii")
 
 
 def _git(*args: str, check: bool = True) -> str:
@@ -236,8 +253,10 @@ def main() -> None:
                 + "\nProvide an exact temporary tools/regression_lock_change_approval.json, run every required regression, then advance the baseline in a separate commit."
             )
         print(
-            "REGRESSION LOCK OK: exact candidate drift explicitly approved; "
-            f"baseline={baseline}; changed={len(mismatches)}; reason={reason}"
+            _console_safe(
+                "REGRESSION LOCK OK: exact candidate drift explicitly approved; "
+                f"baseline={baseline}; changed={len(mismatches)}; reason={reason}"
+            )
         )
         return
 
