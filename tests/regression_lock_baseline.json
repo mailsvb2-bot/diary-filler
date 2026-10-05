@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "b9d2a3d30f3f49c99a1d90d03e87b43fdee53f0b",
-  "baseline_note": "PR #333 source-fidelity candidate b9d2a3d30f3f49c99a1d90d03e87b43fdee53f0b validated by License Server CI run 37276407752 and Windows EXE Build run 37276407813. Validation covered regression/document-mechanics locks, release/prod gates, full patient replay and golden DOCX, long clinical block and complete clinical roundtrip regressions, one-paragraph parsing, full user journey, Windows E1 matrix, staff/gender/diagnosis/diary regressions, performance profiles, real Tk GUI wiring, packaged EXE startup/TkDND, desktop intake E2E, installer build, and install/uninstall smoke. Candidate fixes conditional sick-leave date prompting, preserves dated historical inline diagnoses inside disease anamnesis, and retains precise psychiatric-registration wording such as month plus year.",
+  "baseline_ref": "4ea0ef0024c06e91f4621d2962d3c7b261c16532",
+  "baseline_note": "PR #334 source-fidelity E2E candidate 4ea0ef0024c06e91f4621d2962d3c7b261c16532 validated by License Server CI run 37281703316 and Windows EXE Build run 37281703300. This test-only hardening reproduces the real referral-to-discharge path: years of dated anamnesis containing inline historical Diagnosis phrases must survive exactly once and in order, and precise psychiatric-registration wording such as 'состоит с сентября 2024 года' must remain intact in the generated discharge epicrisis. Full validation covered release/prod gates, document mechanics, full patient replay/golden DOCX, long clinical blocks, complete clinical roundtrip, one-paragraph parsing, full user journey, Windows E1 matrix, staff/gender/diagnosis/diary regressions, performance profiles, packaged EXE, desktop intake E2E, installer build and install/uninstall smoke.",
   "required_approval_evidence": [
     "ci_gate_lock",
     "patient_registry_regression"
