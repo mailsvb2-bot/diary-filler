@@ -152,7 +152,34 @@ class MedicalParserBlocksMixin:
         def norm(raw: str) -> str:
             return _first_valid_full_date(raw or "")
 
-        # Самый сильный источник: период именно текущего пребывания/обследования.
+        # For referral/primary sources, a dated current-episode sentence is
+        # stronger than any old hospitalization mentioned inside the history.
+        # Example: «09.06.2026 обратился в 3 отделение КДП ...». Without this
+        # guard an older «находился на обследовании ... с 13.02.2025 по ...»
+        # can be misread as the present admission date.
+        current_source_kinds = {
+            normalize_match("направление на госпитализацию"),
+            normalize_match("первичный осмотр"),
+            normalize_match("осмотр врача приёмного покоя"),
+            normalize_match("осмотр врача приемного покоя"),
+        }
+        if kind in current_source_kinds:
+            current_episode_re = re.compile(
+                rf"(?im)^\s*({date_token})\s+"
+                rf"(?:обратил(?:ся|ась)|поступил(?:а)?|доставлен(?:а)?|"
+                rf"госпитализир(?:ован|ована|уется)|направлен(?:а)?)\b"
+                rf"[^\n]{{0,180}}(?:3\s+отделени\w*\s+кдп|кдп|"
+                rf"при[её]мн\w*\s+отделени\w*|стационар\w*|госпитализац\w*)"
+            )
+            current_match = current_episode_re.search(value)
+            if current_match:
+                current_admission = norm(current_match.group(1))
+                if current_admission:
+                    return current_admission, ""
+
+        # Strongest source for completed-episode documents: the period of the
+        # current stay/examination. In a referral/primary source the same wording
+        # usually belongs to historical anamnesis and must not seed admission.
         period_patterns = (
             re.compile(
                 rf"(?i)(?:находил(?:ся|ась)?|находится)\s+"
@@ -164,16 +191,17 @@ class MedicalParserBlocksMixin:
                 rf"[^\n]{{0,160}}?\bс\s+({date_token})\s+\bпо\s+({date_token})"
             ),
         )
-        for period_re in period_patterns:
-            match = period_re.search(value)
-            if not match:
-                continue
-            admission = norm(match.group(1))
-            end_date = norm(match.group(2))
-            if admission:
-                if "выписной эпикриз" in kind or "акт для рвк" in kind:
-                    return admission, end_date
-                return admission, ""
+        if kind not in current_source_kinds:
+            for period_re in period_patterns:
+                match = period_re.search(value)
+                if not match:
+                    continue
+                admission = norm(match.group(1))
+                end_date = norm(match.group(2))
+                if admission:
+                    if "выписной эпикриз" in kind or "акт для рвк" in kind:
+                        return admission, end_date
+                    return admission, ""
 
         admission = ""
         discharge = ""
@@ -203,7 +231,7 @@ class MedicalParserBlocksMixin:
         # «Находится на лечении с 10.06.2026». Принимаем такую дату только
         # при явном контексте лечения/обследования/стационара. Формулировки
         # вроде «Находится на учёте у психиатра с ...» не относятся к эпизоду.
-        if not admission:
+        if not admission and kind not in current_source_kinds:
             current_treatment = re.search(
                 rf"(?i)(?:находил(?:ся|ась)?|находится)\s+"
                 rf"[^\n]{{0,100}}?\b(?:лечени\w*|обследован\w*|стационар\w*)\b"
@@ -375,6 +403,7 @@ class MedicalParserBlocksMixin:
                 normalize_match("Результаты исследований"),
             }
         )
+        inside_life_anamnesis = normalize_match("Анамнез жизни") in current_norm
         for marker in self.SECTION_MARKERS:
             marker_norm = normalize_match(marker)
             if marker_norm in current_norm:
@@ -387,6 +416,20 @@ class MedicalParserBlocksMixin:
             for m in re.finditer(pattern, text[start_pos:], flags=re.IGNORECASE):
                 pos = start_pos + m.start()
                 end = start_pos + m.end()
+                if inside_life_anamnesis and marker_norm == normalize_match("Проживает"):
+                    line_end = text.find("\n", end)
+                    if line_end < 0:
+                        line_end = len(text)
+                    residence_tail = re.sub(
+                        r"^\s*[:.-]*\s*", "", text[end:line_end]
+                    )
+                    # «Проживает- с родителями и братом» is a life-anamnesis
+                    # fact, not a registration-address section. Inline address
+                    # extraction already applies the same semantic distinction;
+                    # block boundaries must do so too or the life anamnesis is
+                    # silently truncated.
+                    if not self._looks_like_address_tail(residence_tail):
+                        continue
                 if not self._is_valid_section_boundary_occurrence(text, pos, end, marker):
                     continue
                 if pos < best:
@@ -469,7 +512,23 @@ class MedicalParserBlocksMixin:
         if not line_prefix.strip() and line_start > 0:
             previous_end = line_start - 1
             previous_start = text.rfind("\n", 0, previous_end) + 1
-            _append_dated_candidates(text[previous_start:previous_end])
+            previous_line = text[previous_start:previous_end].strip()
+            previous_norm = normalize_match(previous_line)
+            # Only a compact dated event header may carry historical scope onto
+            # the next physical line. A completed sentence such as
+            # «В октябре 2024 направлен на обследование.» must not suppress the
+            # following real top-level «Психический статус:» section.
+            historical_action_words = (
+                "обратил", "направлен", "находил", "лечил", "госпитал",
+                "наблюдал", "получал", "поступил", "выписан", "состояние",
+                "жалоб", "диагноз", "лечение", "обследован",
+            )
+            if (
+                previous_line
+                and len(previous_line) <= 120
+                and not any(word in previous_norm for word in historical_action_words)
+            ):
+                _append_dated_candidates(previous_line)
 
         document_title_signals = (
             "первичный осмотр",
