@@ -1,8 +1,9 @@
 {
   "schema_version": 1,
-  "base_sha": "bfec32ecd1b434dfc467695191c7872395212628",
-  "reason": "Historical production compatibility hardening: preserve dated and explicitly historical clinical sublabels inside disease anamnesis, including Russian year inflections and bare-year chronology, without suppressing a following real current section.",
+  "base_sha": "31eecb68c5c933534f64af8d98cd0d827463c494",
+  "reason": "Deep source-fidelity hardening: an explicitly historical 'был выставлен диагноз' phrase must never become the patient's current diagnosis or suppress the doctor diagnosis prompt; legitimate current diagnosis phrasing remains supported.",
   "approved_blobs": {
-    "medical_parser_blocks.py": "92b527d88c8d188e27b4fb682247f99ebe38eba7"
+    "medical_parser_blocks.py": "a5bef5ef1295c9398b2a69767aa955116ca6969d",
+    "medical_parser_core.py": "285f34b40433b4020d8b2f20426963cfb65011cc"
   }
 }
