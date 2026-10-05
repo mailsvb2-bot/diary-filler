@@ -22,6 +22,7 @@ from medical_docx_editor import DocxBlockEditor
 from medical_docx_editor_utils import paragraph_matches_marker
 from medical_parser import MedicalTextParser
 from medical_paths import bundled_template_path
+from medical_service import MedicalDocumentService
 from generation_performance_profile import _make_fixture
 from medical_markers import (
     COMMISSION_MARKERS,
@@ -218,6 +219,94 @@ F20.8 Другой тип шизофрении
     assert "Психический статус:" not in data.disease_anamnesis, data.disease_anamnesis
     assert "Контактен, ориентирован" in data.mental_status, data.mental_status
     assert data.diagnosis == "F20.8 Другой тип шизофрении", data.diagnosis
+
+
+def _assert_real_referral_to_discharge_roundtrip_keeps_full_dated_history() -> None:
+    """Lock the exact parser -> PatientData -> discharge path behind PR #333.
+
+    Real referral documents commonly keep many years of dated neurology and
+    psychiatry observations inside one disease-anamnesis section. Historical
+    inline diagnosis phrases without an F-code belong to that history and must
+    survive the generated discharge epicrisis byte-for-byte and in order.
+    """
+
+    with TemporaryDirectory(prefix="medical-autofill-source-fidelity-") as temp_dir:
+        root = Path(temp_dir)
+        source = root / "направление на госпитализацию.docx"
+        doc = Document()
+        doc.add_paragraph("09.05.2026 Первичный осмотр")
+        doc.add_paragraph("История болезни № 353")
+        doc.add_paragraph("Ф.И.О.: Маркер Истории Тестовый")
+        doc.add_paragraph("Год рождения: 26.09.2008")
+        doc.add_paragraph("Проживает: Нижний Новгород, тестовый район, дом 24-12")
+        doc.add_paragraph("Место работы: не работает")
+        doc.add_paragraph("На учёте у психиатров состоит с сентября 2024 года")
+        doc.add_paragraph("В 3 отделение КДП поступает: повторно")
+        doc.add_paragraph("Жалобы на момент осмотра: тревога, плохой сон")
+        doc.add_paragraph("Анамнез жизни:")
+        doc.add_paragraph("Наследственность не отягощена. Рос и развивался соответственно возрасту.")
+        doc.add_paragraph("Анамнез заболевания:")
+        history = [
+            "Родился от 1 беременности, протекавшей без патологии. Роды срочные.",
+            "07.02.2013 Невролог. Диагноз: Неврозоподобный синдром. Наблюдался амбулаторно.",
+            "24.07.2015 Невролог. Диагноз: Неврозоподобный синдром. Состояние без ухудшения.",
+            "25.01.2024 ЭПИ (ДО №4): находился на лечении, состояние стабилизировалось.",
+            "В сентябре 2024 года самостоятельно обратился к психиатру.",
+            "После выписки продолжал наблюдение амбулаторно, рекомендации выполнял.",
+            "ФИНАЛ_РЕАЛЬНОГО_АНАМНЕЗА_НЕ_ОБРЕЗАТЬ.",
+        ]
+        for line in history:
+            doc.add_paragraph(line)
+        doc.add_paragraph("Психический статус:")
+        doc.add_paragraph("Контактен, ориентирован, отвечает по существу.")
+        doc.add_paragraph("Соматический статус:")
+        doc.add_paragraph("Состояние удовлетворительное.")
+        doc.add_paragraph("План лечения:")
+        doc.add_paragraph("Рисперидон 2 мг вечером.")
+        doc.add_paragraph("Диагноз:")
+        doc.add_paragraph("F20.8 Другой тип шизофрении")
+        doc.save(source)
+
+        service = MedicalDocumentService()
+        parsed = service.parse_navigation(source)
+        for line in history:
+            assert parsed.disease_anamnesis.count(line) == 1, (
+                "source parse lost/duplicated dated history: ",
+                line,
+                parsed.disease_anamnesis,
+            )
+        assert parsed.diagnosis == "F20.8 Другой тип шизофрении", parsed.diagnosis
+        assert parsed.psych_account == "состоит с сентября 2024 года", parsed.psych_account
+
+        parsed.discharge_date = "05.10.2026"
+        parsed.admission_occurrence = "повторно"
+        parsed.psych_account_status = "да"
+        parsed.psych_account_since_year = "2024"
+        parsed.expert_work_status = "нет"
+        parsed.expert_sick_leave_needed = "нет"
+
+        created, _ = service.create_documents(
+            navigation_path=source,
+            output_dir=root / "generated",
+            discharge_date=parsed.discharge_date,
+            selected_docs=("discharge",),
+            override_data=parsed,
+        )
+        assert len(created) == 1, created
+        output_text = extract_docx_text(created[0])
+
+        positions = []
+        for line in history:
+            assert output_text.count(line) == 1, (
+                f"generated discharge lost/duplicated dated history {line!r}; "
+                f"count={output_text.count(line)}"
+            )
+            positions.append(output_text.find(line))
+        assert positions == sorted(positions), positions
+        assert "ФИНАЛ_РЕАЛЬНОГО_АНАМНЕЗА_НЕ_ОБРЕЗАТЬ." in output_text, output_text
+        assert "Психический статус: Контактен, ориентирован, отвечает по существу." in output_text, output_text
+        assert "Диагноз: F20.8 Другой тип шизофрении" in output_text, output_text
+        assert "На учёте у психиатров: состоит с сентября 2024 года" in output_text, output_text
 
 
 def _assert_narrative_marker_words_never_replace_target_fields() -> None:
@@ -971,6 +1060,7 @@ def verify() -> None:
     _assert_alias_boundary_stops_destructive_span_deletion()
     _assert_long_source_block_is_not_cut_by_narrative_marker_words()
     _assert_dated_historical_diagnoses_stay_inside_disease_anamnesis()
+    _assert_real_referral_to_discharge_roundtrip_keeps_full_dated_history()
     _assert_narrative_marker_words_never_replace_target_fields()
     _assert_long_multiline_docx_roundtrip_preserves_full_tail()
     _assert_table_and_run_fragmented_source_roundtrip()
