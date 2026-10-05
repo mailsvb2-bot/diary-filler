@@ -410,30 +410,41 @@ class MedicalParserBlocksMixin:
         line_start = text.rfind("\n", 0, start) + 1
         line_prefix = text[line_start:start]
 
-        # Use several local candidates instead of the whole physical paragraph.
-        # One-paragraph DOCX exports can contain the current document title,
-        # birth date and many later clinical sections on the same line. A date
-        # elsewhere in that long paragraph is not evidence that this marker is
-        # historical. Conversely, real chronology often looks like:
-        #   "Начало болезни. В 2013 году был выставлен диагноз: ..."
-        # or:
-        #   "07.02.2013 Невролог. Диагноз: ..."
-        # so inspect the recent sentence/event fragments too.
-        candidates: list[str] = []
+        # Date-like evidence is strong enough to inspect the whole event line
+        # and the last two completed sentence fragments. This keeps rows such
+        # as "07.02.2013 Невролог. Диагноз: ..." historical even though the
+        # marker starts a new sentence after the dated clinician heading.
+        dated_candidates: list[str] = []
 
-        def _append_candidates(value: str) -> None:
+        def _append_dated_candidates(value: str) -> None:
             value = value.strip()
             if not value:
                 return
-            candidates.append(value)
+            dated_candidates.append(value)
             sentence_parts = [
                 part.strip()
                 for part in re.split(r"(?<=[.!?;])\s+", value)
                 if part.strip()
             ]
-            candidates.extend(sentence_parts[-2:])
+            dated_candidates.extend(sentence_parts[-2:])
 
-        _append_candidates(line_prefix)
+        _append_dated_candidates(line_prefix)
+
+        # Explicit words such as "Ранее" or "До госпитализации" are weaker than
+        # a real date. Apply them only to the unfinished sentence fragment that
+        # actually contains the marker. Otherwise a perfectly current section
+        # in "Ранее наблюдался. Психический статус: ..." could be suppressed by
+        # the previous sentence.
+        historical_context_candidates: list[str] = []
+        if line_prefix.strip():
+            boundary_matches = list(re.finditer(r"[.!?;]\s+", line_prefix))
+            context_fragment = (
+                line_prefix[boundary_matches[-1].end():]
+                if boundary_matches
+                else line_prefix
+            ).strip()
+            if context_fragment:
+                historical_context_candidates.append(context_fragment)
 
         # A historical event header may occupy its own paragraph, with the
         # first nested clinical label on the following line:
@@ -445,10 +456,7 @@ class MedicalParserBlocksMixin:
         if not line_prefix.strip() and line_start > 0:
             previous_end = line_start - 1
             previous_start = text.rfind("\n", 0, previous_end) + 1
-            _append_candidates(text[previous_start:previous_end])
-
-        if not candidates:
-            return False
+            _append_dated_candidates(text[previous_start:previous_end])
 
         document_title_signals = (
             "первичный осмотр",
@@ -465,7 +473,7 @@ class MedicalParserBlocksMixin:
             r"ноябр[ьяе]|декабр[ьяе])"
         )
 
-        for candidate in candidates:
+        for candidate in dated_candidates:
             candidate_norm = normalize_match(candidate)
             if any(signal in candidate_norm for signal in document_title_signals):
                 continue
@@ -503,6 +511,22 @@ class MedicalParserBlocksMixin:
                 candidate,
                 flags=re.IGNORECASE,
             )
+            if any(
+                (
+                    numeric_date,
+                    numeric_month_year,
+                    textual_day_month_year,
+                    month_year,
+                    year_lead,
+                    season_year,
+                )
+            ):
+                return True
+
+        for candidate in historical_context_candidates:
+            candidate_norm = normalize_match(candidate)
+            if any(signal in candidate_norm for signal in document_title_signals):
+                continue
             historical_context = re.match(
                 r"^\s*(?:"
                 r"ранее\b|"
@@ -517,17 +541,7 @@ class MedicalParserBlocksMixin:
                 candidate,
                 flags=re.IGNORECASE,
             )
-            if any(
-                (
-                    numeric_date,
-                    numeric_month_year,
-                    textual_day_month_year,
-                    month_year,
-                    year_lead,
-                    season_year,
-                    historical_context,
-                )
-            ):
+            if historical_context:
                 return True
 
         return False
