@@ -386,6 +386,168 @@ class MedicalParserBlocksMixin:
         return best
 
     @classmethod
+    def _is_dated_historical_inline_occurrence(
+        cls,
+        text: str,
+        start: int,
+        marker: str,
+    ) -> bool:
+        """Return True when a clinical label belongs to historical event context.
+
+        Referral anamneses often contain compact chronology rows such as
+        "07.02.2013 Невролог. Диагноз: ..." or
+        "24.07.2015 Психиатр. Лечение: ...". Those nested labels describe a
+        past event and must not terminate the current disease-anamnesis block or
+        seed the patient's current top-level clinical fields.
+
+        A one-paragraph document may itself begin with a dated document title,
+        so title-bearing prefixes are explicitly excluded from this rule.
+        """
+        marker_norm = normalize_match(marker)
+        if marker_norm not in cls._STRICT_CLINICAL_BOUNDARY_MARKERS:
+            return False
+
+        line_start = text.rfind("\n", 0, start) + 1
+        line_prefix = text[line_start:start]
+
+        # Date-like evidence is strong enough to inspect the whole event line
+        # and the last two completed sentence fragments. This keeps rows such
+        # as "07.02.2013 Невролог. Диагноз: ..." historical even though the
+        # marker starts a new sentence after the dated clinician heading.
+        dated_candidates: list[str] = []
+
+        def _append_dated_candidates(value: str) -> None:
+            value = value.strip()
+            if not value:
+                return
+            dated_candidates.append(value)
+            sentence_parts = [
+                part.strip()
+                for part in re.split(r"(?<=[.!?;])\s+", value)
+                if part.strip()
+            ]
+            dated_candidates.extend(sentence_parts[-2:])
+
+        _append_dated_candidates(line_prefix)
+
+        # Explicit words such as "Ранее" or "До госпитализации" are weaker than
+        # a real date. Apply them only to the unfinished sentence fragment that
+        # actually contains the marker. Otherwise a perfectly current section
+        # in "Ранее наблюдался. Психический статус: ..." could be suppressed by
+        # the previous sentence.
+        historical_context_candidates: list[str] = []
+        if line_prefix.strip():
+            boundary_matches = list(re.finditer(r"[.!?;]\s+", line_prefix))
+            context_fragment = (
+                line_prefix[boundary_matches[-1].end():]
+                if boundary_matches
+                else line_prefix
+            ).strip()
+            if context_fragment:
+                historical_context_candidates.append(context_fragment)
+
+        # A historical event header may occupy its own paragraph, with the
+        # first nested clinical label on the following line:
+        #   "07.02.2013 Невролог."
+        #   "Диагноз: F06.8 ..."
+        # Treat that first nested label as historical too. Document titles are
+        # rejected below, so "10.06.2026 Первичный осмотр\nДиагноз: ..." still
+        # remains a current top-level diagnosis.
+        if not line_prefix.strip() and line_start > 0:
+            previous_end = line_start - 1
+            previous_start = text.rfind("\n", 0, previous_end) + 1
+            _append_dated_candidates(text[previous_start:previous_end])
+
+        document_title_signals = (
+            "первичный осмотр",
+            "выписной эпикриз",
+            "совместный осмотр",
+            "осмотр врача приемного покоя",
+            "акт для рвк",
+            "вк на мсэ",
+            "вк больничный",
+        )
+        month_name = (
+            r"(?:январ[ьяе]|феврал[ьяе]|март(?:а|е)?|апрел[ьяе]|ма[йяе]|"
+            r"июн[ьяе]|июл[ьяе]|август(?:а|е)?|сентябр[ьяе]|октябр[ьяе]|"
+            r"ноябр[ьяе]|декабр[ьяе])"
+        )
+
+        for candidate in dated_candidates:
+            candidate_norm = normalize_match(candidate)
+            if any(signal in candidate_norm for signal in document_title_signals):
+                continue
+
+            numeric_date = re.match(
+                r"^\s*(?:от\s+)?\d{1,2}[./-]\d{1,2}[./-]\d{2,4}\b",
+                candidate,
+                flags=re.IGNORECASE,
+            )
+            numeric_month_year = re.match(
+                r"^\s*(?:в\s+|с\s+|от\s+)?(?:0?[1-9]|1[0-2])[./-](?:19|20)\d{2}\b",
+                candidate,
+                flags=re.IGNORECASE,
+            )
+            textual_day_month_year = re.match(
+                rf"^\s*(?:от\s+)?\d{{1,2}}\s+{month_name}\s+(?:19|20)\d{{2}}"
+                r"(?:\s*г(?:ода|\.)?)?\b",
+                candidate,
+                flags=re.IGNORECASE,
+            )
+            month_year = re.match(
+                rf"^\s*(?:в\s+|с\s+|от\s+)?{month_name}\s+(?:19|20)\d{{2}}"
+                r"(?:\s*г(?:ода|\.)?)?\b",
+                candidate,
+                flags=re.IGNORECASE,
+            )
+            year_lead = re.match(
+                r"^\s*(?:в\s+|с\s+|от\s+)?(?:19|20)\d{2}"
+                r"(?:\s*г(?:од(?:а|у)?|\.)?)?\b",
+                candidate,
+                flags=re.IGNORECASE,
+            )
+            season_year = re.match(
+                r"^\s*(?:в\s+)?(?:весной|летом|осенью|зимой)\s+(?:19|20)\d{2}"
+                r"(?:\s*г(?:од(?:а|у)?|\.)?)?\b",
+                candidate,
+                flags=re.IGNORECASE,
+            )
+            if any(
+                (
+                    numeric_date,
+                    numeric_month_year,
+                    textual_day_month_year,
+                    month_year,
+                    year_lead,
+                    season_year,
+                )
+            ):
+                return True
+
+        for candidate in historical_context_candidates:
+            candidate_norm = normalize_match(candidate)
+            if any(signal in candidate_norm for signal in document_title_signals):
+                continue
+            historical_context = re.match(
+                r"^\s*(?:"
+                r"ранее\b|"
+                r"до\s+(?:настоящей\s+)?(?:госпитализации|поступления|обращения|лечения)\b|"
+                r"в\s+анамнезе\b|"
+                r"на\s+предыдущем\s+этапе\b|"
+                r"при\s+предыдущ(?:ей|ем)\s+(?:госпитализации|обращении|лечении)\b|"
+                r"в\s+детстве\b|"
+                r"в\s+подростковом\s+возрасте\b|"
+                r"амбулаторно\s+(?:ранее\s+)?(?:был|была|было|выставлен|установлен)\b"
+                r")",
+                candidate,
+                flags=re.IGNORECASE,
+            )
+            if historical_context:
+                return True
+
+        return False
+
+    @classmethod
     def _is_safe_one_line_clinical_boundary(
         cls,
         text: str,
@@ -515,6 +677,8 @@ class MedicalParserBlocksMixin:
             return explicit_colon or explicit_line_label
 
         if marker_norm in cls._STRICT_CLINICAL_BOUNDARY_MARKERS:
+            if cls._is_dated_historical_inline_occurrence(text, start, marker):
+                return False
             if not at_line_start:
                 # A colon alone is not enough to split a long clinical history.
                 # Real anamneses often contain historical inline facts such as
@@ -568,6 +732,11 @@ class MedicalParserBlocksMixin:
         marker_norm = normalize_match(marker)
         if marker_norm.startswith("на основании"):
             return True
+        if (
+            marker_norm in cls._STRICT_CLINICAL_BOUNDARY_MARKERS
+            and cls._is_dated_historical_inline_occurrence(text, start, marker)
+        ):
+            return False
         # Compact diagnosis in one-paragraph exports is a strong structural
         # signal even without a colon: "Диагноз F20.0 ...".
         if marker_norm == normalize_match("Диагноз") and re.match(

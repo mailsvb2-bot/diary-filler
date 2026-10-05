@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "base_sha": "bfec32ecd1b434dfc467695191c7872395212628",
+  "reason": "Historical production compatibility hardening: preserve dated and explicitly historical clinical sublabels inside disease anamnesis, including Russian year inflections and bare-year chronology, without suppressing a following real current section.",
+  "approved_blobs": {
+    "medical_parser_blocks.py": "92b527d88c8d188e27b4fb682247f99ebe38eba7"
+  }
+}

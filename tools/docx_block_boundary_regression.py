@@ -221,6 +221,153 @@ F20.8 Другой тип шизофрении
     assert data.diagnosis == "F20.8 Другой тип шизофрении", data.diagnosis
 
 
+def _assert_dated_historical_clinical_sublabels_stay_inside_disease_anamnesis() -> None:
+    """Dated historical sublabels are event details, not current top-level sections."""
+    source = """Анамнез заболевания:
+Начало заболевания постепенное.
+07.02.2013 Невролог. Диагноз: F06.8 Исторический диагноз. Жалобы: головные боли. Психический статус: спокоен. Соматический статус: без особенностей. Лечение: магний.
+24.07.2015 Психиатр. Жалобы: тревога. Психический статус: напряжён. Лечение: амбулаторная терапия.
+Ноябрь 2024 Психиатр. Диагноз: F20.8 Историческая формулировка. Лечение: скорректировано амбулаторно.
+В сентябре 2025 года Психиатр. Жалобы: нарушения сна. Психический статус: без психотической симптоматики.
+25.01.2024 Контроль. Результаты обследований: ЭЭГ без отрицательной динамики.
+ФИНАЛ_ДАТИРОВАННОЙ_ИСТОРИИ_НЕ_ОБРЕЗАТЬ.
+Психический статус:
+Контактен, ориентирован, отвечает по существу.
+Соматический статус:
+Состояние удовлетворительное.
+План лечения:
+Рисперидон 2 мг вечером.
+Диагноз:
+F20.8 Другой тип шизофрении
+"""
+    data = MedicalTextParser().parse_text(source)
+    for required in (
+        "07.02.2013 Невролог. Диагноз: F06.8 Исторический диагноз.",
+        "Жалобы: головные боли.",
+        "Психический статус: спокоен.",
+        "Соматический статус: без особенностей.",
+        "Лечение: магний.",
+        "24.07.2015 Психиатр. Жалобы: тревога.",
+        "Психический статус: напряжён.",
+        "Лечение: амбулаторная терапия.",
+        "Ноябрь 2024 Психиатр. Диагноз: F20.8 Историческая формулировка.",
+        "Лечение: скорректировано амбулаторно.",
+        "В сентябре 2025 года Психиатр. Жалобы: нарушения сна.",
+        "Психический статус: без психотической симптоматики.",
+        "25.01.2024 Контроль. Результаты обследований: ЭЭГ без отрицательной динамики.",
+        "ФИНАЛ_ДАТИРОВАННОЙ_ИСТОРИИ_НЕ_ОБРЕЗАТЬ.",
+    ):
+        assert required in data.disease_anamnesis, (required, data.disease_anamnesis)
+    assert data.mental_status == "Контактен, ориентирован, отвечает по существу.", data.mental_status
+    assert data.somatic_status == "Состояние удовлетворительное.", data.somatic_status
+    assert data.treatment_plan == "Рисперидон 2 мг вечером.", data.treatment_plan
+    assert data.diagnosis == "F20.8 Другой тип шизофрении", data.diagnosis
+
+
+def _assert_historical_chronology_variant_matrix() -> None:
+    """Date-format and split-line history variants must not steal current fields."""
+    variants = (
+        "07.02.2013 Невролог. Диагноз: F06.8 Исторический диагноз.",
+        "7/2/2013 Невролог. Диагноз: F06.8 Исторический диагноз.",
+        "07-02-13 Невролог. Диагноз: F06.8 Исторический диагноз.",
+        "02.2014 Невролог. Диагноз: F06.8 Исторический диагноз.",
+        "02/2015 Невролог. Лечение: историческая терапия.",
+        "12 февраля 2016 г. Психиатр. Диагноз: F06.8 Исторический диагноз.",
+        "Февраль 2017 Психиатр. Жалобы: историческая тревога.",
+        "В феврале 2018 года Психиатр. Психический статус: исторически напряжён.",
+        "Осенью 2019 года Психиатр. Соматический статус: без особенностей.",
+        "Начало наблюдения. В 2020 году был выставлен диагноз: F06.8 Исторический диагноз.",
+        "Начало наблюдения. В 2020 г. был выставлен диагноз: F06.8 Исторический диагноз.",
+        "Начало наблюдения. В 2020 был выставлен диагноз: F06.8 Исторический диагноз.",
+        "07.02.2021 Невролог.\nДиагноз: F06.8 Исторический диагноз.",
+        "Ноябрь 2022 Психиатр.\nЖалобы: историческая тревога.",
+        "Ранее был выставлен диагноз: F06.8 Исторический диагноз.",
+        "До настоящей госпитализации был выставлен диагноз: F06.8 Исторический диагноз.",
+        "В анамнезе был выставлен диагноз: F06.8 Исторический диагноз.",
+        "На предыдущем этапе был выставлен диагноз: F06.8 Исторический диагноз.",
+        "При предыдущей госпитализации был выставлен диагноз: F06.8 Исторический диагноз.",
+        "Амбулаторно был выставлен диагноз: F06.8 Исторический диагноз.",
+    )
+    for index, history_fragment in enumerate(variants):
+        source = f"""Жалобы:
+текущие жалобы
+Анамнез заболевания:
+Начало текущего анамнеза.
+{history_fragment}
+После исторического события наблюдение продолжалось.
+ФИНАЛ_ВАРИАНТА_{index}_НЕ_ОБРЕЗАТЬ.
+Психический статус:
+Текущий психический статус.
+Соматический статус:
+Текущий соматический статус.
+План лечения:
+Текущее лечение.
+Диагноз:
+F20.8 Текущий диагноз
+"""
+        data = MedicalTextParser().parse_text(source)
+        assert f"ФИНАЛ_ВАРИАНТА_{index}_НЕ_ОБРЕЗАТЬ" in data.disease_anamnesis, (
+            history_fragment,
+            data.disease_anamnesis,
+        )
+        assert data.complaints == "текущие жалобы", (history_fragment, data.complaints)
+        assert data.mental_status == "Текущий психический статус.", (
+            history_fragment,
+            data.mental_status,
+        )
+        assert data.somatic_status == "Текущий соматический статус.", (
+            history_fragment,
+            data.somatic_status,
+        )
+        assert data.treatment_plan == "Текущее лечение.", (
+            history_fragment,
+            data.treatment_plan,
+        )
+        assert data.diagnosis == "F20.8 Текущий диагноз", (
+            history_fragment,
+            data.diagnosis,
+        )
+
+    # A completed historical sentence must not poison the *next* real current
+    # section. The historical-context detector is intentionally scoped to the
+    # unfinished sentence containing the marker, unlike strong date evidence.
+    for completed_history in (
+        "Ранее наблюдался амбулаторно.",
+        "До настоящей госпитализации регулярно посещал психиатра.",
+        "В анамнезе отмечались эпизоды тревоги.",
+        "На предыдущем этапе состояние было нестабильным.",
+    ):
+        source = (
+            "Анамнез заболевания: Начало болезни. "
+            + completed_history
+            + " Психический статус: Текущий психический статус. "
+            "Соматический статус: Текущий соматический статус. "
+            "План лечения: Текущее лечение. "
+            "Диагноз: F20.8 Текущий диагноз"
+        )
+        data = MedicalTextParser().parse_text(source)
+        assert completed_history in data.disease_anamnesis, (
+            completed_history,
+            data.disease_anamnesis,
+        )
+        assert data.mental_status == "Текущий психический статус.", (
+            completed_history,
+            data.mental_status,
+        )
+        assert data.somatic_status == "Текущий соматический статус.", (
+            completed_history,
+            data.somatic_status,
+        )
+        assert data.treatment_plan == "Текущее лечение.", (
+            completed_history,
+            data.treatment_plan,
+        )
+        assert data.diagnosis == "F20.8 Текущий диагноз", (
+            completed_history,
+            data.diagnosis,
+        )
+
+
 def _assert_real_referral_to_discharge_roundtrip_keeps_full_dated_history() -> None:
     """Lock the exact parser -> PatientData -> discharge path behind PR #333.
 
@@ -306,6 +453,19 @@ def _assert_real_referral_to_discharge_roundtrip_keeps_full_dated_history() -> N
         )
         assert len(created) == 1, created
         output_text = extract_docx_text(created[0])
+
+        # Identity/episode facts were already stable in the v1.4.19/v1.4.20
+        # production line. Keep that historical contract while hardening the
+        # richer clinical-source path.
+        for expected in (
+            "Выписной эпикриз № 353",
+            "Маркер Истории Тестовый",
+            "26.09.2008 г.р.",
+            "регистрация по адресу: Нижний Новгород, тестовый район, дом 24-12",
+            "с 09.05.2026 по 05.10.2026",
+            "В 3 отделение КДП поступает повторно",
+        ):
+            assert expected in output_text, (expected, output_text)
 
         positions = []
         for line in history:
@@ -1092,6 +1252,8 @@ def verify() -> None:
     _assert_alias_boundary_stops_destructive_span_deletion()
     _assert_long_source_block_is_not_cut_by_narrative_marker_words()
     _assert_dated_historical_diagnoses_stay_inside_disease_anamnesis()
+    _assert_dated_historical_clinical_sublabels_stay_inside_disease_anamnesis()
+    _assert_historical_chronology_variant_matrix()
     _assert_real_referral_to_discharge_roundtrip_keeps_full_dated_history()
     _assert_narrative_marker_words_never_replace_target_fields()
     _assert_long_multiline_docx_roundtrip_preserves_full_tail()
