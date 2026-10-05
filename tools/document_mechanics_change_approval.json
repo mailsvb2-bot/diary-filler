@@ -1,8 +1,10 @@
 {
   "schema_version": 1,
-  "base_sha": "f19ec9801b5a1eebb02ba1b81053a7a1a196184e",
-  "reason": "Version-only app_config update for the reviewed v1.4.33 clean-unlicensed release; document parsing, rendering, templates and generation semantics are unchanged.",
+  "base_sha": "6ff5f40a6405ffa4e360a595d5e758d3f14ebce4",
+  "reason": "Explicit document-generation correctness fix: ask sick-leave date only after a positive decision, preserve dated historical diagnoses inside disease anamnesis, and preserve precise psychiatric-registration wording.",
   "approved_blobs": {
-    "app_config.py": "4ecd3049514f108cd5fa3eb9202012ec06c43c56"
+    "dialog_expert.py": "2ab43ef18b5379f7cea2f126805e3ec84cfc3b34",
+    "medical_formatting.py": "fed7d7b12b948d1a4d775a83db356483c3129f16",
+    "medical_parser_blocks.py": "243bef8e88b041da13559007c2a38071fe26701b"
   }
 }
