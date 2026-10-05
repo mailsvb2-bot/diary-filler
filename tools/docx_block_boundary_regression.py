@@ -484,7 +484,6 @@ def _assert_real_referral_to_discharge_roundtrip_keeps_full_dated_history() -> N
         parsed.admission_occurrence = "повторно"
         parsed.psych_account_status = "да"
         parsed.psych_account_since_year = "2024"
-        parsed.expert_work_status = "нет"
         parsed.expert_sick_leave_needed = "нет"
 
         created, _ = service.create_documents(
@@ -597,6 +596,7 @@ def _assert_photo_like_referral_generation_fidelity() -> None:
         assert "09.06.2026 обратился" not in parsed.diagnosis, parsed.diagnosis
         assert parsed.psych_account == "состоит с сентября 2024 года", parsed.psych_account
         assert parsed.work_org == "", parsed.work_org
+        assert parsed.expert_work_status == "нет", parsed.expert_work_status
 
         parsed.case_number = "353/3"
         parsed.discharge_date = "05.10.2026"
