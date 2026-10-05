@@ -31,6 +31,7 @@ from patient_registry import (
     sick_leave_days_on,
 )
 from startup import DesktopExplorerQuadClickDetector
+from patient_registry_mixin import bind_patient_primary_press
 
 
 def _assert_sick_leave_parser() -> None:
@@ -407,6 +408,55 @@ def _assert_explorer_word_snapshot_is_nonblocking() -> None:
         startup_module._desktop_close_quad_click_word_document = original_close
 
 
+
+def _assert_patient_primary_click_hold_contract() -> None:
+    class FakeWidget:
+        def __init__(self):
+            self.handlers = {}
+            self.callbacks = {}
+            self.next_id = 0
+
+        def bind(self, event, callback):
+            self.handlers[event] = callback
+
+        def after(self, delay_ms, callback):
+            assert delay_ms == 2000
+            self.next_id += 1
+            key = f"after-{self.next_id}"
+            self.callbacks[key] = callback
+            return key
+
+        def after_cancel(self, key):
+            self.callbacks.pop(key, None)
+
+        def fire_pending(self):
+            pending = list(self.callbacks.items())
+            self.callbacks.clear()
+            for _key, callback in pending:
+                callback()
+
+    widget = FakeWidget()
+    events = []
+    bind_patient_primary_press(
+        widget,
+        on_click=lambda: events.append("click"),
+        on_hold=lambda: events.append("hold"),
+    )
+
+    # Ordinary press/release opens the Word document and never loads primary.
+    assert widget.handlers["<ButtonPress-1>"]() == "break"
+    assert widget.handlers["<ButtonRelease-1>"]() == "break"
+    assert events == ["click"], events
+
+    # A deliberate two-second hold loads primary exactly once; release must not
+    # additionally trigger the ordinary click/open action.
+    events.clear()
+    assert widget.handlers["<ButtonPress-1>"]() == "break"
+    widget.fire_pending()
+    assert events == ["hold"], events
+    assert widget.handlers["<ButtonRelease-1>"]() == "break"
+    assert events == ["hold"], events
+
 def _assert_vk_wednesday_schedule() -> None:
     # Day one is exactly the date from «Нужен больничный лист с ...».
     # For every possible weekday, the first VK must be a Wednesday inside the
@@ -622,6 +672,7 @@ def main() -> None:
     _assert_registry_parse_cache()
     _assert_explorer_quad_click_detector()
     _assert_explorer_word_snapshot_is_nonblocking()
+    _assert_patient_primary_click_hold_contract()
     _assert_vk_wednesday_schedule()
     _assert_discharge_stays_admission_based()
     _assert_desktop_wiring_contract()
