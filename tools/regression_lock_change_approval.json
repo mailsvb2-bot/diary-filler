@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "710c1e856426b8e2d7869dc51fc22628e129d9eb",
-  "reason": "Real referral generation fidelity hardening from a production-shaped replay: preserve life and disease anamneses, current mental status, current referral admission date, exact custom diagnosis wording, and explicit non-working status through parser -> popup defaults -> PatientData -> generated discharge.",
+  "reason": "Document-generation source-fidelity restoration verified against production v1.4.16-v1.4.20 behavior: explicit patient examination plan and epidemiological anamnesis must replace generic template text in Primary, Joint Examination and Admission Doctor outputs; unsourced epidemiology must not be invented.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -23,10 +23,13 @@
     "medical_parser_work.py": "a01479b4b97f8aeac25997e45518d787cf27644c",
     "smoke_combined_part03_medical_parser_manual.py": "b1a58c531a1cd554de4bdd64273e477ae6a3382c",
     "tools/docx_block_boundary_regression.py": "e8247c46aaf429a823f90f3b25385259a4b44d3a",
-    "tools/document_mechanics_change_approval.json": "71a83d8ad9a44638075a0b36f7c2cae467ea6255",
+    "tools/document_mechanics_change_approval.json": "0a3406cb17be835c01eadc972507295d008ceb33",
     "tools/regression_lock_check.py": "deea0121d9e26066c78b595afd72538b2191e580",
     "medical_parser_sanitize.py": "bee1386208a4f79f3869a4c95347c48b44090c16",
     "dialog_expert.py": "af2b96af9cf7f56babfed1522cf5de6898daca0a",
-    "smoke_combined_part02_ui_parser_regressions.py": "a7c5f0a2af2684f3d7307f4f8b590d591ed6b155"
+    "smoke_combined_part02_ui_parser_regressions.py": "a7c5f0a2af2684f3d7307f4f8b590d591ed6b155",
+    "medical_renderer_primary.py": "c45ccee69633a4b068af3d6dc61952cc05863209",
+    "medical_renderer_commission.py": "b5d1321618113e316fbda26f1c3a4ee05b5ef4b1",
+    "smoke_combined_part04_medical_generation.py": "1db499689826e328577afc3bcf31abc02d013c77"
   }
 }
