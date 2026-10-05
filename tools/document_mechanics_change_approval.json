@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "base_sha": "bfec32ecd1b434dfc467695191c7872395212628",
-  "reason": "Historical production compatibility hardening: dated clinical sublabels inside disease-anamnesis chronology must remain historical event evidence and must not become current top-level complaints/status/treatment/diagnosis fields.",
+  "reason": "Historical production compatibility hardening: numeric, textual, month/year and split-line chronology labels inside disease anamnesis must remain historical event evidence and must not become current top-level complaints/status/treatment/diagnosis fields.",
   "approved_blobs": {
-    "medical_parser_blocks.py": "28683805fb00d276e2037bf5c3caa4ec3373b93f"
+    "medical_parser_blocks.py": "18fba0e7b33c534f3ddbf78249cfdf9c1ab751ee"
   }
 }
