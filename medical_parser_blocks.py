@@ -386,6 +386,54 @@ class MedicalParserBlocksMixin:
         return best
 
     @classmethod
+    def _is_dated_historical_inline_occurrence(
+        cls,
+        text: str,
+        start: int,
+        marker: str,
+    ) -> bool:
+        """Return True when a clinical label belongs to a dated historical event line.
+
+        Referral anamneses often contain compact chronology rows such as
+        "07.02.2013 Невролог. Диагноз: ..." or
+        "24.07.2015 Психиатр. Лечение: ...". Those nested labels describe a
+        past event and must not terminate the current disease-anamnesis block or
+        seed the patient's current top-level clinical fields.
+
+        A one-paragraph document may itself begin with a dated document title,
+        so title-bearing prefixes are explicitly excluded from this rule.
+        """
+        marker_norm = normalize_match(marker)
+        if marker_norm not in cls._STRICT_CLINICAL_BOUNDARY_MARKERS:
+            return False
+
+        line_start = text.rfind("\n", 0, start) + 1
+        prefix = text[line_start:start]
+        if not prefix.strip():
+            return False
+
+        prefix_norm = normalize_match(prefix)
+        document_title_signals = (
+            "первичный осмотр",
+            "выписной эпикриз",
+            "совместный осмотр",
+            "осмотр врача приемного покоя",
+            "акт для рвк",
+            "вк на мсэ",
+            "вк больничный",
+        )
+        if any(signal in prefix_norm for signal in document_title_signals):
+            return False
+
+        return bool(
+            re.match(
+                r"^\s*(?:от\s+)?\d{1,2}[./-]\d{1,2}[./-]\d{2,4}\b",
+                prefix,
+                flags=re.IGNORECASE,
+            )
+        )
+
+    @classmethod
     def _is_safe_one_line_clinical_boundary(
         cls,
         text: str,
@@ -516,6 +564,8 @@ class MedicalParserBlocksMixin:
 
         if marker_norm in cls._STRICT_CLINICAL_BOUNDARY_MARKERS:
             if not at_line_start:
+                if cls._is_dated_historical_inline_occurrence(text, start, marker):
+                    return False
                 # A colon alone is not enough to split a long clinical history.
                 # Real anamneses often contain historical inline facts such as
                 # "07.02.2013 Невролог. Диагноз: Неврозоподобный синдром".
@@ -568,6 +618,12 @@ class MedicalParserBlocksMixin:
         marker_norm = normalize_match(marker)
         if marker_norm.startswith("на основании"):
             return True
+        if (
+            marker_norm in cls._STRICT_CLINICAL_BOUNDARY_MARKERS
+            and not at_line_start
+            and cls._is_dated_historical_inline_occurrence(text, start, marker)
+        ):
+            return False
         # Compact diagnosis in one-paragraph exports is a strong structural
         # signal even without a colon: "Диагноз F20.0 ...".
         if marker_norm == normalize_match("Диагноз") and re.match(
