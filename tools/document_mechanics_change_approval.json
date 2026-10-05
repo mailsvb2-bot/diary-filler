@@ -1,8 +1,9 @@
 {
   "schema_version": 1,
   "base_sha": "f918b2ae2e6e57882a530926ecf46eb1f73ce57f",
-  "reason": "Patient work source-fidelity fix: employment aliases in family/life anamnesis must not populate the patient's work organization or position and must not auto-select patient employment in expert/VK generation.",
+  "reason": "Patient work source-fidelity fix: both inline and fallback employment parsing must reject relatives' work facts so they cannot become patient work defaults in expert/VK generation.",
   "approved_blobs": {
-    "medical_parser_inline.py": "e1dddff58f5fd06fa5a9a459c690c27ab86a5b21"
+    "medical_parser_inline.py": "c3c29e64a57a5b3da64c99e9de50d77cc2753431",
+    "medical_parser_work.py": "0f364260348f7cc2b83864a3408332ab00c86d74"
   }
 }
