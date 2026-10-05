@@ -24,29 +24,6 @@ from medical_text_utils import (
 
 
 class MedicalParserInlineMixin:
-    _RELATIVE_EMPLOYMENT_TERM_RE = (
-        r"(?:мать|матери|мама|мамы|отец|отца|папа|папы|"
-        r"родитель|родители|родителя|родителей|"
-        r"брат|брата|сестра|сестры|муж|мужа|жена|жены|"
-        r"супруг|супруга|супруги|бабушка|бабушки|дед|деда|дедушка|дедушки|"
-        r"опекун|опекуна|сын|сына|дочь|дочери|ребенок|ребенка)"
-    )
-
-    @classmethod
-    def _employment_alias_is_relative_context(
-        cls,
-        before: str,
-        after: str = "",
-    ) -> bool:
-        """Whether a work/position label is scoped to a relative, not the patient."""
-        before_norm = normalize_match(before)
-        after_norm = normalize_match(after)
-        relative = cls._RELATIVE_EMPLOYMENT_TERM_RE
-        return bool(
-            re.search(rf"(?:^|[\s,;:.]){relative}\s*$", before_norm)
-            or re.match(rf"^\s*{relative}(?:\b|\s*[:.-])", after_norm)
-        )
-
     def _parsed_field_value_is_only_label(self, field_name: str, value: str) -> bool:
         """Safely clear accidental labels without deleting meaningful values.
 
@@ -114,8 +91,8 @@ class MedicalParserInlineMixin:
                     return value
         return ""
 
-    @classmethod
-    def _ignore_inline_alias_match(cls, line: str, alias: str, start: int, end: int) -> bool:
+    @staticmethod
+    def _ignore_inline_alias_match(line: str, alias: str, start: int, end: int) -> bool:
         """Reject false inline matches such as ``Не работает``.
 
         The alias ``Работает`` is a field label only when it introduces a value
@@ -126,25 +103,6 @@ class MedicalParserInlineMixin:
         alias_norm = normalize_match(alias)
         before = normalize_match(line[:start])
         after = line[end:]
-        after_norm = normalize_match(after)
-
-        # Employment facts are patient-scoped. Life anamnesis routinely contains
-        # phrases such as «отец работает...», «мать работает врачом» or
-        # «должность матери: ...». Those are family-history facts and must never
-        # prefill the patient's work fields: doing so later auto-selects
-        # «Работает ли пациент: да» and contaminates expert/VK output.
-        work_aliases = {
-            "работает",
-            "работает в организации",
-            "место работы",
-            "работа",
-            "должность",
-        }
-        if alias_norm in work_aliases and cls._employment_alias_is_relative_context(
-            before, after_norm
-        ):
-            return True
-
         if alias_norm == "работает" and re.search(r"(?:^|\s)не$", before):
             return True
         # A bare label without a separator/value is not a field.
