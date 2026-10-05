@@ -1,9 +1,11 @@
 {
   "schema_version": 1,
   "base_sha": "8fe9e59f533118cd28018f802d7788ebed184989",
-  "reason": "Real referral generation fidelity fix: preserve current section boundaries after dated history, keep non-address residence facts inside life anamnesis, prefer the current referral admission date over old examination periods, and prevent dated referral prose from leaking into diagnosis.",
+  "reason": "Real referral generation fidelity fix: preserve current section boundaries after dated history, keep non-address residence facts inside life anamnesis, prefer the current referral admission date over old examination periods, prevent dated referral prose from leaking into diagnosis, and preserve explicit patient non-working status through parser and popup defaults.",
   "approved_blobs": {
+    "dialog_expert.py": "af2b96af9cf7f56babfed1522cf5de6898daca0a",
     "medical_parser_blocks.py": "97e32e3b428873c6878729370dad249339000e0c",
-    "medical_parser_sanitize.py": "bee1386208a4f79f3869a4c95347c48b44090c16"
+    "medical_parser_sanitize.py": "bee1386208a4f79f3869a4c95347c48b44090c16",
+    "medical_parser_work.py": "a01479b4b97f8aeac25997e45518d787cf27644c"
   }
 }
