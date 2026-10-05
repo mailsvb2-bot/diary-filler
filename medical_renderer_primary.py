@@ -81,7 +81,16 @@ class MedicalRendererPrimaryMixin:
             PRIMARY_MARKERS,
             before_markers=["План лечения", "На основании данных", "Диагноз", "Врач психиатр", "Врач-психиатр"],
         )
-        # Canonical examination plan is template-owned and intentionally immutable.
+        # Historical production (v1.4.16-v1.4.20) treated an explicit
+        # source examination plan as patient evidence. Keep the template plan
+        # only when the source has no plan; otherwise preserve the patient's
+        # actual source wording instead of publishing a generic template plan.
+        editor.replace_block(
+            ["План обследования"],
+            "План обследования:",
+            data.examination_plan,
+            PRIMARY_MARKERS,
+        )
         editor.replace_block(["План лечения"], "План лечения:", data.treatment_plan, PRIMARY_MARKERS)
 
         diagnosis = sanitize_diagnosis(data.diagnosis)
@@ -92,7 +101,17 @@ class MedicalRendererPrimaryMixin:
             PRIMARY_MARKERS,
             allow_empty=True,
         )
-        # Canonical epidemiological anamnesis is template-owned and intentionally immutable.
+        # Epidemiological anamnesis is a patient fact. Historical
+        # production replaced this template block from the source and removed
+        # it when the source had no value; never invent the generic template
+        # statement for a patient.
+        editor.replace_block(
+            ["Эпидемиологический анамнез"],
+            "Эпидемиологический анамнез:",
+            data.epidemiology,
+            PRIMARY_MARKERS,
+            allow_empty=True,
+        )
         put_expert_anamnesis(
             editor,
             data,
