@@ -16,10 +16,60 @@ from patient_registry import (
     install_patient_summary_autostart,
     launch_patient_summary_tray_process,
     next_sick_leave_vk_date,
+    open_patient_document,
     open_patient_folder,
     scan_patient_registry,
     sick_leave_days_on,
 )
+
+PATIENT_PRIMARY_HOLD_MS = 2000
+
+
+def bind_patient_primary_press(
+    widget,
+    *,
+    on_click,
+    on_hold,
+    hold_ms: int = PATIENT_PRIMARY_HOLD_MS,
+):
+    """Bind a normal click versus a deliberate two-second left-button hold."""
+    state = {"after_id": None, "hold_fired": False}
+
+    def cancel_pending() -> None:
+        after_id = state.get("after_id")
+        state["after_id"] = None
+        if after_id is None:
+            return
+        try:
+            widget.after_cancel(after_id)
+        except (tk.TclError, RuntimeError):
+            pass
+
+    def on_press(_event=None):
+        cancel_pending()
+        state["hold_fired"] = False
+
+        def fire_hold() -> None:
+            state["after_id"] = None
+            state["hold_fired"] = True
+            on_hold()
+
+        state["after_id"] = widget.after(max(1, int(hold_ms)), fire_hold)
+        return "break"
+
+    def on_release(_event=None):
+        had_pending = state.get("after_id") is not None
+        cancel_pending()
+        if state.get("hold_fired"):
+            state["hold_fired"] = False
+            return "break"
+        if had_pending:
+            on_click()
+        return "break"
+
+    widget.bind("<ButtonPress-1>", on_press)
+    widget.bind("<ButtonRelease-1>", on_release)
+    return state
 
 
 class PatientRegistryMixin:
@@ -78,6 +128,59 @@ class PatientRegistryMixin:
             parent=parent or self.root,
         )
         return False
+
+    def _open_registry_primary_document(
+        self,
+        entry: PatientRegistryEntry,
+        *,
+        parent: tk.Misc | None = None,
+    ) -> bool:
+        source = entry.primary_path
+        if source is None:
+            messagebox.showwarning(
+                "Мои пациенты",
+                "В папке пациента не найден Word-документ, который можно открыть.",
+                parent=parent or self.root,
+            )
+            return False
+        if open_patient_document(source):
+            return True
+        messagebox.showerror(
+            "Мои пациенты",
+            "Не удалось открыть Word-документ пациента.",
+            parent=parent or self.root,
+        )
+        return False
+
+    def _load_registry_primary_document(
+        self,
+        entry: PatientRegistryEntry,
+        *,
+        parent: tk.Misc | None = None,
+    ) -> bool:
+        source = entry.primary_path
+        if source is None:
+            messagebox.showwarning(
+                "Мои пациенты",
+                "В папке пациента не найден Word-документ, который можно добавить как первичный.",
+                parent=parent or self.root,
+            )
+            return False
+        try:
+            self.root.deiconify()
+            self.root.lift()
+            self.root.focus_force()
+        except Exception:
+            pass
+        try:
+            applied = self._apply_primary_document_path(
+                str(Path(source).expanduser().resolve()),
+                prompt_for_referral=True,
+            )
+        except Exception as exc:
+            self._show_error("Не удалось добавить первичный документ", exc)
+            return False
+        return applied is not False
 
     def show_patient_registry_folder_settings(self) -> None:
         """Open/change the root folder used by «Мои пациенты»."""
@@ -448,7 +551,16 @@ class PatientRegistryMixin:
             anchor="w",
             font=self._font(11, "bold"),
         )
-        summary.pack(fill="x", padx=16, pady=(0, 8))
+        summary.pack(fill="x", padx=16, pady=(0, 4))
+        tk.Label(
+            win,
+            text="Клик по пациенту — открыть Word-файл • удерживать левую кнопку 2 секунды — добавить как первичный",
+            bg=DEEP,
+            fg=MUTED,
+            justify="left",
+            anchor="w",
+            font=self._font(9),
+        ).pack(fill="x", padx=16, pady=(0, 8))
 
         list_shell = tk.Frame(win, bg=PANEL, highlightbackground=BORDER_SOFT, highlightthickness=1)
         list_shell.pack(fill="both", expand=True, padx=16, pady=(0, 10))
@@ -544,13 +656,24 @@ class PatientRegistryMixin:
             )
             details_label.grid(row=1, column=0, sticky="ew", pady=(3, 0))
 
-            open_folder = lambda _event=None, folder=entry.folder: self._open_patient_registry_path(
-                folder,
-                parent=win,
-            )
-            row.bind("<Button-1>", open_folder)
-            title_label.bind("<Button-1>", open_folder)
-            details_label.bind("<Button-1>", open_folder)
+            def open_primary() -> None:
+                self._open_registry_primary_document(entry, parent=win)
+
+            def load_primary() -> None:
+                if not self._load_registry_primary_document(entry, parent=win):
+                    return
+                tray.stop()
+                try:
+                    win.destroy()
+                except Exception:
+                    pass
+
+            for clickable in (row, title_label, details_label):
+                bind_patient_primary_press(
+                    clickable,
+                    on_click=open_primary,
+                    on_hold=load_primary,
+                )
 
             if next_vk is not None or entry.rvk_referral:
                 actions = tk.Frame(row, bg=PANEL)
