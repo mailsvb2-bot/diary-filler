@@ -182,28 +182,11 @@ def format_registration_text(value: str) -> str:
 def format_psych_account_value(status: str, since_year: str = "", fallback: str = "") -> str:
     status = normalize_text(status).lower().replace("ё", "е")
     year = normalize_text(since_year)
-    fallback_text = normalize_text(fallback)
-    fallback_norm = fallback_text.lower().replace("ё", "е")
     if status == "нет":
         return "не состоит"
     if status == "да":
-        # Preserve a richer explicit source fact when it agrees with the
-        # doctor's current positive decision.  Primary documents may say
-        # "состоит с сентября 2024 года"; collapsing that to "с 2024 года"
-        # loses clinically meaningful source detail.  A changed UI year still
-        # wins, so stale source text can never override a doctor correction.
-        fallback_positive = bool(
-            re.search(r"\bсостоит\b", fallback_norm)
-            and not re.search(r"\bне\s+состоит\b", fallback_norm)
-        )
-        fallback_year = re.search(r"\b(19|20)\d{2}\b", fallback_norm)
-        if fallback_positive:
-            if year and fallback_year and fallback_year.group(0) == year:
-                return fallback_text
-            if not year:
-                return fallback_text
         return f"состоит с {year} года" if year else "состоит"
-    return fallback_text
+    return normalize_text(fallback)
 
 
 def format_rvk_referral_decision(status: str, commissariat: str = "", fallback: str = "") -> str:
