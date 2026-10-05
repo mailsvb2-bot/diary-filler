@@ -326,6 +326,45 @@ F20.8 Текущий диагноз
             data.diagnosis,
         )
 
+    # A completed historical sentence must not poison the *next* real current
+    # section. The historical-context detector is intentionally scoped to the
+    # unfinished sentence containing the marker, unlike strong date evidence.
+    for completed_history in (
+        "Ранее наблюдался амбулаторно.",
+        "До настоящей госпитализации регулярно посещал психиатра.",
+        "В анамнезе отмечались эпизоды тревоги.",
+        "На предыдущем этапе состояние было нестабильным.",
+    ):
+        source = (
+            "Анамнез заболевания: Начало болезни. "
+            + completed_history
+            + " Психический статус: Текущий психический статус. "
+            "Соматический статус: Текущий соматический статус. "
+            "План лечения: Текущее лечение. "
+            "Диагноз: F20.8 Текущий диагноз"
+        )
+        data = MedicalTextParser().parse_text(source)
+        assert completed_history in data.disease_anamnesis, (
+            completed_history,
+            data.disease_anamnesis,
+        )
+        assert data.mental_status == "Текущий психический статус.", (
+            completed_history,
+            data.mental_status,
+        )
+        assert data.somatic_status == "Текущий соматический статус.", (
+            completed_history,
+            data.somatic_status,
+        )
+        assert data.treatment_plan == "Текущее лечение.", (
+            completed_history,
+            data.treatment_plan,
+        )
+        assert data.diagnosis == "F20.8 Текущий диагноз", (
+            completed_history,
+            data.diagnosis,
+        )
+
 
 def _assert_real_referral_to_discharge_roundtrip_keeps_full_dated_history() -> None:
     """Lock the exact parser -> PatientData -> discharge path behind PR #333.
