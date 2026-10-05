@@ -304,7 +304,7 @@ def _assert_real_referral_to_discharge_roundtrip_keeps_full_dated_history() -> N
             positions.append(output_text.find(line))
         assert positions == sorted(positions), positions
         assert "ФИНАЛ_РЕАЛЬНОГО_АНАМНЕЗА_НЕ_ОБРЕЗАТЬ." in output_text, output_text
-        assert "Психический статус: Контактен, ориентирован, отвечает по существу." in output_text, output_text
+        assert "Психический статус при поступлении: Контактен, ориентирован, отвечает по существу." in output_text, output_text
         assert "Диагноз: F20.8 Другой тип шизофрении" in output_text, output_text
         assert "На учёте у психиатров: состоит с сентября 2024 года" in output_text, output_text
 
