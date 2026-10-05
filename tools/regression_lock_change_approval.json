@@ -22,6 +22,7 @@
     "smoke_combined_part02_ui_parser_regressions.py": "fc783b868d4257995ef6f8ffc87c6ff453530a95",
     "smoke_combined_part04_medical_generation.py": "fbc6ce0d12ebd28356351a214b28662164d89910",
     "tools/docx_block_boundary_regression.py": "a8720a552af79a0108886a9294542e0f6f79629b",
-    "tools/document_mechanics_change_approval.json": "acf8e5d101c9be6021e7cf945c3dd7ba2023bc54"
+    "tools/document_mechanics_change_approval.json": "acf8e5d101c9be6021e7cf945c3dd7ba2023bc54",
+    "tests/verbal_diary_source_regression.py": "7edc3812d99a157c3924c00a360a601b072544c2"
   }
 }
