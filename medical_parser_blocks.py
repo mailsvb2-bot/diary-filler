@@ -411,6 +411,11 @@ class MedicalParserBlocksMixin:
             return False
 
         tail = normalize_match(text[end:end + 96])
+        # Inline headings commonly carry their own separator (e.g.
+        # "Диагноз: F20.0 ..."). Strip only label punctuation before semantic
+        # inspection; otherwise the conservative F-code check below can never
+        # recognize a legitimate compact diagnosis boundary.
+        tail = tail.lstrip(" :.-—–№#")
         if not tail:
             return False
 
@@ -511,6 +516,25 @@ class MedicalParserBlocksMixin:
 
         if marker_norm in cls._STRICT_CLINICAL_BOUNDARY_MARKERS:
             if not at_line_start:
+                # A colon alone is not enough to split a long clinical history.
+                # Real anamneses often contain historical inline facts such as
+                # "07.02.2013 Невролог. Диагноз: Неврозоподобный синдром".
+                # Treating that word as the patient's current Diagnosis section
+                # truncated every later hospitalization/history paragraph.
+                #
+                # For an inline Diagnosis boundary require the same strong signal
+                # used by compact one-paragraph documents: sentence punctuation
+                # before the label and an F-code after it. Other strict clinical
+                # labels keep their existing separator behavior for compatibility.
+                if marker_norm == normalize_match("Диагноз"):
+                    inline_tail = normalize_match(after_on_line).lstrip(" :.-—–№#")
+                    # Inline current-diagnosis labels are accepted when they
+                    # immediately introduce an F-code, even in compact column
+                    # exports like "Лечение: терапия Диагноз: F41.2 ...".
+                    # Historical prose such as
+                    # "07.02.2013 Невролог. Диагноз: Неврозоподобный синдром"
+                    # has no F-code here and therefore remains inside anamnesis.
+                    return bool(re.match(r"[fф]\s*\d", inline_tail, flags=re.IGNORECASE))
                 return has_label_separator or cls._is_safe_one_line_clinical_boundary(
                     text, start, end, marker
                 )

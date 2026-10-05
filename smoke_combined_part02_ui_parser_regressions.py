@@ -603,7 +603,7 @@ def _clinical_prompt(title, rows, width=46, linked_groups=None, choice_options=N
     if title == "Место работы":
         return ["ООО Тест", "врач"]
     if title == "Больничный лист":
-        raise AssertionError("opening date must be collected in the shared sick-leave popup")
+        return ["12062026"]
     raise AssertionError((title, rows))
 clinical_logic._prompt_fields = _clinical_prompt
 assert clinical_logic._prompt_shared_clinical_options_if_needed(["primary", "commission"]) is True
@@ -616,8 +616,9 @@ assert clinical_logic.disability_needed_var.get() == "нет"
 assert clinical_logic.epi_present_var.get() == "нет"
 assert clinical_logic.epi_path_var.get() == ""
 assert clinical_logic.data.disability == "не нужно"
-assert [call[0] for call in clinical_prompts] == ["Дополнительные данные", "Учёт у психиатров", "Направление из РВК", "Место работы"]
-assert "С какого числа больничный лист" in [label for label, _default in clinical_prompts[0][1]]
+assert [call[0] for call in clinical_prompts] == ["Дополнительные данные", "Учёт у психиатров", "Направление из РВК", "Место работы", "Больничный лист"]
+assert "С какого числа больничный лист" not in [label for label, _default in clinical_prompts[0][1]]
+assert [label for label, _default in clinical_prompts[-1][1]] == ["С какого числа больничный лист"]
 assert clinical_logic.psych_account_status_var.get() == "да"
 assert clinical_logic.psych_account_since_year_var.get() == "2018"
 assert clinical_logic.rvk_referral_present_var.get() == "да"
@@ -710,10 +711,10 @@ for clinical_kind in ("discharge", "commission"):
     def _standalone_prompt(title, rows, width=46, linked_groups=None, choice_options=None):
         standalone_calls.append((title, list(rows), choice_options))
         assert title == "Дополнительные данные"
-        return ["не состоит", "нет", "нет", "", "нет"]
+        return ["не состоит", "нет", "нет", "нет"]
     standalone_logic._prompt_fields = _standalone_prompt
     assert standalone_logic._prompt_shared_clinical_options_if_needed([clinical_kind]) is True
-    assert [label for label, _ in standalone_calls[0][1]] == ["На учёте у психиатров", "Работает ли пациент", "Нужен ли больничный лист", "С какого числа больничный лист", "Есть ли ЭПИ"]
+    assert [label for label, _ in standalone_calls[0][1]] == ["На учёте у психиатров", "Работает ли пациент", "Нужен ли больничный лист", "Есть ли ЭПИ"]
     assert standalone_logic.expert_work_status_var.get() == "нет"
     assert "Нужно ли оформление инвалидности" not in [label for label, _ in standalone_calls[0][1]]
     assert standalone_logic.expert_sick_leave_needed_var.get() == "нет"

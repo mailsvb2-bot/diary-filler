@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "a5492b49f320d4cfda60f3a3b937e39c6ac33d82",
-  "baseline_note": "Self-check license diagnostics candidate a5492b49f320d4cfda60f3a3b937e39c6ac33d82 validated by License Server CI #192 and Windows EXE Build #1675. Current v1.4.33 remains authoritatively unlicensed: required=False omits the License self-check row and never touches entitlement state; future required=True diagnostics now fail visibly if license configuration or entitlement status cannot be read. Full validation covered release/prod gates, document mechanics guard, full patient replay and golden DOCX, clinical roundtrip, full user journey, Windows E1 matrix, staff/gender/diagnosis/diary regressions, performance profiles, real Tk GUI wiring, packaged EXE startup/TkDND, desktop intake E2E, installer build, and install/uninstall smoke.",
+  "baseline_ref": "b9d2a3d30f3f49c99a1d90d03e87b43fdee53f0b",
+  "baseline_note": "PR #333 source-fidelity candidate b9d2a3d30f3f49c99a1d90d03e87b43fdee53f0b validated by License Server CI run 37276407752 and Windows EXE Build run 37276407813. Validation covered regression/document-mechanics locks, release/prod gates, full patient replay and golden DOCX, long clinical block and complete clinical roundtrip regressions, one-paragraph parsing, full user journey, Windows E1 matrix, staff/gender/diagnosis/diary regressions, performance profiles, real Tk GUI wiring, packaged EXE startup/TkDND, desktop intake E2E, installer build, and install/uninstall smoke. Candidate fixes conditional sick-leave date prompting, preserves dated historical inline diagnoses inside disease anamnesis, and retains precise psychiatric-registration wording such as month plus year.",
   "required_approval_evidence": [
     "ci_gate_lock",
     "patient_registry_regression"

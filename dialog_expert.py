@@ -259,8 +259,15 @@ class DialogExpertMixin:
             rows.append((label, sick))
             fields.append("sick_leave")
             choices[label] = ("нет", "да")
-            rows.append(("С какого числа больничный лист", self._sick_leave_start_date_popup_default()))
-            fields.append("sick_leave_from")
+            # Do not ask for an opening date before the doctor has confirmed
+            # that a sick leave is actually needed. If the current patient state
+            # already contains an explicit positive decision, keep the date in
+            # this shared popup so it can be reviewed/edited. For a previously
+            # unknown decision, choosing "да" is followed by the dedicated date
+            # popup below; choosing "нет" never exposes or defaults a date.
+            if sick == "да":
+                rows.append(("С какого числа больничный лист", self._sick_leave_start_date_popup_default()))
+                fields.append("sick_leave_from")
 
         if selected & disability_docs:
             disability = self._normalize_yes_no(self.disability_needed_var.get())
