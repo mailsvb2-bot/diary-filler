@@ -484,7 +484,6 @@ def _assert_real_referral_to_discharge_roundtrip_keeps_full_dated_history() -> N
         parsed.admission_occurrence = "повторно"
         parsed.psych_account_status = "да"
         parsed.psych_account_since_year = "2024"
-        parsed.expert_work_status = "нет"
         parsed.expert_sick_leave_needed = "нет"
 
         created, _ = service.create_documents(
@@ -542,6 +541,96 @@ def _assert_real_referral_to_discharge_roundtrip_keeps_full_dated_history() -> N
         assert "Экспертный анамнез: Не работает. В выдаче ЛН не нуждается." in output_text, output_text
         assert "Больничный лист открыт с" not in output_text, output_text
         assert "Больничный лист нужен" not in output_text, output_text
+
+
+def _assert_photo_like_referral_generation_fidelity() -> None:
+    """Regression for the real referral layout that escaped a fully green CI.
+
+    The source deliberately has no dated title. It contains an old examination
+    period, a dated historical sentence immediately before the real current
+    mental-status heading, a life-anamnesis «Проживает- ...» fact, a custom
+    wording after F20.8, and a dated current referral sentence after Diagnosis.
+    None of those facts may be reassigned to the wrong patient field.
+    """
+    with TemporaryDirectory(prefix="medical-autofill-photo-like-referral-") as temp_dir:
+        root = Path(temp_dir)
+        source = root / "Маркер направление на госпитализацию.docx"
+        doc = Document()
+        for line in (
+            "Ф.И.О.: Маркер Контрольный Пациент",
+            "Год рождения: 26.09.2008",
+            "Проживает: Нижний Новгород, тестовый район, дом 24-12",
+            "Место работы: не работает",
+            "На учёте у психиатров состоит с сентября 2024 года",
+            "Работает в организации: не работает",
+            "В 3 отделение КДП поступает повторно",
+            "Жалобы на момент осмотра: плаксивость, тревога, плохой сон",
+            "Анамнез жизни: Со слов:",
+            "Наследственность не отягощена.",
+            "Дети- нет",
+            "Проживает- с родителями и братом",
+            "Анамнез заболевания: Начало заболевания постепенное.",
+            "07.02.2013 Невролог. Диагноз: F06.8 Исторический диагноз.",
+            "Ноябрь 2024 Осмотр психиатра. Наблюдение продолжено.",
+            "В октябре 2024 направлен на обследование.",
+            "Психический статус: Контактен, ориентирован, отвечает по существу.",
+            "Соматический статус: Состояние удовлетворительное.",
+            "Находился на обследовании в ГБУЗ НО «Психиатрическая больница №2» с 13.02.2025 по 26.02.2025",
+            "Диагноз: F20.8 Индивидуальная клиническая формулировка.",
+            "09.06.2026 обратился в 3 отделение КДП с жалобами на тревогу. В связи с ухудшением психического состояния целесообразна госпитализация.",
+        ):
+            doc.add_paragraph(line)
+        doc.save(source)
+
+        service = MedicalDocumentService()
+        parsed = service.parse_navigation(source)
+
+        assert parsed.input_document_kind == "направление на госпитализацию", parsed.input_document_kind
+        assert parsed.admission_date == "09.06.2026", parsed.admission_date
+        assert parsed.registered == "Нижний Новгород, тестовый район, дом 24-12", parsed.registered
+        assert "Проживает- с родителями и братом" in parsed.life_anamnesis, parsed.life_anamnesis
+        assert "В октябре 2024 направлен на обследование." in parsed.disease_anamnesis, parsed.disease_anamnesis
+        assert "Психический статус:" not in parsed.disease_anamnesis, parsed.disease_anamnesis
+        assert parsed.mental_status == "Контактен, ориентирован, отвечает по существу.", parsed.mental_status
+        assert parsed.diagnosis == "F20.8 Индивидуальная клиническая формулировка.", parsed.diagnosis
+        assert "09.06.2026 обратился" not in parsed.diagnosis, parsed.diagnosis
+        assert parsed.psych_account == "состоит с сентября 2024 года", parsed.psych_account
+        assert parsed.work_org == "", parsed.work_org
+        assert parsed.expert_work_status == "нет", parsed.expert_work_status
+
+        parsed.case_number = "353/3"
+        parsed.discharge_date = "05.10.2026"
+        parsed.admission_occurrence = "повторно"
+        parsed.treatment_plan = "Рисперидон 2 мг вечером."
+        parsed.psych_account_status = "да"
+        parsed.psych_account_since_year = "2024"
+        parsed.expert_work_status = "нет"
+        parsed.expert_sick_leave_needed = "нет"
+        parsed.epi_present = "нет"
+
+        created, _ = service.create_documents(
+            navigation_path=source,
+            output_dir=root / "generated",
+            discharge_date=parsed.discharge_date,
+            selected_docs=("discharge",),
+            override_data=parsed,
+        )
+        assert len(created) == 1, created
+        output_text = extract_docx_text(created[0])
+
+        required = (
+            "с 09.06.2026 по 05.10.2026",
+            "На учёте у психиатров: состоит с сентября 2024 года",
+            "Проживает- с родителями и братом",
+            "Психический статус при поступлении: Контактен, ориентирован, отвечает по существу.",
+            "Диагноз: F20.8 Индивидуальная клиническая формулировка.",
+            "Экспертный анамнез: Не работает. В выдаче ЛН не нуждается.",
+        )
+        for expected in required:
+            assert output_text.count(expected) == 1, (expected, output_text)
+        assert "Психический статус при поступлении:\n" not in output_text, output_text
+        assert "09.06.2026 обратился в 3 отделение КДП" not in output_text, output_text
+        assert "F20.8 Другой тип шизофрении" not in output_text, output_text
 
 
 def _assert_narrative_marker_words_never_replace_target_fields() -> None:
@@ -1299,6 +1388,7 @@ def verify() -> None:
     _assert_historical_chronology_variant_matrix()
     _assert_historical_diagnosis_phrase_never_becomes_current_fallback()
     _assert_real_referral_to_discharge_roundtrip_keeps_full_dated_history()
+    _assert_photo_like_referral_generation_fidelity()
     _assert_narrative_marker_words_never_replace_target_fields()
     _assert_long_multiline_docx_roundtrip_preserves_full_tail()
     _assert_table_and_run_fragmented_source_roundtrip()

@@ -1,10 +1,11 @@
 {
   "schema_version": 1,
-  "base_sha": "f918b2ae2e6e57882a530926ecf46eb1f73ce57f",
-  "reason": "Patient work source-fidelity fix: inline, compact-demographic and fallback work parsing must all reject relatives' employment so family history cannot become patient expert/VK work defaults.",
+  "base_sha": "8fe9e59f533118cd28018f802d7788ebed184989",
+  "reason": "Real referral generation fidelity fix: preserve current section boundaries after dated history, keep non-address residence facts inside life anamnesis, prefer the current referral admission date over old examination periods, prevent dated referral prose from leaking into diagnosis, and preserve explicit patient non-working status through parser and popup defaults.",
   "approved_blobs": {
-    "medical_parser_demographics.py": "9393209b0a4e45e071a987225de53069b855a794",
-    "medical_parser_inline.py": "c3c29e64a57a5b3da64c99e9de50d77cc2753431",
-    "medical_parser_work.py": "0f364260348f7cc2b83864a3408332ab00c86d74"
+    "dialog_expert.py": "af2b96af9cf7f56babfed1522cf5de6898daca0a",
+    "medical_parser_blocks.py": "97e32e3b428873c6878729370dad249339000e0c",
+    "medical_parser_sanitize.py": "bee1386208a4f79f3869a4c95347c48b44090c16",
+    "medical_parser_work.py": "a01479b4b97f8aeac25997e45518d787cf27644c"
   }
 }
