@@ -103,6 +103,33 @@ class MedicalParserInlineMixin:
         alias_norm = normalize_match(alias)
         before = normalize_match(line[:start])
         after = line[end:]
+        after_norm = normalize_match(after)
+
+        # Employment facts are patient-scoped. Life anamnesis routinely contains
+        # phrases such as «отец работает...», «мать работает врачом» or
+        # «должность матери: ...». Those are family-history facts and must never
+        # prefill the patient's work fields: doing so later auto-selects
+        # «Работает ли пациент: да» and contaminates expert/VK output.
+        work_aliases = {
+            "работает",
+            "работает в организации",
+            "место работы",
+            "работа",
+            "должность",
+        }
+        relative = (
+            r"(?:мать|матери|мама|мамы|отец|отца|папа|папы|"
+            r"родитель|родители|родителя|родителей|"
+            r"брат|брата|сестра|сестры|муж|мужа|жена|жены|"
+            r"супруг|супруга|супруги|бабушка|бабушки|дед|деда|дедушка|дедушки|"
+            r"опекун|опекуна|сын|сына|дочь|дочери|ребенок|ребенка)"
+        )
+        if alias_norm in work_aliases:
+            if re.search(rf"(?:^|[\s,;:.]){relative}\s*$", before):
+                return True
+            if re.match(rf"^\s*{relative}(?:\b|\s*[:.-])", after_norm):
+                return True
+
         if alias_norm == "работает" and re.search(r"(?:^|\s)не$", before):
             return True
         # A bare label without a separator/value is not a field.
