@@ -18,6 +18,7 @@ from medical_models import PatientData, parse_rvk_referral_text, parse_rvk_refer
 from medical_parser import MedicalTextParser
 from medical_service import MedicalDocumentService
 import patient_registry as patient_registry_module
+import patient_registry_mixin as patient_registry_mixin_module
 import startup as startup_module
 from patient_registry import (
     first_sick_leave_vk_date,
@@ -26,9 +27,15 @@ from patient_registry import (
     is_discharge_patient_filename,
     is_primary_patient_filename,
     next_sick_leave_vk_date,
+    open_patient_document,
     patient_source_candidates,
     scan_patient_registry,
     sick_leave_days_on,
+)
+from patient_registry_mixin import (
+    PATIENT_PRIMARY_HOLD_MS,
+    PatientRegistryMixin,
+    bind_patient_primary_press,
 )
 from startup import DesktopExplorerQuadClickDetector
 
@@ -312,6 +319,123 @@ def _assert_registry_parse_cache() -> None:
         patient_registry_module._PRIMARY_PARSE_CACHE.clear()
 
 
+def _assert_my_patients_click_hold_contract() -> None:
+    assert PATIENT_PRIMARY_HOLD_MS == 2000
+
+    class FakeWidget:
+        def __init__(self):
+            self.bindings = {}
+            self.callbacks = {}
+            self.cancelled = []
+            self.delays = []
+            self._counter = 0
+
+        def bind(self, sequence, callback):
+            self.bindings[sequence] = callback
+
+        def after(self, delay, callback):
+            self._counter += 1
+            token = f"after-{self._counter}"
+            self.delays.append(delay)
+            self.callbacks[token] = callback
+            return token
+
+        def after_cancel(self, token):
+            self.cancelled.append(token)
+            self.callbacks.pop(token, None)
+
+        def run_pending(self):
+            pending = list(self.callbacks.items())
+            self.callbacks.clear()
+            for _token, callback in pending:
+                callback()
+
+    widget = FakeWidget()
+    actions = []
+    bind_patient_primary_press(
+        widget,
+        on_click=lambda: actions.append("open"),
+        on_hold=lambda: actions.append("primary"),
+    )
+    assert set(widget.bindings) == {"<ButtonPress-1>", "<ButtonRelease-1>"}
+
+    # A normal click opens exactly once and never triggers the primary handoff.
+    widget.bindings["<ButtonPress-1>"]()
+    assert widget.delays[-1] == 2000
+    widget.bindings["<ButtonRelease-1>"]()
+    assert actions == ["open"], actions
+
+    # Holding for the full two seconds performs the primary handoff and the
+    # subsequent release must not also open Word.
+    widget.bindings["<ButtonPress-1>"]()
+    widget.run_pending()
+    assert actions == ["open", "primary"], actions
+    widget.bindings["<ButtonRelease-1>"]()
+    assert actions == ["open", "primary"], actions
+
+    class RootStub:
+        def __init__(self):
+            self.calls = []
+
+        def deiconify(self):
+            self.calls.append("deiconify")
+
+        def lift(self):
+            self.calls.append("lift")
+
+        def focus_force(self):
+            self.calls.append("focus_force")
+
+    class Harness(PatientRegistryMixin):
+        def __init__(self):
+            self.root = RootStub()
+            self.applied = []
+
+        def _apply_primary_document_path(self, path, *, prompt_for_referral):
+            self.applied.append((path, prompt_for_referral))
+            return True
+
+        def _show_error(self, title, exc):
+            raise AssertionError((title, exc))
+
+    with TemporaryDirectory(prefix="my-patients-click-hold-") as temp:
+        source = Path(temp) / "Пациент первичный.docx"
+        source.touch()
+        entry = patient_registry_module.PatientRegistryEntry(
+            fio="Маркер Пациент Тестовый",
+            folder=source.parent,
+            primary_path=source,
+            admission_date=None,
+            sick_leave_needed=False,
+            sick_leave_from=None,
+        )
+
+        original_open = patient_registry_mixin_module.open_patient_document
+        opened = []
+        try:
+            patient_registry_mixin_module.open_patient_document = (
+                lambda candidate: opened.append(Path(candidate)) or True
+            )
+            harness = Harness()
+            assert harness._open_registry_primary_document(entry) is True
+            assert opened == [source]
+
+            assert harness._load_registry_primary_document(entry) is True
+            assert harness.applied == [(str(source.resolve()), True)]
+            assert harness.root.calls == ["deiconify", "lift", "focus_force"]
+        finally:
+            patient_registry_mixin_module.open_patient_document = original_open
+
+    # Core opener rejects non-files and unsupported extensions instead of
+    # accidentally opening a patient folder as the single-click action.
+    with TemporaryDirectory(prefix="patient-document-open-") as temp:
+        root = Path(temp)
+        assert open_patient_document(root) is False
+        unsupported = root / "notes.txt"
+        unsupported.write_text("x", encoding="utf-8")
+        assert open_patient_document(unsupported) is False
+
+
 def _assert_explorer_quad_click_detector() -> None:
     detector = DesktopExplorerQuadClickDetector(max_gap_seconds=0.5)
     first = Path("C:/Patients/Иванов/Иванов первичный.docx")
@@ -525,8 +649,16 @@ def _assert_desktop_wiring_contract() -> None:
         "scan_results: queue.Queue",
         'summary_var.set("Анализирую папки пациентов…")',
         "entry.primary_path is None",
+        "PATIENT_PRIMARY_HOLD_MS = 2000",
+        "bind_patient_primary_press",
+        "_open_registry_primary_document",
+        "_load_registry_primary_document",
+        "удерживать левую кнопку 2 секунды",
+        "on_click=open_primary",
+        "on_hold=load_primary",
     ):
         assert snippet in mixin_source
+    assert 'row.bind("<Button-1>", open_folder)' not in mixin_source
     assert 'text="Мои пациенты", command=self.show_my_patients' in window_source
     assert 'text="Папка пациентов", command=self.show_patient_registry_folder_settings' in window_source
     assert 'patient_root_button.grid(row=0, column=2' in window_source
@@ -548,6 +680,7 @@ def _assert_desktop_wiring_contract() -> None:
         "rvk_referral: bool",
         "rvk_commissariat: str",
         "_rvk_referral_state",
+        "def open_patient_document",
     ):
         assert snippet in registry_source
     assert "DIR_PATIENT_REGISTRY" in settings_source
@@ -620,6 +753,7 @@ def main() -> None:
     _assert_real_docx_registry_ingestion()
     _assert_registry_scan_and_independent_timelines()
     _assert_registry_parse_cache()
+    _assert_my_patients_click_hold_contract()
     _assert_explorer_quad_click_detector()
     _assert_explorer_word_snapshot_is_nonblocking()
     _assert_vk_wednesday_schedule()
@@ -632,7 +766,8 @@ def main() -> None:
         "real DOCX ingestion, renamed/no-document folder census, sick-leave-first ordering, sick-leave chronology, "
         "RVK formulation/district detection and My Patients act wiring, "
         "all sick-leave popup opening dates, persistent tray, cached/asynchronous registry loading, "
-        "Explorer four-click direct primary handoff, 7..15-day Wednesday VK schedule and "
+        "My Patients click-to-open + two-second hold primary handoff, Explorer four-click compatibility, "
+        "7..15-day Wednesday VK schedule and "
         "admission-based discharge duration are locked"
     )
 
