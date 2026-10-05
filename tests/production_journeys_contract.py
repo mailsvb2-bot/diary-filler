@@ -85,8 +85,8 @@ def main() -> None:
     _require(installer, (
         "Installed application startup probe",
         "INSTALLED INTAKE drop-to-visible latency",
-        "installed watcher did not open a visible GUI",
-        "installed watcher GUI did not move the primary DOCX into a patient subfolder",
+        "Installed watcher did not open a visible GUI for the dropped primary DOCX",
+        "Installed watcher GUI did not move the primary DOCX into a patient subfolder",
         "Uninstaller removed Desktop\\Выписанные пациенты",
         "Uninstaller removed a user-owned file from Desktop\\Выписанные пациенты",
         "WINDOWS INSTALLER FAST ONEDIR WATCHER BOOTSTRAP AND UNINSTALL SMOKE OK",
