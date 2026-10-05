@@ -305,8 +305,17 @@ def _assert_real_referral_to_discharge_roundtrip_keeps_full_dated_history() -> N
         assert positions == sorted(positions), positions
         assert "ФИНАЛ_РЕАЛЬНОГО_АНАМНЕЗА_НЕ_ОБРЕЗАТЬ." in output_text, output_text
         assert "Психический статус при поступлении: Контактен, ориентирован, отвечает по существу." in output_text, output_text
-        assert "Диагноз: F20.8 Другой тип шизофрении" in output_text, output_text
+        assert output_text.count("Диагноз: F20.8 Другой тип шизофрении") == 1, output_text
         assert "На учёте у психиатров: состоит с сентября 2024 года" in output_text, output_text
+
+        # The same real-world source explicitly says that the patient does not
+        # work and contains no sick-leave fact. Once the doctor confirms
+        # "больничный не нужен", the discharge must preserve that expert state
+        # without inventing an opening date or silently dropping the expert
+        # anamnesis from the document.
+        assert "Экспертный анамнез: Не работает. В выдаче ЛН не нуждается." in output_text, output_text
+        assert "Больничный лист открыт с" not in output_text, output_text
+        assert "Больничный лист нужен" not in output_text, output_text
 
 
 def _assert_narrative_marker_words_never_replace_target_fields() -> None:
