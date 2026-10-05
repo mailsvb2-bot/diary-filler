@@ -123,6 +123,11 @@ jobs:
           PYTHONPATH: .
         run: python tests/full_user_journey_regression.py
 
+      - name: Run My Patients registry regression
+        env:
+          PYTHONPATH: .
+        run: python tests/patient_registry_regression.py
+
       - name: Run Windows E1 exhaustive finite user matrix
         env:
           PYTHONPATH: .
