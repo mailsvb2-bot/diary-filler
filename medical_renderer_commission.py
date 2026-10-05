@@ -92,7 +92,16 @@ class MedicalRendererCommissionMixin:
             allow_empty=True,
         )
         editor.replace_block(["Лечение"], "Лечение:", data.treatment_plan, COMMISSION_MARKERS)
-        # Canonical epidemiological anamnesis is template-owned and intentionally immutable.
+        # Patient-specific epidemiology must come from the source. This restores
+        # the v1.4.16-v1.4.20 production contract and prevents a generic
+        # template statement from being published as a patient fact.
+        editor.replace_block(
+            ["Эпидемиологический анамнез"],
+            "Эпидемиологический анамнез:",
+            data.epidemiology,
+            COMMISSION_MARKERS,
+            allow_empty=True,
+        )
         editor.remove_all_matching_paragraphs(["Целесообразна госпитализация"])
         self._remove_trailing_clinical_leakage(editor, data)
         finalize_medical_document(doc, data, editor=editor)
@@ -149,7 +158,15 @@ class MedicalRendererCommissionMixin:
             PRIMARY_MARKERS,
             before_markers=["План лечения", "На основании данных", "Диагноз", "Врач психиатр", "Врач-психиатр"],
         )
-        # Canonical examination plan is template-owned and intentionally immutable.
+        # Preserve an explicit source examination plan. When no plan
+        # exists in the source, keep the template-owned fallback exactly as
+        # historical production did.
+        editor.replace_block(
+            ["План обследования"],
+            "План обследования:",
+            data.examination_plan,
+            PRIMARY_MARKERS,
+        )
         self._render_sourced_block(
             editor,
             aliases=["План лечения", "Назначенное лечение", "Лечение"],
@@ -166,7 +183,13 @@ class MedicalRendererCommissionMixin:
             PRIMARY_MARKERS,
             allow_empty=True,
         )
-        # Canonical epidemiological anamnesis is template-owned and intentionally immutable.
+        editor.replace_block(
+            ["Эпидемиологический анамнез"],
+            "Эпидемиологический анамнез:",
+            data.epidemiology,
+            PRIMARY_MARKERS,
+            allow_empty=True,
+        )
         self._remove_trailing_clinical_leakage(editor, data)
         # Финальная фраза должна быть строго такой по пользовательскому требованию.
         target_referral_line = f"В связи с психическим состоянием, направляется на лечение в {TARGET_MEDICAL_FACILITY}"
