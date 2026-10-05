@@ -425,13 +425,25 @@ class MedicalParserBlocksMixin:
         if any(signal in prefix_norm for signal in document_title_signals):
             return False
 
-        return bool(
-            re.match(
-                r"^\s*(?:от\s+)?\d{1,2}[./-]\d{1,2}[./-]\d{2,4}\b",
-                prefix,
-                flags=re.IGNORECASE,
-            )
+        numeric_date = re.match(
+            r"^\s*(?:от\s+)?\d{1,2}[./-]\d{1,2}[./-]\d{2,4}\b",
+            prefix,
+            flags=re.IGNORECASE,
         )
+        month_year = re.match(
+            r"^\s*(?:в\s+|с\s+|от\s+)?"
+            r"(?:январ[ьяе]|феврал[ьяе]|март(?:а|е)?|апрел[ьяе]|ма[йяе]|"
+            r"июн[ьяе]|июл[ьяе]|август(?:а|е)?|сентябр[ьяе]|октябр[ьяе]|"
+            r"ноябр[ьяе]|декабр[ьяе])\s+(?:19|20)\d{2}(?:\s*г(?:ода|\.)?)?\b",
+            prefix,
+            flags=re.IGNORECASE,
+        )
+        year_lead = re.match(
+            r"^\s*(?:в\s+|с\s+)?(?:19|20)\d{2}\s*г(?:ода|\.)?\b",
+            prefix,
+            flags=re.IGNORECASE,
+        )
+        return bool(numeric_date or month_year or year_lead)
 
     @classmethod
     def _is_safe_one_line_clinical_boundary(
