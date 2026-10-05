@@ -613,6 +613,7 @@ for path in rvk_no_created:
 psych_yes_data = copy.deepcopy(manual_data)
 psych_yes_data.psych_account_status = "да"
 psych_yes_data.psych_account_since_year = "2018"
+psych_yes_data.psych_account = "состоит с сентября 2018 года"
 psych_yes_created, _psych_yes_used = service.create_documents(
     navigation_path=nav,
     output_dir=OUT / "psych_account_yes_all_docs",
@@ -625,7 +626,7 @@ for path in psych_yes_created:
     doc = Document(path)
     lines = [p.text.strip() for p in doc.paragraphs if p.text.strip()]
     reg_idx = next(i for i, line in enumerate(lines) if "регистрация по адресу" in line.lower())
-    assert lines[reg_idx + 1] == "На учёте у психиатров: состоит с 2018 года", (path.name, lines[reg_idx:reg_idx + 3])
+    assert lines[reg_idx + 1] == "На учёте у психиатров: состоит с сентября 2018 года", (path.name, lines[reg_idx:reg_idx + 3])
 
 # Empty registration is valid source data. The mandatory psychiatric-account
 # decision must still survive in documents whose compact identity line normally
@@ -644,7 +645,7 @@ psych_no_address_created, _ = service.create_documents(
 for path in psych_no_address_created:
     lines = [p.text.strip() for p in Document(path).paragraphs if p.text.strip()]
     psych_lines = [line for line in lines if line.lower().startswith("на учёте у психиатров:")]
-    assert psych_lines == ["На учёте у психиатров: состоит с 2018 года"], (path.name, psych_lines, lines[:12])
+    assert psych_lines == ["На учёте у психиатров: состоит с сентября 2018 года"], (path.name, psych_lines, lines[:12])
 
 # Discharge must not manufacture a positive outcome or universal medical advice.
 # With no explicit sourced outcome/recommendation fields, signatures follow the
