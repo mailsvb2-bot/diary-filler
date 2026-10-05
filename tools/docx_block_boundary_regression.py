@@ -242,9 +242,16 @@ def _assert_real_referral_to_discharge_roundtrip_keeps_full_dated_history() -> N
         doc.add_paragraph("Место работы: не работает")
         doc.add_paragraph("На учёте у психиатров состоит с сентября 2024 года")
         doc.add_paragraph("В 3 отделение КДП поступает: повторно")
-        doc.add_paragraph("Жалобы на момент осмотра: тревога, плохой сон")
+        complaints = "тревога, плохой сон"
+        life = "Наследственность не отягощена. Рос и развивался соответственно возрасту."
+        mental = "Контактен, ориентирован, отвечает по существу."
+        somatic = "Состояние удовлетворительное."
+        treatment = "Рисперидон 2 мг вечером."
+        diagnosis = "F20.8 Другой тип шизофрении"
+
+        doc.add_paragraph(f"Жалобы на момент осмотра: {complaints}")
         doc.add_paragraph("Анамнез жизни:")
-        doc.add_paragraph("Наследственность не отягощена. Рос и развивался соответственно возрасту.")
+        doc.add_paragraph(life)
         doc.add_paragraph("Анамнез заболевания:")
         history = [
             "Родился от 1 беременности, протекавшей без патологии. Роды срочные.",
@@ -258,13 +265,13 @@ def _assert_real_referral_to_discharge_roundtrip_keeps_full_dated_history() -> N
         for line in history:
             doc.add_paragraph(line)
         doc.add_paragraph("Психический статус:")
-        doc.add_paragraph("Контактен, ориентирован, отвечает по существу.")
+        doc.add_paragraph(mental)
         doc.add_paragraph("Соматический статус:")
-        doc.add_paragraph("Состояние удовлетворительное.")
+        doc.add_paragraph(somatic)
         doc.add_paragraph("План лечения:")
-        doc.add_paragraph("Рисперидон 2 мг вечером.")
+        doc.add_paragraph(treatment)
         doc.add_paragraph("Диагноз:")
-        doc.add_paragraph("F20.8 Другой тип шизофрении")
+        doc.add_paragraph(diagnosis)
         doc.save(source)
 
         service = MedicalDocumentService()
@@ -275,7 +282,12 @@ def _assert_real_referral_to_discharge_roundtrip_keeps_full_dated_history() -> N
                 line,
                 parsed.disease_anamnesis,
             )
-        assert parsed.diagnosis == "F20.8 Другой тип шизофрении", parsed.diagnosis
+        assert parsed.complaints == complaints, parsed.complaints
+        assert parsed.life_anamnesis == life, parsed.life_anamnesis
+        assert parsed.mental_status == mental, parsed.mental_status
+        assert parsed.somatic_status == somatic, parsed.somatic_status
+        assert parsed.treatment_plan == treatment, parsed.treatment_plan
+        assert parsed.diagnosis == diagnosis, parsed.diagnosis
         assert parsed.psych_account == "состоит с сентября 2024 года", parsed.psych_account
 
         parsed.discharge_date = "05.10.2026"
@@ -304,9 +316,20 @@ def _assert_real_referral_to_discharge_roundtrip_keeps_full_dated_history() -> N
             positions.append(output_text.find(line))
         assert positions == sorted(positions), positions
         assert "ФИНАЛ_РЕАЛЬНОГО_АНАМНЕЗА_НЕ_ОБРЕЗАТЬ." in output_text, output_text
-        assert "Психический статус при поступлении: Контактен, ориентирован, отвечает по существу." in output_text, output_text
-        assert output_text.count("Диагноз: F20.8 Другой тип шизофрении") == 1, output_text
-        assert "На учёте у психиатров: состоит с сентября 2024 года" in output_text, output_text
+        clinical_expectations = (
+            f"Жалобы при поступлении: {complaints}",
+            f"Анамнез жизни: {life}",
+            f"Психический статус при поступлении: {mental}",
+            f"Сомато-неврологический статус: {somatic}",
+            f"Лечение: {treatment}",
+            f"Диагноз: {diagnosis}",
+            "На учёте у психиатров: состоит с сентября 2024 года",
+        )
+        for expected in clinical_expectations:
+            assert output_text.count(expected) == 1, (
+                f"generated discharge lost/duplicated clinical payload {expected!r}; "
+                f"count={output_text.count(expected)}"
+            )
 
         # The same real-world source explicitly says that the patient does not
         # work and contains no sick-leave fact. Once the doctor confirms
