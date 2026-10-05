@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "710c1e856426b8e2d7869dc51fc22628e129d9eb",
-  "reason": "Historical production compatibility hardening: preserve numeric-date, month/year, textual-date and split-line historical clinical sublabels inside disease anamnesis while retaining later current complaints/status/treatment/diagnosis sections.",
+  "reason": "Historical production compatibility hardening: preserve dated, textual-date, split-line and explicitly historical clinical labels inside disease anamnesis while retaining later current complaints/status/treatment/diagnosis sections.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -16,8 +16,8 @@
     "patient_registry_regression"
   ],
   "approved_blobs": {
-    "tools/docx_block_boundary_regression.py": "9369d2d19616d2c489a543e8348892441e1f6cd0",
-    "medical_parser_blocks.py": "18fba0e7b33c534f3ddbf78249cfdf9c1ab751ee",
-    "tools/document_mechanics_change_approval.json": "224e6bfb82ac4e57fb0d62cbb2ea1c8c8083296f"
+    "tools/docx_block_boundary_regression.py": "367b3d112f0eabbbdc60ddc2ee21a94aa728ba09",
+    "medical_parser_blocks.py": "48c6c00046f94b2e8d2da755da0673c8e08aa5c7",
+    "tools/document_mechanics_change_approval.json": "26aec83e83531e55c918ea0eee7801fd38640a25"
   }
 }
