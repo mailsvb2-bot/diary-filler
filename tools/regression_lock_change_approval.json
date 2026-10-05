@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "710c1e856426b8e2d7869dc51fc22628e129d9eb",
-  "reason": "Real referral generation fidelity hardening: a dated historical sentence must not swallow the following current mental-status section; life-anamnesis residence wording must survive; the current referral date must beat old examination periods; custom diagnosis wording must remain exact and dated referral prose must not leak into Diagnosis.",
+  "reason": "Real referral generation fidelity hardening from a production-shaped replay: preserve life and disease anamneses, current mental status, current referral admission date, exact custom diagnosis wording, and explicit non-working status through parser -> popup defaults -> PatientData -> generated discharge.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -20,11 +20,13 @@
     "medical_parser_core.py": "285f34b40433b4020d8b2f20426963cfb65011cc",
     "medical_parser_demographics.py": "9393209b0a4e45e071a987225de53069b855a794",
     "medical_parser_inline.py": "c3c29e64a57a5b3da64c99e9de50d77cc2753431",
-    "medical_parser_work.py": "0f364260348f7cc2b83864a3408332ab00c86d74",
-    "smoke_combined_part03_medical_parser_manual.py": "491a5ea4411a74c8ebf77b5aef388a75124024b9",
-    "tools/docx_block_boundary_regression.py": "f075ef313d2ee21bca197608f37d88d36dc82465",
-    "tools/document_mechanics_change_approval.json": "4a437e8eb74420298a7f5bce79780f45b2d52ecb",
+    "medical_parser_work.py": "a01479b4b97f8aeac25997e45518d787cf27644c",
+    "smoke_combined_part03_medical_parser_manual.py": "b1a58c531a1cd554de4bdd64273e477ae6a3382c",
+    "tools/docx_block_boundary_regression.py": "e8247c46aaf429a823f90f3b25385259a4b44d3a",
+    "tools/document_mechanics_change_approval.json": "71a83d8ad9a44638075a0b36f7c2cae467ea6255",
     "tools/regression_lock_check.py": "deea0121d9e26066c78b595afd72538b2191e580",
-    "medical_parser_sanitize.py": "bee1386208a4f79f3869a4c95347c48b44090c16"
+    "medical_parser_sanitize.py": "bee1386208a4f79f3869a4c95347c48b44090c16",
+    "dialog_expert.py": "af2b96af9cf7f56babfed1522cf5de6898daca0a",
+    "smoke_combined_part02_ui_parser_regressions.py": "a7c5f0a2af2684f3d7307f4f8b590d591ed6b155"
   }
 }
