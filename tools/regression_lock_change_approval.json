@@ -21,6 +21,7 @@
     "medical_parser_blocks.py": "243bef8e88b041da13559007c2a38071fe26701b",
     "smoke_combined_part02_ui_parser_regressions.py": "fc783b868d4257995ef6f8ffc87c6ff453530a95",
     "smoke_combined_part04_medical_generation.py": "fbc6ce0d12ebd28356351a214b28662164d89910",
-    "tools/docx_block_boundary_regression.py": "a8720a552af79a0108886a9294542e0f6f79629b"
+    "tools/docx_block_boundary_regression.py": "a8720a552af79a0108886a9294542e0f6f79629b",
+    "tools/document_mechanics_change_approval.json": "fbfa79c2d32b2a6a07eeb03f38bd7fd7ddf4361a"
   }
 }
