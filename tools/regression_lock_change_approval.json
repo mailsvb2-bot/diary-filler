@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "dc4a74893050ba996940916098628711b7e8f60d",
+  "reason": "Remove the consumed document-mechanics approval from the merged source-fidelity fix so no stale authorization artifact remains in the production tree.",
+  "required_evidence": [
+    "document_mechanics_guard",
+    "full_patient_replay",
+    "golden_docx",
+    "staff_profile_regression",
+    "gender_generation_matrix",
+    "desktop_intake_contract",
+    "intake_lifecycle_regression",
+    "packaged_desktop_intake_e2e",
+    "installer_uninstall_smoke",
+    "ci_gate_lock",
+    "patient_registry_regression"
+  ],
+  "approved_blobs": {
+    "tools/document_mechanics_change_approval.json": "<deleted>"
+  }
+}
