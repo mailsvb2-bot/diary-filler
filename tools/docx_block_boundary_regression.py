@@ -184,6 +184,42 @@ def _assert_long_source_block_is_not_cut_by_narrative_marker_words() -> None:
     assert "Контактен, ориентирован" in data.mental_status, data.mental_status
 
 
+def _assert_dated_historical_diagnoses_stay_inside_disease_anamnesis() -> None:
+    """Historical inline diagnoses must not cut off the current anamnesis.
+
+    This mirrors real referral documents where years of dated neurology/
+    psychiatry history are written inside one «Анамнез заболевания» block.
+    Only the later true top-level Diagnosis section may terminate/reclassify
+    clinical text.
+    """
+    source = """Анамнез заболевания:
+Родился от 1 беременности, протекавшей без патологии. Роды срочные, хроническая гипоксия плода.
+07.02.2013 Невролог. Диагноз: Неврозоподобный синдром. Наблюдался амбулаторно.
+24.07.2015 Невролог. Диагноз: Неврозоподобный синдром. Состояние без ухудшения.
+25.01.2024 ЭПИ (ДО №4): находился на лечении, состояние стабилизировалось.
+В сентябре 2024 года обратился самостоятельно, далее наблюдался у психиатра.
+ФИНАЛ_ИСТОРИЧЕСКОГО_АНАМНЕЗА_НЕ_ОБРЕЗАТЬ.
+Психический статус:
+Контактен, ориентирован, отвечает по существу.
+Соматический статус:
+Без существенных особенностей.
+Диагноз:
+F20.8 Другой тип шизофрении
+"""
+    data = MedicalTextParser().parse_text(source)
+    for required in (
+        "07.02.2013 Невролог. Диагноз: Неврозоподобный синдром",
+        "24.07.2015 Невролог. Диагноз: Неврозоподобный синдром",
+        "25.01.2024 ЭПИ (ДО №4): находился на лечении",
+        "В сентябре 2024 года обратился самостоятельно",
+        "ФИНАЛ_ИСТОРИЧЕСКОГО_АНАМНЕЗА_НЕ_ОБРЕЗАТЬ",
+    ):
+        assert required in data.disease_anamnesis, data.disease_anamnesis
+    assert "Психический статус:" not in data.disease_anamnesis, data.disease_anamnesis
+    assert "Контактен, ориентирован" in data.mental_status, data.mental_status
+    assert data.diagnosis == "F20.8 Другой тип шизофрении", data.diagnosis
+
+
 def _assert_narrative_marker_words_never_replace_target_fields() -> None:
     source = """Анамнез заболевания:
 Начало заболевания постепенное.
@@ -934,6 +970,7 @@ def verify() -> None:
     _assert_inserted_marker_like_patient_text_never_becomes_structure()
     _assert_alias_boundary_stops_destructive_span_deletion()
     _assert_long_source_block_is_not_cut_by_narrative_marker_words()
+    _assert_dated_historical_diagnoses_stay_inside_disease_anamnesis()
     _assert_narrative_marker_words_never_replace_target_fields()
     _assert_long_multiline_docx_roundtrip_preserves_full_tail()
     _assert_table_and_run_fragmented_source_roundtrip()
