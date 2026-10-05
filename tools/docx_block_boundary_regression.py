@@ -264,6 +264,63 @@ F20.8 Другой тип шизофрении
     assert data.diagnosis == "F20.8 Другой тип шизофрении", data.diagnosis
 
 
+def _assert_historical_chronology_variant_matrix() -> None:
+    """Date-format and split-line history variants must not steal current fields."""
+    variants = (
+        "07.02.2013 Невролог. Диагноз: F06.8 Исторический диагноз.",
+        "7/2/2013 Невролог. Диагноз: F06.8 Исторический диагноз.",
+        "07-02-13 Невролог. Диагноз: F06.8 Исторический диагноз.",
+        "02.2014 Невролог. Диагноз: F06.8 Исторический диагноз.",
+        "02/2015 Невролог. Лечение: историческая терапия.",
+        "12 февраля 2016 г. Психиатр. Диагноз: F06.8 Исторический диагноз.",
+        "Февраль 2017 Психиатр. Жалобы: историческая тревога.",
+        "В феврале 2018 года Психиатр. Психический статус: исторически напряжён.",
+        "Осенью 2019 года Психиатр. Соматический статус: без особенностей.",
+        "Начало наблюдения. В 2020 году был выставлен диагноз: F06.8 Исторический диагноз.",
+        "07.02.2021 Невролог.\nДиагноз: F06.8 Исторический диагноз.",
+        "Ноябрь 2022 Психиатр.\nЖалобы: историческая тревога.",
+    )
+    for index, history_fragment in enumerate(variants):
+        source = f"""Жалобы:
+текущие жалобы
+Анамнез заболевания:
+Начало текущего анамнеза.
+{history_fragment}
+После исторического события наблюдение продолжалось.
+ФИНАЛ_ВАРИАНТА_{index}_НЕ_ОБРЕЗАТЬ.
+Психический статус:
+Текущий психический статус.
+Соматический статус:
+Текущий соматический статус.
+План лечения:
+Текущее лечение.
+Диагноз:
+F20.8 Текущий диагноз
+"""
+        data = MedicalTextParser().parse_text(source)
+        assert f"ФИНАЛ_ВАРИАНТА_{index}_НЕ_ОБРЕЗАТЬ" in data.disease_anamnesis, (
+            history_fragment,
+            data.disease_anamnesis,
+        )
+        assert data.complaints == "текущие жалобы", (history_fragment, data.complaints)
+        assert data.mental_status == "Текущий психический статус.", (
+            history_fragment,
+            data.mental_status,
+        )
+        assert data.somatic_status == "Текущий соматический статус.", (
+            history_fragment,
+            data.somatic_status,
+        )
+        assert data.treatment_plan == "Текущее лечение.", (
+            history_fragment,
+            data.treatment_plan,
+        )
+        assert data.diagnosis == "F20.8 Текущий диагноз", (
+            history_fragment,
+            data.diagnosis,
+        )
+
+
 def _assert_real_referral_to_discharge_roundtrip_keeps_full_dated_history() -> None:
     """Lock the exact parser -> PatientData -> discharge path behind PR #333.
 
@@ -1149,6 +1206,7 @@ def verify() -> None:
     _assert_long_source_block_is_not_cut_by_narrative_marker_words()
     _assert_dated_historical_diagnoses_stay_inside_disease_anamnesis()
     _assert_dated_historical_clinical_sublabels_stay_inside_disease_anamnesis()
+    _assert_historical_chronology_variant_matrix()
     _assert_real_referral_to_discharge_roundtrip_keeps_full_dated_history()
     _assert_narrative_marker_words_never_replace_target_fields()
     _assert_long_multiline_docx_roundtrip_preserves_full_tail()
