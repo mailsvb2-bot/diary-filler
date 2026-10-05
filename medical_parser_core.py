@@ -173,11 +173,7 @@ class MedicalParserCoreMixin:
         self._repair_life_anamnesis_from_free_style(data, text)
 
         if not data.diagnosis:
-            diagnosis = self._extract_after_phrase(
-                text,
-                r"был\s+выставлен\s+диагноз\s*[:.]?",
-                historical_marker="был выставлен диагноз",
-            )
+            diagnosis = self._extract_after_phrase(text, r"был\s+выставлен\s+диагноз\s*[:.]?")
             if diagnosis:
                 data.diagnosis = diagnosis
 
