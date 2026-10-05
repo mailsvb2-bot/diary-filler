@@ -28,7 +28,7 @@
     "smoke_combined_part03_medical_parser_manual.py": "b1a58c531a1cd554de4bdd64273e477ae6a3382c",
     "tests/licensing_disabled_mode_contract.py": "55417c66427995e50878f60188b5987cf48e0e6a",
     "tests/patient_registry_regression.py": "89eaeece83a74e26630bf1a817072709b8054a56",
-    "tests/production_journeys_contract.py": "8084e01ab965793ecf7219bad6a46bbe44e9fdd8",
+    "tests/production_journeys_contract.py": "91c81cb4d85b8983cffd4d8aca94614795e2c231",
     "tools/document_mechanics_change_approval.json": "71a83d8ad9a44638075a0b36f7c2cae467ea6255",
     "tools/docx_block_boundary_regression.py": "e8247c46aaf429a823f90f3b25385259a4b44d3a",
     "tools/regression_lock_check.py": "deea0121d9e26066c78b595afd72538b2191e580"
