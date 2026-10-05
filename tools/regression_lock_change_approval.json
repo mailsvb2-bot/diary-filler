@@ -16,6 +16,6 @@
     "patient_registry_regression"
   ],
   "approved_blobs": {
-    "tools/docx_block_boundary_regression.py": "573b87b07766cf0ae87b8244634d8c05c62afae5"
+    "tools/docx_block_boundary_regression.py": "72a01c1f3452126e31da0a5a4cb11ece28c2dca7"
   }
 }
