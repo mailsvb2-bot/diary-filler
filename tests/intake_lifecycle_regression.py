@@ -785,7 +785,66 @@ def assert_legacy_disabled_preference_heals_and_preserves_user_folder() -> None:
         assert app._desktop_intake_enabled_for_session is True
         assert sentinel.read_text(encoding="utf-8") == "keep"
 
+
+def assert_background_agent_spawn_stays_hidden() -> None:
+    """The long-lived watcher must not flash a console window on Windows."""
+    calls = []
+    original_os = startup.os
+    original_popen = startup.subprocess.Popen
+    original_group = getattr(startup.subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+    original_detached = getattr(startup.subprocess, "DETACHED_PROCESS", 0)
+    try:
+        startup.os = SimpleNamespace(name="nt", environ={})  # type: ignore[assignment]
+        startup.subprocess.CREATE_NEW_PROCESS_GROUP = 0x200  # type: ignore[attr-defined]
+        startup.subprocess.DETACHED_PROCESS = 0x8  # type: ignore[attr-defined]
+        startup.subprocess.Popen = lambda command, **kwargs: calls.append((command, kwargs)) or object()  # type: ignore[assignment]
+        startup._desktop_hidden_popen(["MedicalDiaryAutofill.exe", "--intake-agent"])
+    finally:
+        startup.subprocess.Popen = original_popen  # type: ignore[assignment]
+        startup.os = original_os  # type: ignore[assignment]
+        startup.subprocess.CREATE_NEW_PROCESS_GROUP = original_group  # type: ignore[attr-defined]
+        startup.subprocess.DETACHED_PROCESS = original_detached  # type: ignore[attr-defined]
+    assert len(calls) == 1, calls
+    _command, kwargs = calls[0]
+    flags = int(kwargs.get("creationflags", 0))
+    assert flags & 0x8, f"background agent lost DETACHED_PROCESS: {flags:#x}"
+    assert flags & 0x200, f"background agent lost CREATE_NEW_PROCESS_GROUP: {flags:#x}"
+    assert kwargs.get("stdin") is startup.subprocess.DEVNULL
+    assert kwargs.get("stdout") is startup.subprocess.DEVNULL
+    assert kwargs.get("stderr") is startup.subprocess.DEVNULL
+
+
+def assert_gui_healthcheck_restarts_dead_agent() -> None:
+    """A watcher crash must be self-healed by the already-open GUI."""
+    scheduled = []
+    restarts = []
+    logs = []
+
+    class Root:
+        def winfo_exists(self): return True
+        def after(self, ms, callback): scheduled.append((ms, callback))
+
+    app = SimpleNamespace(root=Root())
+    original_active = startup._desktop_agent_is_active
+    original_start = startup._desktop_start_agent_process
+    original_log = startup._desktop_agent_log
+    try:
+        startup._desktop_agent_is_active = lambda: False  # type: ignore[assignment]
+        startup._desktop_start_agent_process = lambda: restarts.append(True) or True  # type: ignore[assignment]
+        startup._desktop_agent_log = lambda message: logs.append(str(message))  # type: ignore[assignment]
+        startup._desktop_schedule_agent_health(app)
+    finally:
+        startup._desktop_agent_is_active = original_active  # type: ignore[assignment]
+        startup._desktop_start_agent_process = original_start  # type: ignore[assignment]
+        startup._desktop_agent_log = original_log  # type: ignore[assignment]
+
+    assert restarts == [True], restarts
+    assert any("requested restart" in item for item in logs), logs
+    assert scheduled, "agent healthcheck did not reschedule itself"
+
 def main() -> None:
+    assert_background_agent_spawn_stays_hidden()
+    assert_gui_healthcheck_restarts_dead_agent()
     assert_agent_recreates_deleted_intake_root()
     assert_agent_rebinds_when_desktop_moves()
     assert_gui_poll_rebinds_when_desktop_moves()
