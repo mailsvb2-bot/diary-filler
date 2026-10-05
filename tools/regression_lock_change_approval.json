@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "710c1e856426b8e2d7869dc51fc22628e129d9eb",
-  "reason": "Historical production compatibility hardening: preserve dated, textual-date, split-line and explicitly historical clinical labels inside disease anamnesis while retaining later current complaints/status/treatment/diagnosis sections.",
+  "reason": "Historical production compatibility hardening: preserve dated/textual/split-line/explicitly historical clinical labels inside disease anamnesis, while proving that completed historical sentences never suppress following current sections.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -16,8 +16,8 @@
     "patient_registry_regression"
   ],
   "approved_blobs": {
-    "tools/docx_block_boundary_regression.py": "367b3d112f0eabbbdc60ddc2ee21a94aa728ba09",
-    "medical_parser_blocks.py": "48c6c00046f94b2e8d2da755da0673c8e08aa5c7",
-    "tools/document_mechanics_change_approval.json": "26aec83e83531e55c918ea0eee7801fd38640a25"
+    "tools/docx_block_boundary_regression.py": "34863f505eec40335a53dbd2b8ef42025fb5ea6f",
+    "medical_parser_blocks.py": "7206c466c9e7d1cd9d590369bd36a7eb087edc39",
+    "tools/document_mechanics_change_approval.json": "438382d9cee8ea26e6f8b018fc7d31fc6748870d"
   }
 }
