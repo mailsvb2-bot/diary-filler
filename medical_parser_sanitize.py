@@ -28,21 +28,6 @@ def sanitize_diagnosis(value: str) -> str:
     ).strip()
     value = clean_value(value)
 
-    # Referral documents may put the current episode sentence immediately
-    # after the diagnosis without a formal heading:
-    #   «Диагноз: F20.8 ...»
-    #   «09.06.2026 обратился в 3 отделение КДП ...»
-    # The dated operational sentence is not part of the diagnosis and must not
-    # leak into the diagnosis entry or generated documents.
-    dated_episode_tail = re.search(
-        r"(?im)^\s*\d{1,2}[./-]\d{1,2}[./-]\d{2,4}\s+"
-        r"(?:обратил(?:ся|ась)|поступил(?:а)?|доставлен(?:а)?|"
-        r"госпитализир(?:ован|ована|уется)|направлен(?:а)?)\b",
-        value,
-    )
-    if dated_episode_tail and dated_episode_tail.start() > 0:
-        value = clean_value(value[:dated_episode_tail.start()])
-
     # Word-таблицы/текстовые блоки иногда склеивают конец диагноза со следующим
     # клиническим предложением без пробела или переноса строки, например:
     # ``F21 Шизотипическое расстройствоНаходится на лечении ...``. Такие фразы
