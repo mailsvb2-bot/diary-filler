@@ -368,6 +368,46 @@ F20.8 Текущий диагноз
         )
 
 
+def _assert_historical_diagnosis_phrase_never_becomes_current_fallback() -> None:
+    """A historical «был выставлен диагноз» must not suppress current diagnosis input."""
+    historical_only = """Анамнез заболевания:
+Начало заболевания постепенное.
+В 2020 году был выставлен диагноз: F06.8 Исторический диагноз.
+После этого наблюдался амбулаторно.
+Психический статус:
+Контактен, ориентирован.
+Соматический статус:
+Без особенностей.
+План лечения:
+Терапия по схеме.
+"""
+    parsed = MedicalTextParser().parse_text(historical_only)
+    assert parsed.diagnosis == "", parsed.diagnosis
+    assert "В 2020 году был выставлен диагноз: F06.8 Исторический диагноз." in parsed.disease_anamnesis
+
+    historical_wording_only = """Анамнез заболевания:
+Ранее был выставлен диагноз F06.8 Исторический диагноз.
+После этого наблюдался амбулаторно.
+Психический статус:
+Контактен.
+"""
+    parsed = MedicalTextParser().parse_text(historical_wording_only)
+    assert parsed.diagnosis == "", parsed.diagnosis
+
+    current_phrase = """Жалобы:
+тревога
+Анамнез заболевания:
+Текущее ухудшение в течение месяца.
+Психический статус:
+Контактен, ориентирован.
+План лечения:
+Терапия по схеме.
+По итогам настоящего обследования был выставлен диагноз F20.8 Текущий диагноз
+"""
+    parsed = MedicalTextParser().parse_text(current_phrase)
+    assert parsed.diagnosis == "F20.8 Текущий диагноз", parsed.diagnosis
+
+
 def _assert_real_referral_to_discharge_roundtrip_keeps_full_dated_history() -> None:
     """Lock the exact parser -> PatientData -> discharge path behind PR #333.
 
@@ -1254,6 +1294,7 @@ def verify() -> None:
     _assert_dated_historical_diagnoses_stay_inside_disease_anamnesis()
     _assert_dated_historical_clinical_sublabels_stay_inside_disease_anamnesis()
     _assert_historical_chronology_variant_matrix()
+    _assert_historical_diagnosis_phrase_never_becomes_current_fallback()
     _assert_real_referral_to_discharge_roundtrip_keeps_full_dated_history()
     _assert_narrative_marker_words_never_replace_target_fields()
     _assert_long_multiline_docx_roundtrip_preserves_full_tail()
