@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "710c1e856426b8e2d7869dc51fc22628e129d9eb",
-  "reason": "Harden referral-to-discharge source fidelity across every clinical payload, not only the long disease anamnesis: complaints, life anamnesis, mental status, somatic status, treatment and diagnosis must each survive exactly once.",
+  "reason": "Historical production compatibility hardening: preserve dated historical clinical sublabels inside disease anamnesis while retaining later current complaints/status/treatment/diagnosis sections.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -16,6 +16,8 @@
     "patient_registry_regression"
   ],
   "approved_blobs": {
-    "tools/docx_block_boundary_regression.py": "ce3c6696465200068657e8af21367df1dd9d6731"
+    "tools/docx_block_boundary_regression.py": "44f8d841115aaf1d790e8186c6c533f7f2584efa",
+    "medical_parser_blocks.py": "180c66ad3fb17ec48817cfa6f348f3119e531a72",
+    "tools/document_mechanics_change_approval.json": "0bbdccf6c432227541a5023dd46d2165be46d7c0"
   }
 }
