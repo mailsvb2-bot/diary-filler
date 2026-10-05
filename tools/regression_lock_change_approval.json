@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "710c1e856426b8e2d7869dc51fc22628e129d9eb",
-  "reason": "Real referral generation fidelity hardening from a production-shaped replay: preserve life and disease anamneses, current mental status, current referral admission date, exact custom diagnosis wording, and explicit non-working status through parser -> popup defaults -> PatientData -> generated discharge.",
+  "reason": "Temporary CI packaging candidate: application/document code is unchanged from current main; add one branch-scoped artifact upload solely to hand off the already-built unlicensed installer, while preserving the existing approved main drift.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -27,6 +27,7 @@
     "tools/regression_lock_check.py": "deea0121d9e26066c78b595afd72538b2191e580",
     "medical_parser_sanitize.py": "bee1386208a4f79f3869a4c95347c48b44090c16",
     "dialog_expert.py": "af2b96af9cf7f56babfed1522cf5de6898daca0a",
-    "smoke_combined_part02_ui_parser_regressions.py": "a7c5f0a2af2684f3d7307f4f8b590d591ed6b155"
+    "smoke_combined_part02_ui_parser_regressions.py": "a7c5f0a2af2684f3d7307f4f8b590d591ed6b155",
+    ".github/workflows/windows-build.yml": "b96678e775d374a52d9db3fd9b1a2b33b8e709c9"
   }
 }
