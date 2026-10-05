@@ -501,13 +501,14 @@ class MedicalParserBlocksMixin:
                 flags=re.IGNORECASE,
             )
             year_lead = re.match(
-                r"^\s*(?:в\s+|с\s+|от\s+)?(?:19|20)\d{2}\s*г(?:ода|\.)?\b",
+                r"^\s*(?:в\s+|с\s+|от\s+)?(?:19|20)\d{2}"
+                r"(?:\s*г(?:од(?:а|у)?|\.)?)?\b",
                 candidate,
                 flags=re.IGNORECASE,
             )
             season_year = re.match(
                 r"^\s*(?:в\s+)?(?:весной|летом|осенью|зимой)\s+(?:19|20)\d{2}"
-                r"(?:\s*г(?:ода|\.)?)?\b",
+                r"(?:\s*г(?:од(?:а|у)?|\.)?)?\b",
                 candidate,
                 flags=re.IGNORECASE,
             )
