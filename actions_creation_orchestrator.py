@@ -10,7 +10,6 @@ import sys
 import time
 
 from app_config import *
-from license_ui import ensure_generation_license
 
 
 class _GenerationCommitError(RuntimeError):
@@ -341,11 +340,6 @@ class ActionsCreationOrchestratorMixin:
 
     def create_selected_outputs(self, *, print_after: bool = False) -> None:
         """Serialize generation and suppress only an identical queued double-click."""
-        parent = getattr(self, "root", None)
-        if not ensure_generation_license(parent):
-            self._set_status("Создание отменено: требуется активная лицензия")
-            return
-
         now = time.monotonic()
         if getattr(self, "_generation_action_in_progress", False):
             self._set_status("Создание уже выполняется")

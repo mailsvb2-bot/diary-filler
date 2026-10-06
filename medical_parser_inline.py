@@ -131,8 +131,7 @@ class MedicalParserInlineMixin:
         # Employment facts are patient-scoped. Life anamnesis routinely contains
         # phrases such as «отец работает...», «мать работает врачом» or
         # «должность матери: ...». Those are family-history facts and must never
-        # prefill the patient's work fields: doing so later auto-selects
-        # «Работает ли пациент: да» and contaminates expert/VK output.
+        # prefill the patient's work fields.
         work_aliases = {
             "работает",
             "работает в организации",

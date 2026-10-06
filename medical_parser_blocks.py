@@ -645,11 +645,6 @@ class MedicalParserBlocksMixin:
             return False
 
         tail = normalize_match(text[end:end + 96])
-        # Inline headings commonly carry their own separator (e.g.
-        # "Диагноз: F20.0 ..."). Strip only label punctuation before semantic
-        # inspection; otherwise the conservative F-code check below can never
-        # recognize a legitimate compact diagnosis boundary.
-        tail = tail.lstrip(" :.-—–№#")
         if not tail:
             return False
 

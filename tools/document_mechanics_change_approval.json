@@ -1,11 +1,10 @@
 {
   "schema_version": 1,
-  "base_sha": "8fe9e59f533118cd28018f802d7788ebed184989",
-  "reason": "Real referral generation fidelity fix: preserve current section boundaries after dated history, keep non-address residence facts inside life anamnesis, prefer the current referral admission date over old examination periods, prevent dated referral prose from leaking into diagnosis, and preserve explicit patient non-working status through parser and popup defaults.",
+  "base_sha": "2a55b7b2d2d1114e272947b67bd1d0ac4c20f1e7",
+  "reason": "Controlled recovery against main 2a55b7b2d2d1114e272947b67bd1d0ac4c20f1e7. Only the three protected files that actually differ from main are approved: unlicensed generation orchestration plus the intentionally retained parser recovery deltas; all other parser safeguards now match main and therefore are deliberately absent from this exact whitelist.",
   "approved_blobs": {
-    "dialog_expert.py": "af2b96af9cf7f56babfed1522cf5de6898daca0a",
-    "medical_parser_blocks.py": "97e32e3b428873c6878729370dad249339000e0c",
-    "medical_parser_sanitize.py": "bee1386208a4f79f3869a4c95347c48b44090c16",
-    "medical_parser_work.py": "a01479b4b97f8aeac25997e45518d787cf27644c"
+    "actions_creation_orchestrator.py": "865a5e521d18d1b54d6c0a50546382d63837cd90",
+    "medical_parser_blocks.py": "145308e7bac7292b33483ffc2af5ed0f7f924521",
+    "medical_parser_inline.py": "51d572125232e1a3d2f9ee606f478f61a0a495a4"
   }
 }

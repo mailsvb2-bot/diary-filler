@@ -522,6 +522,29 @@ def open_patient_folder(path: str | Path) -> bool:
         return False
 
 
+def open_patient_document(path: str | Path) -> bool:
+    """Open one patient Word document in the operating system's default editor."""
+    document = Path(path).expanduser()
+    if (
+        not document.exists()
+        or not document.is_file()
+        or document.suffix.lower() not in SUPPORTED_WORD_SUFFIXES
+    ):
+        return False
+    try:
+        if os.name == "nt":
+            startfile = getattr(os, "startfile")
+            startfile(str(document))
+        else:
+            import sys
+
+            command = ["open", str(document)] if sys.platform == "darwin" else ["xdg-open", str(document)]
+            subprocess.Popen(command)
+        return True
+    except (AttributeError, OSError, subprocess.SubprocessError):
+        return False
+
+
 class PatientSummaryTray:
     """Small native Windows notification-area controller for the patient summary.
 
