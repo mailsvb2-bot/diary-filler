@@ -116,6 +116,11 @@ class MedicalParserWorkMixin:
             )
             if not m:
                 continue
+            if self._employment_alias_is_relative_context(
+                line[:m.start()],
+                line[m.end():],
+            ):
+                continue
             if not data.work_org:
                 data.work_org = self._clean_work_org_value(m.group(1))
             if not data.position:
