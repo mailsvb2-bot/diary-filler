@@ -1,14 +1,14 @@
 {
   "schema_version": 1,
   "base_sha": "2a55b7b2d2d1114e272947b67bd1d0ac4c20f1e7",
-  "reason": "Controlled recovery of document generation mechanics to the historically working v1.4.26 user journey after observed regressions in parsing, dates, clinical text preservation, sick-leave prompts and generated DOCX. Proven post-baseline safety fixes are retained where recovery reintroduced real regressions, including historical-diagnosis isolation and relative-employment isolation. Approval is exact-base and exact-blob for the protected recovery surface only.",
+  "reason": "Controlled recovery of the historically working v1.4.26 user journey while retaining later fixes that are already proven by production-shaped regressions: historical diagnosis isolation, relatives' employment isolation, current referral admission-date priority, life-anamnesis residence preservation, diagnosis-tail sanitation, explicit non-working status, and precise psychiatric-registration wording. Approval is exact-base and exact-blob only.",
   "approved_blobs": {
     "actions_creation_orchestrator.py": "865a5e521d18d1b54d6c0a50546382d63837cd90",
-    "medical_formatting.py": "eb24f4c5ce7f025f6fc2dd2d2a8c52bac22a3caa",
-    "medical_parser_blocks.py": "5e73fa6aea1c1f60c8be2052e26ae9b5c0528314",
+    "medical_formatting.py": "fed7d7b12b948d1a4d775a83db356483c3129f16",
+    "medical_parser_blocks.py": "145308e7bac7292b33483ffc2af5ed0f7f924521",
     "medical_parser_demographics.py": "9393209b0a4e45e071a987225de53069b855a794",
     "medical_parser_inline.py": "51d572125232e1a3d2f9ee606f478f61a0a495a4",
-    "medical_parser_sanitize.py": "feade7b3f5ac42a4352837a9b28710b1e55420cb",
-    "medical_parser_work.py": "0f364260348f7cc2b83864a3408332ab00c86d74"
+    "medical_parser_sanitize.py": "bee1386208a4f79f3869a4c95347c48b44090c16",
+    "medical_parser_work.py": "a01479b4b97f8aeac25997e45518d787cf27644c"
   }
 }
