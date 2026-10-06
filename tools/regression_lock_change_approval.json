@@ -29,7 +29,7 @@
     "tests/licensing_disabled_mode_contract.py": "55417c66427995e50878f60188b5987cf48e0e6a",
     "tests/patient_registry_regression.py": "89eaeece83a74e26630bf1a817072709b8054a56",
     "tests/production_journeys_contract.py": "cd414af62f42feab35dee9b70ba54c6fec31e14c",
-    "tools/document_mechanics_change_approval.json": "31b31d2c3c12414417786e0d27c7d3a58b68f851",
+    "tools/document_mechanics_change_approval.json": "c7d16c7410d0c4e4b5e3e547fef62d761f1b133b",
     "tools/docx_block_boundary_regression.py": "e8247c46aaf429a823f90f3b25385259a4b44d3a",
     "tools/regression_lock_check.py": "deea0121d9e26066c78b595afd72538b2191e580",
     "tests/intake_lifecycle_regression.py": "8488849ec710e22a517ce780ec904f4ce561a7a0",
