@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "710c1e856426b8e2d7869dc51fc22628e129d9eb",
-  "reason": "Controlled v1.4.26 user-journey recovery with exact preservation of later production-shaped fixes that prevent known user-visible data corruption: historical diagnosis leakage, relatives' employment leakage, stale historical admission dates, truncated life anamnesis, referral prose in diagnosis, lost non-working status, and loss of precise psychiatric-registration wording. Licensing remains implemented but disabled in current product mode.",
+  "reason": "Controlled v1.4.26 user-journey recovery with exact preservation of later production-shaped fixes that prevent known user-visible data corruption. This approval enumerates exactly the current critical diff against baseline 710c1e856426b8e2d7869dc51fc22628e129d9eb; unchanged paths are not whitelisted.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -20,23 +20,22 @@
     "actions_creation_orchestrator.py": "865a5e521d18d1b54d6c0a50546382d63837cd90",
     "dialog_expert.py": "af2b96af9cf7f56babfed1522cf5de6898daca0a",
     "main.py": "189167ddb23d5b576a8404f4dabbd3a45271d1a0",
-    "medical_formatting.py": "fed7d7b12b948d1a4d775a83db356483c3129f16",
     "medical_parser_blocks.py": "145308e7bac7292b33483ffc2af5ed0f7f924521",
+    "medical_parser_core.py": "285f34b40433b4020d8b2f20426963cfb65011cc",
+    "medical_parser_demographics.py": "9393209b0a4e45e071a987225de53069b855a794",
+    "medical_parser_inline.py": "51d572125232e1a3d2f9ee606f478f61a0a495a4",
+    "medical_parser_sanitize.py": "bee1386208a4f79f3869a4c95347c48b44090c16",
+    "medical_parser_work.py": "a01479b4b97f8aeac25997e45518d787cf27644c",
     "patient_registry.py": "241881d1c043c581db633ac75a5dfd8734bba1ee",
     "patient_registry_mixin.py": "b7ed033ebb17f7da3e3c5df0be7f192e1e932265",
     "smoke_combined_part02_ui_parser_regressions.py": "a7c5f0a2af2684f3d7307f4f8b590d591ed6b155",
     "smoke_combined_part03_medical_parser_manual.py": "b1a58c531a1cd554de4bdd64273e477ae6a3382c",
+    "tests/intake_lifecycle_regression.py": "8488849ec710e22a517ce780ec904f4ce561a7a0",
     "tests/licensing_disabled_mode_contract.py": "55417c66427995e50878f60188b5987cf48e0e6a",
     "tests/patient_registry_regression.py": "89eaeece83a74e26630bf1a817072709b8054a56",
     "tests/production_journeys_contract.py": "cd414af62f42feab35dee9b70ba54c6fec31e14c",
     "tools/document_mechanics_change_approval.json": "a9c036a8a124a6dc7bf3653ae5e0d9c38ca460ce",
     "tools/docx_block_boundary_regression.py": "e8247c46aaf429a823f90f3b25385259a4b44d3a",
-    "tools/regression_lock_check.py": "deea0121d9e26066c78b595afd72538b2191e580",
-    "tests/intake_lifecycle_regression.py": "8488849ec710e22a517ce780ec904f4ce561a7a0",
-    "medical_parser_core.py": "285f34b40433b4020d8b2f20426963cfb65011cc",
-    "medical_parser_inline.py": "51d572125232e1a3d2f9ee606f478f61a0a495a4",
-    "medical_parser_demographics.py": "9393209b0a4e45e071a987225de53069b855a794",
-    "medical_parser_work.py": "a01479b4b97f8aeac25997e45518d787cf27644c",
-    "medical_parser_sanitize.py": "bee1386208a4f79f3869a4c95347c48b44090c16"
+    "tools/regression_lock_check.py": "deea0121d9e26066c78b595afd72538b2191e580"
   }
 }
