@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "710c1e856426b8e2d7869dc51fc22628e129d9eb",
-  "baseline_note": "PR #336 cleanup candidate 710c1e856426b8e2d7869dc51fc22628e129d9eb validated by License Server CI run 37288655222 and Windows EXE Build run 37288655250. The only locked-surface change removes the consumed document-mechanics approval that was bound to the old pre-fix main. No production code or document-generation behavior changes; full Windows regression, packaged EXE, desktop intake, installer and install/uninstall smoke remained green.",
+  "baseline_ref": "4b7be35bc20dd41f4cca4340d17875b1c86d6b1c",
+  "baseline_note": "Recovery candidate 4b7be35bc20dd41f4cca4340d17875b1c86d6b1c validated by License Server CI #314 (run 37431204371) and Windows EXE Build #1797 (run 37431204358). Full hosted Windows path passed: regression locks, document mechanics, production safety/audit/release gates, golden DOCX, clinical roundtrip/boundary suites, full user journey, My Patients, 255-output matrix, Tk GUI, packaged intake, EXE build, installer, and install/uninstall smoke.",
   "required_approval_evidence": [
     "ci_gate_lock",
     "patient_registry_regression"
