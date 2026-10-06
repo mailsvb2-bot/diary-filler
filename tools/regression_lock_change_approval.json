@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "710c1e856426b8e2d7869dc51fc22628e129d9eb",
-  "reason": "Controlled v1.4.26 user-journey recovery with current unlicensed product gates removed while the full licensing implementation and dormant licensed-mode diagnostics remain intact. Exact critical-diff approval only; known production-shaped document safeguards are retained.",
+  "reason": "Controlled v1.4.26 user-journey recovery with current unlicensed product gates removed while licensing implementation and dormant diagnostics remain intact. Intake lifecycle assertions now validate the heartbeat-before-onboarding invariant in both current unlicensed mode and any future explicitly licensed mode.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -30,7 +30,7 @@
     "patient_registry_mixin.py": "b7ed033ebb17f7da3e3c5df0be7f192e1e932265",
     "smoke_combined_part02_ui_parser_regressions.py": "a7c5f0a2af2684f3d7307f4f8b590d591ed6b155",
     "smoke_combined_part03_medical_parser_manual.py": "b1a58c531a1cd554de4bdd64273e477ae6a3382c",
-    "tests/intake_lifecycle_regression.py": "8488849ec710e22a517ce780ec904f4ce561a7a0",
+    "tests/intake_lifecycle_regression.py": "ecd57aa6751eb31d805bb366eb74c02d443e40a2",
     "tests/licensing_disabled_mode_contract.py": "55417c66427995e50878f60188b5987cf48e0e6a",
     "tests/patient_registry_regression.py": "89eaeece83a74e26630bf1a817072709b8054a56",
     "tests/production_journeys_contract.py": "cd414af62f42feab35dee9b70ba54c6fec31e14c",
