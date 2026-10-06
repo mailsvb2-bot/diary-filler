@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "710c1e856426b8e2d7869dc51fc22628e129d9eb",
-  "reason": "Controlled v1.4.26 user-journey recovery with exact preservation of later production-shaped fixes that prevent known user-visible data corruption. This approval enumerates exactly the current critical diff against baseline 710c1e856426b8e2d7869dc51fc22628e129d9eb; unchanged paths are not whitelisted.",
+  "reason": "Controlled v1.4.26 user-journey recovery with current unlicensed product gates removed while the full licensing implementation and dormant licensed-mode diagnostics remain intact. Exact critical-diff approval only; known production-shaped document safeguards are retained.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -19,7 +19,7 @@
     ".github/workflows/windows-build.yml": "1e75edf4122a1d340db1ec0fecde97591fba4e29",
     "actions_creation_orchestrator.py": "865a5e521d18d1b54d6c0a50546382d63837cd90",
     "dialog_expert.py": "af2b96af9cf7f56babfed1522cf5de6898daca0a",
-    "main.py": "189167ddb23d5b576a8404f4dabbd3a45271d1a0",
+    "main.py": "4b4dd4e1d27b13323e34f8060e4a563018f1326f",
     "medical_parser_blocks.py": "145308e7bac7292b33483ffc2af5ed0f7f924521",
     "medical_parser_core.py": "285f34b40433b4020d8b2f20426963cfb65011cc",
     "medical_parser_demographics.py": "9393209b0a4e45e071a987225de53069b855a794",
