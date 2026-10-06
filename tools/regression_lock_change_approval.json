@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "710c1e856426b8e2d7869dc51fc22628e129d9eb",
-  "reason": "Controlled v1.4.26 user-journey recovery: restore historically working parser/generation/startup behavior, keep licensing implementation present but disabled for the current product mode, preserve My Patients click/hold behavior, and add explicit production-journey regression topology without weakening protected mechanics.",
+  "reason": "Controlled v1.4.26 user-journey recovery: restore historically working parser/generation/startup behavior, keep licensing implementation present but disabled for the current product mode, preserve My Patients click/hold behavior, retain the proven historical-diagnosis guard, and add explicit production-journey regression topology without weakening protected mechanics.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -21,7 +21,7 @@
     "dialog_expert.py": "af2b96af9cf7f56babfed1522cf5de6898daca0a",
     "main.py": "189167ddb23d5b576a8404f4dabbd3a45271d1a0",
     "medical_formatting.py": "eb24f4c5ce7f025f6fc2dd2d2a8c52bac22a3caa",
-    "medical_parser_blocks.py": "c1ca4b3309964eab380d7faa1228a9c39b36d1bc",
+    "medical_parser_blocks.py": "5e73fa6aea1c1f60c8be2052e26ae9b5c0528314",
     "patient_registry.py": "241881d1c043c581db633ac75a5dfd8734bba1ee",
     "patient_registry_mixin.py": "b7ed033ebb17f7da3e3c5df0be7f192e1e932265",
     "smoke_combined_part02_ui_parser_regressions.py": "a7c5f0a2af2684f3d7307f4f8b590d591ed6b155",
@@ -29,9 +29,10 @@
     "tests/licensing_disabled_mode_contract.py": "55417c66427995e50878f60188b5987cf48e0e6a",
     "tests/patient_registry_regression.py": "89eaeece83a74e26630bf1a817072709b8054a56",
     "tests/production_journeys_contract.py": "cd414af62f42feab35dee9b70ba54c6fec31e14c",
-    "tools/document_mechanics_change_approval.json": "19e516ff1a73fd5d2178b3e8c638c1c0396121f9",
+    "tools/document_mechanics_change_approval.json": "31b31d2c3c12414417786e0d27c7d3a58b68f851",
     "tools/docx_block_boundary_regression.py": "e8247c46aaf429a823f90f3b25385259a4b44d3a",
     "tools/regression_lock_check.py": "deea0121d9e26066c78b595afd72538b2191e580",
-    "tests/intake_lifecycle_regression.py": "8488849ec710e22a517ce780ec904f4ce561a7a0"
+    "tests/intake_lifecycle_regression.py": "8488849ec710e22a517ce780ec904f4ce561a7a0",
+    "medical_parser_core.py": "285f34b40433b4020d8b2f20426963cfb65011cc"
   }
 }
