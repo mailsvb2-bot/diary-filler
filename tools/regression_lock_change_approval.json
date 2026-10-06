@@ -34,7 +34,7 @@
     "tests/licensing_disabled_mode_contract.py": "55417c66427995e50878f60188b5987cf48e0e6a",
     "tests/patient_registry_regression.py": "89eaeece83a74e26630bf1a817072709b8054a56",
     "tests/production_journeys_contract.py": "cd414af62f42feab35dee9b70ba54c6fec31e14c",
-    "tools/document_mechanics_change_approval.json": "a9c036a8a124a6dc7bf3653ae5e0d9c38ca460ce",
+    "tools/document_mechanics_change_approval.json": "3628d8ceaecab0a41533ada440c4d9942cefd360",
     "tools/docx_block_boundary_regression.py": "e8247c46aaf429a823f90f3b25385259a4b44d3a",
     "tools/regression_lock_check.py": "deea0121d9e26066c78b595afd72538b2191e580"
   }
