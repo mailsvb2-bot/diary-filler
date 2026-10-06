@@ -713,13 +713,27 @@ def assert_visible_gui_claim_precedes_onboarding() -> None:
     main_source = source[source.index("def main() -> None:"):]
     root = main_source.index("root = _create_root()")
     claim = main_source.index("claim_desktop_gui_session()", root)
-    license_import = main_source.index("from license_ui import ensure_license", root)
-    license_gate = main_source.index("if not ensure_license(", license_import)
-    gui_import = main_source.index("from app import CombinedMedicalDiaryApp", license_gate)
+    gui_import = main_source.index("from app import CombinedMedicalDiaryApp", claim)
     onboarding = main_source.index("_first_launch_onboarding(", gui_import)
-    assert root < claim < license_import < license_gate < gui_import < onboarding, (
-        "visible GUI heartbeat must be claimed before licensing/modal startup and heavy GUI import"
-    )
+
+    # Current public product mode is intentionally unlicensed, so startup must
+    # not require/import a license gate at all. The invariant we actually need
+    # for intake reliability is that the visible-GUI heartbeat is claimed before
+    # any heavy GUI import or modal onboarding. If licensing is explicitly
+    # re-enabled in a future build, its import/gate must also remain after claim.
+    license_import_marker = "from license_ui import ensure_license"
+    license_gate_marker = "if not ensure_license("
+    if license_import_marker in main_source[root:]:
+        license_import = main_source.index(license_import_marker, root)
+        license_gate = main_source.index(license_gate_marker, license_import)
+        assert root < claim < license_import < license_gate < gui_import < onboarding, (
+            "visible GUI heartbeat must be claimed before licensed/modal startup and heavy GUI import"
+        )
+    else:
+        assert license_gate_marker not in main_source[root:]
+        assert root < claim < gui_import < onboarding, (
+            "visible GUI heartbeat must be claimed before heavy GUI import and modal onboarding"
+        )
 
     startup_source = Path("startup.py").read_text(encoding="utf-8")
     for snippet in (
