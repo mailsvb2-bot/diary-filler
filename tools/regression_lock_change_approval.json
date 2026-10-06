@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "710c1e856426b8e2d7869dc51fc22628e129d9eb",
-  "reason": "Controlled v1.4.26 user-journey recovery: restore historically working parser/generation/startup behavior, keep licensing implementation present but disabled for the current product mode, preserve My Patients click/hold behavior, retain the proven historical-diagnosis guard, and add explicit production-journey regression topology without weakening protected mechanics.",
+  "reason": "Controlled v1.4.26 user-journey recovery: restore historically working parser/generation/startup behavior, keep licensing implementation present but disabled for the current product mode, preserve My Patients click/hold behavior, retain proven historical-diagnosis and relative-employment safety fixes, and add explicit production-journey regression topology without weakening protected mechanics.",
   "required_evidence": [
     "document_mechanics_guard",
     "full_patient_replay",
@@ -29,10 +29,13 @@
     "tests/licensing_disabled_mode_contract.py": "55417c66427995e50878f60188b5987cf48e0e6a",
     "tests/patient_registry_regression.py": "89eaeece83a74e26630bf1a817072709b8054a56",
     "tests/production_journeys_contract.py": "cd414af62f42feab35dee9b70ba54c6fec31e14c",
-    "tools/document_mechanics_change_approval.json": "c7d16c7410d0c4e4b5e3e547fef62d761f1b133b",
+    "tools/document_mechanics_change_approval.json": "0cdb76f9ebfa21c71c469560d2591d3b56e62094",
     "tools/docx_block_boundary_regression.py": "e8247c46aaf429a823f90f3b25385259a4b44d3a",
     "tools/regression_lock_check.py": "deea0121d9e26066c78b595afd72538b2191e580",
     "tests/intake_lifecycle_regression.py": "8488849ec710e22a517ce780ec904f4ce561a7a0",
-    "medical_parser_core.py": "285f34b40433b4020d8b2f20426963cfb65011cc"
+    "medical_parser_core.py": "285f34b40433b4020d8b2f20426963cfb65011cc",
+    "medical_parser_inline.py": "51d572125232e1a3d2f9ee606f478f61a0a495a4",
+    "medical_parser_demographics.py": "9393209b0a4e45e071a987225de53069b855a794",
+    "medical_parser_work.py": "0f364260348f7cc2b83864a3408332ab00c86d74"
   }
 }
