@@ -1,11 +1,15 @@
 {
   "schema_version": 1,
-  "base_sha": "8fe9e59f533118cd28018f802d7788ebed184989",
-  "reason": "Real referral generation fidelity fix: preserve current section boundaries after dated history, keep non-address residence facts inside life anamnesis, prefer the current referral admission date over old examination periods, prevent dated referral prose from leaking into diagnosis, and preserve explicit patient non-working status through parser and popup defaults.",
+  "base_sha": "2a55b7b2d2d1114e272947b67bd1d0ac4c20f1e7",
+  "reason": "Controlled recovery of document generation mechanics to the historically working v1.4.26 user journey after observed regressions in parsing, dates, clinical text preservation, sick-leave prompts and generated DOCX. Approval is exact-base and exact-blob for the protected recovery surface only.",
   "approved_blobs": {
-    "dialog_expert.py": "af2b96af9cf7f56babfed1522cf5de6898daca0a",
-    "medical_parser_blocks.py": "97e32e3b428873c6878729370dad249339000e0c",
-    "medical_parser_sanitize.py": "bee1386208a4f79f3869a4c95347c48b44090c16",
-    "medical_parser_work.py": "a01479b4b97f8aeac25997e45518d787cf27644c"
+    "actions_creation_orchestrator.py": "865a5e521d18d1b54d6c0a50546382d63837cd90",
+    "medical_formatting.py": "eb24f4c5ce7f025f6fc2dd2d2a8c52bac22a3caa",
+    "medical_parser_blocks.py": "02914dbdc2c534e7586f32e93a2a30fe44b61159",
+    "medical_parser_core.py": "d22d251ccb4890a71db54cb4823553eafd09cefb",
+    "medical_parser_demographics.py": "f66f9b2a98e99d9b6c720add54d54712a2f103e2",
+    "medical_parser_inline.py": "e6708e2df1a771a34b9809d05acee9ebfd49ea1d",
+    "medical_parser_sanitize.py": "feade7b3f5ac42a4352837a9b28710b1e55420cb",
+    "medical_parser_work.py": "7c12cc19f61ae852251d7bf54b3e2616eb6d9df3"
   }
 }
