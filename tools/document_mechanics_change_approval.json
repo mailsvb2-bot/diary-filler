@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "base_sha": "2a55b7b2d2d1114e272947b67bd1d0ac4c20f1e7",
-  "reason": "Controlled recovery of document generation mechanics to the historically working v1.4.26 user journey after observed regressions in parsing, dates, clinical text preservation, sick-leave prompts and generated DOCX. Approval is exact-base and exact-blob for the protected recovery surface only.",
+  "reason": "Controlled recovery of document generation mechanics to the historically working v1.4.26 user journey after observed regressions in parsing, dates, clinical text preservation, sick-leave prompts and generated DOCX. Historical-diagnosis fallback protection is intentionally retained because the recovery baseline otherwise reintroduces a proven regression. Approval is exact-base and exact-blob for the protected recovery surface only.",
   "approved_blobs": {
     "actions_creation_orchestrator.py": "865a5e521d18d1b54d6c0a50546382d63837cd90",
     "medical_formatting.py": "eb24f4c5ce7f025f6fc2dd2d2a8c52bac22a3caa",
-    "medical_parser_blocks.py": "c1ca4b3309964eab380d7faa1228a9c39b36d1bc",
-    "medical_parser_core.py": "d22d251ccb4890a71db54cb4823553eafd09cefb",
+    "medical_parser_blocks.py": "5e73fa6aea1c1f60c8be2052e26ae9b5c0528314",
+    "medical_parser_core.py": "285f34b40433b4020d8b2f20426963cfb65011cc",
     "medical_parser_demographics.py": "f66f9b2a98e99d9b6c720add54d54712a2f103e2",
     "medical_parser_inline.py": "e6708e2df1a771a34b9809d05acee9ebfd49ea1d",
     "medical_parser_sanitize.py": "feade7b3f5ac42a4352837a9b28710b1e55420cb",
