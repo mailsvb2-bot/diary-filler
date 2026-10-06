@@ -87,6 +87,16 @@ class MedicalParserWorkMixin:
         Раньше строка "Работает в Рассвет, в должности Уборщик" могла целиком
         попадать в `work_org`. Для popup-окон нужны два отдельных значения.
         """
+        raw_work_org = clean_value(data.work_org)
+        if not data.expert_work_status:
+            if raw_work_org and self._is_non_working_org_value(raw_work_org):
+                # Preserve the semantic fact before normalizing the organization
+                # field to empty. The UI/expert renderer must distinguish
+                # explicit «не работает» from genuinely missing employment data.
+                data.expert_work_status = "нет"
+            elif raw_work_org or clean_value(data.position):
+                data.expert_work_status = "да"
+
         if data.work_org:
             org, position_from_org = self._split_work_position_value(data.work_org)
             # Assign even an empty normalized organization: values like
@@ -127,6 +137,9 @@ class MedicalParserWorkMixin:
                 data.position = self._clean_position_value(m.group(2))
             if data.work_org and data.position:
                 break
+
+        if not data.expert_work_status and (data.work_org or data.position):
+            data.expert_work_status = "да"
 
     def _repair_life_anamnesis_from_free_style(self, data: PatientData, text: str) -> None:
         """Достать анамнез жизни из свободного/анкетного стиля.
