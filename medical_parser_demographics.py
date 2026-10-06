@@ -232,15 +232,21 @@ class MedicalParserDemographicsMixin:
         work_org = ""
 
         labelled_work = re.search(
-            r"(?<![А-Яа-яA-Za-z0-9])(?:работает(?:\s+в\s+организации)?|место\s+работы|работа)"
-            r"(?![А-Яа-яA-Za-z0-9])\s*[:.-]?\s*(.+)$",
+            r"(?<![А-Яа-яA-Za-z0-9])"
+            r"(?P<label>работает(?:\s+в\s+организации)?|место\s+работы|работа)"
+            r"(?![А-Яа-яA-Za-z0-9])\s*[:.-]?\s*(?P<value>.+)$",
             compact,
             flags=re.IGNORECASE,
         )
         if labelled_work and re.search(r"(?:^|\s)не\s+работает\b", compact[:labelled_work.end()], flags=re.IGNORECASE):
             labelled_work = None
+        if labelled_work and self._employment_alias_is_relative_context(
+            compact[:labelled_work.start("label")],
+            labelled_work.group("value"),
+        ):
+            labelled_work = None
         if labelled_work:
-            work_org = clean_value(labelled_work.group(1))
+            work_org = clean_value(labelled_work.group("value"))
             work_org = self._cut_at_next_inline_marker(work_org, self.FIELD_ALIASES["work_org"])
             work_org = clean_value(work_org)
 
