@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "base_sha": "b79b9546acfb9fb624411a406dd3e21c368ecbbc",
-  "reason": "Explicit clinical document mechanics task: epidemiology template gender agreement, 2027 calendar, and VK MSE date constraints, with full Windows regression evidence.",
+  "base_sha": "bb7110eedc9a4eba61c35e1e4c75aebcbd145cc9",
+  "reason": "Explicit task: clinical document gender agreement, 2027 calendar, VK MSE date boundaries. Validate combined candidate in full Windows CI.",
   "approved_blobs": {
     "diary_calendar.py": "21a3f1ff631a0d259ae3d45507edbc780f62aa02",
     "medical_gender.py": "8f9c6fd2a1a0f94c6ff5107da927c607e1ba1c6a",
