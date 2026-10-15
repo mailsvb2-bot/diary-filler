@@ -193,6 +193,12 @@ _CANONICAL_EPIDEMIOLOGY = (
     "в течение трёх предыдущих месяцев не выезжал, в контакте с инфекционными больными "
     "не был. Венерические заболевания, туберкулёз, вирусные гепатиты отрицает."
 )
+# Female fixture: agree the template-owned canonical sentence with patient gender.
+_CANONICAL_EPIDEMIOLOGY = (
+    _CANONICAL_EPIDEMIOLOGY.replace("со слов пациента", "со слов пациентки")
+    .replace("не выезжал,", "не выезжала,")
+    .replace("не был.", "не была.")
+)
 assert _CANONICAL_EXAMINATION_PLAN in primary_text, primary_text
 assert _CANONICAL_EXAMINATION_PLAN in admission_doctor_text, admission_doctor_text
 for _fixed_epi_text in (primary_text, commission_text, admission_doctor_text):

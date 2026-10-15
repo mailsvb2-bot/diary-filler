@@ -84,6 +84,10 @@ def adapt_patient_data_to_gender(data: PatientData) -> PatientData:
 
 
 def adapt_document_to_patient_gender(doc: DocxDocument, data: PatientData) -> None:
+    _adapt_document_paragraphs_to_gender(doc, data)
+
+
+def _adapt_document_paragraphs_to_gender(doc: DocxDocument, data: PatientData, *, paragraph_filter=None) -> None:
     """Применить ту же муж/жен коррекцию к итоговому DOCX.
 
     Это нужно для шаблонных фраз самих документов: например,
@@ -113,6 +117,8 @@ def adapt_document_to_patient_gender(doc: DocxDocument, data: PatientData) -> No
     for paragraph in list(iter_all_paragraphs(doc)):
         original = paragraph.text or ""
         if not original.strip():
+            continue
+        if paragraph_filter is not None and not paragraph_filter(original):
             continue
         # Защита от порчи фраз вида «установлен диагноз: ...» и названий МКБ.
         # Клинические описания вокруг этих строк уже адаптированы на уровне данных.
@@ -234,10 +240,16 @@ def normalize_staff_references_in_document(doc: DocxDocument, data: PatientData,
             )
 
 
+def _is_template_epidemiology_paragraph(text: str) -> bool:
+    return normalize_match(text).startswith("эпидемиологический анамнез: со слов пациент")
+
+
 def finalize_medical_document(doc: DocxDocument, data: PatientData, *, editor=None) -> None:
     """Общие финальные правки перед сохранением любого медицинского документа."""
     normalize_facility_references_in_document(doc)
     normalize_staff_references_in_document(doc, data, editor=editor)
+    # Adapt only the fixed epidemiology template, never arbitrary clinical prose.
+    _adapt_document_paragraphs_to_gender(doc, data, paragraph_filter=_is_template_epidemiology_paragraph)
     # EPI/service cleanup is renderer-owned and template-aware. Never scan the
     # whole finalized document for marker-like patient prose.
     apply_readable_section_spacing(doc)
