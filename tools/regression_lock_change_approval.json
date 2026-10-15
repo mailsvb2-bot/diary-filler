@@ -20,6 +20,7 @@
     "smoke_combined_part04_medical_generation.py": "8229af1b06b67b514fbbd28bdd4b3d4392fc77d1",
     "tests/golden_docx_manifest.json": "c60e92000a982b2299dcc88a338100973abb8fcf",
     "diary_calendar.py": "21a3f1ff631a0d259ae3d45507edbc780f62aa02",
-    "medical_service.py": "f387954956b9f2e5fad3686fabfc4f4ea1a6b0fc"
+    "medical_service.py": "f387954956b9f2e5fad3686fabfc4f4ea1a6b0fc",
+    "tools/document_mechanics_change_approval.json": "78cf8eb844044bbb129ea2739ded409a3a9eb7d8"
   }
 }
