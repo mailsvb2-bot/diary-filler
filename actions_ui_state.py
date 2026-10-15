@@ -7,6 +7,22 @@ from tkinter import messagebox
 from app_config import *
 
 
+def _user_facing_error_text(exc: BaseException) -> str:
+    """Translate low-level python-docx/zip failures into a Russian user message."""
+    import zipfile
+
+    try:
+        from docx.opc.exceptions import PackageNotFoundError
+    except ImportError:
+        PackageNotFoundError = ()  # type: ignore[assignment]
+    if isinstance(exc, (zipfile.BadZipFile, PackageNotFoundError)):
+        return (
+            "Файл повреждён или не является документом Word (.docx/.docm). "
+            "Откройте его в Word, сохраните заново и повторите."
+        )
+    return str(exc)
+
+
 class ActionsUiStateMixin:
     def _mark_manual_field(self, field: str) -> None:
         if self._suspend_user_edit_tracking:
@@ -90,4 +106,4 @@ class ActionsUiStateMixin:
     def _show_error(self, title: str, exc: Exception) -> None:
         details = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
         self._log(f"\n❌ {title}: {exc}\n{details}\n")
-        messagebox.showerror(title, str(exc))
+        messagebox.showerror(title, _user_facing_error_text(exc))

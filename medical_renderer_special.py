@@ -20,6 +20,7 @@ from medical_formatting import (
     format_registration_text,
     format_staff_short_name,
     treatment_period_text,
+    treatment_term_start,
 )
 from medical_gender import finalize_medical_document, patient_gender
 from medical_markers import (
@@ -199,7 +200,10 @@ class MedicalRendererSpecialMixin:
         work_position = data.sick_leave_vk_work_position or ", ".join(
             part for part in [data.sick_leave_vk_work_org, data.sick_leave_vk_position] if part
         ).strip(", ")
-        treatment_line = treatment_period_text(data.admission_date, data.sick_leave_vk_commission_date or data.sick_leave_vk_date)
+        treatment_line = treatment_period_text(
+            treatment_term_start(data.admission_date, data.expert_sick_leave_from),
+            data.sick_leave_vk_commission_date or data.sick_leave_vk_date,
+        )
 
         editor.replace_all_matching_paragraphs(["Ф.И.О", "Ф.И.О:"], f"Ф.И.О: {data.fio}")
         editor.replace_all_matching_paragraphs(["Год рождения"], f"Год рождения: {data.birth}")

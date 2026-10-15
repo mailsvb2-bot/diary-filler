@@ -59,9 +59,9 @@ def _optional_full_date(value: str) -> date | None:
 
 
 def dynamic_epicrisis_base_date(admission: date, sick_leave_from: str) -> date:
-    """Use the later of admission and sick-leave start, matching Dokkomplekt."""
+    """Count the epicrisis cycle from the doctor-entered sick-leave opening date."""
     sick_leave_date = _optional_full_date(sick_leave_from)
-    return max(admission, sick_leave_date) if sick_leave_date is not None else admission
+    return sick_leave_date if sick_leave_date is not None else admission
 
 
 def dynamic_epicrisis_dates(
@@ -69,6 +69,7 @@ def dynamic_epicrisis_dates(
     *,
     discharge_date: date | None = None,
     limit: int = 12,
+    not_before: date | None = None,
 ) -> tuple[date, ...]:
     """Plan each 10-day epicrisis, shifting non-working dates forward.
 
@@ -83,6 +84,10 @@ def dynamic_epicrisis_dates(
         adjusted = next_working_day(current, used=result)
         if discharge_date is not None and adjusted >= discharge_date:
             break
+        if not_before is not None and adjusted <= not_before:
+            # Preserve the 10-day cycle when sick leave predates admission.
+            current += timedelta(days=10)
+            continue
         result.append(adjusted)
         current += timedelta(days=10)
     return tuple(result)
@@ -277,8 +282,8 @@ def apply_sick_leave_dynamic_epicrises(
             "Дата начала больничного для динамических эпикризов указана неверно."
         ) from exc
     discharge = parse_optional_discharge_date(discharge_value)
-    base_date = max(admission, sick_leave_date)
-    dates = dynamic_epicrisis_dates(base_date, discharge_date=discharge, limit=12)
+    base_date = dynamic_epicrisis_base_date(admission, sick_leave_text)
+    dates = dynamic_epicrisis_dates(base_date, discharge_date=discharge, limit=12, not_before=admission)
     if not dates:
         return 0
 

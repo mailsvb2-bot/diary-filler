@@ -399,6 +399,10 @@ def _assert_dynamic_epicrisis_calendar_contract() -> None:
     admission = date(2026, 9, 1)
     assert dynamic_epicrisis_base_date(admission, "06.09.2026") == date(2026, 9, 6)
     assert dynamic_epicrisis_base_date(admission, "") == admission
+    assert dynamic_epicrisis_base_date(admission, "20.08.2026") == date(2026, 8, 20)
+    assert dynamic_epicrisis_dates(
+        date(2026, 8, 20), discharge_date=date(2026, 9, 30), not_before=admission
+    ) == (date(2026, 9, 9), date(2026, 9, 21), date(2026, 9, 29))
 
     # 19.09.2026 is Saturday, therefore the first +10 day epicrisis moves to Monday.
     assert dynamic_epicrisis_dates(
