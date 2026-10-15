@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "4b3f1d1de9c91f22cafee055a11b51554f3289ca",
-  "baseline_note": "Exact patch candidate validated by Windows EXE Build run 38805492821 and License Server CI run 38805492843 (2026-10-15). Full regression evidence accepted with exact temporary blob approval; approval removed in subsequent metadata-only baseline commit.",
+  "baseline_ref": "5a84564b81702fe0e0d8bd55892c5adfb4bec8d7",
+  "baseline_note": "Combined diary-filler fixes validated by Windows EXE Build run 38812309250 and License Server CI run 38812309255. Exact protected mechanics approval retained for merging the validated medical changes onto base bb7110e.",
   "required_approval_evidence": [
     "ci_gate_lock",
     "patient_registry_regression"
