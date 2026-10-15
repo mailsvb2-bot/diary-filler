@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
-  "base_sha": "2a55b7b2d2d1114e272947b67bd1d0ac4c20f1e7",
-  "reason": "Controlled recovery against main 2a55b7b2d2d1114e272947b67bd1d0ac4c20f1e7. Only the three protected files that actually differ from main are approved: unlicensed generation orchestration plus the intentionally retained parser recovery deltas; all other parser safeguards now match main and therefore are deliberately absent from this exact whitelist.",
+  "base_sha": "b79b9546acfb9fb624411a406dd3e21c368ecbbc",
+  "reason": "Explicit clinical document mechanics task: epidemiology template gender agreement, 2027 calendar, and VK MSE date constraints, with full Windows regression evidence.",
   "approved_blobs": {
-    "actions_creation_orchestrator.py": "865a5e521d18d1b54d6c0a50546382d63837cd90",
-    "medical_parser_blocks.py": "145308e7bac7292b33483ffc2af5ed0f7f924521",
-    "medical_parser_inline.py": "51d572125232e1a3d2f9ee606f478f61a0a495a4"
+    "diary_calendar.py": "21a3f1ff631a0d259ae3d45507edbc780f62aa02",
+    "medical_gender.py": "8f9c6fd2a1a0f94c6ff5107da927c607e1ba1c6a",
+    "medical_service.py": "f387954956b9f2e5fad3686fabfc4f4ea1a6b0fc"
   }
 }
