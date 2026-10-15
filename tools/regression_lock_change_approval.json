@@ -16,10 +16,6 @@
     "patient_registry_regression"
   ],
   "approved_blobs": {
-    "main.py": "bc93a0a0fdf09854e27a6e5b02135b1649506a4f",
-    "requirements.txt": "bafcba99d6507104f7d54df27a122e0965970a3c",
-    "requirements_build.txt": "57fa651e27754ac58df724e82267f1c71245c6ca",
-    "licensing_server/requirements.txt": "343713955679c313c2d7a1d1019d6e8032435cfb",
     "diary_calendar.py": "21a3f1ff631a0d259ae3d45507edbc780f62aa02",
     "medical_gender.py": "8f9c6fd2a1a0f94c6ff5107da927c607e1ba1c6a",
     "medical_service.py": "f387954956b9f2e5fad3686fabfc4f4ea1a6b0fc",
