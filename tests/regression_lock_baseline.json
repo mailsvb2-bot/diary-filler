@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "4b7be35bc20dd41f4cca4340d17875b1c86d6b1c",
-  "baseline_note": "Recovery candidate 4b7be35bc20dd41f4cca4340d17875b1c86d6b1c validated by License Server CI #314 (run 37431204371) and Windows EXE Build #1797 (run 37431204358). Full hosted Windows path passed: regression locks, document mechanics, production safety/audit/release gates, golden DOCX, clinical roundtrip/boundary suites, full user journey, My Patients, 255-output matrix, Tk GUI, packaged intake, EXE build, installer, and install/uninstall smoke.",
+  "baseline_ref": "4b3f1d1de9c91f22cafee055a11b51554f3289ca",
+  "baseline_note": "Exact patch candidate validated by Windows EXE Build run 38805492821 and License Server CI run 38805492843 (2026-10-15). Full regression evidence accepted with exact temporary blob approval; approval removed in subsequent metadata-only baseline commit.",
   "required_approval_evidence": [
     "ci_gate_lock",
     "patient_registry_regression"
