@@ -23,6 +23,6 @@
     "medical_renderer_special.py": "8aabdc649f81d22e5b26f8fceeadd728e09a4a84",
     "tests/patient_registry_regression.py": "31420f25b9da6920c803a6c8b62d8635c2c03f66",
     "tests/verbal_diary_source_regression.py": "64afc4fe4047a240d3dc0ff8932d94ac1a1260c5",
-    "tools/document_mechanics_change_approval.json": "afad439d0675633b2760d645f91d4fe7e04094a1"
+    "tools/document_mechanics_change_approval.json": "c2fe3626ac73c158450fdb8dcba6737ab46dad9d"
   }
 }
