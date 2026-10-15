@@ -454,6 +454,8 @@ class MedicalDocumentService:
             data.vk_protocol_number = self._require_text(data.vk_protocol_number, "номер протокола ВК на МСЭ")
             data.vk_protocol_date = self._normalize_required_date(data.vk_protocol_date, "Дата протокола ВК на МСЭ")
             self._ensure_date_not_before_admission(data.admission_date, data.vk_protocol_date, "Дата протокола ВК на МСЭ")
+            self._ensure_date_not_after_discharge(data.discharge_date, data.vk_date, "Дата ВК на МСЭ")
+            self._ensure_date_not_after_discharge(data.discharge_date, data.vk_protocol_date, "Дата протокола ВК на МСЭ")
             data.vk_mse_work_org, data.vk_mse_position = self._normalize_commission_work_fields(
                 explicit_org=data.vk_mse_work_org,
                 explicit_position=data.vk_mse_position,

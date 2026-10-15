@@ -30,6 +30,8 @@ FIXED_HOLIDAYS: frozenset[tuple[int, int]] = frozenset(
 YEAR_SPECIFIC_NON_WORKING_DATES: dict[int, frozenset[tuple[int, int]]] = {
     2025: frozenset({(5, 2), (5, 8), (6, 13), (11, 3), (12, 31)}),
     2026: frozenset({(1, 9), (3, 9), (5, 11), (12, 31)}),
+    # Resolution No. 1187 (17.09.2026) and statutory holiday carry-overs.
+    2027: frozenset({(2, 22), (5, 3), (5, 10), (6, 14), (11, 5), (12, 31)}),
 }
 
 # A transferred weekend can become a working day. This must also be explicit;
