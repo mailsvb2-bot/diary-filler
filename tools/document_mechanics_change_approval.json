@@ -1,10 +1,12 @@
 {
   "schema_version": 1,
-  "base_sha": "bb7110eedc9a4eba61c35e1e4c75aebcbd145cc9",
-  "reason": "Explicit task: clinical document gender agreement, 2027 calendar, VK MSE date boundaries. Validate combined candidate in full Windows CI.",
+  "base_sha": "55d22ee6e305e515850985e6fd11b36ecd50029a",
+  "reason": "Explicit end-to-end scenario changes: invalid DOCX error, MSE disability selection, sick leave term and dynamic epicrisis dates, validated by full Windows regression.",
   "approved_blobs": {
-    "diary_calendar.py": "21a3f1ff631a0d259ae3d45507edbc780f62aa02",
-    "medical_gender.py": "8f9c6fd2a1a0f94c6ff5107da927c607e1ba1c6a",
-    "medical_service.py": "f387954956b9f2e5fad3686fabfc4f4ea1a6b0fc"
+    "actions_ui_state.py": "93ab3fcf078f53a2967a9d13b19501030ccaf8a1",
+    "dialog_expert.py": "3ad61b456d00eb6a20149b911a343af8d8417ac7",
+    "diary_service.py": "623237dcddeff760d000d64b32f644e89be8463e",
+    "medical_formatting.py": "a94aca11dc8a036a5b8a804cf8bf36039ffb84ff",
+    "medical_renderer_special.py": "8aabdc649f81d22e5b26f8fceeadd728e09a4a84"
   }
 }

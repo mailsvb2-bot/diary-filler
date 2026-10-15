@@ -181,6 +181,10 @@ class DialogExpertMixin:
         if sick_leave_vk_selected:
             self.expert_sick_leave_needed_var.set("да")
             self._update_expert_sick_leave_display()
+        # VK na MSE explicitly requests disability registration; a stale
+        # negative value must not abort after the remaining dialogs.
+        if "vk_mse" in selected and self._normalize_yes_no(self.disability_needed_var.get()) != "да":
+            self.disability_needed_var.set("да")
         disability_docs = {"primary", "admission_doctor_referral"}
         expert_work_docs = {"primary", "discharge", "commission", "admission_doctor_referral"}
         epi_docs = {"discharge", "commission", "vk_mse", "sick_leave_vk", "rvk"}

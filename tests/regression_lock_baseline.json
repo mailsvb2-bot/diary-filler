@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "5a84564b81702fe0e0d8bd55892c5adfb4bec8d7",
-  "baseline_note": "Combined diary-filler fixes validated by Windows EXE Build run 38812309250 and License Server CI run 38812309255. Exact protected mechanics approval retained for merging the validated medical changes onto base bb7110e.",
+  "baseline_ref": "8e873c3b57bebd7905c7e948930fe1b9fc176b08",
+  "baseline_note": "Scenario patch candidate fully validated by Windows EXE Build run 38816022492 and License Server CI run 38816022585. Regression, document mechanics and packaged installer checks were green.",
   "required_approval_evidence": [
     "ci_gate_lock",
     "patient_registry_regression"
