@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "4b7be35bc20dd41f4cca4340d17875b1c86d6b1c",
+  "reason": "Approve exact uninstall Run key import and cryptography 50.0.0 dependency updates after full CI regression and Windows packaging validation.",
+  "required_evidence": [
+    "document_mechanics_guard",
+    "full_patient_replay",
+    "golden_docx",
+    "staff_profile_regression",
+    "gender_generation_matrix",
+    "desktop_intake_contract",
+    "intake_lifecycle_regression",
+    "packaged_desktop_intake_e2e",
+    "installer_uninstall_smoke",
+    "ci_gate_lock",
+    "patient_registry_regression"
+  ],
+  "approved_blobs": {
+    "main.py": "bc93a0a0fdf09854e27a6e5b02135b1649506a4f",
+    "requirements.txt": "bafcba99d6507104f7d54df27a122e0965970a3c",
+    "requirements_build.txt": "57fa651e27754ac58df724e82267f1c71245c6ca",
+    "licensing_server/requirements.txt": "343713955679c313c2d7a1d1019d6e8032435cfb"
+  }
+}
