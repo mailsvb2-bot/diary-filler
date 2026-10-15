@@ -35,6 +35,7 @@ from startup import (
     DESKTOP_DIRECT_PRIMARY_ARGUMENT,
     _create_root,
     _desktop_agent_is_active,
+    _desktop_remove_agent_run_key,
     claim_desktop_gui_session,
     _startup_log_path,
     _write_startup_error,

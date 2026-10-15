@@ -30,3 +30,4 @@ Thumbs.db
 .idea/
 release/
 .ruff_cache/
+generation_finalize_profile.json
