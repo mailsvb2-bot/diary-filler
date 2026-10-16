@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "8e873c3b57bebd7905c7e948930fe1b9fc176b08",
-  "baseline_note": "Scenario patch candidate fully validated by Windows EXE Build run 38816022492 and License Server CI run 38816022585. Regression, document mechanics and packaged installer checks were green.",
+  "baseline_ref": "7a681d905132ad7b491c676a91bc1d0f854e8260",
+  "baseline_note": "Clinical parser completeness candidate validated by Windows EXE Build run 38889914129 with exact temporary regression and document-mechanics approvals; baseline advanced in metadata-only commit.",
   "required_approval_evidence": [
     "ci_gate_lock",
     "patient_registry_regression"
