@@ -25,6 +25,54 @@ from patient_registry import (
 PATIENT_PRIMARY_HOLD_MS = 2000
 
 
+def fit_patient_window_to_screen(width: int, height: int, screen_width: int, screen_height: int):
+    usable_w = max(480, int(screen_width) - 24)
+    usable_h = max(360, int(screen_height) - 72)
+    width = min(int(width), usable_w)
+    height = min(int(height), usable_h)
+    return width, height, min(720, width), min(440, height)
+
+
+def _wheel_steps(event) -> int:
+    num = getattr(event, "num", None)
+    if num == 4:
+        return -1
+    if num == 5:
+        return 1
+    delta = int(getattr(event, "delta", 0) or 0)
+    if not delta:
+        return 0
+    if abs(delta) >= 120:
+        return -int(delta / 120)
+    return -1 if delta > 0 else 1
+
+
+def bind_patient_list_wheel(win, canvas) -> None:
+    def on_wheel(event):
+        steps = _wheel_steps(event)
+        if steps:
+            try:
+                canvas.yview_scroll(steps * 3, "units")
+            except tk.TclError:
+                pass
+        return "break"
+
+    for sequence in ("<MouseWheel>", "<Button-4>", "<Button-5>"):
+        win.bind(sequence, on_wheel, add="+")
+
+
+def bind_label_wrap_to_width(label, *, minimum: int = 160) -> None:
+    def on_configure(event):
+        wanted = max(minimum, int(event.width) - 4)
+        try:
+            if abs(int(float(label.cget("wraplength"))) - wanted) > 2:
+                label.configure(wraplength=wanted)
+        except (tk.TclError, ValueError):
+            pass
+
+    label.bind("<Configure>", on_configure, add="+")
+
+
 def bind_patient_primary_press(
     widget,
     *,
@@ -435,8 +483,11 @@ class PatientRegistryMixin:
         win.configure(bg=DEEP)
         width = 900 if not startup_mode else 840
         height = 620 if not startup_mode else 560
-        win.geometry(f"{width}x{height}")
-        win.minsize(720, 440)
+        width, height, min_width, min_height = fit_patient_window_to_screen(
+            width, height, win.winfo_screenwidth(), win.winfo_screenheight()
+        )
+        win.geometry(f"{width}x{height}+{max(0, (win.winfo_screenwidth() - width) // 2)}+0")
+        win.minsize(min_width, min_height)
         if startup_mode:
             try:
                 win.attributes("-topmost", True)
@@ -562,6 +613,9 @@ class PatientRegistryMixin:
             font=self._font(9),
         ).pack(fill="x", padx=16, pady=(0, 8))
 
+        footer = tk.Frame(win, bg=DEEP)
+        footer.pack(side="bottom", fill="x", padx=16, pady=(0, 14))
+
         list_shell = tk.Frame(win, bg=PANEL, highlightbackground=BORDER_SOFT, highlightthickness=1)
         list_shell.pack(fill="both", expand=True, padx=16, pady=(0, 10))
         canvas = tk.Canvas(list_shell, bg=PANEL, highlightthickness=0, bd=0)
@@ -574,8 +628,7 @@ class PatientRegistryMixin:
         rows.bind("<Configure>", lambda _e: canvas.configure(scrollregion=canvas.bbox("all")))
         canvas.bind("<Configure>", lambda e: canvas.itemconfigure(window_id, width=e.width))
 
-        footer = tk.Frame(win, bg=DEEP)
-        footer.pack(fill="x", padx=16, pady=(0, 14))
+        bind_patient_list_wheel(win, canvas)
 
         def clear_rows() -> None:
             for child in rows.winfo_children():
@@ -584,7 +637,7 @@ class PatientRegistryMixin:
         def add_patient_row(entry: PatientRegistryEntry, query_date: date) -> None:
             row = tk.Frame(rows, bg=PANEL)
             row.pack(fill="x", padx=10, pady=6)
-            row.grid_columnconfigure(0, weight=1)
+            row.grid_columnconfigure(0, weight=1, minsize=160)
 
             admission_text = (
                 entry.admission_date.strftime("%d.%m.%Y")
@@ -605,6 +658,7 @@ class PatientRegistryMixin:
                 font=self._font(10, "bold"),
             )
             title_label.grid(row=0, column=0, sticky="ew")
+            bind_label_wrap_to_width(title_label)
 
             details = "Без больничного листа на выбранную дату."
             next_vk = None
@@ -655,6 +709,7 @@ class PatientRegistryMixin:
                 font=self._font(9),
             )
             details_label.grid(row=1, column=0, sticky="ew", pady=(3, 0))
+            bind_label_wrap_to_width(details_label)
 
             def open_primary() -> None:
                 self._open_registry_primary_document(entry, parent=win)
@@ -750,7 +805,7 @@ class PatientRegistryMixin:
                     fg=MUTED,
                     justify="left",
                     anchor="w",
-                    wraplength=760,
+                    wraplength=640,
                     font=self._font(10),
                     pady=16,
                 ).pack(fill="x", padx=10)
@@ -785,7 +840,7 @@ class PatientRegistryMixin:
                         fg=WARN,
                         justify="left",
                         anchor="w",
-                        wraplength=760,
+                        wraplength=640,
                         font=self._font(9),
                     ).pack(fill="x", padx=18, pady=(0, 3))
                 if len(snapshot.issues) > 10:
