@@ -149,6 +149,16 @@ jobs:
           PYTHONPATH: .
         run: python tests/patient_registry_visibility_regression.py
 
+      - name: Run diary joint exam working-day regression
+        env:
+          PYTHONPATH: .
+        run: python tests/diary_joint_exam_working_day_regression.py
+
+      - name: Run main window small screen regression
+        env:
+          PYTHONPATH: .
+        run: python tests/main_window_small_screen_regression.py
+
       - name: Run Windows E1 exhaustive finite user matrix
         env:
           PYTHONPATH: .
