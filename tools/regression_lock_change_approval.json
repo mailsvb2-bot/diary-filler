@@ -25,6 +25,6 @@
     "tests/golden_docx_manifest.json": "9bc81bcfac48578000bc0cfdfc25c749688ed651",
     "tests/diary_joint_exam_working_day_regression.py": "85cc7206e98ff5af275c586030eb701ea23c7ba0",
     "tests/main_window_small_screen_regression.py": "ee66122496c0608817d55499b931c5d7534260c9",
-    "tools/document_mechanics_change_approval.json": "9201662e3420c8fc5f03df7901d06cca4cab39ad"
+    "tools/document_mechanics_change_approval.json": "13a889796e7947561168957e7bc0588a1fcce4a1"
   }
 }
