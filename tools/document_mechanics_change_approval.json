@@ -1,12 +1,11 @@
 {
   "schema_version": 1,
-  "base_sha": "55d22ee6e305e515850985e6fd11b36ecd50029a",
-  "reason": "Explicit end-to-end scenario changes: invalid DOCX error, MSE disability selection, sick leave term and dynamic epicrisis dates, validated by full Windows regression.",
+  "base_sha": "8857267ee92999583d54056fca562effa0246686",
+  "reason": "Explicit parser completeness fixes: clinical headings, reused joint examination birth date and RVK tail boundaries; full Windows E2E regression required.",
   "approved_blobs": {
-    "actions_ui_state.py": "93ab3fcf078f53a2967a9d13b19501030ccaf8a1",
-    "dialog_expert.py": "3ad61b456d00eb6a20149b911a343af8d8417ac7",
-    "diary_service.py": "623237dcddeff760d000d64b32f644e89be8463e",
-    "medical_formatting.py": "a94aca11dc8a036a5b8a804cf8bf36039ffb84ff",
-    "medical_renderer_special.py": "8aabdc649f81d22e5b26f8fceeadd728e09a4a84"
+    "medical_parser.py": "5ea006f26093be42dd5ad636763768c20c921a98",
+    "medical_parser_blocks.py": "df9edd8eec543898cad9457b9da222ce42c7c237",
+    "medical_text_utils.py": "6ed4d0e8c90667c6d1783df26fbe97131222457b",
+    "medical_parser_demographics.py": "e97120705a0638edc5ceffb165b2cb9c9bebe27f"
   }
 }

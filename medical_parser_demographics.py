@@ -224,7 +224,7 @@ class MedicalParserDemographicsMixin:
                 birth_or_age = clean_value(age.group(1))
             else:
                 date_or_year = re.search(r"\b(\d{2}\.\d{2}\.(?:\d{2}|\d{4})|[12]\d{3}\s*(?:г\.?\s*р\.?)?)\b", compact)
-                if date_or_year:
+                if date_or_year and fio:
                     birth_or_age = clean_value(date_or_year.group(1))
 
         # Адрес / место жительства и место работы.

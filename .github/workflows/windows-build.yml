@@ -124,6 +124,16 @@ jobs:
           PYTHONPATH: .
         run: python tests/one_paragraph_primary_regression.py
 
+      - name: Run heading synonym completeness regression
+        env:
+          PYTHONPATH: .
+        run: python tests/heading_synonym_completeness_regression.py
+
+      - name: Run reused document boundary regression
+        env:
+          PYTHONPATH: .
+        run: python tests/reused_document_boundary_regression.py
+
       - name: Run full user journey regression
         env:
           PYTHONPATH: .
