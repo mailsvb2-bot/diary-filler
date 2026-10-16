@@ -19,6 +19,7 @@ from patient_registry import (
     open_patient_document,
     open_patient_folder,
     scan_patient_registry,
+    patient_document_labels,
     sick_leave_days_on,
 )
 
@@ -461,6 +462,33 @@ class PatientRegistryMixin:
         if self.output_vars["rvk"].get():
             self.create_selected_outputs(print_after=False)
 
+    def _prepare_registry_quick_document(self, entry: PatientRegistryEntry, kind: str,
+                                         *, owner_window: tk.Toplevel) -> None:
+        """Select a canonical generator; never create files before explicit confirmation."""
+        if kind not in ("primary", "discharge", DIARY_KIND):
+            return
+        if entry.primary_path is None:
+            messagebox.showwarning("Мои пациенты",
+                "Нет доступного исходного Word-документа пациента.", parent=owner_window)
+            return
+        if not self._load_registry_primary_document(entry, parent=owner_window):
+            return
+        for key, variable in self.output_vars.items():
+            variable.set(key == kind)
+        self._redraw_selection_controls()
+        self._on_output_toggle(kind)
+        if not self.output_vars[kind].get():
+            return
+        try:
+            self.root.deiconify()
+            self.root.lift()
+            self.root.focus_force()
+        except Exception:
+            pass
+        # The normal Create action remains under physician control, including
+        # discharge date, treatment and diary input checks. Never auto-generate.
+        owner_window.destroy()
+
     def show_my_patients(self, *, startup_mode: bool = False, start_in_tray: bool = False) -> None:
         # A logon summary must never block Windows with a first-run folder dialog.
         # Folder onboarding belongs to the normal visible application start.
@@ -711,6 +739,30 @@ class PatientRegistryMixin:
             details_label.grid(row=1, column=0, sticky="ew", pady=(3, 0))
             bind_label_wrap_to_width(details_label)
 
+            documents = patient_document_labels(entry.folder, primary_path=entry.primary_path,
+                                                single_file=(entry.folder == Path(self._patient_registry_root()).expanduser()))
+            tk.Label(
+                row, text="В папке: " + (" · ".join(documents) if documents else "Word-файлов нет"),
+                bg=PANEL, fg=MUTED, justify="left", anchor="w",
+                wraplength=520, font=self._font(8),
+            ).grid(row=2, column=0, sticky="ew", pady=(3, 0))
+
+            quick = tk.Frame(row, bg=PANEL)
+            quick.grid(row=3, column=0, sticky="w", pady=(5, 0))
+            for caption, kind in (
+                ("Выписной эпикриз", "discharge"),
+                ("Дневники", DIARY_KIND),
+                ("Первичный осмотр", "primary"),
+            ):
+                tk.Button(
+                    quick, text=caption,
+                    command=lambda k=kind, item=entry: self._prepare_registry_quick_document(
+                        item, k, owner_window=win),
+                    bg=PANEL_3, fg=TEXT, relief="flat", padx=6, pady=2,
+                    activebackground=BORDER, activeforeground=TEXT,
+                    cursor="hand2", font=self._font(8),
+                ).pack(side="left", padx=(0, 5))
+
             def open_primary() -> None:
                 self._open_registry_primary_document(entry, parent=win)
 
@@ -732,7 +784,7 @@ class PatientRegistryMixin:
 
             if next_vk is not None or entry.rvk_referral:
                 actions = tk.Frame(row, bg=PANEL)
-                actions.grid(row=0, column=1, rowspan=2, sticky="e", padx=(12, 0))
+                actions.grid(row=0, column=1, rowspan=4, sticky="e", padx=(12, 0))
                 if next_vk is not None:
                     tk.Button(
                         actions,

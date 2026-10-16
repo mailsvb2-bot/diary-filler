@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "base_sha": "fe366a86c068e62543dca6689b27c5aece423205",
-  "reason": "Explicit clinical diary calendar and small-screen Tk UI fixes from deep audit archive; all protected files remain fully tested.",
+  "base_sha": "e30db140cf575410848ade01e139e3520ad798e5",
+  "reason": "Requested My Patients patient-folder document inventory and compact canonical generation quick actions; explicit doctor confirmation remains required.",
   "approved_blobs": {
-    "diary_batch.py": "a35ec23f56084073b45a5d674a3bea19efef51ad",
-    "app_initialization.py": "d8fef1655a24a9287452e2e8e32feae7ac14e524"
+    "patient_registry.py": "94e36fe775fe6a276cbe94c2fc35222f95817643",
+    "patient_registry_mixin.py": "2bd87248cccdb05f93462dde8a47e85357ec76f5"
   }
 }
