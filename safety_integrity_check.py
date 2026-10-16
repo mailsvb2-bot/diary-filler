@@ -117,8 +117,8 @@ def _test_text_diary_signature_semantics() -> None:
     assert DIARY_DEPARTMENT_HEAD_SIGNATURE == "Зав.отделением Можарова Е.А."
     entries, final_rows, _gender = diary_batch_module._build_text_diary_entries(
         ["Пациент спокоен"],
-        [date(2026, 1, day) for day in (2, 3, 4, 5, 6, 7)],
-        discharge_date_value=date(2026, 1, 7),
+        [date(2026, 1, day) for day in (12, 13, 14, 15, 16, 17)],
+        discharge_date_value=date(2026, 1, 17),
         force_final_diary=True,
         repeat_statuses=True,
         patient_gender="male",
@@ -178,14 +178,15 @@ def _test_text_diary_user_route(tmp: Path) -> None:
     assert tuple(line.split()[0] for line in diary_lines) == expected_prefixes, diary_lines
     assert "02.01.26 Пациентка спокойна" in text, text
     assert "03.01.26 Пациентка спокойна" in text, text
-    assert "04.01.26 Совместный осмотр с зав. отделением" in text, text
+    assert "04.01.26 Пациентка спокойна" in text, text
     assert "08.01.26 Пациентка спокойна" in text, text
+    assert "09.01.26 Совместный осмотр с зав. отделением" in text, text
     canonical_final_diary = (
         "Состояние улучшилось. Жалоб не предъявляет. Острой психотической симптоматики не продуцирует. "
         "Фон настроения ровный, суицидальных мыслей не высказывает. Критика к состоянию присутствует. "
         "На текущую дату оформлена выписка из стационара. Даны рекомендации"
     )
-    assert f"09.01.26 {canonical_final_diary}" in text, text
+    assert canonical_final_diary in text.split("09.01.26 Совместный осмотр с зав. отделением", 1)[1], text
     for omitted in ("05.01.26", "06.01.26", "07.01.26"):
         assert omitted not in text, (omitted, text)
     assert "12.01.26" not in text, text
@@ -196,10 +197,10 @@ def _test_text_diary_user_route(tmp: Path) -> None:
     nonempty_paragraphs = [paragraph for paragraph in rendered.paragraphs if paragraph.text.strip()]
     joint_heading = next(
         paragraph for paragraph in nonempty_paragraphs
-        if paragraph.text.strip() == "04.01.26 Совместный осмотр с зав. отделением"
+        if paragraph.text.strip() == "09.01.26 Совместный осмотр с зав. отделением"
     )
     joint_index = nonempty_paragraphs.index(joint_heading)
-    assert "Пациентка спокойна" in nonempty_paragraphs[joint_index + 1].text
+    assert "Состояние улучшилось" in nonempty_paragraphs[joint_index + 1].text
     assert nonempty_paragraphs[joint_index + 2].text == "Лечащий врач Балаганин С.В."
     assert nonempty_paragraphs[joint_index + 3].text == "Зав.отделением Можарова Е.А."
     for paragraph in nonempty_paragraphs:

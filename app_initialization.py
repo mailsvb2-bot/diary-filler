@@ -11,6 +11,11 @@ from medical_constants import DOCUMENT_ORDER
 from medical_models import PatientData
 
 
+def usable_screen_size(screen_w: int, screen_h: int) -> tuple[int, int]:
+    """Reserve space for window decorations and taskbar."""
+    return max(640, int(screen_w) - 16), max(420, int(screen_h) - 56)
+
+
 class _LazyMedicalDocumentService:
     """Create the DOCX service only when a file operation really needs it.
 
@@ -259,12 +264,13 @@ class AppInitializationMixin:
         # чтобы сохранить внешний вид референса, но не открывать окно слишком большим.
         screen_w = self.root.winfo_screenwidth()
         screen_h = self.root.winfo_screenheight()
-        target_w = max(900, int(screen_w * 0.577))
-        target_h = max(700, int(screen_h * 0.63))
+        usable_w, usable_h = usable_screen_size(screen_w, screen_h)
+        target_w = min(max(900, int(screen_w * 0.577)), usable_w)
+        target_h = min(max(700, int(screen_h * 0.63)), usable_h)
         start_x = max(0, (screen_w - target_w) // 2)
-        start_y = max(0, (screen_h - target_h) // 2)
+        start_y = max(0, (usable_h - target_h) // 2)
         self.root.geometry(f"{target_w}x{target_h}+{start_x}+{start_y}")
-        self.root.minsize(980, 700)
+        self.root.minsize(min(980, usable_w), min(700, usable_h))
         # Масштабируем не только окно, но и сам UI. Иначе при 1/3 экрана
         # карточки 03/04 уезжали вниз, а часть полей визуально обрезалась.
         self._ui_scale = max(0.57, min(1.0, target_w / 1408, target_h / 1056))

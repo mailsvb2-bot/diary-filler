@@ -913,7 +913,9 @@ def _assert_joint_diary_semantics_contract() -> None:
     for required in (
         "class TextDiaryEntry",
         "is_joint_head_exam: bool",
-        "is_joint_head_exam=(index % 3 == 0)",
+        "is_joint_head_exam=is_joint",
+        "def _joint_head_exam_flags(",
+        "is_non_working_day(item_date)",
         "if entry.is_joint_head_exam:",
         "doctor_paragraph.alignment = WD_ALIGN_PARAGRAPH.RIGHT",
         "head_paragraph.alignment = WD_ALIGN_PARAGRAPH.RIGHT",
@@ -949,14 +951,24 @@ def _assert_joint_diary_semantics_contract() -> None:
     import diary_batch as diary_batch_module
     entries, final_rows, _ = diary_batch_module._build_text_diary_entries(
         ["Пациент спокоен"],
-        [date(2026, 1, day) for day in (2, 3, 4, 5, 6, 7)],
-        discharge_date_value=date(2026, 1, 7),
+        [date(2026, 1, day) for day in (12, 13, 14, 15, 16, 17)],
+        discharge_date_value=date(2026, 1, 17),
         force_final_diary=True,
         repeat_statuses=True,
         patient_gender="male",
     )
     if [entry.sequence_number for entry in entries if entry.is_joint_head_exam] != [3, 6]:
         _fail("every-third-diary joint examination semantics changed")
+    carried, _rows, _ = diary_batch_module._build_text_diary_entries(
+        ["Пациент спокоен"],
+        [date(2026, 1, day) for day in (2, 3, 4, 5, 6, 7, 8, 9, 12, 13)],
+        discharge_date_value=date(2026, 1, 20),
+        force_final_diary=True,
+        repeat_statuses=True,
+        patient_gender="male",
+    )
+    if [entry.date for entry in carried if entry.is_joint_head_exam and not entry.is_final] != [date(2026, 1, 12)]:
+        _fail("joint examination with the department head landed on a non-working day")
     if final_rows != 1 or not entries[-1].is_final:
         _fail("joint-exam semantics broke the independent final-discharge diary")
 

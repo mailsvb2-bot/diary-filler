@@ -57,7 +57,8 @@ class WindowMixin:
         shell = tk.Frame(self.root, bg=DEEP, highlightthickness=1, highlightbackground="#123958")
         shell.pack(fill="both", expand=True, padx=0, pady=0)
 
-        content = tk.Frame(shell, bg=DEEP)
+        holder = self._build_scrollable_viewport(shell)
+        content = tk.Frame(holder, bg=DEEP)
         content.pack(fill="both", expand=True, padx=self._px(21, 12), pady=(self._px(14, 7), self._px(10, 4)))
 
         content.grid_columnconfigure(0, weight=1)
@@ -72,6 +73,48 @@ class WindowMixin:
         self._build_input_files_card(content)
         self._build_create_checklist_card(content)
         self._build_action_bar(content)
+
+    def _build_scrollable_viewport(self, parent) -> tk.Frame:
+        viewport = tk.Canvas(parent, bg=DEEP, highlightthickness=0, bd=0)
+        scrollbar = tk.Scrollbar(parent, orient="vertical", command=viewport.yview)
+        viewport.configure(yscrollcommand=scrollbar.set)
+        viewport.pack(side="left", fill="both", expand=True)
+        holder = tk.Frame(viewport, bg=DEEP)
+        window_id = viewport.create_window((0, 0), window=holder, anchor="nw")
+        state = {"shown": False}
+
+        def sync(_event=None) -> None:
+            width = max(1, viewport.winfo_width())
+            visible = max(1, viewport.winfo_height())
+            needed = holder.winfo_reqheight()
+            height = max(visible, needed)
+            viewport.itemconfigure(window_id, width=width, height=height)
+            viewport.configure(scrollregion=(0, 0, width, height))
+            overflow = needed > visible + 1
+            if overflow and not state["shown"]:
+                scrollbar.pack(side="right", fill="y", before=viewport)
+                state["shown"] = True
+            elif not overflow and state["shown"]:
+                scrollbar.pack_forget()
+                viewport.yview_moveto(0)
+                state["shown"] = False
+
+        def on_wheel(event) -> None:
+            if not state["shown"] or isinstance(event.widget, (tk.Listbox, tk.Text)):
+                return
+            num = getattr(event, "num", None)
+            delta = int(getattr(event, "delta", 0) or 0)
+            step = 1 if num == 5 else -1 if num == 4 else (-1 if delta > 0 else 1 if delta < 0 else 0)
+            if step:
+                viewport.yview_scroll(step * 3, "units")
+
+        viewport.bind("<Configure>", sync, add="+")
+        holder.bind("<Configure>", sync, add="+")
+        for sequence in ("<MouseWheel>", "<Button-4>", "<Button-5>"):
+            self.root.bind(sequence, on_wheel, add="+")
+        self._main_viewport = viewport
+        self._main_viewport_scrollbar = scrollbar
+        return holder
 
     def _px(self, value: int | float, minimum: int = 1) -> int:
         """Pixel helper: сохраняет пропорции референса на компактном окне 1/3 экрана."""

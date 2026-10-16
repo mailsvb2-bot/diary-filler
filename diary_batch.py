@@ -21,6 +21,7 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 
 from diary_table_cells import apply_compact_diary_layout
 from diary_dates import parse_admission_month_year, parse_full_date, parse_optional_discharge_date
+from diary_calendar import is_non_working_day
 from diary_constants import (
     DIARY_DEPARTMENT_HEAD_SIGNATURE,
     DIARY_JOINT_HEAD_EXAM_TITLE,
@@ -310,11 +311,31 @@ def _build_text_diary_entries(
             text=text,
             sequence_number=index,
             is_final=is_final,
-            is_joint_head_exam=(index % 3 == 0),
+            is_joint_head_exam=is_joint,
         )
-        for index, (item_date, text, is_final) in enumerate(raw_entries, start=1)
+        for index, ((item_date, text, is_final), is_joint) in enumerate(
+            zip(raw_entries, _joint_head_exam_flags(raw_entries)),
+            start=1,
+        )
     ]
     return entries, final_rows, gender_replacements
+
+
+def _joint_head_exam_flags(raw_entries: Sequence[tuple[date, str, bool]]) -> list[bool]:
+    """Carry third-entry joint examinations from non-working days to the next eligible entry.
+
+    The independently dated final discharge diary may receive an overdue exam.
+    """
+    flags: list[bool] = []
+    since_last = 0
+    for item_date, _text, is_final in raw_entries:
+        since_last += 1
+        if since_last >= 3 and (is_final or not is_non_working_day(item_date)):
+            flags.append(True)
+            since_last = 0
+        else:
+            flags.append(False)
+    return flags
 
 
 def _write_text_diary_docx(
