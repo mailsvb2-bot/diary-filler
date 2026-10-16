@@ -159,6 +159,11 @@ jobs:
           PYTHONPATH: .
         run: python tests/main_window_small_screen_regression.py
 
+      - name: Run patient document quick action regression
+        env:
+          PYTHONPATH: .
+        run: python tests/patient_document_quick_actions_regression.py
+
       - name: Run Windows E1 exhaustive finite user matrix
         env:
           PYTHONPATH: .

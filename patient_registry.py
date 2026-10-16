@@ -76,6 +76,44 @@ class PatientRegistrySnapshot:
         return tuple(item for item in self.patients if item.rvk_referral)
 
 
+_PATIENT_DOCUMENT_TYPES = (
+    ("Первичный осмотр", ("первичн", "первичка")),
+    ("Направление на госпитализацию", ("направлен", "госпитализац")),
+    ("Дневники", ("дневник", "дневники")),
+    ("Выписной эпикриз", ("выписной", "эпикриз")),
+    ("Совместный осмотр", ("совместн", "комиссионн")),
+    ("Акт РВК", ("акт рвк", "акт для рвк")),
+    ("ВК на МСЭ", ("вк на мсэ",)),
+    ("ВК по больничному", ("вк больничн", "больничн вк")),
+    ("Осмотр приёмного покоя", ("приёмного покоя", "приемного покоя")),
+)
+
+
+def patient_document_labels(folder: str | Path, *, primary_path: Path | None = None, single_file: bool = False) -> tuple[str, ...]:
+    """Read-only filename classification. No parsing or mutations on UI refresh."""
+    root = Path(folder)
+    try:
+        files = sorted(
+            (p for p in root.iterdir() if p.is_file()
+             and not _is_word_lock_file(p) and p.suffix.lower() in SUPPORTED_WORD_SUFFIXES),
+            key=lambda p: p.name.casefold(),
+        )
+    except OSError:
+        return ()
+    # Root-level entries represent one file; do not show other patients' files.
+    if single_file and primary_path is not None:
+        files = [primary_path]
+    labels = []
+    for path in files:
+        stem = _normalize_primary_stem(path.stem).lower()
+        found = next((label for label, aliases in _PATIENT_DOCUMENT_TYPES
+                      if any(alias in stem for alias in aliases)), None)
+        label = found or "Другой Word"
+        if label not in labels:
+            labels.append(label)
+    return tuple(labels)
+
+
 def _normalize_primary_stem(value: str) -> str:
     return " ".join(str(value or "").replace("ё", "е").split())
 
