@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "7a681d905132ad7b491c676a91bc1d0f854e8260",
-  "baseline_note": "Clinical parser completeness candidate validated by Windows EXE Build run 38889914129 with exact temporary regression and document-mechanics approvals; baseline advanced in metadata-only commit.",
+  "baseline_ref": "eda2b33a6872da37ff0fce23a204ab538f475be4",
+  "baseline_note": "Patient registry visibility and My Patients UI fully tested by Windows EXE Build run 38956637994 and License Server CI run 38956637888. Exact temporary regression approval removed in subsequent metadata-only commit.",
   "required_approval_evidence": [
     "ci_gate_lock",
     "patient_registry_regression"
