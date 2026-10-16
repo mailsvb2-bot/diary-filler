@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "eda2b33a6872da37ff0fce23a204ab538f475be4",
-  "baseline_note": "Patient registry visibility and My Patients UI fully tested by Windows EXE Build run 38956637994 and License Server CI run 38956637888. Exact temporary regression approval removed in subsequent metadata-only commit.",
+  "baseline_ref": "c4e17a341770956a290538735034dfb7dff92881",
+  "baseline_note": "Deep audit diary joint-exam and small-screen UI candidate validated by Windows EXE Build run 38958881314 and License Server CI run 38958881394. Temporary regression approval retired in metadata-only follow-up.",
   "required_approval_evidence": [
     "ci_gate_lock",
     "patient_registry_regression"
