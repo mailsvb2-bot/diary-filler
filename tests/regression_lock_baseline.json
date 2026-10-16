@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "c4e17a341770956a290538735034dfb7dff92881",
-  "baseline_note": "Deep audit diary joint-exam and small-screen UI candidate validated by Windows EXE Build run 38958881314 and License Server CI run 38958881394. Temporary regression approval retired in metadata-only follow-up.",
+  "baseline_ref": "b37f6a8f04d37a41bf228c7e915abeed20ba732e",
+  "baseline_note": "My Patients compact document inventory and quick-action candidate validated with Windows EXE Build 38970512290 and License Server CI 38970512230; temporary exact-blob approval retired in metadata-only commit.",
   "required_approval_evidence": [
     "ci_gate_lock",
     "patient_registry_regression"
