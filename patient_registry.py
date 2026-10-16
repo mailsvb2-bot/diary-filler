@@ -96,7 +96,7 @@ def primary_candidates(folder: str | Path) -> list[Path]:
     result = [
         path
         for path in root.iterdir()
-        if path.is_file() and is_primary_patient_filename(path)
+        if path.is_file() and not _is_word_lock_file(path) and is_primary_patient_filename(path)
     ]
     return sorted(result, key=lambda p: (rank.get(p.suffix.lower(), 9), p.name.casefold()))
 
@@ -128,8 +128,14 @@ def patient_source_candidates(folder: str | Path) -> list[Path]:
     return sorted(fallback, key=lambda p: (rank.get(p.suffix.lower(), 9), p.name.casefold()))
 
 
+def _is_word_lock_file(path: str | Path) -> bool:
+    return Path(path).name.startswith("~$")
+
+
 def is_discharge_patient_filename(path: str | Path) -> bool:
     candidate = Path(path)
+    if _is_word_lock_file(candidate):
+        return False
     if candidate.suffix.lower() not in SUPPORTED_WORD_SUFFIXES:
         return False
     stem = _normalize_primary_stem(candidate.stem)
@@ -145,6 +151,61 @@ def has_discharge_patient_document(folder: str | Path) -> bool:
         path.is_file() and is_discharge_patient_filename(path)
         for path in root.iterdir()
     )
+
+
+def discharge_patient_documents(folder: str | Path) -> list[Path]:
+    root = Path(folder)
+    if not root.is_dir():
+        return []
+    return sorted(
+        (path for path in root.iterdir() if path.is_file() and is_discharge_patient_filename(path)),
+        key=lambda path: path.name.casefold(),
+    )
+
+
+def _discharge_hides_patient(folder: Path, as_of: date, parse) -> bool:
+    for document in discharge_patient_documents(folder):
+        try:
+            discharge = _date_value(getattr(parse(document), "discharge_date", ""))
+        except Exception:
+            discharge = None
+        if discharge is None or discharge <= as_of:
+            return True
+    return False
+
+
+def _contains_word_documents(folder: Path) -> bool:
+    return any(
+        path.is_file() and not _is_word_lock_file(path) and path.suffix.lower() in SUPPORTED_WORD_SUFFIXES
+        for path in folder.iterdir()
+    )
+
+
+def _patient_folders(directory: Path, issues: list, *, max_depth: int = 2) -> list[Path]:
+    result: list[Path] = []
+
+    def visit(folder: Path, depth: int) -> None:
+        try:
+            children = sorted((p for p in folder.iterdir() if p.is_dir()), key=lambda p: p.name.casefold())
+        except OSError as exc:
+            issues.append(PatientRegistryIssue(folder, f"Папка недоступна для чтения ({type(exc).__name__})."))
+            return
+        for child in children:
+            if child.name.startswith((".", "~$")):
+                continue
+            try:
+                has_word = _contains_word_documents(child)
+                has_subfolders = any(p.is_dir() for p in child.iterdir())
+            except OSError as exc:
+                issues.append(PatientRegistryIssue(child, f"Папка недоступна для чтения ({type(exc).__name__})."))
+                continue
+            if not has_word and has_subfolders and depth < max_depth:
+                visit(child, depth + 1)
+            else:
+                result.append(child)
+
+    visit(directory, 0)
+    return result
 
 
 def _date_value(value: str) -> date | None:
@@ -353,13 +414,28 @@ def scan_patient_registry(
     patients: list[PatientRegistryEntry] = []
     issues: list[PatientRegistryIssue] = []
 
-    for patient_folder in sorted((p for p in directory.iterdir() if p.is_dir()), key=lambda p: p.name.casefold()):
-        # User contract: if this patient folder contains any Word document
-        # recognized as «Выписной», do not show that patient in «Мои пациенты».
-        if has_discharge_patient_document(patient_folder):
-            continue
+    work_items: list[tuple[Path, list[Path] | None]] = []
+    try:
+        root_primaries = primary_candidates(directory)
+    except OSError as exc:
+        root_primaries = []
+        issues.append(PatientRegistryIssue(directory, f"Папка недоступна для чтения ({type(exc).__name__})."))
+    for path in root_primaries:
+        work_items.append((directory, [path]))
+    for folder in _patient_folders(directory, issues):
+        work_items.append((folder, None))
 
-        candidates = patient_source_candidates(patient_folder)
+    for patient_folder, explicit_candidates in work_items:
+        if explicit_candidates is None:
+            try:
+                if _discharge_hides_patient(patient_folder, target_date, parse):
+                    continue
+                candidates = patient_source_candidates(patient_folder)
+            except OSError as exc:
+                issues.append(PatientRegistryIssue(patient_folder, f"Папка недоступна для чтения ({type(exc).__name__})."))
+                continue
+        else:
+            candidates = explicit_candidates
         if not candidates:
             warning = "В папке пациента не найден Word-документ для распознавания."
             issues.append(PatientRegistryIssue(patient_folder, warning))
@@ -414,9 +490,13 @@ def scan_patient_registry(
                 )
             )
         elif admission > target_date:
+            issues.append(PatientRegistryIssue(
+                patient_folder if explicit_candidates is None else chosen,
+                f"Дата поступления {admission.strftime('%d.%m.%Y')} позже выбранной даты — пациент не показан. Проверьте дату в первой строке первичного документа.",
+            ))
             continue
 
-        fio = " ".join(str(getattr(parsed_data, "fio", "") or "").split()) or patient_folder.name
+        fio = " ".join(str(getattr(parsed_data, "fio", "") or "").split()) or (patient_folder.name if explicit_candidates is None else chosen.stem)
         sick_needed, sick_from, sick_warning = _sick_leave_state(parsed_data, chosen)
         if sick_warning:
             warnings.append(sick_warning)

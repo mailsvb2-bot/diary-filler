@@ -1,11 +1,9 @@
 {
   "schema_version": 1,
-  "base_sha": "8857267ee92999583d54056fca562effa0246686",
-  "reason": "Explicit parser completeness fixes: clinical headings, reused joint examination birth date and RVK tail boundaries; full Windows E2E regression required.",
+  "base_sha": "1c8c13e82184416db3580d0f4bb0c335164712a4",
+  "reason": "Explicit user patch for patient registry visibility and UI fit, preserving Windows regression gates.",
   "approved_blobs": {
-    "medical_parser.py": "5ea006f26093be42dd5ad636763768c20c921a98",
-    "medical_parser_blocks.py": "df9edd8eec543898cad9457b9da222ce42c7c237",
-    "medical_text_utils.py": "6ed4d0e8c90667c6d1783df26fbe97131222457b",
-    "medical_parser_demographics.py": "e97120705a0638edc5ceffb165b2cb9c9bebe27f"
+    "patient_registry.py": "ea21a92fd93ea0c17930770bdcfe1cccb983c33b",
+    "patient_registry_mixin.py": "399c99b9eea16c027cd2ea8fd6428d4f2b030f97"
   }
 }

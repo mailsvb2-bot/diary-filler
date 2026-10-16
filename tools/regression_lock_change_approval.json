@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "7a681d905132ad7b491c676a91bc1d0f854e8260",
+  "reason": "Patient registry visibility correctness changes with new CI regression, requiring complete Windows EXE and license CI.",
+  "required_evidence": [
+    "document_mechanics_guard",
+    "full_patient_replay",
+    "golden_docx",
+    "staff_profile_regression",
+    "gender_generation_matrix",
+    "desktop_intake_contract",
+    "intake_lifecycle_regression",
+    "packaged_desktop_intake_e2e",
+    "installer_uninstall_smoke",
+    "ci_gate_lock",
+    "patient_registry_regression"
+  ],
+  "approved_blobs": {
+    "patient_registry.py": "ea21a92fd93ea0c17930770bdcfe1cccb983c33b",
+    "patient_registry_mixin.py": "399c99b9eea16c027cd2ea8fd6428d4f2b030f97",
+    ".github/workflows/windows-build.yml": "9d6fb164ae8570f8cd8dcb2fa8bf75b6077f5582",
+    "tests/patient_registry_visibility_regression.py": "b0d47c2d9cf7ab4087ef88ab5e337db06c47f72f",
+    "tools/document_mechanics_change_approval.json": "83e610b05d580d30642681d8ae32cbfeec71890f"
+  }
+}

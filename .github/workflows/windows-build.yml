@@ -144,6 +144,11 @@ jobs:
           PYTHONPATH: .
         run: python tests/patient_registry_regression.py
 
+      - name: Run patient registry visibility regression
+        env:
+          PYTHONPATH: .
+        run: python tests/patient_registry_visibility_regression.py
+
       - name: Run Windows E1 exhaustive finite user matrix
         env:
           PYTHONPATH: .
