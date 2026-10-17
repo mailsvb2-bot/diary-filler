@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "b37f6a8f04d37a41bf228c7e915abeed20ba732e",
-  "baseline_note": "My Patients compact document inventory and quick-action candidate validated with Windows EXE Build 38970512290 and License Server CI 38970512230; temporary exact-blob approval retired in metadata-only commit.",
+  "baseline_ref": "d02997ff57b32c8955357fa3f05d6e50775dd78c",
+  "baseline_note": "TkDND root cleanup and patient inventory/layout validated by Windows Build run 39041126655 and License CI run 39041126742; temporary regression approval retired in metadata-only commit.",
   "required_approval_evidence": [
     "ci_gate_lock",
     "patient_registry_regression"
