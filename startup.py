@@ -40,13 +40,28 @@ def _write_startup_error(details: str) -> None:
         pass
 
 
+def _discard_partial_root(previous_default) -> None:
+    """Destroy an orphan Tk interpreter after an unsuccessful TkDND load."""
+    orphan = getattr(tk, "_default_root", None)
+    if orphan is None or orphan is previous_default:
+        return
+    try:
+        orphan.destroy()
+    except Exception:
+        pass
+    if getattr(tk, "_default_root", None) is orphan:
+        tk._default_root = previous_default
+
+
 def _create_root(*, require_dnd: bool = False):
     """Create the root; production may fall back, release probes require TkDND."""
+    previous_default = getattr(tk, "_default_root", None)
     try:
         from tkinterdnd2 import TkinterDnD  # type: ignore
 
         return TkinterDnD.Tk()
     except Exception:
+        _discard_partial_root(previous_default)
         if require_dnd:
             raise
         return tk.Tk()

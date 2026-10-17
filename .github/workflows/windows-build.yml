@@ -164,6 +164,16 @@ jobs:
           PYTHONPATH: .
         run: python tests/patient_document_quick_actions_regression.py
 
+      - name: Run startup fallback root regression
+        env:
+          PYTHONPATH: .
+        run: python tests/startup_fallback_root_regression.py
+
+      - name: Run patient registry quick actions layout regression
+        env:
+          PYTHONPATH: .
+        run: python tests/patient_registry_quick_actions_layout_regression.py
+
       - name: Run Windows E1 exhaustive finite user matrix
         env:
           PYTHONPATH: .
