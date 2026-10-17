@@ -41,7 +41,7 @@ def check_registry():
         snapshot = scan_patient_registry(root, as_of=date(2026, 10, 16), parser=parser)
         names = {item.fio for item in snapshot.patients}
         assert names == {"Обычный Тест", "Заранее Тест", "Блок Тест",
-                         "Вложенный0 Тест", "Вложенный1 Тест", "Корневой Тест"}, (names, snapshot.issues)
+                         "Вложенный0 Тест", "Вложенный1 Тест", "Корневой Тест", "БезДаты Тест"}, (names, snapshot.issues)
         assert all(item.folder.name != "Палата 5" for item in snapshot.patients)
         assert any("16.10.2027" in issue.message and "не показан" in issue.message for issue in snapshot.issues)
         past = scan_patient_registry(root, as_of=date(2026, 10, 10), parser=parser)

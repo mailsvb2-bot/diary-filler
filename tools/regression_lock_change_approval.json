@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "7ec7974e4d6eb5e4819ec0a19c35c2b3a16fa85f",
+  "reason": "Review long-stay dynamic epicrisis and patient census behavior fixes with a new Windows regression gate; require all existing end-to-end validations before updating baseline.",
+  "required_evidence": [
+    "document_mechanics_guard",
+    "full_patient_replay",
+    "golden_docx",
+    "staff_profile_regression",
+    "gender_generation_matrix",
+    "desktop_intake_contract",
+    "intake_lifecycle_regression",
+    "packaged_desktop_intake_e2e",
+    "installer_uninstall_smoke",
+    "ci_gate_lock",
+    "patient_registry_regression"
+  ],
+  "approved_blobs": {
+    ".github/workflows/windows-build.yml": "7132fc4f6e13581a28ad94f8c5fa78c494fc6637",
+    "diary_service.py": "b34a6b409956aab3c692ff76f8b9bcc8cd1b5472",
+    "patient_registry.py": "e2eb7b14bb1223fd5661e35b0631704884c72bfc",
+    "tests/audit_long_stay_registry_regression.py": "f68c5e46fa7b52a34276a0c9b5615527fe11b022",
+    "tools/document_mechanics_change_approval.json": "b3f7cb8b817726d86ab3e3add84cc8a84413d857",
+    "tests/patient_registry_regression.py": "9e09b60c04ccb7aaaae62ff54e81f5744db2d5b7",
+    "tests/patient_registry_visibility_regression.py": "6832d13f77920fd52685ea926baa1dab6401a748"
+  }
+}
