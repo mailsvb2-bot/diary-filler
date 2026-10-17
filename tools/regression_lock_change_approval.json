@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "e15803e1f8a58ded40db61643a9b5f7378a19df5",
+  "reason": "Explicit license-aware publication of Windows EXE and installer artifacts; no changes to medical document mechanics or verification gates.",
+  "required_evidence": [
+    "ci_gate_lock",
+    "patient_registry_regression",
+    "packaged_desktop_intake_e2e",
+    "installer_uninstall_smoke"
+  ],
+  "approved_blobs": {
+    ".github/workflows/windows-build.yml": "b33d1de7954d4126572c2fd65c51bef3004abe6b"
+  }
+}
