@@ -35,6 +35,6 @@
     "window_mixin.py": "d68aae0aa17d33a4c88f863eb3dfd8fadc4d438f",
     "tests/oct17_clinical_safety_regression.py": "91bb4f48a07f5b9f215d77e479c8b986d45fd765",
     ".github/workflows/windows-build.yml": "5434ff70ef52bc2397e554d028d93d8ac6aaa7fe",
-    "tools/document_mechanics_change_approval.json": "0275c1468e9814eb320c65f66c1d8146b7918d0e"
+    "tools/document_mechanics_change_approval.json": "96f6de89909b0de148f1ec5028d9ac7150efd86c"
   }
 }
