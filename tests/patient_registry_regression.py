@@ -228,7 +228,8 @@ def _assert_registry_scan_and_independent_timelines() -> None:
 
         # Only sick leave active on the requested summary date is prioritized.
         # A future opening date stays in the ordinary group until it begins.
-        assert snapshot.patients[0].fio == "Маркер Иванов Тестовый", snapshot.patients
+        assert snapshot.patients[0].is_on_sick_leave_on(date(2026, 10, 1)), snapshot.patients
+        assert any(item.fio == "Маркер Иванов Тестовый" for item in snapshot.sick_leave_patients)
         future_sick = next(item for item in snapshot.patients if "Кузнецов" in item.fio)
         assert future_sick.is_on_sick_leave_on(date(2026, 10, 1)) is False
         assert snapshot.patients.index(future_sick) > 0
