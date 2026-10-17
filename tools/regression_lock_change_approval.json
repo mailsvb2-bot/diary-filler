@@ -3,6 +3,15 @@
   "baseline_ref": "5779e28c9981ccf74006da7ab83bf25a1c4568b1",
   "reason": "Fix false-negative empty GitHub vars handling for explicitly approved temporary unlicensed main-only EXE and installer publication without loosening license checks.",
   "required_evidence": [
+    "document_mechanics_guard",
+    "full_patient_replay",
+    "golden_docx",
+    "staff_profile_regression",
+    "gender_generation_matrix",
+    "desktop_intake_contract",
+    "intake_lifecycle_regression",
+    "packaged_desktop_intake_e2e",
+    "installer_uninstall_smoke",
     "ci_gate_lock",
     "patient_registry_regression"
   ],
