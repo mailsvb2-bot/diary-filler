@@ -58,6 +58,29 @@ def main() -> None:
                 f"WINDOWS BINARY LICENSING CONTRACT FAILED: {label} upload is not license-gated"
             )
 
+    # Temporary unlicensed main uploads are separate from the two licensed
+    # uploads, must be explicitly tied to the pre-existing release policy,
+    # and cannot run on PRs or partially configured licensed builds.
+    temporary_condition = (
+        "if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main'"
+        " && vars.MEDICAL_AUTOFILL_LICENSE_SERVER_URL == ''"
+        " && vars.MEDICAL_AUTOFILL_LICENSE_PUBLIC_KEY_B64 == '' }}"
+    )
+    if "MEDICAL_AUTOFILL_RELEASE_LICENSE_MODE: \"unlicensed\"" not in release:
+        raise SystemExit("WINDOWS BINARY LICENSING CONTRACT FAILED: no approved unlicensed release policy")
+    if text.count(temporary_condition) != 3:
+        raise SystemExit("WINDOWS BINARY LICENSING CONTRACT FAILED: invalid temporary main upload gating")
+    for step in (
+        "Verify temporary unlicensed main build before publication",
+        "Upload temporary unlicensed EXE for main",
+        "Upload temporary unlicensed installer for main",
+    ):
+        start = text.find("      - name: " + step)
+        if start < 0 or temporary_condition not in text[start:start+350]:
+            raise SystemExit("WINDOWS BINARY LICENSING CONTRACT FAILED: unsafe temporary artifact step " + step)
+    if "LICENSE_REQUIRED = False" not in text or "LICENSE_PUBLIC_KEY_B64 = ''" not in text:
+        raise SystemExit("WINDOWS BINARY LICENSING CONTRACT FAILED: missing embedded unlicensed build verification")
+
     source_block = text[source:]
     if CONDITION in source_block:
         raise SystemExit(
