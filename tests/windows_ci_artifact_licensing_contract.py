@@ -63,8 +63,8 @@ def main() -> None:
     # and cannot run on PRs or partially configured licensed builds.
     temporary_condition = (
         "if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main'"
-        " && vars.MEDICAL_AUTOFILL_LICENSE_SERVER_URL == ''"
-        " && vars.MEDICAL_AUTOFILL_LICENSE_PUBLIC_KEY_B64 == '' }}"
+        " && !vars.MEDICAL_AUTOFILL_LICENSE_SERVER_URL"
+        " && !vars.MEDICAL_AUTOFILL_LICENSE_PUBLIC_KEY_B64 }}"
     )
     if "MEDICAL_AUTOFILL_RELEASE_LICENSE_MODE: \"unlicensed\"" not in release:
         raise SystemExit("WINDOWS BINARY LICENSING CONTRACT FAILED: no approved unlicensed release policy")
