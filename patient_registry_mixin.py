@@ -586,7 +586,12 @@ class PatientRegistryMixin:
             except Exception:
                 tray.stop()
 
+        def stop_tray_on_destroy(event) -> None:
+            if event.widget is win:
+                tray.stop()
+
         win.protocol("WM_DELETE_WINDOW", close_window)
+        win.bind("<Destroy>", stop_tray_on_destroy, add="+")
         win.after(200, poll_tray_requests)
 
         top = tk.Frame(win, bg=DEEP)
@@ -631,7 +636,7 @@ class PatientRegistryMixin:
             font=self._font(11, "bold"),
         )
         summary.pack(fill="x", padx=16, pady=(0, 4))
-        tk.Label(
+        hint_label = tk.Label(
             win,
             text="Клик по пациенту — открыть Word-файл • удерживать левую кнопку 2 секунды — добавить как первичный",
             bg=DEEP,
@@ -639,7 +644,9 @@ class PatientRegistryMixin:
             justify="left",
             anchor="w",
             font=self._font(9),
-        ).pack(fill="x", padx=16, pady=(0, 8))
+        )
+        hint_label.pack(fill="x", padx=16, pady=(0, 8))
+        bind_label_wrap_to_width(hint_label)
 
         footer = tk.Frame(win, bg=DEEP)
         footer.pack(side="bottom", fill="x", padx=16, pady=(0, 14))
@@ -741,14 +748,16 @@ class PatientRegistryMixin:
 
             documents = patient_document_labels(entry.folder, primary_path=entry.primary_path,
                                                 single_file=(entry.folder == Path(self._patient_registry_root()).expanduser()))
-            tk.Label(
+            documents_label = tk.Label(
                 row, text="В папке: " + (" · ".join(documents) if documents else "Word-файлов нет"),
                 bg=PANEL, fg=MUTED, justify="left", anchor="w",
                 wraplength=520, font=self._font(8),
-            ).grid(row=2, column=0, sticky="ew", pady=(3, 0))
+            )
+            documents_label.grid(row=2, column=0, sticky="ew", pady=(3, 0))
+            bind_label_wrap_to_width(documents_label)
 
             quick = tk.Frame(row, bg=PANEL)
-            quick.grid(row=3, column=0, sticky="w", pady=(5, 0))
+            quick.grid(row=3, column=0, columnspan=2, sticky="w", pady=(5, 0))
             for caption, kind in (
                 ("Выписной эпикриз", "discharge"),
                 ("Дневники", DIARY_KIND),
@@ -784,7 +793,7 @@ class PatientRegistryMixin:
 
             if next_vk is not None or entry.rvk_referral:
                 actions = tk.Frame(row, bg=PANEL)
-                actions.grid(row=0, column=1, rowspan=4, sticky="e", padx=(12, 0))
+                actions.grid(row=0, column=1, rowspan=3, sticky="e", padx=(12, 0))
                 if next_vk is not None:
                     tk.Button(
                         actions,

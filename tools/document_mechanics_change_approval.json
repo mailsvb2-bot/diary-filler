@@ -1,9 +1,10 @@
 {
   "schema_version": 1,
-  "base_sha": "e30db140cf575410848ade01e139e3520ad798e5",
-  "reason": "Requested My Patients patient-folder document inventory and compact canonical generation quick actions; explicit doctor confirmation remains required.",
+  "base_sha": "3d84e282cf7ce2d66b3acbfcf4394d988a2a7816",
+  "reason": "Restore safe TkDND failed-initialization cleanup and correct My Patients document labels, scrolling, grid width and tray lifecycle.",
   "approved_blobs": {
-    "patient_registry.py": "94e36fe775fe6a276cbe94c2fc35222f95817643",
-    "patient_registry_mixin.py": "2bd87248cccdb05f93462dde8a47e85357ec76f5"
+    "startup.py": "94f8c4837c9aed8f3ddd529046724f8fb14bf501",
+    "patient_registry.py": "8439b068a74c0a003a953126296a3a2eb01982c6",
+    "patient_registry_mixin.py": "69bbd29ac3eae04ec390f5adb4ef81a29d7a3fe7"
   }
 }

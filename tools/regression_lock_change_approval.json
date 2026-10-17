@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "b37f6a8f04d37a41bf228c7e915abeed20ba732e",
+  "reason": "Candidate with Tk root and patients UI fixes, exact-blob approvals and additional regressions; do not waive CI checks.",
+  "required_evidence": [
+    "document_mechanics_guard",
+    "full_patient_replay",
+    "golden_docx",
+    "staff_profile_regression",
+    "gender_generation_matrix",
+    "desktop_intake_contract",
+    "intake_lifecycle_regression",
+    "packaged_desktop_intake_e2e",
+    "installer_uninstall_smoke",
+    "ci_gate_lock",
+    "patient_registry_regression"
+  ],
+  "approved_blobs": {
+    "startup.py": "94f8c4837c9aed8f3ddd529046724f8fb14bf501",
+    "patient_registry.py": "8439b068a74c0a003a953126296a3a2eb01982c6",
+    "patient_registry_mixin.py": "69bbd29ac3eae04ec390f5adb4ef81a29d7a3fe7",
+    ".github/workflows/windows-build.yml": "1292a154c50e6eef8b4e7bfa04fa673dbbb99fcf",
+    "tests/patient_registry_visibility_regression.py": "35e040e8a08ce28a771d6d3c56e3bb0b716f160a",
+    "tests/startup_fallback_root_regression.py": "cb9894c180c772793ca34baa40bfa1351f35b610",
+    "tests/patient_registry_quick_actions_layout_regression.py": "039d3605e28c565b7d30b8f2311dfc4d95b7ba7c",
+    "tools/document_mechanics_change_approval.json": "0956d3673a7d0217e2c9953dfc58a616387184d6"
+  }
+}

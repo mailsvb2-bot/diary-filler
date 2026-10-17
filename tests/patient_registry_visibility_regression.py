@@ -51,13 +51,17 @@ def check_ui():
     assert prm.fit_patient_window_to_screen(900, 620, 1920, 1080) == (900, 620, 720, 440)
     w, h, mw, mh = prm.fit_patient_window_to_screen(900, 620, 911, 512)
     assert w <= 887 and h <= 440 and mw <= w and mh <= h
+    _, high_dpi_height, _, _ = prm.fit_patient_window_to_screen(900, 620, 1093, 614)
+    assert high_dpi_height <= 542
     assert prm._wheel_steps(SimpleNamespace(num=None, delta=-120)) == 1
     assert prm._wheel_steps(SimpleNamespace(num=None, delta=240)) == -2
     assert prm._wheel_steps(SimpleNamespace(num=5, delta=0)) == 1
+    assert prm._wheel_steps(SimpleNamespace(num=4, delta=0)) == -1
     source = Path(prm.__file__).read_text(encoding="utf-8")
     body = source[source.index("def show_my_patients("):]
     assert body.index('footer.pack(side="bottom"') < body.index("list_shell.pack(")
     assert "bind_patient_list_wheel(win, canvas)" in body
+    assert "fit_patient_window_to_screen(" in body
     assert "bind_label_wrap_to_width(details_label)" in body
 
 if __name__ == "__main__":
