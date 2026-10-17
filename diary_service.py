@@ -15,6 +15,7 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 
 from diary_batch import _clinical_diary_offsets, create_text_diaries
 from diary_calendar import is_fixed_holiday, is_non_working_day
+from medical_formatting import format_staff_short_name
 from diary_dates import parse_full_date, parse_optional_discharge_date
 from diary_models import DiaryBatchResult
 
@@ -97,11 +98,12 @@ def _signature_person_name(value: object) -> str:
     text = " ".join(str(value or "").strip().split())
     if not text:
         return ""
-    return re.sub(
+    person = re.sub(
         r"(?i)^\s*(?:лечащий\s+врач|врач(?:-психиатр)?|заведующ(?:ий|ая)\s+отделением|зав\.?\s*отделением|зав\.?\s*отд\.?)\s*[:—–-]?\s*",
         "",
         text,
     ).strip()
+    return format_staff_short_name(person) if person else ""
 
 
 def dynamic_epicrisis_signature_lines(

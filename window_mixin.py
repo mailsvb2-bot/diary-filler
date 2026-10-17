@@ -354,7 +354,8 @@ class WindowMixin:
             fg=TEXT,
             font=self._font(21 if self._compact_ui else 23, "bold"),
         )
-        title.grid(row=0, column=0, sticky="w")
+        title.grid(row=0, column=0, sticky="ew")
+        title_box.grid_columnconfigure(0, weight=1)
 
         subtitle = tk.Label(
             title_box,
@@ -363,9 +364,12 @@ class WindowMixin:
             fg=MUTED,
             font=self._font(11 if self._compact_ui else 12),
         )
-        subtitle.grid(row=1, column=0, sticky="w", pady=(self._px(2, 0), 0))
+        subtitle.grid(row=1, column=0, sticky="ew", pady=(self._px(2, 0), 0))
         self._bind_window_drag(title)
         self._bind_window_drag(subtitle)
+        for label in (title, subtitle):
+            label.configure(anchor="w", justify="left")
+            self._bind_header_label_wrap(label)
 
         controls = tk.Frame(header, bg=DEEP)
         controls.grid(row=0, column=1, sticky="ne", pady=(0, self._px(18 if self._compact_ui else 22, 7)))
@@ -418,6 +422,21 @@ class WindowMixin:
         self._window_control_button(controls, "−", self._minimize_window).grid(row=0, column=control_column)
         self._window_control_button(controls, "□", self._toggle_maximize).grid(row=0, column=control_column + 1)
         self._window_control_button(controls, "×", self._request_close, danger=True).grid(row=0, column=control_column + 2)
+
+    @staticmethod
+    def _bind_header_label_wrap(label: tk.Label, *, minimum: int = 120) -> None:
+        def on_configure(event) -> None:
+            wanted = max(minimum, int(event.width) - 4)
+            try:
+                current = int(float(label.cget("wraplength") or 0))
+                if current == 0 and label.winfo_reqwidth() <= int(event.width):
+                    return
+                if abs(current - wanted) > 2:
+                    label.configure(wraplength=wanted)
+            except (tk.TclError, ValueError):
+                pass
+
+        label.bind("<Configure>", on_configure, add="+")
 
     def _header_icon_button(self, parent, text: str, command) -> tk.Button:
         return tk.Button(

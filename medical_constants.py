@@ -42,3 +42,14 @@ DOCUMENT_LABELS: Dict[str, str] = {
 
 DOCUMENT_ORDER = ("primary", "discharge", "commission", "vk_mse", "admission_doctor_referral", "sick_leave_vk", "rvk")
 TARGET_MEDICAL_FACILITY = "ГБУЗ НО «НКЦПЗ» диспансер №2"
+
+# Missing clinical observations must be disclosed to the physician rather than
+# silently filled. Epidemiology and examination plans come from templates.
+REQUIRED_CLINICAL_SECTIONS: tuple[tuple[str, str], ...] = (
+    ("complaints", "Жалобы"),
+    ("life_anamnesis", "Анамнез жизни"),
+    ("disease_anamnesis", "Анамнез заболевания"),
+    ("mental_status", "Психический статус"),
+    ("somatic_status", "Соматический (сомато-неврологический) статус"),
+    ("diagnosis", "Диагноз"),
+)

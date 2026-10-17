@@ -84,9 +84,10 @@ def build_expert_anamnesis(
                 # Выписной должен хранить два независимых факта:
                 # 1) когда открыт ЛН (из popup «С какого числа больничный лист»);
                 # 2) срок стационарного лечения — строго от даты поступления.
-                line = f"Больничный лист{number_part}."
                 if sick_from:
-                    line += f" Больничный лист открыт с {sick_from}."
+                    line = f"Больничный лист{number_part} открыт с {sick_from}."
+                else:
+                    line = f"Больничный лист{number_part}."
                 start = normalize_text(data.admission_date)
                 finish = normalize_text(data.discharge_date)
                 days = calculate_inclusive_treatment_days(start, finish) if start and finish else None

@@ -215,7 +215,8 @@ class MedicalParserCoreMixin:
         infer from an arbitrary treatment-period sentence elsewhere.
         """
         decision, _date = parse_sick_leave_value(data.sick_leave)
-        if decision:
+        rendered_tail = re.match(r"(?i)^\s*(?:№\s*\S+\s+)?открыт", str(data.sick_leave or ""))
+        if decision and not rendered_tail:
             return
 
         date_token = r"(?:\d{1,2}[./-]\d{1,2}[./-]\d{2,4}|\d{6,8})"

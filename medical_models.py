@@ -428,6 +428,11 @@ class PatientData:
             missing.append("дата госпитализации")
         return missing
 
+    def empty_required_sections(self) -> List[str]:
+        from medical_constants import REQUIRED_CLINICAL_SECTIONS
+        return [label for field, label in REQUIRED_CLINICAL_SECTIONS
+                if not str(getattr(self, field, "") or "").strip()]
+
     def missing_recommended_fields(self) -> List[str]:
         checks = [
             ("адрес регистрации", self.registered),

@@ -1116,7 +1116,7 @@ def _assert_diagnosis_diary_text_contract() -> None:
     required_final_diary_clauses = (
         "Состояние улучшилось. Жалоб не предъявляет. Острой психотической симптоматики не продуцирует. ",
         "Фон настроения ровный, суицидальных мыслей не высказывает. Критика к состоянию присутствует. ",
-        "На текущую дату оформлена выписка из стационара. Даны рекомендации",
+        "На текущую дату оформлена выписка из стационара. Даны рекомендации.",
     )
     if not all(clause in constants for clause in required_final_diary_clauses):
         _fail("canonical universal final-discharge diary text was changed or removed")

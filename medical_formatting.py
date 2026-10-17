@@ -228,7 +228,8 @@ def format_staff_short_name(value: str) -> str:
         return f"{tokens[0]} {tokens[1][0].upper()}.{tokens[2][0].upper()}."
     if len(tokens) == 2:
         if _STAFF_INITIALS_TOKEN_RE.fullmatch(tokens[1]):
-            return text
+            letters = re.findall(r"[A-Za-zА-ЯЁа-яё]", tokens[1])
+            return f"{tokens[0]} " + "".join(f"{letter.upper()}." for letter in letters)
         return f"{tokens[0]} {tokens[1][0].upper()}."
     return text
 
