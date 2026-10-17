@@ -506,7 +506,8 @@ def _assert_discharge_stays_admission_based() -> None:
         expert_sick_leave_number="123456",
     )
     rendered = build_expert_anamnesis(data)
-    assert "Больничный лист открыт с 01.09.2026." in rendered
+    assert "Больничный лист № 123456 открыт с 01.09.2026." in rendered
+    assert "Больничный лист. Больничный лист" not in rendered
     assert "Срок лечения с 10.09.2026 по 20.09.2026, 11 дней." in rendered
     assert "Срок лечения с 01.09.2026" not in rendered
 

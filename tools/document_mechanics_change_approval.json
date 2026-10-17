@@ -1,10 +1,15 @@
 {
   "schema_version": 1,
-  "base_sha": "3d84e282cf7ce2d66b3acbfcf4394d988a2a7816",
-  "reason": "Restore safe TkDND failed-initialization cleanup and correct My Patients document labels, scrolling, grid width and tray lifecycle.",
+  "base_sha": "9008996a67cd57c2aa6bd654f1f2fae59c714882",
+  "reason": "Explicit safe physician clinical warning, sick leave sentence canonicalization, initials punctuation and title layout fixes; never invent missing clinical observations.",
   "approved_blobs": {
-    "startup.py": "94f8c4837c9aed8f3ddd529046724f8fb14bf501",
-    "patient_registry.py": "8439b068a74c0a003a953126296a3a2eb01982c6",
-    "patient_registry_mixin.py": "69bbd29ac3eae04ec390f5adb4ef81a29d7a3fe7"
+    "actions_creation_orchestrator.py": "52530941d9dea5f54a188b242cd2587ff84ae86d",
+    "medical_expert.py": "9dc5d5f8ccec111c1dabd0b5a84196578dfde94a",
+    "medical_parser_core.py": "d1d044e7e663a9e60e1b5477db6fe4ebfae59ef4",
+    "medical_formatting.py": "8b2f7ea72daece2fd2525a266e38d1b1f2a093d8",
+    "medical_gender.py": "86e1ce9a6dcc6fdf5e427a88af7112977c438052",
+    "diary_constants.py": "4163e4bdf1530e89f95d6779626fee7531d7e1db",
+    "diary_service.py": "6966da0db49c8c88677c6aa6839606dde6819400",
+    "window_mixin.py": "d68aae0aa17d33a4c88f863eb3dfd8fadc4d438f"
   }
 }

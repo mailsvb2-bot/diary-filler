@@ -193,7 +193,7 @@ def normalize_staff_references_in_document(doc: DocxDocument, data: PatientData,
     deputy_role = r"(?:Зам(?:еститель|\.)?\s*(?:глав(?:ного)?|гл)\.?\s+врача|Председатель\s+ВК)"
 
     replacements: list[tuple[str, str, str]] = []
-    if configured["doctor"] and configured["doctor"] != "Балаганин С.В":
+    if configured["doctor"] and configured["doctor"] != "Балаганин С.В.":
         replacements.append((doctor_role, r"Балаганин\s+С\.В\.?", configured["doctor"]))
     if configured["head"] and configured["head"] != "Можарова Е.А.":
         replacements.extend([

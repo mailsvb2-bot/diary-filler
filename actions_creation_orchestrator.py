@@ -366,6 +366,35 @@ class ActionsCreationOrchestratorMixin:
             self._generation_action_last_fingerprint = fingerprint
             self._generation_action_cooldown_until = time.monotonic() + 0.75
 
+    def _confirm_empty_required_sections(self) -> bool:
+        """Warn the physician about missing source sections without inventing content."""
+        data = getattr(self, "data", None)
+        if data is None or not hasattr(data, "empty_required_sections"):
+            return True
+        empty = list(data.empty_required_sections())
+        diagnosis_var = getattr(self, "diagnosis_var", None)
+        ui_diagnosis = str(diagnosis_var.get() or "").strip() if diagnosis_var is not None else ""
+        override = str(getattr(self, "_popup_diagnosis_override", "") or "").strip()
+        if "Диагноз" in empty and (ui_diagnosis or override):
+            empty.remove("Диагноз")
+        if not empty:
+            return True
+        self._log("\n⚠ Пустые разделы в исходном документе: " + ", ".join(empty) + "\n")
+        try:
+            return bool(messagebox.askyesno(
+                "Пустые разделы",
+                "В исходном документе пациента не заполнены разделы:\n\n"
+                + "\n".join(f"• {label}" for label in empty)
+                + "\n\nВ созданных документах они останутся пустыми.\n"
+                "Продолжить создание документов?",
+                icon="warning", default="no",
+                parent=getattr(self, "root", None),
+            ))
+        except Exception:
+            # Fail closed: a missing warning dialog must not silently create
+            # records with unreviewed omissions.
+            return False
+
     def _ensure_primary_source_available_for_generation(
         self,
         selected_medical: List[str],
@@ -577,6 +606,9 @@ class ActionsCreationOrchestratorMixin:
         if not self._ensure_epi_source_available_for_generation(selected_medical):
             return
         if not self._ensure_diary_input_sources_available_for_generation(selected_diaries):
+            return
+        if selected_medical and not self._confirm_empty_required_sections():
+            self._set_status("Создание отменено: проверьте пустые разделы")
             return
         if not self._ensure_result_output_path_ready_for_prompts():
             return
