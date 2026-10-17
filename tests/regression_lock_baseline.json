@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "d02997ff57b32c8955357fa3f05d6e50775dd78c",
-  "baseline_note": "TkDND root cleanup and patient inventory/layout validated by Windows Build run 39041126655 and License CI run 39041126742; temporary regression approval retired in metadata-only commit.",
+  "baseline_ref": "e15803e1f8a58ded40db61643a9b5f7378a19df5",
+  "baseline_note": "Validated clinical missing-field warning, expert sick-leave sentence, staff initials and UI wrapping by Windows EXE Build run 39042214507 and License CI run 39042214513; temporary approval removed in following metadata-only commit.",
   "required_approval_evidence": [
     "ci_gate_lock",
     "patient_registry_regression"
