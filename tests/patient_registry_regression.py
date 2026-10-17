@@ -219,13 +219,12 @@ def _assert_registry_scan_and_independent_timelines() -> None:
             return by_path[path]
 
         snapshot = scan_patient_registry(root, as_of=date(2026, 10, 1), parser=parser)
-        # The patient's own "... Выписной.docx" excludes that patient.
-        # All other current-patient folders stay visible, including an RVK-only
-        # patient, renamed primary sources and folders with no readable source.
-        assert len(snapshot.patients) == 8, (snapshot.patients, snapshot.issues)
-        assert len(snapshot.sick_leave_patients) == 2
+        # An undated/unreadable discharge draft must not silently remove a patient.
+        # Only a confirmed discharge date on or before the census date may do so.
+        assert len(snapshot.patients) == 9, (snapshot.patients, snapshot.issues)
+        assert len(snapshot.sick_leave_patients) == 3
         assert len(snapshot.rvk_patients) == 2
-        assert all(item.folder.name != "Выписан" for item in snapshot.patients)
+        assert any(item.folder.name == "Выписан" for item in snapshot.patients)
 
         # Only sick leave active on the requested summary date is prioritized.
         # A future opening date stays in the ordinary group until it begins.
