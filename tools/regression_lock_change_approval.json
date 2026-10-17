@@ -21,6 +21,6 @@
     "patient_registry.py": "e2eb7b14bb1223fd5661e35b0631704884c72bfc",
     "tests/audit_long_stay_registry_regression.py": "f68c5e46fa7b52a34276a0c9b5615527fe11b022",
     "tools/document_mechanics_change_approval.json": "b3f7cb8b817726d86ab3e3add84cc8a84413d857",
-    "tests/patient_registry_regression.py": "84262a60a014ba5baf90b6acdc1a89713de039b1"
+    "tests/patient_registry_regression.py": "9e09b60c04ccb7aaaae62ff54e81f5744db2d5b7"
   }
 }
