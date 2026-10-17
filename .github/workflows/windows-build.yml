@@ -22,7 +22,6 @@ jobs:
       MEDICAL_AUTOFILL_LICENSE_SERVER_URL: ${{ vars.MEDICAL_AUTOFILL_LICENSE_SERVER_URL }}
       MEDICAL_AUTOFILL_LICENSE_PUBLIC_KEY_B64: ${{ vars.MEDICAL_AUTOFILL_LICENSE_PUBLIC_KEY_B64 }}
       MEDICAL_AUTOFILL_LICENSE_REQUIRED: ${{ vars.MEDICAL_AUTOFILL_LICENSE_SERVER_URL != '' && vars.MEDICAL_AUTOFILL_LICENSE_PUBLIC_KEY_B64 != '' && '1' || '0' }}
-      MEDICAL_AUTOFILL_RELEASE_LICENSE_MODE: ${{ vars.MEDICAL_AUTOFILL_RELEASE_LICENSE_MODE }}
 
     steps:
       - name: Checkout
@@ -280,27 +279,44 @@ jobs:
       - name: Build clean source archive
         run: python make_release_zip.py
 
-      - name: Validate binary publication policy
+      # Mirrors the temporary unlicensed distribution policy already approved
+      # in .github/workflows/release.yml. Only publish successful main builds
+      # when BOTH licensing variables are absent, never half-configured builds.
+      - name: Verify temporary unlicensed main build before publication
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.MEDICAL_AUTOFILL_LICENSE_SERVER_URL == '' && vars.MEDICAL_AUTOFILL_LICENSE_PUBLIC_KEY_B64 == '' }}
         shell: pwsh
-        env:
-          RELEASE_MODE: ${{ vars.MEDICAL_AUTOFILL_RELEASE_LICENSE_MODE }}
-          LICENSE_URL: ${{ vars.MEDICAL_AUTOFILL_LICENSE_SERVER_URL }}
-          LICENSE_KEY: ${{ vars.MEDICAL_AUTOFILL_LICENSE_PUBLIC_KEY_B64 }}
         run: |
-          $mode = "$env:RELEASE_MODE".Trim().ToLowerInvariant()
-          $hasLicense = -not [string]::IsNullOrWhiteSpace($env:LICENSE_URL) -and -not [string]::IsNullOrWhiteSpace($env:LICENSE_KEY)
-          if ($mode -eq "licensed" -and -not $hasLicense) {
-            throw "Licensed binary publication requires both license server URL and public key."
+          $config = Get-Content build/generated/license_build_config.py -Raw
+          if ($config -notmatch 'LICENSE_REQUIRED = False' -or
+              $config -notmatch "LICENSE_SERVER_URL = ''" -or
+              $config -notmatch "LICENSE_PUBLIC_KEY_B64 = ''") {
+            throw "Refusing unlicensed artifact publication: embedded licensing is not the approved temporary policy."
           }
-          if ($mode -eq "unlicensed" -and $hasLicense) {
-            throw "Unlicensed publication must not contain licensed configuration."
-          }
-          if ($mode -notin @("licensed", "unlicensed")) {
-            Write-Host "::notice::Binary artifacts not published. Explicitly configure MEDICAL_AUTOFILL_RELEASE_LICENSE_MODE (licensed/unlicensed)."
+          if (-not (Test-Path dist/MedicalDiaryAutofill.exe) -or
+              -not (Test-Path dist/MedicalDiaryAutofill-Setup-1.4.33.exe)) {
+            throw "Expected tested binaries are missing."
           }
 
+      - name: Upload temporary unlicensed EXE for main
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.MEDICAL_AUTOFILL_LICENSE_SERVER_URL == '' && vars.MEDICAL_AUTOFILL_LICENSE_PUBLIC_KEY_B64 == '' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        with:
+          name: MedicalDiaryAutofill-Main-Unlicensed-EXE
+          path: dist/MedicalDiaryAutofill.exe
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload temporary unlicensed installer for main
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.MEDICAL_AUTOFILL_LICENSE_SERVER_URL == '' && vars.MEDICAL_AUTOFILL_LICENSE_PUBLIC_KEY_B64 == '' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        with:
+          name: MedicalDiaryAutofill-Main-Unlicensed-Installer
+          path: dist/MedicalDiaryAutofill-Setup-1.4.33.exe
+          if-no-files-found: error
+          retention-days: 30
+
       - name: Upload EXE artifact
-        if: ${{ vars.MEDICAL_AUTOFILL_RELEASE_LICENSE_MODE == 'unlicensed' || (vars.MEDICAL_AUTOFILL_RELEASE_LICENSE_MODE == 'licensed' && vars.MEDICAL_AUTOFILL_LICENSE_SERVER_URL != '' && vars.MEDICAL_AUTOFILL_LICENSE_PUBLIC_KEY_B64 != '') }}
+        if: ${{ vars.MEDICAL_AUTOFILL_LICENSE_SERVER_URL != '' && vars.MEDICAL_AUTOFILL_LICENSE_PUBLIC_KEY_B64 != '' }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
           name: MedicalDiaryAutofill-Windows-EXE
@@ -308,7 +324,7 @@ jobs:
           if-no-files-found: error
 
       - name: Upload Windows installer artifact
-        if: ${{ vars.MEDICAL_AUTOFILL_RELEASE_LICENSE_MODE == 'unlicensed' || (vars.MEDICAL_AUTOFILL_RELEASE_LICENSE_MODE == 'licensed' && vars.MEDICAL_AUTOFILL_LICENSE_SERVER_URL != '' && vars.MEDICAL_AUTOFILL_LICENSE_PUBLIC_KEY_B64 != '') }}
+        if: ${{ vars.MEDICAL_AUTOFILL_LICENSE_SERVER_URL != '' && vars.MEDICAL_AUTOFILL_LICENSE_PUBLIC_KEY_B64 != '' }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
           name: MedicalDiaryAutofill-Windows-Installer
