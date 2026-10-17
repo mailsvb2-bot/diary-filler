@@ -19,6 +19,7 @@
     ".github/workflows/windows-build.yml": "7132fc4f6e13581a28ad94f8c5fa78c494fc6637",
     "diary_service.py": "b34a6b409956aab3c692ff76f8b9bcc8cd1b5472",
     "patient_registry.py": "e2eb7b14bb1223fd5661e35b0631704884c72bfc",
-    "tests/audit_long_stay_registry_regression.py": "f68c5e46fa7b52a34276a0c9b5615527fe11b022"
+    "tests/audit_long_stay_registry_regression.py": "f68c5e46fa7b52a34276a0c9b5615527fe11b022",
+    "tools/document_mechanics_change_approval.json": "b3f7cb8b817726d86ab3e3add84cc8a84413d857"
   }
 }
