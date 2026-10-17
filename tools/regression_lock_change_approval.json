@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "5779e28c9981ccf74006da7ab83bf25a1c4568b1",
+  "reason": "Fix false-negative empty GitHub vars handling for explicitly approved temporary unlicensed main-only EXE and installer publication without loosening license checks.",
+  "required_evidence": [
+    "ci_gate_lock",
+    "patient_registry_regression"
+  ],
+  "approved_blobs": {
+    ".github/workflows/windows-build.yml": "942f64604cfa46cadfdf1c6db1f6be1e9f9fd1c6",
+    "tests/windows_ci_artifact_licensing_contract.py": "6bbbfcc1d0704c19cf1785ea9d8ad0ba938e8882"
+  }
+}
