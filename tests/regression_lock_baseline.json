@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "3487b86be04c025077feff755c7d12d3ff2dd4bf",
-  "baseline_note": "Reviewed address/popup source fidelity candidate 3487b86be04c025077feff755c7d12d3ff2dd4bf; full Windows EXE Build 39113680486 attempt 2 and License Server CI 39113680476 passed. Temporary approval retired.",
+  "baseline_ref": "7ec7974e4d6eb5e4819ec0a19c35c2b3a16fa85f",
+  "baseline_note": "Approved main-only temporary unlicensed artifact condition correction, verified Windows EXE Build 39055868424 and License Server CI 39055868904; temporary approval retired.",
   "required_approval_evidence": [
     "ci_gate_lock",
     "patient_registry_regression"
