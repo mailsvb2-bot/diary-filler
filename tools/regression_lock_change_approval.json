@@ -20,6 +20,7 @@
     "patient_registry.py": "19edf5dcf17710b3eb2d8c4f77e009c0eff473fd",
     "tests/discharge_address_preflight_regression.py": "f0b671a3ed2f5665bce922e538d8a5a15a3ddc20",
     "tests/patient_registry_visibility_regression.py": "d64bd7b6b7a93a53e725f9318f398921a669d43e",
-    "tools/document_mechanics_change_approval.json": "efc0ed7fe2d5e65a91ee73601242d6669b8831a2"
+    "tools/document_mechanics_change_approval.json": "efc0ed7fe2d5e65a91ee73601242d6669b8831a2",
+    "tests/oct17_clinical_safety_regression.py": "9def8d340f73b4ee11dfdd6fc4e3f88413b7eb82"
   }
 }
