@@ -16,6 +16,12 @@ from actions_creation_orchestrator import ActionsCreationOrchestratorMixin
 from medical_models import PatientData
 
 def main():
+    # The former bulk warning must not run before the per-field preflight.
+    source = (ROOT / "actions_creation_orchestrator.py").read_text(encoding="utf-8")
+    start = source.index("def _create_selected_outputs_impl(")
+    end = source.index("with TemporaryDirectory(", start)
+    assert "_confirm_empty_required_sections()" not in source[start:end]
+    assert "_resolve_unrecognized_generation_fields(" in source[start:end]
     service = MedicalDocumentService()
     with TemporaryDirectory() as tmp:
         source = Path(tmp) / "primary.docx"

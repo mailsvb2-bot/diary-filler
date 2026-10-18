@@ -41,6 +41,10 @@ def main():
         assert format_staff_short_name(raw)==expected,(raw,format_staff_short_name(raw))
     assert FINAL_DIARY_TEXT.endswith("Даны рекомендации.")
     s=(Path(__file__).resolve().parents[1]/"actions_creation_orchestrator.py").read_text(encoding="utf-8")
-    assert "if selected_medical and not self._confirm_empty_required_sections():" in s
+    generation = s[s.index("def _create_selected_outputs_impl("):]
+    assert "if selected_medical and not self._confirm_empty_required_sections():" not in generation
+    assert "if not self._resolve_unrecognized_generation_fields(generation_patient_data, selected_medical):" in generation
+    assert "_missing_clinical_fields_for_popup(data)" in s
+    assert "messagebox.askyesnocancel(" in s
     print("OCT17 CLINICAL SAFETY REGRESSION OK")
 if __name__=="__main__":main()

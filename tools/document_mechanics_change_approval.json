@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "base_sha": "ac730090a6972c00a2a7f0d5f746488578fa2804",
-  "reason": "Explicitly reviewed missing-address and clinical-field preflight on the same medical generation snapshot after registry merge.",
+  "base_sha": "9631a2c778f2d1a7686140dcca33937da86ea1f8",
+  "reason": "Explicitly reviewed correction of duplicate physician confirmation in the canonical output generation preflight.",
   "approved_blobs": {
-    "actions_creation_orchestrator.py": "d09b4c30ca63552e93e7dd2bdf3cf3643fd8cfc3"
+    "actions_creation_orchestrator.py": "e149036658bfe94d3b7f196173b9b3fa40e2d60a"
   }
 }

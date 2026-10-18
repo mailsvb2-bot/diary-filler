@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "503bdc5a04c1bcb8b20f7ad58dd4e370b3d717e2",
-  "baseline_note": "Verified combined registry and doctor clarification candidate 503bdc5a04c1bcb8b20f7ad58dd4e370b3d717e2; Windows EXE Build 39122043399 and License Server CI 39122043383 passed.",
+  "baseline_ref": "b78eb1dd1b1736138384b93dd06b578952e6c865",
+  "baseline_note": "Verified canonical physician clarification and patient registry missing discharge evidence candidate b78eb1dd1b1736138384b93dd06b578952e6c865; Windows EXE Build 39126237361 and License Server CI 39126237362 passed; retire temporary approval.",
   "required_approval_evidence": [
     "ci_gate_lock",
     "patient_registry_regression"
