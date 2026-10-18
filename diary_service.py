@@ -285,7 +285,8 @@ def apply_sick_leave_dynamic_epicrises(
         ) from exc
     discharge = parse_optional_discharge_date(discharge_value)
     base_date = dynamic_epicrisis_base_date(admission, sick_leave_text)
-    dates = dynamic_epicrisis_dates(base_date, discharge_date=discharge, limit=12, not_before=admission)
+    cycle_limit = (max(0, (discharge - base_date).days) // 10 + 2) if discharge is not None else 12
+    dates = dynamic_epicrisis_dates(base_date, discharge_date=discharge, limit=cycle_limit, not_before=admission)
     if not dates:
         return 0
 
