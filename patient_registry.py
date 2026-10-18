@@ -202,12 +202,25 @@ def discharge_patient_documents(folder: str | Path) -> list[Path]:
     )
 
 
-def _discharge_hides_patient(folder: Path, as_of: date, parse) -> bool:
+def _discharge_hides_patient(
+    folder: Path,
+    as_of: date,
+    parse,
+    issues: list[PatientRegistryIssue] | None = None,
+) -> bool:
     for document in discharge_patient_documents(folder):
         try:
             discharge = _date_value(getattr(parse(document), "discharge_date", ""))
-        except Exception:
+        except Exception as exc:
             discharge = None
+            detail = f"ошибка чтения {type(exc).__name__}"
+        else:
+            detail = "дата выписки не распознана" if discharge is None else ""
+        if discharge is None and issues is not None:
+            issues.append(PatientRegistryIssue(
+                document,
+                f"Выписка не подтверждена ({detail}). Пациент остаётся в реестре; проверьте документ.",
+            ))
         if discharge is not None and discharge <= as_of:
             return True
     return False
@@ -467,7 +480,7 @@ def scan_patient_registry(
     for patient_folder, explicit_candidates in work_items:
         if explicit_candidates is None:
             try:
-                if _discharge_hides_patient(patient_folder, target_date, parse):
+                if _discharge_hides_patient(patient_folder, target_date, parse, issues):
                     continue
                 candidates = patient_source_candidates(patient_folder)
             except OSError as exc:
