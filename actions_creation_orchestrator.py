@@ -667,9 +667,8 @@ class ActionsCreationOrchestratorMixin:
             return
         if not self._ensure_diary_input_sources_available_for_generation(selected_diaries):
             return
-        if selected_medical and not self._confirm_empty_required_sections():
-            self._set_status("Создание отменено: проверьте пустые разделы")
-            return
+        # Review missing clinical sections once, on the final generation snapshot.
+        # The later physician preflight owns all field clarification decisions.
         if not self._ensure_result_output_path_ready_for_prompts():
             return
         if not self._ensure_staff_profile_for_generation():
