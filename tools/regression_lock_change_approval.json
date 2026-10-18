@@ -20,6 +20,7 @@
     "tests/discharge_address_preflight_regression.py": "50a6fc53e98d7e40ae30d809acc5102c033384e4",
     ".github/workflows/windows-build.yml": "cf674c2a2d7ceab8c0e53a2479fe8cb5b042be0c",
     "tools/document_mechanics_change_approval.json": "afd16e2ee84798182e999274bd718eab320de8fe",
-    "tests/full_user_journey_regression.py": "d013d44576d437733bb787efc557a3bcd991fb57"
+    "tests/full_user_journey_regression.py": "d013d44576d437733bb787efc557a3bcd991fb57",
+    "tests/diagnosis_override_regression.py": "26e051a92daec3b83414f82d5fe9ed673729f7d6"
   }
 }
