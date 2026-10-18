@@ -43,6 +43,8 @@ def check_registry():
         assert names == {"Обычный Тест", "Заранее Тест", "Блок Тест",
                          "Вложенный0 Тест", "Вложенный1 Тест", "Корневой Тест", "БезДаты Тест"}, (names, snapshot.issues)
         assert all(item.folder.name != "Палата 5" for item in snapshot.patients)
+        assert any("Выписка не подтверждена" in issue.message and issue.folder.name == "БезДаты Выписной.docx" for issue in snapshot.issues)
+        assert all("Выписка не подтверждена" not in issue.message for issue in snapshot.issues if issue.folder.name == "Заранее Выписной эпикриз.docx")
         assert any("16.10.2027" in issue.message and "не показан" in issue.message for issue in snapshot.issues)
         past = scan_patient_registry(root, as_of=date(2026, 10, 10), parser=parser)
         assert "Выписан Тест" in {item.fio for item in past.patients}
