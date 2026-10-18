@@ -19,6 +19,7 @@
     "actions_creation_orchestrator.py": "d09b4c30ca63552e93e7dd2bdf3cf3643fd8cfc3",
     "tests/discharge_address_preflight_regression.py": "7a9a4eb75f5c681da521f1c60893ac89bbf9f5a5",
     ".github/workflows/windows-build.yml": "cf674c2a2d7ceab8c0e53a2479fe8cb5b042be0c",
-    "tools/document_mechanics_change_approval.json": "afd16e2ee84798182e999274bd718eab320de8fe"
+    "tools/document_mechanics_change_approval.json": "afd16e2ee84798182e999274bd718eab320de8fe",
+    "tests/full_user_journey_regression.py": "d013d44576d437733bb787efc557a3bcd991fb57"
   }
 }
