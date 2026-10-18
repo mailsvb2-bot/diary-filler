@@ -51,7 +51,10 @@ def main():
         result = extract_docx_text(output[0])
         assert "г. Нижний Новгород, ул. Макетная, д. 42" in result, result
 
-    host = SimpleNamespace(root=None)
+    host = SimpleNamespace(
+        root=None,
+        _missing_clinical_fields_for_popup=ActionsCreationOrchestratorMixin._missing_clinical_fields_for_popup,
+    )
     method = ActionsCreationOrchestratorMixin._resolve_unrecognized_generation_fields
     missing = PatientData(registered="", complaints="")
     with patch("actions_creation_orchestrator.simpledialog.askstring", return_value="г. Тест, д. 1"), patch(
