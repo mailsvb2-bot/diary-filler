@@ -1,10 +1,15 @@
 """End-to-end address fidelity and physician missing-field preflight."""
 from __future__ import annotations
 from pathlib import Path
+import sys
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
 from unittest.mock import patch
 from docx import Document
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 from medical_service import MedicalDocumentService
 from medical_docx_reader import extract_docx_text
 from actions_creation_orchestrator import ActionsCreationOrchestratorMixin
