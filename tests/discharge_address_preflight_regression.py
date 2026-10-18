@@ -38,6 +38,10 @@ def main():
         parsed.case_number = "123"
         parsed.diagnosis = "F32.1"
         parsed.treatment_plan = "тестовое назначение врача"
+        parsed.expert_work_status = "нет"
+        parsed.expert_sick_leave_needed = "нет"
+        parsed.psych_account_status = "нет"
+        parsed.admission_occurrence = "первично"
         output, _ = service.create_documents(
             navigation_path=source,
             output_dir=Path(tmp) / "output",
