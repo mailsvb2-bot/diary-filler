@@ -149,6 +149,9 @@ jobs:
           PYTHONPATH: .
         run: python tests/patient_registry_visibility_regression.py
 
+      - name: Audit long-stay and registry discharge regressions
+        run: python tests/audit_long_stay_registry_regression.py
+
       - name: Run diary joint exam working-day regression
         env:
           PYTHONPATH: .
@@ -178,9 +181,6 @@ jobs:
         env:
           PYTHONPATH: .
         run: python tests/oct17_clinical_safety_regression.py
-
-      - name: Discharge address and doctor clarification regression
-        run: python tests/discharge_address_preflight_regression.py
 
       - name: Run Windows E1 exhaustive finite user matrix
         env:

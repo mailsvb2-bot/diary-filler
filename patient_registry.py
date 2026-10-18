@@ -208,7 +208,7 @@ def _discharge_hides_patient(folder: Path, as_of: date, parse) -> bool:
             discharge = _date_value(getattr(parse(document), "discharge_date", ""))
         except Exception:
             discharge = None
-        if discharge is None or discharge <= as_of:
+        if discharge is not None and discharge <= as_of:
             return True
     return False
 
@@ -220,7 +220,7 @@ def _contains_word_documents(folder: Path) -> bool:
     )
 
 
-def _patient_folders(directory: Path, issues: list, *, max_depth: int = 2) -> list[Path]:
+def _patient_folders(directory: Path, issues: list, *, max_depth: int = 8) -> list[Path]:
     result: list[Path] = []
 
     def visit(folder: Path, depth: int) -> None:

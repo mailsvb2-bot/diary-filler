@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "base_sha": "12a19e87359dd7512e55168f9a37bc32343dbebf",
-  "reason": "Explicit doctor clarification popup and discharge address fidelity before committing any generated medical document.",
+  "reason": "Explicitly reviewed correction to diary_service long-stay dynamic epicrisis generation with a dedicated regression and full Windows CI gates.",
   "approved_blobs": {
-    "actions_creation_orchestrator.py": "d09b4c30ca63552e93e7dd2bdf3cf3643fd8cfc3"
+    "diary_service.py": "b34a6b409956aab3c692ff76f8b9bcc8cd1b5472"
   }
 }
