@@ -417,6 +417,11 @@ class _PrintRetryHarness(ActionsCreationOrchestratorMixin):
     def _selected_output_names(self, selected_medical, selected_diaries):
         return list(selected_medical)
 
+    def _resolve_unrecognized_generation_fields(self, data, selected_medical):
+        # This harness tests orchestration/printing, not physician popup interaction.
+        assert isinstance(data, PatientData)
+        return True
+
     def _prompt_missing_patient_identity_if_needed(self):
         return True
 
@@ -506,6 +511,11 @@ class _PartialSetHarness(ActionsCreationOrchestratorMixin):
 
     def _selected_output_names(self, selected_medical, selected_diaries):
         return [*selected_medical, "diaries"] if selected_diaries else list(selected_medical)
+
+    def _resolve_unrecognized_generation_fields(self, data, selected_medical):
+        # This harness tests orchestration/printing, not physician popup interaction.
+        assert isinstance(data, PatientData)
+        return True
 
     def _prompt_missing_patient_identity_if_needed(self):
         return True

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "a756bceaa9246b0cc6a04cefa0980107b18a7da4",
-  "baseline_note": "Approved long-stay diary/registry fix candidate a756bceaa9246b0cc6a04cefa0980107b18a7da4; Windows EXE Build 39073915323 and License Server CI 39073915317 passed; temporary approval retired.",
+  "baseline_ref": "503bdc5a04c1bcb8b20f7ad58dd4e370b3d717e2",
+  "baseline_note": "Verified combined registry and doctor clarification candidate 503bdc5a04c1bcb8b20f7ad58dd4e370b3d717e2; Windows EXE Build 39122043399 and License Server CI 39122043383 passed.",
   "required_approval_evidence": [
     "ci_gate_lock",
     "patient_registry_regression"

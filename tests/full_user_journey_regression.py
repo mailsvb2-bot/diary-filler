@@ -111,6 +111,10 @@ class JourneyApp(ActionsCreationOrchestratorMixin, ActionsSelectionMixin):
 
     # User-input prompts are outside this orchestration test. They are covered by
     # the real popup->DOCX contracts. Here we verify ordering, aborts and retry state.
+    def _resolve_unrecognized_generation_fields(self, data, selected_medical):
+        # Popup interactions are covered by the dedicated address preflight test.
+        assert data.output_fio == "Тестовый Пациент"
+        return True
     def _prompt_missing_patient_identity_if_needed(self): return True
     def _prompt_shared_clinical_options_if_needed(self, _selected): return True
     def _prompt_common_output_requirements(self, **_kwargs): return True

@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import List
-from tkinter import messagebox
+from tkinter import messagebox, simpledialog
 import os
 import subprocess
 import sys
@@ -365,6 +365,66 @@ class ActionsCreationOrchestratorMixin:
             # selections or the pending queue and must remain immediately usable.
             self._generation_action_last_fingerprint = fingerprint
             self._generation_action_cooldown_until = time.monotonic() + 0.75
+
+    def _resolve_unrecognized_generation_fields(self, data, selected_medical: List[str]) -> bool:
+        """Ask the physician for absent source facts before writing any DOCX.
+
+        The returned values belong to the single generation snapshot, never to
+        the primary source file. Cancel is fail-closed; no fabricated defaults.
+        """
+        if not selected_medical:
+            return True
+        parent = getattr(self, "root", None)
+        if "discharge" in selected_medical and not str(getattr(data, "registered", "") or "").strip():
+            try:
+                address = simpledialog.askstring(
+                    "Не распознан адрес",
+                    "В первичном документе не найден адрес регистрации/проживания.\n"
+                    "Укажите адрес пациента для выписного эпикриза.\n"
+                    "Отмена — не создавать документы.",
+                    parent=parent,
+                )
+            except Exception:
+                return False
+            if not address or not address.strip():
+                return False
+            data.registered = address.strip()
+
+        # Existing clinical section confirmation is retained. Doctors can
+        # explicitly leave an unknown clinical fact blank, but never silently.
+        for field, label in self._missing_clinical_fields_for_popup(data):
+            try:
+                choice = messagebox.askyesnocancel(
+                    "Не распознан раздел",
+                    f"Не найдены данные: {label}.\n\n"
+                    "Да — ввести текст. Нет — осознанно оставить пустым.\n"
+                    "Отмена — прекратить создание.",
+                    parent=parent,
+                    default="cancel",
+                )
+            except Exception:
+                return False
+            if choice is None:
+                return False
+            if choice:
+                try:
+                    value = simpledialog.askstring(
+                        f"Уточнение: {label}",
+                        f"Введите достоверные сведения для раздела «{label}»:",
+                        parent=parent,
+                    )
+                except Exception:
+                    return False
+                if not value or not value.strip():
+                    return False
+                setattr(data, field, value.strip())
+        return True
+
+    @staticmethod
+    def _missing_clinical_fields_for_popup(data):
+        from medical_constants import REQUIRED_CLINICAL_SECTIONS
+        return [(field, label) for field, label in REQUIRED_CLINICAL_SECTIONS
+                if not str(getattr(data, field, "") or "").strip()]
 
     def _confirm_empty_required_sections(self) -> bool:
         """Warn the physician about missing source sections without inventing content."""
@@ -769,6 +829,9 @@ class ActionsCreationOrchestratorMixin:
                         f"{label} не созданы",
                         f"Не удалось подготовить единый снимок данных пациента:\n\n{exc}",
                     )
+                    return
+                if not self._resolve_unrecognized_generation_fields(generation_patient_data, selected_medical):
+                    self._set_status("Создание отменено: не подтверждены сведения пациента")
                     return
                 with TemporaryDirectory(prefix=".medical-autofill-set-", dir=str(final_output_dir)) as temp_dir:
                     staging_dir = Path(temp_dir)
