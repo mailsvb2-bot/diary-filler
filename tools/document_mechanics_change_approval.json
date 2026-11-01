@@ -4,9 +4,10 @@
   "reason": "Explicit reviewed patient registry, source parsing, VK document renderer and diary discovery fixes",
   "approved_blobs": {
     "actions_creation_orchestrator.py": "f614e0793550f4c976bf1405fc965894f4bdf36a",
-    "diary_batch.py": "bf8d291f8526ebd2f7b6ef8f7bab112c9fbd1c77",
+    "diary_batch.py": "1a51317c1f1aa99a085a6e3d108a68c40df42fa8",
+    "diary_calendar.py": "19adcef66e9b05dd25e64e10e6ed982149846183",
     "diary_constants.py": "c81cefc87c41bebff0362accbab85e39a4b07653",
-    "diary_service.py": "6cf7b76390bc7cc0b6ae5ce883460a40166b5ab2",
+    "diary_service.py": "65441db78cd0e07b6a0ff4bd34156e807cca6e26",
     "medical_formatting.py": "a07381bf365abd50b5c1d8632dc365dbc23b0028",
     "medical_service.py": "3c178b12effd8a689b3a581990a17f130344e92f"
   }
