@@ -48,7 +48,7 @@ def test_multiple_sources_and_generated_output():
         root=Path(temp)
         a=stage(root,"Петров/Петров первичный.docx")
         b=stage(root,"Петров/Петров первичка повтор.docx")
-        generated=stage(root,"Петров/Петров Пётр Первичный осмотр.docx")
+        generated=stage(root,"Петров/Маркер Женская Тестовая Первичный осмотр.docx")
         data={a:rec("Петров Пётр"),b:rec("Петров Пётр",adm="10.10.2026")}
         assert generated not in primary_candidates(root/"Петров")
         assert generated not in primary_candidates(root/"Петров")
