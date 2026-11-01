@@ -44,6 +44,26 @@ class MedicalParserDemographicsMixin:
             if standalone_fio:
                 data.fio = standalone_fio
 
+        # A trailing birth fact is not part of the patient's name.
+        if data.fio:
+            match = re.search(
+                r"[,;]?\\s*((?:\\d{1,2}[./]\\d{1,2}[./])?\\d{4})\\s*(?:г\\.?\\s*р\\.?)?\\s*$",
+                data.fio, flags=re.IGNORECASE,
+            )
+            if match:
+                if not data.birth:
+                    data.birth = match.group(1)
+                data.fio = data.fio[:match.start()].rstrip(" ,;")
+        # A second normalization pass is needed after compact-label recovery.
+        if data.fio:
+            suffix = re.search(r"[,;]?\s*\d{4}(?:\s*г\.?\s*р\.?)?\s*$", data.fio, re.I)
+            if suffix:
+                data.fio = data.fio[:suffix.start()].rstrip(" ,;")
+        # Retain a pure year or a full date; do not carry "г.р." into output.
+        if data.birth:
+            year = re.fullmatch(r"\s*(\d{4})\s*г\.?\s*р\.?\s*", data.birth, re.I)
+            if year:
+                data.birth = year.group(1)
         candidates: List[str] = []
         if data.fio:
             candidates.append(data.fio)
@@ -70,6 +90,11 @@ class MedicalParserDemographicsMixin:
 
             if data.fio and data.birth and data.registered and not self._fio_value_looks_overgrown(data.fio):
                 break
+
+        if data.birth:
+            year = re.fullmatch(r"\s*(\d{4})\s*г\.?\s*р\.?\s*", data.birth, re.IGNORECASE)
+            if year:
+                data.birth = year.group(1)
 
     @staticmethod
     def _extract_standalone_header_fio(text: str) -> str:

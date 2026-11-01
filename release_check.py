@@ -440,6 +440,7 @@ def main() -> None:
     _run([sys.executable, "tests/patient_registry_regression.py"], timeout=60)
     _run([sys.executable, "tests/patient_registry_nested_regression.py"], timeout=60)
     _run([sys.executable, "tests/medical_source_corrections_regression.py"], timeout=60)
+    _run([sys.executable, "tests/clinical_tables_episodes_regression.py"], timeout=60)
 
     _print_step("Monthly licensing and owner entitlement")
     _run([sys.executable, "tests/license_client_regression.py"], timeout=60)

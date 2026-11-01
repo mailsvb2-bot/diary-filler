@@ -353,6 +353,12 @@ class MedicalDocumentService:
             if sick_decision == "да":
                 if not data.expert_sick_leave_from.strip() and rendered_sick_from:
                     data.expert_sick_leave_from = rendered_sick_from
+                if "sick_leave_vk" in selected_set and not data.expert_sick_leave_from.strip():
+                    raise ValueError(
+                        "Не указана дата начала больничного: в исходном документе "
+                        + ("отмечено «не нужен»." if _source_sick_decision == "нет"
+                           else "отсутствует дата открытия.")
+                    )
                 data.expert_sick_leave_from = self._normalize_required_date(
                     data.expert_sick_leave_from, "Дата начала больничного"
                 )
@@ -408,6 +414,24 @@ class MedicalDocumentService:
                     "Акт для РВК противоречит первичному осмотру: "
                     "указано отсутствие направления от РВК. Уточните ответ врача."
                 )
+
+        # Reconcile the act district with the doctor-confirmed referral.
+        if "rvk" in selected_set and "primary" in selected_set:
+            from medical_models import normalize_rvk_commissariat_text
+            source_decision, source_district = parse_rvk_referral_value(data.rvk_referral)
+            referral_district = normalize_rvk_commissariat_text(
+                data.rvk_referral_commissariat or source_district
+            )
+            act_district = normalize_rvk_commissariat_text(data.rvk_military_commissariat)
+            if referral_district and act_district and (
+                referral_district.casefold().replace("ё", "е")
+                != act_district.casefold().replace("ё", "е")
+            ):
+                raise ValueError(
+                    "Район РВК в акте не совпадает с направлением в первичном осмотре."
+                )
+            if referral_district and not act_district:
+                data.rvk_military_commissariat = referral_district
 
         rvk_referral_docs = {"primary", "admission_doctor_referral"}
         if selected_set & rvk_referral_docs:

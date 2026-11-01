@@ -18,6 +18,7 @@ from medical_docx_editor import (
     iter_all_paragraphs,
     replace_paragraph_regex_preserving_runs,
     set_paragraph_text,
+    remove_paragraph,
 )
 from medical_models import PatientData
 from medical_text_utils import normalize_match
@@ -250,6 +251,12 @@ def finalize_medical_document(doc: DocxDocument, data: PatientData, *, editor=No
     normalize_staff_references_in_document(doc, data, editor=editor)
     # Adapt only the fixed epidemiology template, never arbitrary clinical prose.
     _adapt_document_paragraphs_to_gender(doc, data, paragraph_filter=_is_template_epidemiology_paragraph)
-    # EPI/service cleanup is renderer-owned and template-aware. Never scan the
-    # whole finalized document for marker-like patient prose.
+    # Suppress only a template-owned blank disease-anamnesis heading.
+    # Never delete a sourced patient paragraph, even if it resembles a marker.
+    if not str(data.disease_anamnesis or "").strip() and editor is not None:
+        for paragraph in list(iter_all_paragraphs(doc)):
+            if (normalize_match(paragraph.text) == "анамнез заболевания:"
+                    and editor.template_paragraph_text(paragraph) is not None):
+                remove_paragraph(paragraph)
+    # EPI/service cleanup is renderer-owned and template-aware.
     apply_readable_section_spacing(doc)

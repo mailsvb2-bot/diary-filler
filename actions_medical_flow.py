@@ -89,7 +89,10 @@ class ActionsMedicalFlowMixin:
         data.psych_account_status = self._normalize_yes_no(self.psych_account_status_var.get())
         data.psych_account_since_year = self.psych_account_since_year_var.get().strip()
         data.rvk_referral_present = self._normalize_yes_no(self.rvk_referral_present_var.get())
-        data.rvk_referral_commissariat = self.rvk_referral_commissariat_var.get().strip()
+        data.rvk_referral_commissariat = (
+            self.rvk_referral_commissariat_var.get().strip()
+            or data.rvk_referral_commissariat
+        )
         if data.disability_needed == "да":
             data.disability = "нужно"
         elif data.disability_needed == "нет":

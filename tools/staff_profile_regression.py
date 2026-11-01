@@ -190,7 +190,7 @@ def _assert_medical_documents(root: Path) -> None:
     assert "Врач психиатр Орлов О.О." in primary
     assert "Зав. отделением Соколова С.С." in primary
     assert "Зав. отд. Соколова С.С." in discharge and "Врач-психиатр" in discharge and "Орлов О.О." in discharge
-    assert "Совместный осмотр с зам глав врача Кузнецовой К.К." in commission
+    assert "Совместный осмотр с заместителем главного врача Кузнецовой К.К." in commission
     assert "Врач психиатр Орлов О.О." in admission
 
 

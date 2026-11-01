@@ -1,20 +1,16 @@
 {
   "schema_version": 1,
-  "base_sha": "4583bd54df588c6a0ae9ba0a973b2f34a5c7f57b",
+  "base_sha": "fca7323defe945dda39ebd5aa21c4f723fdcf6a4",
   "reason": "Explicit reviewed patient registry, source parsing, VK document renderer and diary discovery fixes",
   "approved_blobs": {
-    "actions_medical_flow.py": "5a39abcdd5492bb87e8838e256488cfffeeef705",
-    "actions_navigation.py": "04cb304372640f118bbe25d5e0e0749ec2aede53",
-    "app_initialization.py": "5fafeb8c45c36725f8f3c2d893568efea364a636",
-    "dialog_document_details.py": "83528c2c22d4f292059ee53d08d5bbd93ec85c83",
-    "dialog_expert.py": "d513007d5ef4ef7a9e0b3febfbda64a284cb81f7",
-    "diary_template_discovery.py": "b3d5c961c88eb2a2adca8c19052fa0f16284195a",
-    "diary_text_selection.py": "768d7711246548a02df14d23bc460e7f871698d7",
-    "files_mixin.py": "d4eaeba7b995a6ebc2a0c517a804545f28abec02",
-    "medical_models.py": "d5da08a4c951196cebf92eb28df0d2f2a11b30e1",
-    "medical_parser_work.py": "6c84ffbac8111c9028f68313ce6a9d2cd1d492ad",
-    "medical_renderer_primary.py": "b0b0907ea910693e7cc0747c2c8c01b83d3527a8",
-    "medical_renderer_special.py": "bf091484d10df28cfe130c32607792e686d9e417",
-    "medical_service.py": "f8c6b4c67bf27a6c93f9a41331b954f31a77f9e7"
+    "actions_medical_flow.py": "10292281ec20fd774e3f4f75ad650e74092878c6",
+    "dialog_document_details.py": "7a758d55dbb3a5f8fd0c4b1388d25d9e36e83e13",
+    "medical_gender.py": "5779b4bfde1a1c66fe42cf668492979eea222eaa",
+    "medical_parser.py": "bea9b39c661a25be5e18203ca2162613f98b9cb8",
+    "medical_parser_demographics.py": "c95477a3a65300fc6315bea69281a49bfceafb33",
+    "medical_parser_inline.py": "9d0eb84a9d7492b3864d8f92f0abb23bc8f91b27",
+    "medical_parser_sanitize.py": "0ef4a0885507e120d7c3506bc21471094aceb87a",
+    "medical_renderer_commission.py": "492928d11d9782e28c88a67013b6fd102a3c4b55",
+    "medical_service.py": "f917c50c077d88a6ec183f269575a9849fbd3703"
   }
 }
