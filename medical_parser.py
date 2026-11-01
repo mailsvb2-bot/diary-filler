@@ -43,7 +43,7 @@ class MedicalTextParser(
     BLOCK_ALIASES: Dict[str, Sequence[str]] = {
         "complaints": ("Жалобы на момент осмотра", "Жалобы при поступлении", "Жалобы"),
         "life_anamnesis": ("Анамнез жизни", "Anamnesis vitae"),
-        "disease_anamnesis": ("Анамнез заболевания", "Анамнез болезни", "Анамнез", "Anamnesis morbi"),
+        "disease_anamnesis": ("Анамнез заболевания", "Анамнез болезни", "Анамнез:", "Anamnesis morbi"),
         "mental_status": ("Психический статус при поступлении", "Психический статус", "Психическое состояние", "Status psychicus"),
         "somatic_status": ("Сомато-неврологический статус", "Соматический статус", "Соматическое состояние", "Status somaticus"),
         "examination_plan": ("План обследования",),
@@ -88,7 +88,7 @@ class MedicalTextParser(
         "Анамнез жизни",
         "Анамнез заболевания",
         "Анамнез болезни",
-        "Анамнез",
+        "Анамнез:",
         "Anamnesis vitae",
         "Anamnesis morbi",
         "Психический статус при поступлении",
