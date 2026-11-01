@@ -77,6 +77,20 @@ def test_empty_diagnosis_service_and_long_horizon():
             selected_docs=["primary"],override_data=data,
         )
         assert len(created)==1
+        # Generated VK records must preserve the distinct hospitalization
+        # date when the certificate opened after admission.
+        from medical_docx_reader import extract_docx_text
+        data.admission_date="10.06.2026"
+        data.expert_sick_leave_from="15.06.2026"
+        data.sick_leave="нужен с 15.06.2026"
+        vk_files,_=service.create_documents(
+            navigation_path=nav,output_dir=root/"vk_out",
+            selected_docs=["sick_leave_vk"],override_data=data,
+        )
+        vk_text=extract_docx_text(vk_files[0])
+        assert "Дата госпитализации: 10.06.2026" in vk_text
+        assert "Находится на лечении с 15.06.2026" in vk_text
+        assert service.parse_primary_document(vk_files[0]).admission_date=="10.06.2026"
     # 30 April to early November spans more than twelve ten-day cycles.
     planned=dynamic_epicrisis_dates(date(2026,4,30))
     assert len(planned)>12,len(planned)
