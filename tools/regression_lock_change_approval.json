@@ -29,7 +29,7 @@
     "tools/document_mechanics_change_approval.json": "1a63267e07df606766729f26fc06be5e1d517f43",
     "medical_service.py": "267c925d5bf03930fccd44410321431b41b90252",
     "medical_renderer_commission.py": "492928d11d9782e28c88a67013b6fd102a3c4b55",
-    "tests/golden_docx_manifest.json": "3c52476ae15a018832f674c4570b4b692b0870d5",
+    "tests/golden_docx_manifest.json": "b48b66ef43a415e590bd150e5d9078255b348066",
     "tests/verbal_diary_source_regression.py": "a7104873a4ac4e8e2d66e5426d781352673de919",
     "medical_parser.py": "bea9b39c661a25be5e18203ca2162613f98b9cb8",
     "patient_registry_mixin.py": "c7c6160911fefd5929d52a5bfc17ff7b7d6bb20f",
