@@ -594,7 +594,7 @@ class MedicalDocumentService:
                 suffix = OUTPUT_SUFFIXES[kind]
                 staged_path = tmp_root / f"{index:02d}.docx"
                 self.renderer.render(kind, template_path, staged_path, data)
-                if kind == "primary":
+                if kind == "primary" and staged_path.is_file():
                     # An explicit machine-generated marker distinguishes an
                     # output DOCX from a real patient intake source.
                     from docx import Document
