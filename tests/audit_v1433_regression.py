@@ -115,6 +115,28 @@ def test_vk_sick_leave_start_and_long_horizon():
     assert len(dates) > 12
 
 
+def test_vk_explicit_admission_vs_sick_leave_date():
+    import sys
+    sys.path.insert(0, str(ROOT / "tools"))
+    from generation_performance_profile import _make_fixture
+    from medical_docx_reader import extract_docx_text
+    with TemporaryDirectory() as t:
+        nav, service, data = _make_fixture(Path(t))
+        data.admission_date = "10.06.2026"
+        data.expert_sick_leave_from = "15.06.2026"
+        data.sick_leave = "нужен с 15.06.2026"
+        data.sick_leave_vk_commission_date = "17.06.2026"
+        docs, _ = service.create_documents(
+            navigation_path=nav, output_dir=Path(t)/"vk",
+            selected_docs=["sick_leave_vk"], override_data=data,
+        )
+        text = extract_docx_text(docs[0])
+        assert "Находится на лечении с 15.06.2026 (3 дня)" in text
+        assert "Дата госпитализации: 10.06.2026" in text
+        parsed = service.parse_primary_document(docs[0])
+        assert parsed.admission_date == "10.06.2026", parsed.admission_date
+
+
 if __name__=="__main__":
     test_names_and_root_discharge()
     test_no_fabricated_observation()
@@ -122,4 +144,5 @@ if __name__=="__main__":
     test_machine_generated_primary_is_not_source()
     test_empty_diagnosis_is_clinician_decision()
     test_vk_sick_leave_start_and_long_horizon()
+    test_vk_explicit_admission_vs_sick_leave_date()
     print("AUDIT V1433 REGRESSIONS: PASS")
