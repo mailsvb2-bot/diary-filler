@@ -8,6 +8,7 @@
     "diary_constants.py": "d55fcd0585e0838fe9fae77518fc794978366b38",
     "diary_service.py": "59c1317fd6dd60b989a36e403424d48d5e4b9f73",
     "medical_formatting.py": "5bf35992106011140cc8e2cd5c98d77a30e0d172",
+    "medical_renderer_special.py": "8ffcfaa532bc8ab7784eccaa32fb83983a1c2999",
     "medical_service.py": "9fd547b266cebaa40a0e3cf6866735013e6941e1"
   }
 }
