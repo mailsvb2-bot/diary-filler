@@ -595,7 +595,7 @@ blank_created, _ = service.create_documents(
 )
 blank_text = extract_docx_text(blank_created[0])
 assert "Новые шаблоны учёл по структуре" not in blank_text, blank_text
-assert "Анамнез заболевания:" in blank_text, blank_text
+assert "Анамнез заболевания:" not in blank_text, blank_text
 
 # Negative RVK choice must render explicitly as «нет» and clear any stale area.
 rvk_no_data = copy.deepcopy(manual_data)
