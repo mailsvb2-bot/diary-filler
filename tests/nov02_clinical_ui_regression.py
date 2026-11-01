@@ -45,7 +45,7 @@ def test_choose_source_on_open():
         host=SimpleNamespace(root=dummy_root,_apply_primary_document_path=lambda path,**kwargs:chosen.append(path) or True)
         with patch("patient_registry_mixin.simpledialog.askinteger",return_value=2) as prompt:
             assert PatientRegistryMixin._load_registry_primary_document(host,entry)
-            assert Path(chosen[-1])==b
+            assert Path(chosen[-1]).resolve()==b.resolve(), (chosen[-1], b)
             assert prompt.call_count==1
         with patch("patient_registry_mixin.simpledialog.askinteger",return_value=None):
             assert not PatientRegistryMixin._load_registry_primary_document(host,entry)
