@@ -50,7 +50,7 @@ class MedicalRendererPrimaryMixin:
         editor.replace_first_matching_paragraph(["Дата, время"], header)
         editor.replace_block(["История болезни №"], "История болезни №", data.case_number, PRIMARY_MARKERS, preserve_when_empty=False, allow_empty=True)
         editor.replace_block(["Ф.И.О.", "ФИО"], "Ф.И.О.:", data.fio, PRIMARY_MARKERS, allow_empty=True)
-        editor.replace_block(["Год рождения", "Дата рождения"], "Год рождения:", data.birth, PRIMARY_MARKERS, allow_empty=True)
+        editor.replace_block(["Год рождения", "Дата рождения"], "Дата рождения:" if len(str(data.birth or "").strip()) > 4 else "Год рождения:", data.birth, PRIMARY_MARKERS, allow_empty=True)
         editor.replace_block(["Зарегистрирован", "Регистрация по адресу"], "Регистрация по адресу:", data.registered, PRIMARY_MARKERS, allow_empty=True)
         self._place_psych_account_after_registration(editor, data, ["Регистрация по адресу"], fallback_markers=["Ф.И.О.", "ФИО"])
         if data.expert_work_status == "нет":

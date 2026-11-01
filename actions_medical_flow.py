@@ -116,6 +116,10 @@ class ActionsMedicalFlowMixin:
         data.rvk_work_position = self.rvk_work_position_var.get().strip() or data.rvk_work_position
         data.vk_date = self.vk_date_var.get().strip() or data.vk_date
         data.vk_protocol_number = self.vk_protocol_number_var.get().strip() or data.vk_protocol_number
+        epicrisis_number_var = getattr(self, "vk_epicrisis_number_var", None)
+        if epicrisis_number_var is not None:
+            data.vk_epicrisis_number = epicrisis_number_var.get().strip()
+
         data.vk_protocol_date = self.vk_protocol_date_var.get().strip() or data.vk_protocol_date
         data.vk_mse_work_org = self.vk_mse_work_org_var.get().strip() or data.vk_mse_work_org or shared_org
         data.vk_mse_position = self.vk_mse_position_var.get().strip() or data.vk_mse_position or shared_position

@@ -221,7 +221,7 @@ def _assert_registry_scan_and_independent_timelines() -> None:
         snapshot = scan_patient_registry(root, as_of=date(2026, 10, 1), parser=parser)
         # An undated/unreadable discharge draft must not silently remove a patient.
         # Only a confirmed discharge date on or before the census date may do so.
-        assert len(snapshot.patients) == 9, (snapshot.patients, snapshot.issues)
+        assert len(snapshot.patients) == 8, (snapshot.patients, snapshot.issues)
         assert len(snapshot.sick_leave_patients) == 3
         assert len(snapshot.rvk_patients) == 2
         assert any(item.folder.name == "Выписан" for item in snapshot.patients)
@@ -268,11 +268,11 @@ def _assert_registry_scan_and_independent_timelines() -> None:
         assert renamed.primary_path is not None
         assert renamed.primary_path.name == "источник пациента.docx"
 
-        missing_source = next(item for item in snapshot.patients if item.folder.name == "БезДокумента")
-        assert missing_source.fio == "БезДокумента"
-        assert missing_source.primary_path is None
-        assert missing_source.admission_date is None
-        assert "не найден Word-документ" in missing_source.warning
+        assert not any(item.folder.name == "БезДокумента" for item in snapshot.patients)
+        assert any(
+            issue.folder.name == "БезДокумента" and "Нет первичного медицинского документа" in issue.message
+            for issue in snapshot.issues
+        ), snapshot.issues
 
 
 def _assert_registry_parse_cache() -> None:

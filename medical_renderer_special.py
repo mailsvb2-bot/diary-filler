@@ -283,6 +283,7 @@ class MedicalRendererSpecialMixin:
         """Акт для РВК: нормативную шапку оставляем, заполняем поля ниже."""
         doc = Document(str(template_path))
         editor = DocxBlockEditor(doc)
+        self._normalize_vk_visible_labels(editor, data)
         act_number = data.rvk_act_number or data.case_number
         editor.replace_first_matching_paragraph(["О СОСТОЯНИИ"], f"О СОСТОЯНИИ ЗДОРОВЬЯ ГРАЖДАНИНА № {act_number}".rstrip())
         editor.replace_block(["История болезни №"], "История болезни №", data.case_number, RVK_MARKERS, preserve_when_empty=False, allow_empty=True)
