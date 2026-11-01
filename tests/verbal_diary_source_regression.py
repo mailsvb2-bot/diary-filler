@@ -479,7 +479,8 @@ def _assert_dynamic_epicrisis_is_additive(root: Path) -> None:
         if expected:
             assert f"Динамическое наблюдение: {expected}" in rendered, rendered
         else:
-            assert "Динамическое наблюдение:" not in rendered, rendered
+            from diary_constants import DYNAMIC_OBSERVATION_TEMPLATE
+            assert f"Динамическое наблюдение: {DYNAMIC_OBSERVATION_TEMPLATE}" in rendered, rendered
     assert date(2026, 9, 11) in with_result.dated_clinical_states
     assert date(2026, 9, 21) not in with_result.dated_clinical_states
     # Undated admission-style arguments supplied to the public compatibility
