@@ -42,7 +42,7 @@
     "smoke_combined_part04_medical_generation.py": "c636658914b37fb43edc9f02ba7301b4afc9ee65",
     "diary_text_selection.py": "768d7711246548a02df14d23bc460e7f871698d7",
     "medical_service.py": "9fd547b266cebaa40a0e3cf6866735013e6941e1",
-    "tests/nov02_clinical_ui_regression.py": "33b74f077a5c9569debc80e7f2de9af2f62b5fdb",
+    "tests/nov02_clinical_ui_regression.py": "8f751234039f107737e8cd04797abf6f732fa9cf",
     "tests/nov02_audit_regression.py": "6f76c26d4fc4dae766734adb4ddb2627d9d16c9f",
     "medical_renderer_commission.py": "492928d11d9782e28c88a67013b6fd102a3c4b55",
     "dialog_document_details.py": "7a758d55dbb3a5f8fd0c4b1388d25d9e36e83e13",
