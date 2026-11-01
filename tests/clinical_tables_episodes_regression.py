@@ -65,6 +65,9 @@ def test_nested_episode_and_depth():
         snap=scan_patient_registry(r,as_of=date(2026,10,16),parser=lambda p:data[p])
         assert len(snap.patients)==1
         assert snap.patients[0].primary_path==new
+        earlier=scan_patient_registry(r,as_of=date(2026,10,12),parser=lambda p:data[p])
+        assert len(earlier.patients)==1
+        assert earlier.patients[0].primary_path==old
     with TemporaryDirectory() as t:
         r=Path(t);f=r
         for i in range(10):

@@ -560,7 +560,7 @@ def scan_patient_registry(
                             admission = _date_value(getattr(parse(path), "admission_date", ""))
                         except Exception:
                             admission = None
-                        return (admission or date.min, str(path).casefold())
+                        return (admission is not None and admission <= target_date, admission or date.min, str(path).casefold())
                     candidates = sorted(candidates, key=episode_key, reverse=True)
 
             except OSError as exc:
