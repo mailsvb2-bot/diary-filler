@@ -20,7 +20,7 @@
     "dialog_expert.py": "d513007d5ef4ef7a9e0b3febfbda64a284cb81f7",
     "tests/clinical_tables_episodes_regression.py": "fcd5bf181325eb22346d3836d1c474c5eb2cb836",
     "smoke_combined_part03_medical_parser_manual.py": "f6023e1f37a5f0c9486b7663bf20c49d791ba7de",
-    "smoke_combined_part04_medical_generation.py": "19bf188efe7403f57e9658dd14690aa9468d07f8",
+    "smoke_combined_part04_medical_generation.py": "c636658914b37fb43edc9f02ba7301b4afc9ee65",
     "diary_template_discovery.py": "b3d5c961c88eb2a2adca8c19052fa0f16284195a",
     "release_check.py": "f081ab914c5ef725cd608c2935c1a89cb0a4c7b1",
     "medical_renderer_special.py": "bf091484d10df28cfe130c32607792e686d9e417",
