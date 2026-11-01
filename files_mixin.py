@@ -506,7 +506,12 @@ class FilesMixin:
                     pass
         for root in roots:
             try:
-                children = [root, *sorted((p for p in root.iterdir() if p.is_dir()), key=lambda p: p.name.casefold())[:120]]
+                children = [root, *sorted(
+                    (p for p in root.iterdir() if p.is_dir()
+                     and any(token in p.name.casefold().replace("ё", "е")
+                             for token in ("дневник", "тексты"))),
+                    key=lambda p: p.name.casefold(),
+                )]
             except Exception:
                 children = [root]
             for child in children:

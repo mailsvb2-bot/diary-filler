@@ -280,9 +280,12 @@ class DiaryTemplateDiscoveryMixin:
             candidates.append(start / "шаблоны дневников")
             candidates.append(start / "Шаблоны дневников")
             try:
-                for child in sorted((p for p in start.iterdir() if p.is_dir()), key=lambda p: p.name.casefold())[:200]:
-                    if child.is_dir() and self._is_named_diary_templates_folder(child):
-                        candidates.append(child)
+                for child in sorted(
+                    (p for p in start.iterdir() if p.is_dir()
+                     and self._is_named_diary_templates_folder(p)),
+                    key=lambda p: p.name.casefold(),
+                ):
+                    candidates.append(child)
             except Exception:
                 pass
             for candidate in candidates:
@@ -317,7 +320,7 @@ class DiaryTemplateDiscoveryMixin:
                 continue
             candidates.append(start)
             try:
-                for child in sorted((p for p in start.iterdir() if p.is_dir()), key=lambda p: p.name.casefold())[:120]:
+                for child in sorted((p for p in start.iterdir() if p.is_dir()), key=lambda p: p.name.casefold()):
                     if child.is_dir():
                         candidates.append(child)
             except Exception:

@@ -112,6 +112,14 @@ def test_nested_diary_discovery():
         Document().save(texts)
         assert folder_has_diary_text_candidates(root / "Тексты")
 
+        # Alphabetically late directory must remain discoverable beyond 200 peers.
+        for index in range(225):
+            (root / f"А{index:03d}").mkdir()
+        late = root / "Шаблоны дневников"
+        late.mkdir()
+        Document().save(late / "01.docx")
+        assert late in reader._named_diary_template_dirs_near(root)
+
 
 if __name__=="__main__":
     test_occurrence()
