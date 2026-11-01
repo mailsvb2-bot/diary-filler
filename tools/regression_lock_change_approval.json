@@ -36,7 +36,7 @@
     "diary_batch.py": "cd3ec1040f2e38e232e756f9026c7684020b2d33",
     "smoke_combined_part04_medical_generation.py": "b20fb10bc205f9ee82c56d676706dbb35af97a47",
     "patient_registry.py": "5c58228bebec154d38fbdf2eb103c6eea61c50db",
-    "tests/golden_docx_manifest.json": "3c52476ae15a018832f674c4570b4b692b0870d5",
+    "tests/golden_docx_manifest.json": "ee46f64c4287094a345ed28a60dc24131344d621",
     "dialog_expert.py": "d513007d5ef4ef7a9e0b3febfbda64a284cb81f7",
     "smoke_combined_part03_medical_parser_manual.py": "f6023e1f37a5f0c9486b7663bf20c49d791ba7de",
     "medical_gender.py": "5779b4bfde1a1c66fe42cf668492979eea222eaa",
