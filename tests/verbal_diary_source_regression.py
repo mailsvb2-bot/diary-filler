@@ -469,11 +469,17 @@ def _assert_dynamic_epicrisis_is_additive(root: Path) -> None:
     assert epicrisis_heads[0].startswith("11.09.26 Динамический эпикриз. ФИО:"), epicrisis_heads[0]
     assert epicrisis_heads[1].startswith("21.09.26 Динамический эпикриз. ФИО:"), epicrisis_heads[1]
     assert getattr(with_result, "dynamic_epicrisis_count", 0) == 2
-    # 11.09 is an actual semantic diary date, so the dynamic epicrisis reuses
-    # exactly that selected observation. 21.09 is not in the diary plan (the
-    # next planned observation is 22.09), so it must stay administrative-only.
-    assert "Динамическое наблюдение: Состояние спокойное. Контакт продуктивный." in epicrisis_heads[0], epicrisis_heads
-    assert "Динамическое наблюдение:" not in epicrisis_heads[1], epicrisis_heads
+    # Both dynamic dates must use the fourth earlier ordinary diary,
+    # regardless of whether a semantic diary exists on the same calendar date.
+    epicrisis_dates = (date(2026, 9, 11), date(2026, 9, 21))
+    for item_date, rendered in zip(epicrisis_dates, epicrisis_heads):
+        expected = diary_service.fourth_preceding_diary_observation(
+            item_date, with_result.dated_clinical_states, epicrisis_dates
+        )
+        if expected:
+            assert f"Динамическое наблюдение: {expected}" in rendered, rendered
+        else:
+            assert "Динамическое наблюдение:" not in rendered, rendered
     assert date(2026, 9, 11) in with_result.dated_clinical_states
     assert date(2026, 9, 21) not in with_result.dated_clinical_states
     # Undated admission-style arguments supplied to the public compatibility

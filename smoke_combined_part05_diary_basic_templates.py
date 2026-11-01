@@ -321,9 +321,8 @@ assert "Психический статус:" not in empty_dynamic, empty_dynami
 assert "TEMPLATE_STATUS_THREE" not in contract_joined, contract_joined
 assert contract_result.final_rows_filled == 1
 
-# BLOCKER #232: automatic dynamic epicrises may use only an observation selected
-# for the exact same calendar date. Two matching dynamic dates must preserve two
-# different sourced states; no admission or neighboring status may be relabelled.
+# Fourth-prior diary: dynamic epicrises use the fourth earlier ordinary entry,
+# excluding dates replaced by epicrises. Same-date observations are not reused.
 dynamic_state_source = OUT / "dynamic_exact_date_states.docx"
 dynamic_state_doc = Document()
 for _status in (
@@ -355,13 +354,16 @@ _dynamic_exact_doc = Document(dynamic_exact_result.created_files[0])
 _dynamic_exact_lines = [p.text for p in _dynamic_exact_doc.paragraphs if p.text.strip()]
 _dynamic_first = next(line for line in _dynamic_exact_lines if line.startswith("22.06.26 Динамический эпикриз."))
 _dynamic_second = next(line for line in _dynamic_exact_lines if line.startswith("02.07.26 Динамический эпикриз."))
-assert "Динамическое наблюдение: DYNAMIC_STATE_ALPHA" in _dynamic_first, _dynamic_first
+assert "Динамическое наблюдение: DYNAMIC_STATE_BETA" in _dynamic_first, _dynamic_first
 assert "DYNAMIC_STATE_DELTA" not in _dynamic_first, _dynamic_first
-assert "Динамическое наблюдение: DYNAMIC_STATE_DELTA" in _dynamic_second, _dynamic_second
+from diary_service import fourth_preceding_diary_observation
+_dynamic_dates = (_calendar_date(2026, 6, 22), _calendar_date(2026, 7, 2))
+_dynamic_second_state = fourth_preceding_diary_observation(_dynamic_dates[1], dynamic_exact_result.dated_clinical_states, _dynamic_dates)
+assert _dynamic_second_state and f"Динамическое наблюдение: {_dynamic_second_state}" in _dynamic_second, _dynamic_second
 assert "DYNAMIC_STATE_ALPHA" not in _dynamic_second, _dynamic_second
 
-# If the dynamic date is absent from the semantic diary plan, fail closed:
-# render administrative facts/signatures only, never borrow a nearby state.
+# Missing same-date observations do not block a fourth-prior observation.
+# If fewer than four eligible earlier diaries exist, leave observation empty.
 dynamic_missing_result = DiaryService().create_text_diaries(
     status_files=[dynamic_state_source],
     diary_files=[contract_dates],
@@ -379,9 +381,11 @@ _dynamic_missing_doc = Document(dynamic_missing_result.created_files[0])
 _dynamic_missing_lines = [p.text for p in _dynamic_missing_doc.paragraphs if p.text.strip()]
 _dynamic_with_source = next(line for line in _dynamic_missing_lines if line.startswith("19.06.26 Динамический эпикриз."))
 _dynamic_without_source = next(line for line in _dynamic_missing_lines if line.startswith("29.06.26 Динамический эпикриз."))
-assert "Динамическое наблюдение: DYNAMIC_STATE_EPSILON" in _dynamic_with_source, _dynamic_with_source
-assert "Динамическое наблюдение:" not in _dynamic_without_source, _dynamic_without_source
-assert "DYNAMIC_STATE_" not in _dynamic_without_source, _dynamic_without_source
+_missing_dates = (_calendar_date(2026, 6, 19), _calendar_date(2026, 6, 29))
+_missing_first_state = fourth_preceding_diary_observation(_missing_dates[0], dynamic_missing_result.dated_clinical_states, _missing_dates)
+assert (f"Динамическое наблюдение: {_missing_first_state}" in _dynamic_with_source) if _missing_first_state else ("Динамическое наблюдение:" not in _dynamic_with_source), _dynamic_with_source
+_missing_second_state = fourth_preceding_diary_observation(_missing_dates[1], dynamic_missing_result.dated_clinical_states, _missing_dates)
+assert (f"Динамическое наблюдение: {_missing_second_state}" in _dynamic_without_source) if _missing_second_state else ("Динамическое наблюдение:" not in _dynamic_without_source), _dynamic_without_source
 for section in contract_output.sections:
     assert abs(section.left_margin.cm - 1.5) < 0.03
     assert abs(section.right_margin.cm - 1.0) < 0.03

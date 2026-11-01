@@ -28,8 +28,7 @@ class DynamicEpicrisisInput:
     patient_name: str = ""
     birth_date: str = ""
     sick_leave_from: str = ""
-    # Clinical wording selected for this exact epicrisis date from the semantic
-    # diary plan. Never substitute a neighboring/admission observation.
+    # Clinical wording from the fourth preceding ordinary generated diary.
     clinical_state: str = ""
     complaints: str = ""
     treatment: str = ""
@@ -253,6 +252,26 @@ def _insert_dynamic_block(doc: Document, item_date: date, lines: tuple[str, ...]
     anchor.insert_paragraph_before("")
 
 
+def fourth_preceding_diary_observation(
+    item_date: date,
+    clinical_states: Mapping[date, str],
+    epicrisis_dates: Sequence[date],
+) -> str:
+    """Return the fourth prior ordinary diary observation, not fourth calendar day.
+
+    The generated diary plan is authoritative. Replaced ordinary diary entries
+    (dynamic-epicrisis dates) are never eligible as source observations.
+    """
+    replaced = set(epicrisis_dates)
+    previous = sorted(
+        (day, str(text).strip())
+        for day, text in clinical_states.items()
+        if isinstance(day, date) and day < item_date
+        and day not in replaced and str(text or "").strip()
+    )
+    return previous[-4][1] if len(previous) >= 4 else ""
+
+
 def apply_sick_leave_dynamic_epicrises(
     path: str | Path,
     *,
@@ -291,7 +310,7 @@ def apply_sick_leave_dynamic_epicrises(
         return 0
 
     # A mapping (even an empty one) means the automatic production route is
-    # enforcing date-specific evidence. Legacy undated clinical arguments are
+    # selecting fourth-prior diary evidence. Legacy undated clinical arguments are
     # retained only for explicit low-level callers that do not provide a map.
     use_legacy_undated = clinical_state_by_date is None
     state_by_date = clinical_state_by_date or {}
@@ -302,7 +321,7 @@ def apply_sick_leave_dynamic_epicrises(
             patient_name=patient_name,
             birth_date=birth_date,
             sick_leave_from=f"{base_date:%d.%m.%Y}",
-            clinical_state=state_by_date.get(item_date, ""),
+            clinical_state=fourth_preceding_diary_observation(item_date, state_by_date, dates),
             complaints=complaints if use_legacy_undated else "",
             treatment=treatment if use_legacy_undated else "",
             profile_status=profile_status if use_legacy_undated else "",
@@ -406,8 +425,7 @@ class DiaryService:
                 complaints=complaints,
                 treatment=treatment,
                 profile_status=profile_status,
-                # Only exact-date semantic diary observations may supply the
-                # clinical body of an automatic dynamic epicrisis.
+                # Use ordered ordinary diaries, excluding dates replaced by epicrises.
                 clinical_state_by_date=result.dated_clinical_states,
                 treating_physician=doctor_name,
                 department_head=department_head_name,
