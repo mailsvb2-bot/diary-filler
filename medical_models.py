@@ -271,33 +271,26 @@ def normalize_admission_occurrence(value: str) -> str:
     return normalized if normalized in ADMISSION_OCCURRENCE_OPTIONS else ""
 
 
+_OCCURRENCE_RE = re.compile(
+    r"(?<![\\w])(?:в первый раз|впервые|первично|повторно|вторично)(?![\\w])",
+    re.IGNORECASE,
+)
+
+
 def parse_admission_occurrence_value(value: str) -> str:
-    """Recover an explicit первично/повторно fact from a rendered admission line."""
-    normalized = " ".join(str(value or "").strip().lower().replace("ё", "е").split())
-    for option in ADMISSION_OCCURRENCE_OPTIONS:
-        if re.match(rf"^{re.escape(option)}(?:$|[\s,.;:–—-])", normalized):
-            return option
-    return ""
+    """Extract occurrence anywhere; repeats take precedence over first admissions."""
+    tokens = [m.group(0).lower().replace("ё", "е") for m in _OCCURRENCE_RE.finditer(str(value or ""))]
+    if any(t in {"повторно", "вторично"} for t in tokens):
+        return "повторно"
+    return "первично" if tokens else ""
 
 
 def strip_admission_occurrence_prefix(value: str) -> str:
-    """Remove a legacy leading occurrence token from the clinical admission tail.
-
-    ``admission_occurrence`` is an explicit doctor-confirmed fact. The free-text
-    ``admission`` field must not carry a second copy of ``первично/повторно``.
-    """
-    text = " ".join(str(value or "").strip().split())
-    lowered = text.lower().replace("ё", "е")
-    for option in ADMISSION_OCCURRENCE_OPTIONS:
-        if lowered == option:
-            return ""
-        if lowered.startswith(option):
-            boundary = len(option)
-            if len(lowered) > boundary and not lowered[boundary].isalpha():
-                return text[boundary:].lstrip(" ,.;:–—-")
-            if len(lowered) > boundary and lowered[boundary].isspace():
-                return text[boundary:].strip()
-    return text
+    """Remove occurrence tokens wherever present, avoiding contradictions."""
+    text = _OCCURRENCE_RE.sub("", " ".join(str(value or "").strip().split()))
+    text = re.sub(r"\s+([,.;:])", r"\1", text)
+    text = re.sub(r"[,;]\s*[,;]", ",", text)
+    return text.strip(" ,.;:–—-")
 
 
 def clean_admission_detail(value: str) -> str:
@@ -390,6 +383,7 @@ class PatientData:
     vk_mse_work_org: str = ""
     vk_mse_position: str = ""
     sick_leave_vk_date: str = ""
+    vk_epicrisis_number: str = ""  # Explicit clinician-provided number; never fabricate 1.
     sick_leave_vk_protocol_number: str = ""
     sick_leave_vk_protocol_date: str = ""
     sick_leave_vk_commission_date: str = ""

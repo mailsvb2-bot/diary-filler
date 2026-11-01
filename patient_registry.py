@@ -233,28 +233,79 @@ def _contains_word_documents(folder: Path) -> bool:
     )
 
 
+def _registry_visible_folder(folder: Path) -> bool:
+    name = folder.name.casefold().replace("ё", "е")
+    return not (
+        folder.name.startswith((".", "~$"))
+        or any(token in name for token in ("шаблон", "дневник", "тексты", "__pycache__"))
+    )
+
+
+def _registry_primaries(folder: Path, max_depth: int = 4) -> list[Path]:
+    """Discover real primary records inside patient-owned document subfolders."""
+    found: list[Path] = []
+    def walk(current: Path, depth: int) -> None:
+        try:
+            found.extend(primary_candidates(current))
+            if depth >= max_depth:
+                return
+            for child in sorted(current.iterdir(), key=lambda x: x.name.casefold()):
+                if child.is_dir() and not child.name.startswith((".", "~$")):
+                    walk(child, depth + 1)
+        except (OSError, PermissionError):
+            return
+    walk(folder, 0)
+    return found
+
+
 def _patient_folders(directory: Path, issues: list, *, max_depth: int = 8) -> list[Path]:
+    """Select patient owners; unrelated Word files cannot hide nested patients."""
     result: list[Path] = []
 
     def visit(folder: Path, depth: int) -> None:
         try:
-            children = sorted((p for p in folder.iterdir() if p.is_dir()), key=lambda p: p.name.casefold())
+            children = sorted((p for p in folder.iterdir() if p.is_dir() and
+                               _registry_visible_folder(p)), key=lambda p: p.name.casefold())
         except OSError as exc:
             issues.append(PatientRegistryIssue(folder, f"Папка недоступна для чтения ({type(exc).__name__})."))
             return
         for child in children:
-            if child.name.startswith((".", "~$")):
-                continue
-            try:
-                has_word = _contains_word_documents(child)
-                has_subfolders = any(p.is_dir() for p in child.iterdir())
-            except OSError as exc:
-                issues.append(PatientRegistryIssue(child, f"Папка недоступна для чтения ({type(exc).__name__})."))
-                continue
-            if not has_word and has_subfolders and depth < max_depth:
-                visit(child, depth + 1)
-            else:
+            own_primary = primary_candidates(child)
+            nested_primary = _registry_primaries(child) if not own_primary else own_primary
+            if nested_primary:
+                # If immediate children are themselves patients, this folder is a ward.
+                direct_patient_children = [
+                    p for p in child.iterdir()
+                    if p.is_dir() and _registry_visible_folder(p)
+                    and (primary_candidates(p) or _registry_primaries(p))
+                ]
+                document_subfolder_names = {
+                    "первичка", "первичный", "документы", "документ",
+                    "история болезни", "осмотры", "выписки", "анализы",
+                }
+                is_patient_documents = all(
+                    sub.name.casefold().replace("ё", "е") in document_subfolder_names
+                    for sub in direct_patient_children
+                )
+                if direct_patient_children and not own_primary and not is_patient_documents:
+                    # Parent has no own primary: each named immediate child
+                    # is a separate patient, even if the parent has Word schedules.
+                    if depth < max_depth:
+                        visit(child, depth + 1)
+                    continue
                 result.append(child)
+            elif depth < max_depth:
+                if _contains_word_documents(child) and not any(
+                    p.is_dir() and _registry_visible_folder(p) for p in child.iterdir()
+                ):
+                    # Legacy renamed primary: parser must confirm patient evidence.
+                    result.append(child)
+                else:
+                    visit(child, depth + 1)
+                    if not any(p.is_dir() and _registry_visible_folder(p) for p in child.iterdir()) and not _contains_word_documents(child):
+                        issues.append(PatientRegistryIssue(child, "Нет первичного медицинского документа."))
+            else:
+                issues.append(PatientRegistryIssue(child, "Первичный медицинский документ не найден."))
 
     visit(directory, 0)
     return result
@@ -473,7 +524,22 @@ def scan_patient_registry(
         root_primaries = []
         issues.append(PatientRegistryIssue(directory, f"Папка недоступна для чтения ({type(exc).__name__})."))
     for path in root_primaries:
-        work_items.append((directory, [path]))
+        surname = path.stem.split()[0].casefold()
+        matching_discharge = [
+            other for other in discharge_patient_documents(directory)
+            if other.stem.casefold().startswith(surname + " ")
+        ]
+        hidden = False
+        for other in matching_discharge:
+            try:
+                d = _date_value(getattr(parse(other), "discharge_date", ""))
+                if d is not None and d <= target_date:
+                    hidden = True
+                    break
+            except Exception:
+                issues.append(PatientRegistryIssue(other, "Не удалось проверить дату выписки."))
+        if not hidden:
+            work_items.append((directory, [path]))
     for folder in _patient_folders(directory, issues):
         work_items.append((folder, None))
 
@@ -482,7 +548,7 @@ def scan_patient_registry(
             try:
                 if _discharge_hides_patient(patient_folder, target_date, parse, issues):
                     continue
-                candidates = patient_source_candidates(patient_folder)
+                candidates = _registry_primaries(patient_folder) or patient_source_candidates(patient_folder)
             except OSError as exc:
                 issues.append(PatientRegistryIssue(patient_folder, f"Папка недоступна для чтения ({type(exc).__name__})."))
                 continue
@@ -491,17 +557,6 @@ def scan_patient_registry(
         if not candidates:
             warning = "В папке пациента не найден Word-документ для распознавания."
             issues.append(PatientRegistryIssue(patient_folder, warning))
-            patients.append(
-                PatientRegistryEntry(
-                    fio=patient_folder.name,
-                    folder=patient_folder,
-                    primary_path=None,
-                    admission_date=None,
-                    sick_leave_needed=False,
-                    sick_leave_from=None,
-                    warning=warning,
-                )
-            )
             continue
 
         parsed_data = None
@@ -516,6 +571,15 @@ def scan_patient_registry(
                 last_error = exc
 
         warnings: list[str] = []
+        # Renamed primary fallback is accepted only with actual patient evidence.
+        # Generic Word forms, schedules and templates must not enter the census.
+        if not is_primary_patient_filename(chosen):
+            if parsed_data is None or not (
+                str(getattr(parsed_data, "fio", "") or "").strip()
+                and _date_value(getattr(parsed_data, "admission_date", ""))
+            ):
+                issues.append(PatientRegistryIssue(patient_folder, "Word-документ не подтверждает пациента."))
+                continue
         if parsed_data is None:
             # Keep the folder in the census. Registry-specific fallbacks can
             # still recover admission/LN facts directly from the Word source,

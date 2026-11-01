@@ -38,6 +38,27 @@ from medical_text_utils import normalize_match
 
 class MedicalRendererSpecialMixin:
     @staticmethod
+    def _normalize_vk_visible_labels(editor: DocxBlockEditor, data: PatientData) -> None:
+        """Remove a fixed, unsourced epicrisis number from bundled VK forms."""
+        number = str(getattr(data, "vk_epicrisis_number", "") or "").strip()
+        heading = f"ЭПИКРИЗ № {number}" if number else "ЭПИКРИЗ"
+        editor.replace_first_matching_paragraph(["ЭПИКРИЗ №"], heading)
+        for paragraph in editor.paragraphs:
+            if editor.template_paragraph_text(paragraph) is None:
+                continue
+            text = paragraph.text or ""
+            normalized = text.replace("Врач психиатр", "Врач-психиатр")
+            normalized = normalized.replace("зам глав врача", "зам. главного врача")
+            normalized = normalized.replace("Зуйкова  А.А.", "Зуйкова А.А.")
+            if normalized != text:
+                set_paragraph_text(paragraph, normalized)
+
+    @staticmethod
+    def _birth_label(data: PatientData) -> str:
+        value = str(data.birth or "").strip()
+        return f"{'Дата рождения' if len(value) > 4 else 'Год рождения'}: {value}"
+
+    @staticmethod
     def _clean_vk_purpose_instruction(editor: DocxBlockEditor) -> None:
         """Strip filling instructions only from the template-owned VK purpose row."""
         for paragraph in editor.paragraphs:
@@ -112,6 +133,7 @@ class MedicalRendererSpecialMixin:
         """ВК на МСЭ: заполняем факты пациента; прогнозы шаблона не публикуем."""
         doc = Document(str(template_path))
         editor = DocxBlockEditor(doc)
+        self._normalize_vk_visible_labels(editor, data)
 
         if data.vk_date:
             editor.replace_first_matching_regex(r"^\s*\.?\s*\d{4}\s*$", data.vk_date)
@@ -124,7 +146,7 @@ class MedicalRendererSpecialMixin:
                     clear_paragraph_highlight(paragraph)
 
         editor.replace_all_matching_paragraphs(["Ф.И.О", "Ф.И.О:"], f"Ф.И.О: {data.fio}")
-        editor.replace_all_matching_paragraphs(["Год рождения"], f"Год рождения: {data.birth}")
+        editor.replace_all_matching_paragraphs(["Год рождения"], self._birth_label(data))
         editor.replace_all_matching_paragraphs(["Проживает", "Регистрация по адресу"], format_registration_text(data.registered))
         self._place_psych_account_after_registration(editor, data, ["Регистрация по адресу"], fallback_markers=["Ф.И.О", "Ф.И.О:"])
         # Service validation normalizes the VK-specific work fields. Do not fall
@@ -182,6 +204,7 @@ class MedicalRendererSpecialMixin:
         """ВК больничный: отдельная форма ВК для продления лечения/больничного."""
         doc = Document(str(template_path))
         editor = DocxBlockEditor(doc)
+        self._normalize_vk_visible_labels(editor, data)
 
         # Верхняя дата, номер протокола и дата протокола работают так же, как в ВК на МСЭ.
         if data.sick_leave_vk_date:
@@ -206,7 +229,7 @@ class MedicalRendererSpecialMixin:
         )
 
         editor.replace_all_matching_paragraphs(["Ф.И.О", "Ф.И.О:"], f"Ф.И.О: {data.fio}")
-        editor.replace_all_matching_paragraphs(["Год рождения"], f"Год рождения: {data.birth}")
+        editor.replace_all_matching_paragraphs(["Год рождения"], self._birth_label(data))
         editor.replace_all_matching_paragraphs(["Проживает", "Регистрация по адресу"], format_registration_text(data.registered))
         self._place_psych_account_after_registration(editor, data, ["Регистрация по адресу"], fallback_markers=["Ф.И.О", "Ф.И.О:"])
         editor.replace_all_matching_paragraphs(["Место работы"], f"Место работы, должность: {work_position}")
@@ -264,7 +287,7 @@ class MedicalRendererSpecialMixin:
         editor.replace_first_matching_paragraph(["О СОСТОЯНИИ"], f"О СОСТОЯНИИ ЗДОРОВЬЯ ГРАЖДАНИНА № {act_number}".rstrip())
         editor.replace_block(["История болезни №"], "История болезни №", data.case_number, RVK_MARKERS, preserve_when_empty=False, allow_empty=True)
         editor.replace_block(["Ф.И.О.", "ФИО"], "Ф.И.О.:", data.fio, RVK_MARKERS, allow_empty=True)
-        editor.replace_block(["Год рождения"], "Год рождения:", data.birth, RVK_MARKERS, allow_empty=True)
+        editor.replace_block(["Год рождения"], "Дата рождения:" if len(str(data.birth or "").strip()) > 4 else "Год рождения:", data.birth, RVK_MARKERS, allow_empty=True)
         editor.replace_block(["Проживает", "Регистрация по адресу"], "Регистрация по адресу:", data.registered, RVK_MARKERS, allow_empty=True)
         self._place_psych_account_after_registration(editor, data, ["Регистрация по адресу"], fallback_markers=["Ф.И.О", "Ф.И.О:"])
         # В Акте для РВК строка "Место работы" не нужна: удаляем её из результата,

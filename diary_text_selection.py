@@ -443,7 +443,7 @@ def folder_has_diary_text_candidates(folder: str | Path) -> bool:
         return False
 
     def has_candidate(current: Path, depth: int) -> bool:
-        if depth > 1:
+        if depth > 2:
             return False
         try:
             children = current.iterdir()
