@@ -315,6 +315,10 @@ class MedicalDocumentService:
         # selections (e.g. discharge + sick-leave VK) do not fail merely because
         # the shared yes/no field was initially empty.
         if "sick_leave_vk" in selected_set:
+            # Capture the source date before replacing the source field.
+            _source_sick_decision, _source_sick_from = parse_sick_leave_value(data.sick_leave)
+            if not data.expert_sick_leave_from.strip() and _source_sick_from:
+                data.expert_sick_leave_from = _source_sick_from
             # The selected specialized form is the doctor's current explicit
             # intent and therefore outranks stale/default shared yes/no state.
             # Keep the service boundary consistent with the UI preflight too,
@@ -394,6 +398,16 @@ class MedicalDocumentService:
         data.psych_account = format_psych_account_value(
             data.psych_account_status, data.psych_account_since_year, data.psych_account
         )
+
+        # An RVK act and primary examination must describe the same referral.
+        if "rvk" in selected_set and "primary" in selected_set:
+            ref = normalize_yes_no(data.rvk_referral_present)
+            source_ref, _ = parse_rvk_referral_value(data.rvk_referral)
+            if (ref or source_ref) == "нет":
+                raise ValueError(
+                    "Акт для РВК противоречит первичному осмотру: "
+                    "указано отсутствие направления от РВК. Уточните ответ врача."
+                )
 
         rvk_referral_docs = {"primary", "admission_doctor_referral"}
         if selected_set & rvk_referral_docs:

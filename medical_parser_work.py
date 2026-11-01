@@ -76,6 +76,19 @@ class MedicalParserWorkMixin:
             flags=re.IGNORECASE,
         )
         if not m:
+            # Common compact format: «ООО „Ромашка“, бухгалтер».
+            # Only split a trailing unambiguous occupation; keep addresses
+            # and organization names containing commas intact.
+            compact = re.match(
+                r"^(.+?),\s*((?:старший |главный |ведущий )?"
+                r"(?:бухгалтер|врач|инженер|водитель|продавец|учитель|"
+                r"медсестра|санитар|оператор|менеджер|экономист|"
+                r"юрист|директор|слесарь|электрик|уборщик|повар)"
+                r"(?:\s+[\w-]+)*)$",
+                raw, re.IGNORECASE,
+            )
+            if compact:
+                return cls._clean_work_org_value(compact.group(1)), cls._clean_position_value(compact.group(2))
             return cls._clean_work_org_value(raw), ""
         org = cls._clean_work_org_value(raw[:m.start()])
         position = cls._clean_position_value(m.group(1))

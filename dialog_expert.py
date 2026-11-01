@@ -168,8 +168,8 @@ class DialogExpertMixin:
     def _prompt_shared_clinical_options_if_needed(self, selected_medical: List[str]) -> bool:
         """Collect shared doctor decisions once for the whole selected document set.
 
-        Explicit sick-leave/disability rows currently exist in the primary exam
-        and admission-doctor templates. EPI is shared by every output template
+        The primary exam intentionally omits the sick-leave row;
+        shared sick-leave decisions apply to discharge and commission documents. EPI is shared by every output template
         that contains an EPI block. One answer is reused across all selected docs.
         """
         selected = set(selected_medical)

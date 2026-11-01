@@ -299,6 +299,8 @@ class DialogDocumentDetailsMixin:
                 ("Место работы", self.vk_mse_work_org_var.get().strip() or shared_org),
                 ("Должность", self.vk_mse_position_var.get().strip() or shared_position),
             ])
+        number_var = getattr(self, "vk_epicrisis_number_var", None)
+        rows.append(("Номер эпикриза (если присвоен)", number_var.get().strip() if number_var is not None else ""))
         values = self._prompt_fields(
             title="ВК на МСЭ",
             rows=rows,
@@ -322,6 +324,8 @@ class DialogDocumentDetailsMixin:
             return False
         self.vk_date_var.set(vk_date)
         self.vk_protocol_number_var.set(protocol_number)
+        if number_var is not None:
+            number_var.set(values[-1].strip())
         self.vk_protocol_date_var.set(vk_protocol_date)
         if nonworking:
             self.vk_mse_work_org_var.set("")
@@ -358,6 +362,8 @@ class DialogDocumentDetailsMixin:
                 ("Место работы", self.sick_leave_vk_work_org_var.get().strip() or shared_org),
                 ("Должность", self.sick_leave_vk_position_var.get().strip() or shared_position),
             ])
+        number_var = getattr(self, "vk_epicrisis_number_var", None)
+        rows.append(("Номер эпикриза (если присвоен)", number_var.get().strip() if number_var is not None else ""))
         values = self._prompt_fields(
             title="ВК больничный",
             rows=rows,
@@ -388,6 +394,8 @@ class DialogDocumentDetailsMixin:
             return False
         self.sick_leave_vk_date_var.set(sick_vk_date)
         self.sick_leave_vk_protocol_number_var.set(protocol_number)
+        if number_var is not None:
+            number_var.set(values[-1].strip())
         self.sick_leave_vk_protocol_date_var.set(sick_vk_protocol_date)
         self.sick_leave_vk_commission_date_var.set(sick_vk_commission_date)
         if nonworking:

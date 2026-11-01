@@ -106,8 +106,8 @@ class DiaryTemplateDiscoveryMixin:
             except Exception:
                 cache_key = (str(root), 0)
             cache = getattr(self, "_diary_template_files_cache", None)
-            if isinstance(cache, dict) and cache_key in cache:
-                return list(cache[cache_key])
+            # A root mtime does not change when descendants gain new documents.
+            # Re-scan the bounded tree instead of trusting stale cached results.
 
             files: list[Path] = []
             seen: set[str] = set()
@@ -280,9 +280,12 @@ class DiaryTemplateDiscoveryMixin:
             candidates.append(start / "шаблоны дневников")
             candidates.append(start / "Шаблоны дневников")
             try:
-                for child in list(start.iterdir())[:200]:
-                    if child.is_dir() and self._is_named_diary_templates_folder(child):
-                        candidates.append(child)
+                for child in sorted(
+                    (p for p in start.iterdir() if p.is_dir()
+                     and self._is_named_diary_templates_folder(p)),
+                    key=lambda p: p.name.casefold(),
+                ):
+                    candidates.append(child)
             except Exception:
                 pass
             for candidate in candidates:
@@ -317,7 +320,7 @@ class DiaryTemplateDiscoveryMixin:
                 continue
             candidates.append(start)
             try:
-                for child in list(start.iterdir())[:120]:
+                for child in sorted((p for p in start.iterdir() if p.is_dir()), key=lambda p: p.name.casefold()):
                     if child.is_dir():
                         candidates.append(child)
             except Exception:

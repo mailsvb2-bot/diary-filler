@@ -180,6 +180,7 @@ class AppInitializationMixin:
         self.rvk_work_position_var = tk.StringVar()
         self.vk_date_var = tk.StringVar()
         self.vk_protocol_number_var = tk.StringVar()
+        self.vk_epicrisis_number_var = tk.StringVar()
         self.vk_protocol_date_var = tk.StringVar()
         self.vk_mse_work_org_var = tk.StringVar()
         self.vk_mse_position_var = tk.StringVar()

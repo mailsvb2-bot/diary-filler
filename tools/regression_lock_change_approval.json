@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "b78eb1dd1b1736138384b93dd06b578952e6c865",
-  "reason": "Reviewed change to fourth preceding ordinary diary observation and dedicated regression on PR 360; protected production mechanics and all mandatory test suites remain enforced.",
+  "reason": "Clinician-sourced nested patient registry and medical data correctness repairs with DOCX-backed regression coverage; preserve all required release CI tests.",
   "required_evidence": [
     "ci_gate_lock",
     "desktop_intake_contract",
@@ -17,10 +17,30 @@
   ],
   "approved_blobs": {
     "diary_service.py": "7ae4a4ffa977a65fdfc5b426e63e04ee3b7f446f",
+    "tests/golden_docx_manifest.json": "e95fa82809254546de354a6d5ef34ce9ab5b20c5",
+    "dialog_expert.py": "d513007d5ef4ef7a9e0b3febfbda64a284cb81f7",
     "tests/four_previous_diaries_regression.py": "fa524d8cf0276f5c725389c9f3ee53b179dd3f94",
-    "tools/document_mechanics_change_approval.json": "c79e55a2a66b260f1de06f5195761c45dd284c90",
-    "prod_audit.py": "71f92e67d76e1bf39a508c2f02ed44c3b770882b",
+    "smoke_combined_part04_medical_generation.py": "19bf188efe7403f57e9658dd14690aa9468d07f8",
     "smoke_combined_part05_diary_basic_templates.py": "2d822d07e90ea58786e960c594934696c057780b",
-    "tests/verbal_diary_source_regression.py": "a7104873a4ac4e8e2d66e5426d781352673de919"
+    "medical_renderer_special.py": "bf091484d10df28cfe130c32607792e686d9e417",
+    "app_initialization.py": "5fafeb8c45c36725f8f3c2d893568efea364a636",
+    "actions_navigation.py": "04cb304372640f118bbe25d5e0e0749ec2aede53",
+    "patient_registry.py": "8e673216d48e80d055da852a4f2b2d57650ee955",
+    "tests/patient_registry_nested_regression.py": "ef858c3fba1572b052bb5b6401c71a27f414bc78",
+    "diary_template_discovery.py": "b3d5c961c88eb2a2adca8c19052fa0f16284195a",
+    "tests/medical_source_corrections_regression.py": "420d8c55bac2b9daa803f234f079ac93323178ff",
+    "medical_renderer_primary.py": "b0b0907ea910693e7cc0747c2c8c01b83d3527a8",
+    "release_check.py": "96e80e94c1cf9fa7f6e1c6a6f7ec41776844c354",
+    "prod_audit.py": "71f92e67d76e1bf39a508c2f02ed44c3b770882b",
+    "files_mixin.py": "d4eaeba7b995a6ebc2a0c517a804545f28abec02",
+    "diary_text_selection.py": "768d7711246548a02df14d23bc460e7f871698d7",
+    "actions_medical_flow.py": "5a39abcdd5492bb87e8838e256488cfffeeef705",
+    "medical_models.py": "d5da08a4c951196cebf92eb28df0d2f2a11b30e1",
+    "tests/verbal_diary_source_regression.py": "a7104873a4ac4e8e2d66e5426d781352673de919",
+    "medical_parser_work.py": "6c84ffbac8111c9028f68313ce6a9d2cd1d492ad",
+    "tools/document_mechanics_change_approval.json": "086063c0e0426f98ef5ed539a78507e720d2128d",
+    "dialog_document_details.py": "83528c2c22d4f292059ee53d08d5bbd93ec85c83",
+    "tests/patient_registry_regression.py": "cf087a8797085033826de07ef1c0d8c661c7f91f",
+    "medical_service.py": "f8c6b4c67bf27a6c93f9a41331b954f31a77f9e7"
   }
 }
