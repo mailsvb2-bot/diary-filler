@@ -23,7 +23,7 @@ compact_data2 = service.parser.parse_text("""
 Диагноз: F41.2 тест
 """)
 assert compact_data2.fio == "Маркер Мужской Проверочный", compact_data2.fio
-assert compact_data2.birth == "1980 г.р", compact_data2.birth
+assert compact_data2.birth == "1980", compact_data2.birth
 assert compact_data2.registered == "Нижний Новгород, ул. Тестовая, д. 1", compact_data2.registered
 
 # --- DOCX table regression: FIO label and value can live in adjacent cells ---
