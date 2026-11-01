@@ -375,12 +375,12 @@ class ActionsCreationOrchestratorMixin:
         if not selected_medical:
             return True
         parent = getattr(self, "root", None)
-        if "discharge" in selected_medical and not str(getattr(data, "registered", "") or "").strip():
+        if set(selected_medical) & {"discharge", "primary", "sick_leave_vk", "vk_mse", "rvk"} and not str(getattr(data, "registered", "") or "").strip():
             try:
                 address = simpledialog.askstring(
                     "Не распознан адрес",
                     "В первичном документе не найден адрес регистрации/проживания.\n"
-                    "Укажите адрес пациента для выписного эпикриза.\n"
+                    "Укажите адрес пациента для выбранных документов.\n"
                     "Отмена — не создавать документы.",
                     parent=parent,
                 )
@@ -400,7 +400,7 @@ class ActionsCreationOrchestratorMixin:
                     "Да — ввести текст. Нет — осознанно оставить пустым.\n"
                     "Отмена — прекратить создание.",
                     parent=parent,
-                    default="cancel",
+                    default="no",
                 )
             except Exception:
                 return False
@@ -416,7 +416,7 @@ class ActionsCreationOrchestratorMixin:
                 except Exception:
                     return False
                 if not value or not value.strip():
-                    return False
+                    continue
                 setattr(data, field, value.strip())
         return True
 
@@ -425,35 +425,6 @@ class ActionsCreationOrchestratorMixin:
         from medical_constants import REQUIRED_CLINICAL_SECTIONS
         return [(field, label) for field, label in REQUIRED_CLINICAL_SECTIONS
                 if not str(getattr(data, field, "") or "").strip()]
-
-    def _confirm_empty_required_sections(self) -> bool:
-        """Warn the physician about missing source sections without inventing content."""
-        data = getattr(self, "data", None)
-        if data is None or not hasattr(data, "empty_required_sections"):
-            return True
-        empty = list(data.empty_required_sections())
-        diagnosis_var = getattr(self, "diagnosis_var", None)
-        ui_diagnosis = str(diagnosis_var.get() or "").strip() if diagnosis_var is not None else ""
-        override = str(getattr(self, "_popup_diagnosis_override", "") or "").strip()
-        if "Диагноз" in empty and (ui_diagnosis or override):
-            empty.remove("Диагноз")
-        if not empty:
-            return True
-        self._log("\n⚠ Пустые разделы в исходном документе: " + ", ".join(empty) + "\n")
-        try:
-            return bool(messagebox.askyesno(
-                "Пустые разделы",
-                "В исходном документе пациента не заполнены разделы:\n\n"
-                + "\n".join(f"• {label}" for label in empty)
-                + "\n\nВ созданных документах они останутся пустыми.\n"
-                "Продолжить создание документов?",
-                icon="warning", default="no",
-                parent=getattr(self, "root", None),
-            ))
-        except Exception:
-            # Fail closed: a missing warning dialog must not silently create
-            # records with unreviewed omissions.
-            return False
 
     def _ensure_primary_source_available_for_generation(
         self,

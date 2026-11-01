@@ -8,24 +8,28 @@ from diary_constants import FINAL_DIARY_TEXT
 import actions_creation_orchestrator as orch
 
 def main():
-    data=PatientData(complaints="",life_anamnesis="yes",disease_anamnesis="yes",
+    data=PatientData(registered="Тестовый адрес",complaints="",life_anamnesis="yes",disease_anamnesis="yes",
                      mental_status="",somatic_status="yes",diagnosis="F32.1")
     assert data.empty_required_sections()==["Жалобы","Психический статус"]
-    logs=[]
-    host=SimpleNamespace(data=data,diagnosis_var=SimpleNamespace(get=lambda:"F32.1"),
-                         _popup_diagnosis_override="",_log=logs.append,root=None)
-    original=orch.messagebox.askyesno
+    # Exercise the actual generation preflight, not an unreachable helper.
+    host=SimpleNamespace(root=None,_missing_clinical_fields_for_popup=lambda d: [
+        ("complaints", "Жалобы"), ("mental_status", "Психический статус")
+    ])
+    original=orch.messagebox.askyesnocancel
     called=[]
     def ask(title,msg,**kwargs):
         called.append((title,msg,kwargs))
         return False
-    orch.messagebox.askyesno=ask
+    orch.messagebox.askyesnocancel=ask
     try:
-        assert orch.ActionsCreationOrchestratorMixin._confirm_empty_required_sections(host) is False
-        assert "Жалобы" in called[-1][1] and "Психический статус" in called[-1][1]
-        assert called[-1][2]["default"]=="no"
+        assert orch.ActionsCreationOrchestratorMixin._resolve_unrecognized_generation_fields(
+            host,data,["primary"]
+        ) is True
+        assert "Жалобы" in called[0][1] and "Психический статус" in called[1][1]
+        assert all(row[2]["default"]=="no" for row in called)
+        assert data.complaints=="" and data.mental_status==""
     finally:
-        orch.messagebox.askyesno=original
+        orch.messagebox.askyesnocancel=original
     for number in ("","123456789"):
         source=PatientData(expert_work_status="да",expert_work_org="ООО Завод",expert_position="инженер",
             expert_sick_leave_needed="да",expert_sick_leave_from="15.06.2026",

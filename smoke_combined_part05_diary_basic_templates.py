@@ -363,7 +363,7 @@ assert _dynamic_second_state and f"Динамическое наблюдение
 assert "DYNAMIC_STATE_ALPHA" not in _dynamic_second, _dynamic_second
 
 # Missing same-date observations do not block a fourth-prior observation.
-# If fewer than four eligible earlier diaries exist, leave observation empty.
+# If fewer than four earlier diaries exist, show a clearly unfinished clinician placeholder.
 dynamic_missing_result = DiaryService().create_text_diaries(
     status_files=[dynamic_state_source],
     diary_files=[contract_dates],
@@ -381,11 +381,12 @@ _dynamic_missing_doc = Document(dynamic_missing_result.created_files[0])
 _dynamic_missing_lines = [p.text for p in _dynamic_missing_doc.paragraphs if p.text.strip()]
 _dynamic_with_source = next(line for line in _dynamic_missing_lines if line.startswith("19.06.26 Динамический эпикриз."))
 _dynamic_without_source = next(line for line in _dynamic_missing_lines if line.startswith("29.06.26 Динамический эпикриз."))
+from diary_constants import DYNAMIC_OBSERVATION_TEMPLATE
 _missing_dates = (_calendar_date(2026, 6, 19), _calendar_date(2026, 6, 29))
 _missing_first_state = fourth_preceding_diary_observation(_missing_dates[0], dynamic_missing_result.dated_clinical_states, _missing_dates)
-assert (f"Динамическое наблюдение: {_missing_first_state}" in _dynamic_with_source) if _missing_first_state else ("Динамическое наблюдение:" not in _dynamic_with_source), _dynamic_with_source
+assert (f"Динамическое наблюдение: {_missing_first_state}" in _dynamic_with_source) if _missing_first_state else (f"Динамическое наблюдение: {DYNAMIC_OBSERVATION_TEMPLATE}" in _dynamic_with_source), _dynamic_with_source
 _missing_second_state = fourth_preceding_diary_observation(_missing_dates[1], dynamic_missing_result.dated_clinical_states, _missing_dates)
-assert (f"Динамическое наблюдение: {_missing_second_state}" in _dynamic_without_source) if _missing_second_state else ("Динамическое наблюдение:" not in _dynamic_without_source), _dynamic_without_source
+assert (f"Динамическое наблюдение: {_missing_second_state}" in _dynamic_without_source) if _missing_second_state else (f"Динамическое наблюдение: {DYNAMIC_OBSERVATION_TEMPLATE}" in _dynamic_without_source), _dynamic_without_source
 for section in contract_output.sections:
     assert abs(section.left_margin.cm - 1.5) < 0.03
     assert abs(section.right_margin.cm - 1.0) < 0.03

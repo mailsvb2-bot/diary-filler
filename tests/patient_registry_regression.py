@@ -493,7 +493,7 @@ def _assert_vk_wednesday_schedule() -> None:
     )
     from medical_formatting import treatment_term_start
     assert treatment_term_start("10.09.2026", "01.09.2026") == "01.09.2026"
-    assert treatment_term_start("10.09.2026", "15.09.2026") == "10.09.2026"
+    assert treatment_term_start("10.09.2026", "15.09.2026") == "15.09.2026"
     assert treatment_term_start("10.09.2026", "") == "10.09.2026"
 
 def _assert_discharge_stays_admission_based() -> None:

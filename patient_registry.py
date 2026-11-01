@@ -41,6 +41,7 @@ class PatientRegistryEntry:
     rvk_referral: bool = False
     rvk_commissariat: str = ""
     warning: str = ""
+    primary_choices: tuple[Path, ...] = ()
 
     def is_present_on(self, value: date) -> bool:
         # The selected root is the current ward census. If the date cannot be
@@ -127,6 +128,17 @@ def is_primary_patient_filename(path: str | Path) -> bool:
     return bool(_PRIMARY_NAME_RE.search(stem))
 
 
+def _is_generated_primary_output(path: str | Path) -> bool:
+    """Recognize the app-owned FIO + 'Первичный осмотр' output naming form.
+
+    Single-token source filenames such as 'Первичный осмотр.docx' remain valid
+    historic primary documents.
+    """
+    stem = " ".join(Path(path).stem.casefold().replace("ё", "е").split())
+    words = stem.split()
+    return len(words) >= 4 and words[-2:] == ["первичный", "осмотр"]
+
+
 def primary_candidates(folder: str | Path) -> list[Path]:
     root = Path(folder)
     if not root.is_dir():
@@ -135,7 +147,9 @@ def primary_candidates(folder: str | Path) -> list[Path]:
     result = [
         path
         for path in root.iterdir()
-        if path.is_file() and not _is_word_lock_file(path) and is_primary_patient_filename(path)
+        if path.is_file() and not _is_word_lock_file(path)
+        and not _is_generated_primary_output(path)
+        and is_primary_patient_filename(path)
     ]
     return sorted(result, key=lambda p: (rank.get(p.suffix.lower(), 9), p.name.casefold()))
 
@@ -160,6 +174,7 @@ def patient_source_candidates(folder: str | Path) -> list[Path]:
         if (
             path.is_file()
             and not path.name.startswith("~$")
+            and not _is_generated_primary_output(path)
             and path.suffix.lower() in SUPPORTED_WORD_SUFFIXES
             and not is_discharge_patient_filename(path)
         )
@@ -237,7 +252,7 @@ def _registry_visible_folder(folder: Path) -> bool:
     name = folder.name.casefold().replace("ё", "е")
     return not (
         folder.name.startswith((".", "~$"))
-        or any(token in name for token in ("шаблон", "дневник", "тексты", "__pycache__"))
+        or name in {"шаблон", "шаблоны", "шаблоны дневников", "дневник", "дневники", "тексты", "тексты дневников", "__pycache__"}
     )
 
 
@@ -281,10 +296,13 @@ def _patient_folders(directory: Path, issues: list, *, max_depth: int = 32) -> l
                 ]
                 document_subfolder_names = {
                     "первичка", "первичный", "документы", "документ",
-                    "история болезни", "осмотры", "выписки", "анализы",
+                    "история болезни", "осмотры", "выписки", "анализы", "вк",
                 }
                 is_patient_documents = all(
                     sub.name.casefold().replace("ё", "е") in document_subfolder_names
+                    or sub.name.casefold().replace("ё", "е").startswith(
+                        ("первич", "документ", "вк ", "выписк", "анализ")
+                    )
                     for sub in direct_patient_children
                 )
                 if direct_patient_children and not own_primary and not is_patient_documents:
@@ -528,10 +546,20 @@ def scan_patient_registry(
         root_primaries = []
         issues.append(PatientRegistryIssue(directory, f"Папка недоступна для чтения ({type(exc).__name__})."))
     for path in root_primaries:
-        surname = path.stem.split()[0].casefold()
+        def identity(document):
+            try:
+                fio = str(getattr(parse(document), "fio", "") or "").strip()
+            except Exception:
+                fio = ""
+            if fio:
+                return " ".join(fio.casefold().replace("ё", "е").split())
+            stem = document.stem.casefold().replace("ё", "е")
+            words = stem.split()
+            return " ".join(words[:2]) if len(words) >= 2 else ""
+        source_identity = identity(path)
         matching_discharge = [
             other for other in discharge_patient_documents(directory)
-            if other.stem.casefold().startswith(surname + " ")
+            if source_identity and identity(other) == source_identity
         ]
         hidden = False
         for other in matching_discharge:
@@ -585,6 +613,9 @@ def scan_patient_registry(
                 last_error = exc
 
         warnings: list[str] = []
+        if len(candidates) > 1:
+            warnings.append("Несколько первичных документов: выберите нужную госпитализацию при открытии.")
+            issues.append(PatientRegistryIssue(patient_folder, warnings[-1]))
         # Renamed primary fallback is accepted only with actual patient evidence.
         # Generic Word forms, schedules and templates must not enter the census.
         if not is_primary_patient_filename(chosen):
@@ -639,6 +670,7 @@ def scan_patient_registry(
                 fio=fio,
                 folder=patient_folder,
                 primary_path=chosen,
+                primary_choices=tuple(candidates) if len(candidates) > 1 else (),
                 admission_date=admission,
                 sick_leave_needed=sick_needed,
                 sick_leave_from=sick_from,

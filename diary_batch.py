@@ -226,12 +226,17 @@ def _text_diary_dates_from_sources(
     # +3/+4 day steps.  Numbered 01-31 «Даты» files are compatibility/source
     # material (including signatures), not a command to write every day.
     # The discharge date is added separately as the single final diary entry.
-    if source_dates and discharge_date_value is not None and discharge_date_value > admission_date_value:
-        max_offset = (discharge_date_value - admission_date_value).days
-        return tuple(
-            admission_date_value + timedelta(days=offset)
-            for offset in _clinical_diary_offsets(max_offset)
-        )
+    if source_dates:
+        # Without a discharge date the observation period ends today, not at
+        # an arbitrary one-week template horizon. Follow the established
+        # twice-weekly cadence for the entire known interval.
+        horizon = discharge_date_value or max(date.today(), admission_date_value + timedelta(days=7))
+        if horizon > admission_date_value:
+            max_offset = (horizon - admission_date_value).days
+            return tuple(
+                admission_date_value + timedelta(days=offset)
+                for offset in _clinical_diary_offsets(max_offset)
+            )
     return source_dates
 
 
@@ -273,13 +278,11 @@ def _build_text_diary_entries(
     """
     planned = tuple(sorted(dict.fromkeys(dates)))
     final_date: date | None = None
-    if force_final_diary:
-        if discharge_date_value is not None:
-            final_date = discharge_date_value
-            planned = tuple(item for item in planned if item < final_date)
-        elif planned:
-            final_date = planned[-1]
-            planned = planned[:-1]
+    # Never label the most recent observation as a discharge diary unless
+    # a discharge date was actually supplied by the physician.
+    if force_final_diary and discharge_date_value is not None:
+        final_date = discharge_date_value
+        planned = tuple(item for item in planned if item < final_date)
 
     raw_entries: list[tuple[date, str, bool]] = []
     status_index = 0
@@ -305,6 +308,34 @@ def _build_text_diary_entries(
         raw_entries.append((final_date, remove_examinee_words(clean_status_text(adapted)), True))
         final_rows = 1
 
+    # Insert at most one observation on the nearest available working day
+    # when the third journal entry falls on a non-working date.  Walk the
+    # *augmented* chronological list, so consecutive January holidays never
+    # schedule the same shifted date more than once.
+    ordered = sorted(raw_entries, key=lambda row: row[0])
+    since_joint = 0
+    index = 0
+    while index < len(ordered):
+        item_date, text, is_final = ordered[index]
+        since_joint += 1
+        if since_joint >= 3:
+            if is_final or not is_non_working_day(item_date):
+                since_joint = 0
+            else:
+                moved = item_date + timedelta(days=1)
+                while is_non_working_day(moved):
+                    moved += timedelta(days=1)
+                if (final_date is None or moved < final_date) and not any(
+                    other_date == moved for other_date, _, _ in ordered
+                ):
+                    insert_at = next(
+                        (n for n, (other_date, _, _) in enumerate(ordered)
+                         if other_date > moved),
+                        len(ordered),
+                    )
+                    ordered.insert(insert_at, (moved, text, False))
+        index += 1
+    raw_entries = ordered
     entries = [
         TextDiaryEntry(
             date=item_date,

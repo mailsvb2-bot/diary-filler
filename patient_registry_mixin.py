@@ -5,7 +5,7 @@ from pathlib import Path
 import queue
 import threading
 import tkinter as tk
-from tkinter import filedialog, messagebox
+from tkinter import filedialog, messagebox, simpledialog
 
 from app_config import *
 from medical_formatting import parse_date
@@ -208,6 +208,18 @@ class PatientRegistryMixin:
         parent: tk.Misc | None = None,
     ) -> bool:
         source = entry.primary_path
+        choices = tuple(getattr(entry, "primary_choices", ()) or ())
+        if len(choices) > 1:
+            names = "\n".join(f"{i}. {path.name}" for i, path in enumerate(choices, 1))
+            index = simpledialog.askinteger(
+                "Выберите госпитализацию",
+                "Найдено несколько первичных документов.\n"
+                "Укажите номер нужного документа:\n\n" + names,
+                minvalue=1, maxvalue=len(choices), parent=parent or self.root,
+            )
+            if index is None:
+                return False
+            source = choices[index - 1]
         if source is None:
             messagebox.showwarning(
                 "Мои пациенты",

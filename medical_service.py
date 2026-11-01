@@ -272,7 +272,7 @@ class MedicalDocumentService:
         if birth_dt is None and birth_year is not None and admission_dt is not None and admission_dt.year < birth_year:
             raise ValueError("Дата госпитализации не может быть раньше года рождения.")
         data.case_number = self._require_text(data.case_number, "номер истории болезни")
-        data.diagnosis = self._require_text(data.diagnosis, "диагноз")
+        data.diagnosis = str(data.diagnosis or "").strip()
 
         treatment_docs = {"primary", "discharge", "commission", "vk_mse", "sick_leave_vk"}
         if selected_set & treatment_docs:

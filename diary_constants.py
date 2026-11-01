@@ -7,6 +7,8 @@ import re
 from shared_gender import GENDER_WORD_PAIRS
 
 
+# Explicitly non-clinical placeholder: never invent a patient's condition.
+DYNAMIC_OBSERVATION_TEMPLATE = "[Данные наблюдения отсутствуют; заполнить врачу]"
 MIN_STATUS_LEN = 25
 STATUS_FONT_SIZE_PT = 8
 DIARY_SIGNATURE_GAP_LINES = 3

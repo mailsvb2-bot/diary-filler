@@ -566,16 +566,20 @@ except ValueError as exc:
 missing_diagnosis_data = service.parse_primary_document(nav)
 missing_diagnosis_data.diagnosis = ""
 missing_diagnosis_data.discharge_date = "11.06.2026"
+# The clinician may deliberately continue with a blank diagnosis; the
+# service must not reject *that field*, while other required decisions remain
+# protected by their own validation (e.g. sick-leave choice).
 try:
-    service.create_documents(
+    created_without_diagnosis, _ = service.create_documents(
         navigation_path=nav,
         output_dir=OUT / "missing_diagnosis_service_boundary",
         selected_docs=["discharge"],
         override_data=missing_diagnosis_data,
     )
-    raise AssertionError("medical service must require diagnosis before rendering medical DOCX")
 except ValueError as exc:
-    assert "диагноз" in str(exc), str(exc)
+    assert "диагноз" not in str(exc), str(exc)
+else:
+    assert created_without_diagnosis
 
 missing_fio_data = service.parse_primary_document(nav)
 missing_fio_data.fio = ""
