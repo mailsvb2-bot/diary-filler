@@ -32,6 +32,7 @@
     "diary_text_selection.py": "768d7711246548a02df14d23bc460e7f871698d7",
     "tests/patient_registry_nested_regression.py": "b7ef0599682c2b9e17cc8fd5f5b1750ee3b750d0",
     "diary_template_discovery.py": "19e9a0500a1a81685817a704cbddd170581a3897",
-    "medical_service.py": "f8c6b4c67bf27a6c93f9a41331b954f31a77f9e7"
+    "medical_service.py": "f8c6b4c67bf27a6c93f9a41331b954f31a77f9e7",
+    "medical_renderer_primary.py": "f0e31fd17127e3b876d94c294ac2ac9e52b468bd"
   }
 }

@@ -10,6 +10,7 @@
     "medical_models.py": "d5da08a4c951196cebf92eb28df0d2f2a11b30e1",
     "medical_parser_work.py": "6c84ffbac8111c9028f68313ce6a9d2cd1d492ad",
     "medical_renderer_special.py": "011eef60e3a194068407ef1e28783547c58ed52c",
-    "medical_service.py": "f8c6b4c67bf27a6c93f9a41331b954f31a77f9e7"
+    "medical_service.py": "f8c6b4c67bf27a6c93f9a41331b954f31a77f9e7",
+    "medical_renderer_primary.py": "f0e31fd17127e3b876d94c294ac2ac9e52b468bd"
   }
 }
