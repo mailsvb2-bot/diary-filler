@@ -14,7 +14,7 @@ from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 
 from diary_batch import _clinical_diary_offsets, create_text_diaries
-from diary_calendar import is_fixed_holiday, is_non_working_day
+from diary_calendar import is_fixed_holiday, is_non_working_day, next_working_day
 from medical_formatting import format_staff_short_name
 from diary_dates import parse_full_date, parse_optional_discharge_date
 from diary_models import DiaryBatchResult
@@ -37,16 +37,6 @@ class DynamicEpicrisisInput:
     treatment_correction: str = ""
     treating_physician: str = ""
     department_head: str = ""
-
-
-def next_working_day(day: date, *, used=()) -> date:
-    used_set = set(used)
-    current = day
-    for _ in range(370):
-        if not is_non_working_day(current) and current not in used_set:
-            return current
-        current += timedelta(days=1)
-    raise RuntimeError("Cannot find an available calendar day within one year.")
 
 
 def _optional_full_date(value: str) -> date | None:

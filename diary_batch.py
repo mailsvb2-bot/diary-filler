@@ -21,7 +21,7 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 
 from diary_table_cells import apply_compact_diary_layout
 from diary_dates import parse_admission_month_year, parse_full_date, parse_optional_discharge_date
-from diary_calendar import is_non_working_day
+from diary_calendar import is_non_working_day, next_working_day
 from diary_constants import (
     DIARY_DEPARTMENT_HEAD_SIGNATURE,
     DIARY_JOINT_HEAD_EXAM_TITLE,
@@ -332,7 +332,6 @@ def _insert_working_day_joint_exams(
     the treating physician must fill in the clinical observation.
     """
     entries = sorted(raw_entries, key=lambda item: item[0])
-    from diary_service import next_working_day
 
     for _ in range(len(entries) + 64):
         seen = {item[0] for item in entries}

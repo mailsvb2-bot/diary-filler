@@ -6,7 +6,7 @@ epicrises must avoid every non-working day.
 """
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, timedelta
 
 
 FIXED_HOLIDAYS: frozenset[tuple[int, int]] = frozenset(
@@ -60,3 +60,14 @@ def is_non_working_day(day: date) -> bool:
     if (day.month, day.day) in YEAR_SPECIFIC_WORKING_DATES.get(day.year, frozenset()):
         return False
     return day.weekday() >= 5
+
+
+def next_working_day(day: date, *, used=()) -> date:
+    """Return the first available production-calendar working day."""
+    used_dates = set(used)
+    current = day
+    for _ in range(370):
+        if not is_non_working_day(current) and current not in used_dates:
+            return current
+        current += timedelta(days=1)
+    raise RuntimeError("Cannot find an available calendar day within one year.")
