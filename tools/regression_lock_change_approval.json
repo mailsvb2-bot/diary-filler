@@ -52,7 +52,7 @@
     "tools/staff_profile_regression.py": "65c09780de04e0fc18761358404be0df2db586f1",
     "actions_navigation.py": "04cb304372640f118bbe25d5e0e0749ec2aede53",
     "prod_audit.py": "71f92e67d76e1bf39a508c2f02ed44c3b770882b",
-    "tests/oct17_clinical_safety_regression.py": "08df72974104ed2e9d87c913993068490cc8c3ee",
+    "tests/oct17_clinical_safety_regression.py": "8d2a635ada7c19fdd810d506e362cd8b8be8ac98",
     "dialog_expert.py": "d513007d5ef4ef7a9e0b3febfbda64a284cb81f7",
     "tests/four_previous_diaries_regression.py": "fa524d8cf0276f5c725389c9f3ee53b179dd3f94",
     "medical_formatting.py": "a07381bf365abd50b5c1d8632dc365dbc23b0028",
