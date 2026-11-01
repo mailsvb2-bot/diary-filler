@@ -48,6 +48,7 @@
     "smoke_combined_part05_diary_basic_templates.py": "2d822d07e90ea58786e960c594934696c057780b",
     "medical_parser.py": "bea9b39c661a25be5e18203ca2162613f98b9cb8",
     "tools/document_mechanics_change_approval.json": "97d7025315ca33d3dca9e6e8147af66ef57e7420",
-    "medical_renderer_special.py": "bf091484d10df28cfe130c32607792e686d9e417"
+    "medical_renderer_special.py": "bf091484d10df28cfe130c32607792e686d9e417",
+    "smoke_combined_part03_medical_parser_manual.py": "f6023e1f37a5f0c9486b7663bf20c49d791ba7de"
   }
 }
