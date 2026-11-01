@@ -49,6 +49,7 @@
     "app_initialization.py": "5fafeb8c45c36725f8f3c2d893568efea364a636",
     "tests/patient_registry_regression.py": "cf087a8797085033826de07ef1c0d8c661c7f91f",
     "medical_models.py": "d5da08a4c951196cebf92eb28df0d2f2a11b30e1",
-    "medical_parser_work.py": "6c84ffbac8111c9028f68313ce6a9d2cd1d492ad"
+    "medical_parser_work.py": "6c84ffbac8111c9028f68313ce6a9d2cd1d492ad",
+    "tools/staff_profile_regression.py": "65c09780de04e0fc18761358404be0df2db586f1"
   }
 }
