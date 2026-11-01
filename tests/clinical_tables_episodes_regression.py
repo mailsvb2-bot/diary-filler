@@ -44,7 +44,7 @@ def test_name_diagnosis():
     p=MedicalTextParser()
     d=p.parse_text('ФИО: Маркер Женская Тестовая, 1968 г.р.')
     assert d.fio=='Маркер Женская Тестовая',(d.fio,d.birth)
-    assert '1968' in d.birth
+    assert d.birth=='1968',d.birth
     d=p.parse_text('Д.р.: 12.05.1980')
     assert d.birth=='12.05.1980',d.birth
     assert sanitize_diagnosis('F32.2 Эпизод\nНаправляется на стационарное лечение в 3 отделение')=='F32.2 Эпизод'
