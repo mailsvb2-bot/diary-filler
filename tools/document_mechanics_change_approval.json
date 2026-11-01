@@ -1,16 +1,13 @@
 {
   "schema_version": 1,
-  "base_sha": "fca7323defe945dda39ebd5aa21c4f723fdcf6a4",
+  "base_sha": "68356b6e2ceb4eb86cc706ff6f48f8ddad2bdd8c",
   "reason": "Explicit reviewed patient registry, source parsing, VK document renderer and diary discovery fixes",
   "approved_blobs": {
-    "actions_medical_flow.py": "10292281ec20fd774e3f4f75ad650e74092878c6",
-    "dialog_document_details.py": "7a758d55dbb3a5f8fd0c4b1388d25d9e36e83e13",
-    "medical_gender.py": "5779b4bfde1a1c66fe42cf668492979eea222eaa",
-    "medical_parser.py": "bea9b39c661a25be5e18203ca2162613f98b9cb8",
-    "medical_parser_demographics.py": "c95477a3a65300fc6315bea69281a49bfceafb33",
-    "medical_parser_inline.py": "9d0eb84a9d7492b3864d8f92f0abb23bc8f91b27",
-    "medical_parser_sanitize.py": "0ef4a0885507e120d7c3506bc21471094aceb87a",
-    "medical_renderer_commission.py": "492928d11d9782e28c88a67013b6fd102a3c4b55",
-    "medical_service.py": "f917c50c077d88a6ec183f269575a9849fbd3703"
+    "actions_creation_orchestrator.py": "f614e0793550f4c976bf1405fc965894f4bdf36a",
+    "diary_batch.py": "bf8d291f8526ebd2f7b6ef8f7bab112c9fbd1c77",
+    "diary_constants.py": "c81cefc87c41bebff0362accbab85e39a4b07653",
+    "diary_service.py": "6cf7b76390bc7cc0b6ae5ce883460a40166b5ab2",
+    "medical_formatting.py": "a07381bf365abd50b5c1d8632dc365dbc23b0028",
+    "medical_service.py": "3c178b12effd8a689b3a581990a17f130344e92f"
   }
 }
