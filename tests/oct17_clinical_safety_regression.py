@@ -8,7 +8,7 @@ from diary_constants import FINAL_DIARY_TEXT
 import actions_creation_orchestrator as orch
 
 def main():
-    data=PatientData(complaints="",life_anamnesis="yes",disease_anamnesis="yes",
+    data=PatientData(registered="Тестовый адрес",complaints="",life_anamnesis="yes",disease_anamnesis="yes",
                      mental_status="",somatic_status="yes",diagnosis="F32.1")
     assert data.empty_required_sections()==["Жалобы","Психический статус"]
     # Exercise the actual generation preflight, not an unreachable helper.

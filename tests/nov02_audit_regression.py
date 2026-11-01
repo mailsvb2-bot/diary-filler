@@ -1,7 +1,7 @@
 """Clinician-reported Nov 02 audit: production behaviour, synthetic fixtures."""
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from datetime import date
+from datetime import date, timedelta
 from types import SimpleNamespace
 import sys
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
@@ -80,6 +80,9 @@ def test_empty_diagnosis_service_and_long_horizon():
     # 30 April to early November spans more than twelve ten-day cycles.
     planned=dynamic_epicrisis_dates(date(2026,4,30))
     assert len(planned)>12,len(planned)
+    # An unknown discharge must never authorize a future epicrisis.
+    assert dynamic_epicrisis_dates(date.today()+timedelta(days=10))==()
+
 
 
 def test_joint_exam_next_workday():

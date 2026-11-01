@@ -85,10 +85,10 @@ def dynamic_epicrisis_dates(
     result: list[date] = []
     current = admission + timedelta(days=10)
     while len(result) < limit:
-        if discharge_date is not None and current >= discharge_date:
+        if current >= horizon:
             break
         adjusted = next_working_day(current, used=result)
-        if discharge_date is not None and adjusted >= discharge_date:
+        if adjusted >= horizon:
             break
         if not_before is not None and adjusted <= not_before:
             # Preserve the 10-day cycle when sick leave predates admission.
