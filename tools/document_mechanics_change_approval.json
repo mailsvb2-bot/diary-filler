@@ -3,7 +3,8 @@
   "base_sha": "fca7323defe945dda39ebd5aa21c4f723fdcf6a4",
   "reason": "Explicit reviewed patient registry, source parsing, VK document renderer and diary discovery fixes",
   "approved_blobs": {
-    "dialog_document_details.py": "c02039d071489d75ad0584bc264e1c6a7fd3c4aa",
+    "actions_medical_flow.py": "10292281ec20fd774e3f4f75ad650e74092878c6",
+    "dialog_document_details.py": "7a758d55dbb3a5f8fd0c4b1388d25d9e36e83e13",
     "medical_gender.py": "5779b4bfde1a1c66fe42cf668492979eea222eaa",
     "medical_parser.py": "bea9b39c661a25be5e18203ca2162613f98b9cb8",
     "medical_parser_demographics.py": "c95477a3a65300fc6315bea69281a49bfceafb33",
