@@ -14,6 +14,7 @@ from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 
 from diary_batch import _clinical_diary_offsets, create_text_diaries
+from diary_constants import DYNAMIC_OBSERVATION_TEMPLATE
 from diary_calendar import is_fixed_holiday, is_non_working_day
 from medical_formatting import format_staff_short_name
 from diary_dates import parse_full_date, parse_optional_discharge_date
@@ -68,7 +69,7 @@ def dynamic_epicrisis_dates(
     admission: date,
     *,
     discharge_date: date | None = None,
-    limit: int = 12,
+    limit: int | None = None,
     not_before: date | None = None,
 ) -> tuple[date, ...]:
     """Plan each 10-day epicrisis, shifting non-working dates forward.
@@ -76,6 +77,11 @@ def dynamic_epicrisis_dates(
     The discharge date is a hard exclusive boundary: no dynamic epicrisis is
     created on or after discharge, including after a weekend/holiday shift.
     """
+    # There is no arbitrary 12-epicrisis cap. The plan remains bounded by
+    # discharge, or by today's date when discharge is unknown.
+    horizon = discharge_date or date.today() + timedelta(days=1)
+    if limit is None:
+        limit = max(0, (horizon - admission).days // 10 + 2)
     result: list[date] = []
     current = admission + timedelta(days=10)
     while len(result) < limit:
@@ -132,8 +138,7 @@ def build_dynamic_epicrisis_text(data: DynamicEpicrisisInput) -> str:
         lines.append(f"Дата рождения: {birth_date}.")
     if sick_leave_from:
         lines.append(f"Лечится с: {sick_leave_from}.")
-    if clinical_state:
-        lines.append(f"Динамическое наблюдение: {clinical_state}")
+    lines.append(f"Динамическое наблюдение: {clinical_state or DYNAMIC_OBSERVATION_TEMPLATE}")
     if complaints:
         lines.append(f"Жалобы: {complaints}.")
     if treatment:
@@ -304,8 +309,14 @@ def apply_sick_leave_dynamic_epicrises(
         ) from exc
     discharge = parse_optional_discharge_date(discharge_value)
     base_date = dynamic_epicrisis_base_date(admission, sick_leave_text)
-    cycle_limit = (max(0, (discharge - base_date).days) // 10 + 2) if discharge is not None else 12
-    dates = dynamic_epicrisis_dates(base_date, discharge_date=discharge, limit=cycle_limit, not_before=admission)
+    # Without discharge, use the documented ordinary diary horizon, never
+    # extrapolate epicrises into dates with no generated observations.
+    states = clinical_state_by_date or {}
+    horizon = discharge or (max(states) + timedelta(days=1) if states else date.today() + timedelta(days=1))
+    cycle_limit = max(0, (horizon - base_date).days) // 10 + 2
+    dates = dynamic_epicrisis_dates(
+        base_date, discharge_date=horizon, limit=cycle_limit, not_before=admission
+    )
     if not dates:
         return 0
 
@@ -370,7 +381,8 @@ class DiaryService:
         """
         admission = parse_full_date(admission_value)
         discharge = parse_optional_discharge_date(discharge_value)
-        max_offset = (discharge - admission).days if discharge is not None else 7
+        horizon = discharge or max(date.today(), admission + timedelta(days=7))
+        max_offset = max(0, (horizon - admission).days)
         path = directory / "generated-clinical-diary-dates.docx"
         doc = Document()
         for offset in _clinical_diary_offsets(max_offset):
