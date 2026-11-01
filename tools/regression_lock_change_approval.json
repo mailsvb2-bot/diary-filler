@@ -37,6 +37,7 @@
     "dialog_expert.py": "d513007d5ef4ef7a9e0b3febfbda64a284cb81f7",
     "actions_medical_flow.py": "5a39abcdd5492bb87e8838e256488cfffeeef705",
     "diary_service.py": "7ae4a4ffa977a65fdfc5b426e63e04ee3b7f446f",
-    "files_mixin.py": "2f7c3ca57b7146f0269f6f59ab4053857f44424c"
+    "files_mixin.py": "2f7c3ca57b7146f0269f6f59ab4053857f44424c",
+    "smoke_combined_part04_medical_generation.py": "19bf188efe7403f57e9658dd14690aa9468d07f8"
   }
 }
