@@ -39,6 +39,7 @@
     "diary_service.py": "7ae4a4ffa977a65fdfc5b426e63e04ee3b7f446f",
     "files_mixin.py": "2f7c3ca57b7146f0269f6f59ab4053857f44424c",
     "smoke_combined_part04_medical_generation.py": "19bf188efe7403f57e9658dd14690aa9468d07f8",
-    "release_check.py": "96e80e94c1cf9fa7f6e1c6a6f7ec41776844c354"
+    "release_check.py": "96e80e94c1cf9fa7f6e1c6a6f7ec41776844c354",
+    "tests/golden_docx_manifest.json": "ce6df4eb65d22fbee037d9b594e066ebbc8426dd"
   }
 }
