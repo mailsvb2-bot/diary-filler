@@ -510,7 +510,7 @@ assert "К труду с 21.06.2026" in discharge_text
 for path in created:
     if any(key in path.name for key in ("Первичный", "Выписной", "Совместный")):
         assert "Экспертный анамнез:" in extract_docx_text(path), path
-assert "Находится на лечении с 10.06.2026 (9 дней)" in combined_text
+assert "Находится на лечении с 15.06.2026 (4 дня)" in combined_text
 assert "От 16.06.2026 г." in combined_text
 assert "ЭПИ тестовая информация" in combined_text
 
