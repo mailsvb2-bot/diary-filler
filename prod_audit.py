@@ -870,8 +870,14 @@ def _assert_diary_service_boundary() -> None:
         _fail("text diary semantic plan no longer exposes exact-date non-final clinical states")
     if "clinical_state_by_date=result.dated_clinical_states" not in service:
         _fail("automatic dynamic epicrisis does not consume exact-date semantic diary evidence")
-    if 'clinical_state=state_by_date.get(item_date, "")' not in service:
-        _fail("dynamic epicrisis may borrow clinical state from another date")
+    # The reviewed user contract selects the fourth preceding ordinary diary
+    # rather than a same-date entry. Do not permit arbitrary adjacent-date reuse.
+    if 'clinical_state=fourth_preceding_diary_observation(item_date, state_by_date, dates)' not in service:
+        _fail("dynamic epicrisis must use the fourth preceding ordinary diary")
+    if "day < item_date" not in service or "day not in replaced" not in service:
+        _fail("fourth preceding diary selector must exclude future and epicrisis dates")
+    if "previous[-4][1] if len(previous) >= 4 else" not in service:
+        _fail("dynamic epicrisis must have four preceding observations or stay empty")
     if "use_legacy_undated = clinical_state_by_date is None" not in service:
         _fail("dynamic epicrisis lost fail-closed separation from legacy undated clinical arguments")
     if "Динамическое наблюдение:" not in service:
