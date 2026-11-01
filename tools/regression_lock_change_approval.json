@@ -34,7 +34,7 @@
     "tests/nov02_audit_regression.py": "8efbc2516158ad8320fb506d64b0beeb40a29b2b",
     "tests/patient_registry_regression.py": "6d4a7610d39a04f27736b3d537899efd19c91107",
     "diary_batch.py": "cd3ec1040f2e38e232e756f9026c7684020b2d33",
-    "smoke_combined_part04_medical_generation.py": "c636658914b37fb43edc9f02ba7301b4afc9ee65",
+    "smoke_combined_part04_medical_generation.py": "b20fb10bc205f9ee82c56d676706dbb35af97a47",
     "patient_registry.py": "5c58228bebec154d38fbdf2eb103c6eea61c50db",
     "tests/golden_docx_manifest.json": "3c52476ae15a018832f674c4570b4b692b0870d5",
     "dialog_expert.py": "d513007d5ef4ef7a9e0b3febfbda64a284cb81f7",
