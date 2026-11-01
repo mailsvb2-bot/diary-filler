@@ -1,8 +1,15 @@
 {
   "schema_version": 1,
-  "base_sha": "165b40ea083e68e949f780cafa8b32159e7c54fe",
-  "reason": "Explicit review: fourth preceding diary observation selection in canonical diary service, with exact protected file blob.",
+  "base_sha": "4583bd54df588c6a0ae9ba0a973b2f34a5c7f57b",
+  "reason": "Explicit reviewed patient registry, source parsing, VK document renderer and diary discovery fixes",
   "approved_blobs": {
-    "diary_service.py": "7ae4a4ffa977a65fdfc5b426e63e04ee3b7f446f"
+    "dialog_expert.py": "d513007d5ef4ef7a9e0b3febfbda64a284cb81f7",
+    "diary_template_discovery.py": "19e9a0500a1a81685817a704cbddd170581a3897",
+    "diary_text_selection.py": "768d7711246548a02df14d23bc460e7f871698d7",
+    "files_mixin.py": "2f7c3ca57b7146f0269f6f59ab4053857f44424c",
+    "medical_models.py": "d5da08a4c951196cebf92eb28df0d2f2a11b30e1",
+    "medical_parser_work.py": "6c84ffbac8111c9028f68313ce6a9d2cd1d492ad",
+    "medical_renderer_special.py": "011eef60e3a194068407ef1e28783547c58ed52c",
+    "medical_service.py": "0857ad7e3b07ed87f821d5d38ad3a52c40c686bb"
   }
 }
