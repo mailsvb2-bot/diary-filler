@@ -68,6 +68,7 @@ class DialogDocumentDetailsMixin:
         from medical_models import normalize_rvk_commissariat_text
         referral_default = normalize_rvk_commissariat_text(
             self.rvk_referral_commissariat_var.get().strip()
+            or getattr(getattr(self, "data", None), "rvk_referral_commissariat", "")
         )
         military_var = tk.StringVar(
             value=self.rvk_military_commissariat_var.get().strip() or referral_default
