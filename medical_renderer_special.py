@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import re
 
 from docx import Document
 
@@ -48,7 +49,10 @@ class MedicalRendererSpecialMixin:
                 continue
             text = paragraph.text or ""
             normalized = text.replace("Врач психиатр", "Врач-психиатр")
-            normalized = normalized.replace("зам глав врача", "зам. главного врача")
+            normalized = re.sub(
+                r"\bзам\.?\s*(?:гл\.?|глав)\s*врача\b",
+                "Заместитель главного врача", normalized, flags=re.IGNORECASE,
+            )
             normalized = normalized.replace("Зуйкова  А.А.", "Зуйкова А.А.")
             if normalized != text:
                 set_paragraph_text(paragraph, normalized)

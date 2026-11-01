@@ -44,6 +44,12 @@ def test_vk_headings():
         editor, PatientData(vk_epicrisis_number="7"))
     assert "ЭПИКРИЗ № 7" in [p.text for p in doc.paragraphs]
 
+    doc = Document()
+    doc.add_paragraph("Зам. гл. врача Зуйкова  А.А.")
+    MedicalRendererSpecialMixin._normalize_vk_visible_labels(
+        DocxBlockEditor(doc), PatientData())
+    assert "Заместитель главного врача Зуйкова А.А." in [p.text for p in doc.paragraphs]
+
 def test_service_boundaries_and_real_docx():
     from tempfile import TemporaryDirectory
     from docx import Document
