@@ -20,6 +20,12 @@ class ActionsNavigationMixin:
                 messagebox.showwarning("Нет файла", "Сначала выберите медицинский документ пациента.")
             return
         try:
+            # VK epicrisis numbers are patient/document-specific. Never carry a
+            # manually entered number into another patient's primary source.
+            epicrisis_var = getattr(self, "vk_epicrisis_number_var", None)
+            if epicrisis_var is not None and getattr(self, "_vk_epicrisis_source_path", None) != path:
+                epicrisis_var.set("")
+                self._vk_epicrisis_source_path = path
             data = self._parse_primary_document(path)
             popup_fio = (getattr(self, "_popup_fio_override", "") or "").strip()
             popup_birth = (getattr(self, "_popup_birth_override", "") or "").strip()
