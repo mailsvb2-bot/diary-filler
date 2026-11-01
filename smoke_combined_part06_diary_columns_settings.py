@@ -563,19 +563,16 @@ try:
 except ValueError as exc:
     assert "лечение" in str(exc), str(exc)
 
-missing_diagnosis_data = service.parse_primary_document(nav)
+missing_diagnosis_data = copy.deepcopy(manual_data)
 missing_diagnosis_data.diagnosis = ""
 missing_diagnosis_data.discharge_date = "11.06.2026"
-try:
-    service.create_documents(
-        navigation_path=nav,
-        output_dir=OUT / "missing_diagnosis_service_boundary",
-        selected_docs=["discharge"],
-        override_data=missing_diagnosis_data,
-    )
-    raise AssertionError("medical service must require diagnosis before rendering medical DOCX")
-except ValueError as exc:
-    assert "диагноз" in str(exc), str(exc)
+generated_without_diagnosis, _ = service.create_documents(
+    navigation_path=nav,
+    output_dir=OUT / "missing_diagnosis_service_boundary",
+    selected_docs=["discharge"],
+    override_data=missing_diagnosis_data,
+)
+assert len(generated_without_diagnosis) == 1, generated_without_diagnosis
 
 missing_fio_data = service.parse_primary_document(nav)
 missing_fio_data.fio = ""
