@@ -395,12 +395,13 @@ def _test_daily_diary_coverage(tmp: Path) -> None:
     ]
     expected_text_dates = [
         "02.01.26", "03.01.26", "04.01.26", "08.01.26", "11.01.26",
-        "15.01.26", "18.01.26", "22.01.26", "25.01.26", "29.01.26",
-        "01.02.26", "05.02.26", "08.02.26", "10.02.26",
+        "12.01.26", "15.01.26", "18.01.26", "22.01.26", "25.01.26",
+        "29.01.26", "01.02.26", "02.02.26", "05.02.26", "08.02.26",
+        "10.02.26",
     ]
     assert text_dates == expected_text_dates, text_dates
     assert text_result.detected_rows == 13, text_result.detected_rows
-    assert text_result.filled_rows == 14, text_result.filled_rows
+    assert text_result.filled_rows == 16, text_result.filled_rows
     assert text_result.final_rows_filled == 1, text_result.final_rows_filled
 
 

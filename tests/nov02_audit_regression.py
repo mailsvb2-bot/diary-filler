@@ -91,6 +91,16 @@ def test_joint_exam_next_workday():
     )
     assert any(e.date==date(2026,5,4) and e.is_joint_head_exam for e in entries),entries
     assert not any(e.date==date(2026,5,7) and e.is_joint_head_exam for e in entries),entries
+    january=[date(2026,1,2),date(2026,1,3),date(2026,1,4),
+             date(2026,1,8),date(2026,1,11),date(2026,1,15)]
+    shifted,_,_=_build_text_diary_entries(
+        ["Клинический текст предоставлен врачом."],january,
+        discharge_date_value=None,force_final_diary=False,
+        repeat_statuses=True,patient_gender=None,
+    )
+    assert len({e.date for e in shifted})==len(shifted),shifted
+    assert sum(e.date==date(2026,1,12) for e in shifted)==1
+    assert any(e.date==date(2026,1,12) and e.is_joint_head_exam for e in shifted)
 
 if __name__=="__main__":
     test_names_and_service_parents()

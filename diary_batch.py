@@ -308,13 +308,15 @@ def _build_text_diary_entries(
         raw_entries.append((final_date, remove_examinee_words(clean_status_text(adapted)), True))
         final_rows = 1
 
-    # If the third examination falls on a non-working diary date, create a
-    # dedicated next-working-day entry rather than delaying to the next
-    # scheduled diary (which may be four days later).
-    adjusted: list[tuple[date, str, bool]] = []
+    # Insert at most one observation on the nearest available working day
+    # when the third journal entry falls on a non-working date.  Walk the
+    # *augmented* chronological list, so consecutive January holidays never
+    # schedule the same shifted date more than once.
+    ordered = sorted(raw_entries, key=lambda row: row[0])
     since_joint = 0
-    for item_date, text, is_final in raw_entries:
-        adjusted.append((item_date, text, is_final))
+    index = 0
+    while index < len(ordered):
+        item_date, text, is_final = ordered[index]
         since_joint += 1
         if since_joint >= 3:
             if is_final or not is_non_working_day(item_date):
@@ -323,12 +325,17 @@ def _build_text_diary_entries(
                 moved = item_date + timedelta(days=1)
                 while is_non_working_day(moved):
                     moved += timedelta(days=1)
-                upcoming = raw_entries[len(adjusted):]
-                if (not any(other_date == moved for other_date, _, _ in upcoming)
-                        and (final_date is None or moved < final_date)):
-                    adjusted.append((moved, text, False))
-                # Flagging is recalculated in chronological order below.
-    raw_entries = sorted(adjusted, key=lambda row: row[0])
+                if (final_date is None or moved < final_date) and not any(
+                    other_date == moved for other_date, _, _ in ordered
+                ):
+                    insert_at = next(
+                        (n for n, (other_date, _, _) in enumerate(ordered)
+                         if other_date > moved),
+                        len(ordered),
+                    )
+                    ordered.insert(insert_at, (moved, text, False))
+        index += 1
+    raw_entries = ordered
     entries = [
         TextDiaryEntry(
             date=item_date,
