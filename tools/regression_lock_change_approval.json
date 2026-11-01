@@ -60,6 +60,7 @@
     "files_mixin.py": "d4eaeba7b995a6ebc2a0c517a804545f28abec02",
     "diary_text_selection.py": "768d7711246548a02df14d23bc460e7f871698d7",
     "app_initialization.py": "5fafeb8c45c36725f8f3c2d893568efea364a636",
-    "tests/medical_source_corrections_regression.py": "420d8c55bac2b9daa803f234f079ac93323178ff"
+    "tests/medical_source_corrections_regression.py": "420d8c55bac2b9daa803f234f079ac93323178ff",
+    "smoke_combined_part06_diary_columns_settings.py": "7ad96c949f0124b2cb7ad178a49b34e9104575c3"
   }
 }
