@@ -24,7 +24,7 @@
     "tests/medical_source_corrections_regression.py": "d66c333f905b18d7aa12c12adc5d41a280897608",
     "files_mixin.py": "2f7c3ca57b7146f0269f6f59ab4053857f44424c",
     "medical_models.py": "d5da08a4c951196cebf92eb28df0d2f2a11b30e1",
-    "tools/document_mechanics_change_approval.json": "fbcb96e1631b524e3d03f14fdef142c64cb3560e",
+    "tools/document_mechanics_change_approval.json": "f822813eb7a228c8b7a542bceac0df4cda617454",
     "prod_audit.py": "71f92e67d76e1bf39a508c2f02ed44c3b770882b",
     "tests/four_previous_diaries_regression.py": "fa524d8cf0276f5c725389c9f3ee53b179dd3f94",
     "diary_service.py": "7ae4a4ffa977a65fdfc5b426e63e04ee3b7f446f",
