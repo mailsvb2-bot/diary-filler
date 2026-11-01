@@ -4,6 +4,7 @@
   "reason": "Explicit reviewed patient registry, source parsing, VK document renderer and diary discovery fixes",
   "approved_blobs": {
     "actions_medical_flow.py": "5a39abcdd5492bb87e8838e256488cfffeeef705",
+    "actions_navigation.py": "04cb304372640f118bbe25d5e0e0749ec2aede53",
     "app_initialization.py": "5fafeb8c45c36725f8f3c2d893568efea364a636",
     "dialog_document_details.py": "83528c2c22d4f292059ee53d08d5bbd93ec85c83",
     "dialog_expert.py": "d513007d5ef4ef7a9e0b3febfbda64a284cb81f7",
