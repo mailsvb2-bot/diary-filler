@@ -59,6 +59,7 @@
     "tests/golden_docx_manifest.json": "3c52476ae15a018832f674c4570b4b692b0870d5",
     "medical_service.py": "3c178b12effd8a689b3a581990a17f130344e92f",
     "dialog_expert.py": "d513007d5ef4ef7a9e0b3febfbda64a284cb81f7",
-    "patient_registry_mixin.py": "c7c6160911fefd5929d52a5bfc17ff7b7d6bb20f"
+    "patient_registry_mixin.py": "c7c6160911fefd5929d52a5bfc17ff7b7d6bb20f",
+    "safety_integrity_check.py": "4e04e712646168cfd31bdb4a009ad946eb83d856"
   }
 }
