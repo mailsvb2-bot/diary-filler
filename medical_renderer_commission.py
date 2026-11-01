@@ -43,7 +43,7 @@ class MedicalRendererCommissionMixin:
         commission_date = format_date_with_russian_year_suffix(data.commission_date)
         header = (
             f"{commission_date} 10:00      "
-            f"Совместный осмотр с зам глав врача "
+            f"Совместный осмотр с заместителем главного врача "
             f"{format_staff_instrumental_short_name(data.deputy_chief)} № {data.commission_number}"
         ).rstrip()
         for paragraph in doc.paragraphs:

@@ -241,7 +241,7 @@ def _registry_visible_folder(folder: Path) -> bool:
     )
 
 
-def _registry_primaries(folder: Path, max_depth: int = 4) -> list[Path]:
+def _registry_primaries(folder: Path, max_depth: int = 32) -> list[Path]:
     """Discover real primary records inside patient-owned document subfolders."""
     found: list[Path] = []
     def walk(current: Path, depth: int) -> None:
@@ -258,7 +258,7 @@ def _registry_primaries(folder: Path, max_depth: int = 4) -> list[Path]:
     return found
 
 
-def _patient_folders(directory: Path, issues: list, *, max_depth: int = 8) -> list[Path]:
+def _patient_folders(directory: Path, issues: list, *, max_depth: int = 32) -> list[Path]:
     """Select patient owners; unrelated Word files cannot hide nested patients."""
     result: list[Path] = []
 
@@ -292,6 +292,10 @@ def _patient_folders(directory: Path, issues: list, *, max_depth: int = 8) -> li
                     # is a separate patient, even if the parent has Word schedules.
                     if depth < max_depth:
                         visit(child, depth + 1)
+                    else:
+                        issues.append(PatientRegistryIssue(
+                            child, "Достигнута предельная глубина обхода: вложенные пациенты не проверены."
+                        ))
                     continue
                 result.append(child)
             elif depth < max_depth:
@@ -549,6 +553,16 @@ def scan_patient_registry(
                 if _discharge_hides_patient(patient_folder, target_date, parse, issues):
                     continue
                 candidates = _registry_primaries(patient_folder) or patient_source_candidates(patient_folder)
+                if len(candidates) > 1:
+                    # Multiple admissions: select the latest confirmed episode.
+                    def episode_key(path: Path):
+                        try:
+                            admission = _date_value(getattr(parse(path), "admission_date", ""))
+                        except Exception:
+                            admission = None
+                        return (admission or date.min, str(path).casefold())
+                    candidates = sorted(candidates, key=episode_key, reverse=True)
+
             except OSError as exc:
                 issues.append(PatientRegistryIssue(patient_folder, f"Папка недоступна для чтения ({type(exc).__name__})."))
                 continue

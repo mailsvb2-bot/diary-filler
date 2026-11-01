@@ -86,6 +86,16 @@ class MedicalParserInlineMixin:
             prepared.append((line_norm, normalize_match(line_norm)))
         return prepared
 
+    def _looks_like_inline_field_label(self, value: str) -> bool:
+        cleaned = clean_value(value)
+        return bool(
+            re.match(r"(?i)^(?:история болезни|год рождения|дата рождения|д\.р\.|"
+                     r"зарегистрирован|на учете|на учёте|работает|место работы|"
+                     r"больничный лист|оформление инвалидности|диагноз|"
+                     r"жалобы|анамнез|психический статус)\s*[:№]?", cleaned)
+            or re.match(r"(?i)^(?:Ф\.?И\.?О\.?|должность)\s*[:№]?", cleaned)
+        )
+
     def _extract_inline(
         self,
         text: str,
@@ -97,7 +107,7 @@ class MedicalParserInlineMixin:
         for alias in aliases:
             alias_re = self._inline_value_pattern(alias)
             alias_norm = normalize_match(alias)
-            for line_norm, line_match in lines:
+            for line_index, (line_norm, line_match) in enumerate(lines):
                 # Safe fast rejection: normalize_match collapses the same whitespace
                 # that _inline_value_pattern accepts via \s+, so a missing literal
                 # normalized alias cannot become a regex match later.
@@ -110,8 +120,17 @@ class MedicalParserInlineMixin:
                 value = re.sub(r"^\s*[:№N#.-]*\s*", "", value)
                 value = self._cut_at_next_inline_marker(value, aliases)
                 value = clean_value(value)
+                if alias_norm == "работает" and normalize_match(value).startswith("в организации"):
+                    value = clean_value(re.sub(r"(?i)^в\s+организации\s*[:.-]?\s*", "", value))
                 if value and not self._value_is_only_foreign_label(alias, value):
                     return value
+                # Word table cells are emitted as adjacent separate lines.
+                # Only follow a standalone label; never consume another heading.
+                if not value and line_index + 1 < len(lines):
+                    next_line = lines[line_index + 1][0]
+                    if (not self._looks_like_inline_field_label(next_line)
+                            and not self._value_is_only_foreign_label(alias, next_line)):
+                        return clean_value(next_line)
         return ""
 
     @classmethod

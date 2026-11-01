@@ -65,7 +65,13 @@ class DialogDocumentDetailsMixin:
         admission_var = tk.StringVar(value=self._admission_date_popup_default())
         discharge_var = tk.StringVar(value=self._discharge_popup_default())
         act_var = tk.StringVar(value=self.rvk_act_number_var.get().strip())
-        military_var = tk.StringVar(value=self.rvk_military_commissariat_var.get().strip())
+        from medical_models import normalize_rvk_commissariat_text
+        referral_default = normalize_rvk_commissariat_text(
+            self.rvk_referral_commissariat_var.get().strip()
+        )
+        military_var = tk.StringVar(
+            value=self.rvk_military_commissariat_var.get().strip() or referral_default
+        )
         occurrence_var = tk.StringVar(value=self._current_admission_occurrence())
 
         need_hospitalization_details = self._hospitalization_details_missing()
