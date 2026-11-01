@@ -29,7 +29,7 @@
     "medical_parser_inline.py": "9d0eb84a9d7492b3864d8f92f0abb23bc8f91b27",
     "medical_renderer_commission.py": "492928d11d9782e28c88a67013b6fd102a3c4b55",
     "files_mixin.py": "d4eaeba7b995a6ebc2a0c517a804545f28abec02",
-    "tests/golden_docx_manifest.json": "e95fa82809254546de354a6d5ef34ce9ab5b20c5",
+    "tests/golden_docx_manifest.json": "3c52476ae15a018832f674c4570b4b692b0870d5",
     "dialog_document_details.py": "7a758d55dbb3a5f8fd0c4b1388d25d9e36e83e13",
     "diary_text_selection.py": "768d7711246548a02df14d23bc460e7f871698d7",
     "tests/verbal_diary_source_regression.py": "a7104873a4ac4e8e2d66e5426d781352673de919",
