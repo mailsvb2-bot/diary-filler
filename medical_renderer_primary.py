@@ -163,6 +163,22 @@ class MedicalRendererPrimaryMixin:
                     f"Диагноз: {diagnosis}",
                 )
         editor.replace_block(["Сомато-неврологический статус", "Соматический статус"], "Сомато-неврологический статус:", data.somatic_status, DISCHARGE_MARKERS, allow_empty=True)
+        # Keep the full diagnosis block after the full somatic block in discharge.
+        # Reorder existing Word paragraphs instead of regenerating clinical text.
+        paragraphs = editor.paragraphs
+        diagnosis_idx = next((i for i, p in enumerate(paragraphs)
+                              if p.text.strip().startswith("Диагноз:")), None)
+        somatic_idx = next((i for i, p in enumerate(paragraphs)
+                            if p.text.strip().startswith("Сомато-неврологический статус:")), None)
+        if diagnosis_idx is not None and somatic_idx is not None and diagnosis_idx < somatic_idx:
+            end_idx = editor.find_next_marker_index(
+                somatic_idx + 1, DISCHARGE_MARKERS,
+                exclude=["Сомато-неврологический статус", "Соматический статус"],
+            )
+            anchor = paragraphs[(end_idx if end_idx is not None else somatic_idx + 1) - 1]
+            for paragraph in paragraphs[diagnosis_idx:somatic_idx]:
+                anchor._p.addnext(paragraph._p)
+                anchor = paragraph
         self._render_sourced_investigation_results(
             editor,
             data,
