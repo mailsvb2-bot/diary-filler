@@ -18,6 +18,7 @@ from diary_calendar import is_fixed_holiday, is_non_working_day
 from medical_formatting import format_staff_short_name
 from diary_dates import parse_full_date, parse_optional_discharge_date
 from diary_models import DiaryBatchResult
+from diary_constants import DYNAMIC_OBSERVATION_TEMPLATE
 
 
 _LEADING_DATE_RE = re.compile(r"^\s*([0-3]?\d)[./-]([01]?\d)[./-](\d{2}|20\d{2})(?=\s|$)")
@@ -132,8 +133,11 @@ def build_dynamic_epicrisis_text(data: DynamicEpicrisisInput) -> str:
         lines.append(f"Дата рождения: {birth_date}.")
     if sick_leave_from:
         lines.append(f"Лечится с: {sick_leave_from}.")
-    if clinical_state:
-        lines.append(f"Динамическое наблюдение: {clinical_state}")
+    lines.append(
+        f"Динамическое наблюдение: {clinical_state}"
+        if clinical_state else
+        f"Динамическое наблюдение: {DYNAMIC_OBSERVATION_TEMPLATE}"
+    )
     if complaints:
         lines.append(f"Жалобы: {complaints}.")
     if treatment:
@@ -304,8 +308,9 @@ def apply_sick_leave_dynamic_epicrises(
         ) from exc
     discharge = parse_optional_discharge_date(discharge_value)
     base_date = dynamic_epicrisis_base_date(admission, sick_leave_text)
-    cycle_limit = (max(0, (discharge - base_date).days) // 10 + 2) if discharge is not None else 12
-    dates = dynamic_epicrisis_dates(base_date, discharge_date=discharge, limit=cycle_limit, not_before=admission)
+    horizon = discharge if discharge is not None else date.today()
+    cycle_limit = max(0, (horizon - base_date).days // 10 + 2)
+    dates = dynamic_epicrisis_dates(base_date, discharge_date=horizon, limit=cycle_limit, not_before=admission)
     if not dates:
         return 0
 
@@ -370,7 +375,7 @@ class DiaryService:
         """
         admission = parse_full_date(admission_value)
         discharge = parse_optional_discharge_date(discharge_value)
-        max_offset = (discharge - admission).days if discharge is not None else 7
+        max_offset = max(0, ((discharge or date.today()) - admission).days)
         path = directory / "generated-clinical-diary-dates.docx"
         doc = Document()
         for offset in _clinical_diary_offsets(max_offset):

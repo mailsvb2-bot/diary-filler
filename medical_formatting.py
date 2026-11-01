@@ -282,12 +282,8 @@ def treatment_period_text(admission_date: str, commission_date: str) -> str:
 
 
 def treatment_term_start(admission_date: str, sick_leave_from: str) -> str:
-    """Earlier sick leave extends the term; later opening does not shorten it."""
-    admission = parse_date(admission_date) if admission_date else None
-    opened = parse_date(sick_leave_from) if sick_leave_from else None
-    if admission and opened and opened.date() < admission.date():
-        return opened.strftime("%d.%m.%Y")
-    return admission_date
+    """For sick-leave VK, count days from the certificate opening date."""
+    return normalize_text(sick_leave_from) or admission_date
 
 
 def parse_date(value: str) -> Optional[datetime]:

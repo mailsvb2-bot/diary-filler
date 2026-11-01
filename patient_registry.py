@@ -132,11 +132,22 @@ def primary_candidates(folder: str | Path) -> list[Path]:
     if not root.is_dir():
         return []
     rank = {".docx": 0, ".docm": 1, ".doc": 2}
-    result = [
-        path
-        for path in root.iterdir()
-        if path.is_file() and not _is_word_lock_file(path) and is_primary_patient_filename(path)
-    ]
+    result = []
+    for path in root.iterdir():
+        if not path.is_file() or _is_word_lock_file(path) or not is_primary_patient_filename(path):
+            continue
+        if path.suffix.lower() == ".docx" and "первичный осмотр" in path.stem.casefold():
+            try:
+                from docx import Document
+                if "diary-filler:generated-primary" in (
+                    Document(str(path)).core_properties.keywords or ""
+                ):
+                    continue
+            except Exception:
+                # Preserve unreadable primary sources for the registry's
+                # existing warning/error path; never silently discard them.
+                pass
+        result.append(path)
     return sorted(result, key=lambda p: (rank.get(p.suffix.lower(), 9), p.name.casefold()))
 
 
@@ -237,7 +248,7 @@ def _registry_visible_folder(folder: Path) -> bool:
     name = folder.name.casefold().replace("ё", "е")
     return not (
         folder.name.startswith((".", "~$"))
-        or any(token in name for token in ("шаблон", "дневник", "тексты", "__pycache__"))
+        or name in {"шаблоны", "шаблон", "шаблоны дневников", "дневники", "дневник", "тексты", "тексты дневников", "__pycache__"}
     )
 
 
@@ -279,12 +290,12 @@ def _patient_folders(directory: Path, issues: list, *, max_depth: int = 32) -> l
                     if p.is_dir() and _registry_visible_folder(p)
                     and (primary_candidates(p) or _registry_primaries(p))
                 ]
-                document_subfolder_names = {
-                    "первичка", "первичный", "документы", "документ",
-                    "история болезни", "осмотры", "выписки", "анализы",
-                }
+                document_prefixes = (
+                    "первич", "документ", "вк", "выписк", "анализ",
+                    "история болезни", "осмотр",
+                )
                 is_patient_documents = all(
-                    sub.name.casefold().replace("ё", "е") in document_subfolder_names
+                    sub.name.casefold().replace("ё", "е").startswith(document_prefixes)
                     for sub in direct_patient_children
                 )
                 if direct_patient_children and not own_primary and not is_patient_documents:
@@ -528,20 +539,26 @@ def scan_patient_registry(
         root_primaries = []
         issues.append(PatientRegistryIssue(directory, f"Папка недоступна для чтения ({type(exc).__name__})."))
     for path in root_primaries:
-        surname = path.stem.split()[0].casefold()
-        matching_discharge = [
-            other for other in discharge_patient_documents(directory)
-            if other.stem.casefold().startswith(surname + " ")
-        ]
+        try:
+            source_fio = " ".join(str(getattr(parse(path), "fio", "") or "").casefold().replace("ё", "е").split())
+        except Exception:
+            source_fio = ""
+        if not source_fio:
+            issues.append(PatientRegistryIssue(path, "Не удалось подтвердить ФИО первичного документа; выписка не скрывает пациента."))
         hidden = False
-        for other in matching_discharge:
-            try:
-                d = _date_value(getattr(parse(other), "discharge_date", ""))
-                if d is not None and d <= target_date:
-                    hidden = True
-                    break
-            except Exception:
-                issues.append(PatientRegistryIssue(other, "Не удалось проверить дату выписки."))
+        if source_fio:
+            for other in discharge_patient_documents(directory):
+                try:
+                    discharge_data = parse(other)
+                    other_fio = " ".join(str(getattr(discharge_data, "fio", "") or "").casefold().replace("ё", "е").split())
+                    if other_fio != source_fio:
+                        continue
+                    d = _date_value(getattr(discharge_data, "discharge_date", ""))
+                    if d is not None and d <= target_date:
+                        hidden = True
+                        break
+                except Exception:
+                    issues.append(PatientRegistryIssue(other, "Не удалось проверить ФИО и дату выписки."))
         if not hidden:
             work_items.append((directory, [path]))
     for folder in _patient_folders(directory, issues):
@@ -585,6 +602,8 @@ def scan_patient_registry(
                 last_error = exc
 
         warnings: list[str] = []
+        if len(candidates) > 1:
+            warnings.append("Найдено несколько первичных документов; перед открытием выберите нужный.")
         # Renamed primary fallback is accepted only with actual patient evidence.
         # Generic Word forms, schedules and templates must not enter the census.
         if not is_primary_patient_filename(chosen):

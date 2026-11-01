@@ -5,7 +5,7 @@ from pathlib import Path
 import queue
 import threading
 import tkinter as tk
-from tkinter import filedialog, messagebox
+from tkinter import filedialog, messagebox, simpledialog
 
 from app_config import *
 from medical_formatting import parse_date
@@ -215,6 +215,33 @@ class PatientRegistryMixin:
                 parent=parent or self.root,
             )
             return False
+        from patient_registry import _registry_primaries
+        options = _registry_primaries(entry.folder)
+        # Root-level files are independent patient records. Never offer a
+        # different patient's primary simply because it shares the root.
+        if len(options) > 1 and Path(self._patient_registry_root()).expanduser().resolve() == entry.folder.resolve():
+            from patient_registry import _default_parser
+            expected = " ".join(entry.fio.casefold().replace("ё", "е").split())
+            matching = []
+            for candidate in options:
+                try:
+                    fio = " ".join(str(_default_parser(candidate).fio or "").casefold().replace("ё", "е").split())
+                except Exception:
+                    fio = ""
+                if candidate == source or (fio and fio == expected):
+                    matching.append(candidate)
+            options = matching
+        if len(options) > 1:
+            choices = "\n".join(f"{i}. {p.relative_to(entry.folder)}" for i, p in enumerate(options, 1))
+            choice = simpledialog.askinteger(
+                "Выбор первичного документа",
+                f"В папке несколько первичных документов. Выберите номер:\n\n{choices}",
+                parent=parent or self.root,
+                minvalue=1, maxvalue=len(options),
+            )
+            if choice is None:
+                return False
+            source = options[choice - 1]
         try:
             self.root.deiconify()
             self.root.lift()

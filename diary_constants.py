@@ -11,6 +11,7 @@ MIN_STATUS_LEN = 25
 STATUS_FONT_SIZE_PT = 8
 DIARY_SIGNATURE_GAP_LINES = 3
 DIARY_JOINT_HEAD_EXAM_TITLE = "Совместный осмотр с зав. отделением"
+DYNAMIC_OBSERVATION_TEMPLATE = "сведения за период не представлены; требуется заполнение врачом."
 DIARY_TREATING_DOCTOR_SIGNATURE = "Лечащий врач Балаганин С.В."
 DIARY_DEPARTMENT_HEAD_SIGNATURE = "Зав.отделением Можарова Е.А."
 SIGNATURE_MARKERS = (

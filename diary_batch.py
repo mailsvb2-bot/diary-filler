@@ -226,8 +226,9 @@ def _text_diary_dates_from_sources(
     # +3/+4 day steps.  Numbered 01-31 «Даты» files are compatibility/source
     # material (including signatures), not a command to write every day.
     # The discharge date is added separately as the single final diary entry.
-    if source_dates and discharge_date_value is not None and discharge_date_value > admission_date_value:
-        max_offset = (discharge_date_value - admission_date_value).days
+    horizon = discharge_date_value or date.today()
+    if source_dates and horizon > admission_date_value:
+        max_offset = (horizon - admission_date_value).days
         return tuple(
             admission_date_value + timedelta(days=offset)
             for offset in _clinical_diary_offsets(max_offset)
@@ -305,6 +306,7 @@ def _build_text_diary_entries(
         raw_entries.append((final_date, remove_examinee_words(clean_status_text(adapted)), True))
         final_rows = 1
 
+    raw_entries = _insert_working_day_joint_exams(raw_entries)
     entries = [
         TextDiaryEntry(
             date=item_date,
@@ -319,6 +321,43 @@ def _build_text_diary_entries(
         )
     ]
     return entries, final_rows, gender_replacements
+
+
+def _insert_working_day_joint_exams(
+    raw_entries: list[tuple[date, str, bool]],
+) -> list[tuple[date, str, bool]]:
+    """Create a dated joint examination on the first working day after a missed slot.
+
+    An inserted row deliberately has no fabricated medical examination findings:
+    the treating physician must fill in the clinical observation.
+    """
+    entries = sorted(raw_entries, key=lambda item: item[0])
+    from diary_service import next_working_day
+
+    for _ in range(len(entries) + 64):
+        seen = {item[0] for item in entries}
+        final_date = next((day for day, _text, final in entries if final), None)
+        due = 0
+        missing = None
+        for day, _text, final in entries:
+            due += 1
+            if due >= 3:
+                if final or not is_non_working_day(day):
+                    due = 0
+                else:
+                    target = next_working_day(day)
+                    if target not in seen and (final_date is None or target < final_date):
+                        missing = target
+                    break
+        if missing is None:
+            break
+        entries.append((
+            missing,
+            "Совместный осмотр: клинические сведения не внесены; требуется заполнение врачом.",
+            False,
+        ))
+        entries.sort(key=lambda item: item[0])
+    return entries
 
 
 def _joint_head_exam_flags(raw_entries: Sequence[tuple[date, str, bool]]) -> list[bool]:

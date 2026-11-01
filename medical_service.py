@@ -272,7 +272,7 @@ class MedicalDocumentService:
         if birth_dt is None and birth_year is not None and admission_dt is not None and admission_dt.year < birth_year:
             raise ValueError("Дата госпитализации не может быть раньше года рождения.")
         data.case_number = self._require_text(data.case_number, "номер истории болезни")
-        data.diagnosis = self._require_text(data.diagnosis, "диагноз")
+        data.diagnosis = str(data.diagnosis or "").strip()
 
         treatment_docs = {"primary", "discharge", "commission", "vk_mse", "sick_leave_vk"}
         if selected_set & treatment_docs:
@@ -594,6 +594,15 @@ class MedicalDocumentService:
                 suffix = OUTPUT_SUFFIXES[kind]
                 staged_path = tmp_root / f"{index:02d}.docx"
                 self.renderer.render(kind, template_path, staged_path, data)
+                if kind == "primary":
+                    # An explicit machine-generated marker distinguishes an
+                    # output DOCX from a real patient intake source.
+                    from docx import Document
+                    rendered = Document(str(staged_path))
+                    rendered.core_properties.keywords = (
+                        "diary-filler:generated-primary"
+                    )
+                    rendered.save(str(staged_path))
                 staged.append((staged_path, suffix))
 
             created: List[Path] = []
