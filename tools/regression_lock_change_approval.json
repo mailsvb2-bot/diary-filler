@@ -18,6 +18,7 @@
   "approved_blobs": {
     "diary_service.py": "7ae4a4ffa977a65fdfc5b426e63e04ee3b7f446f",
     "tests/four_previous_diaries_regression.py": "fa524d8cf0276f5c725389c9f3ee53b179dd3f94",
-    "tools/document_mechanics_change_approval.json": "c79e55a2a66b260f1de06f5195761c45dd284c90"
+    "tools/document_mechanics_change_approval.json": "c79e55a2a66b260f1de06f5195761c45dd284c90",
+    "prod_audit.py": "71f92e67d76e1bf39a508c2f02ed44c3b770882b"
   }
 }
