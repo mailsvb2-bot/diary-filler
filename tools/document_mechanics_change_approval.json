@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "base_sha": "9631a2c778f2d1a7686140dcca33937da86ea1f8",
-  "reason": "Explicitly reviewed correction of duplicate physician confirmation in the canonical output generation preflight.",
+  "base_sha": "165b40ea083e68e949f780cafa8b32159e7c54fe",
+  "reason": "Explicit review: fourth preceding diary observation selection in canonical diary service, with exact protected file blob.",
   "approved_blobs": {
-    "actions_creation_orchestrator.py": "e149036658bfe94d3b7f196173b9b3fa40e2d60a"
+    "diary_service.py": "7ae4a4ffa977a65fdfc5b426e63e04ee3b7f446f"
   }
 }

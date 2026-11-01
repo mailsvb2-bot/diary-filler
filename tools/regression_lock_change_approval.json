@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "b78eb1dd1b1736138384b93dd06b578952e6c865",
+  "reason": "Reviewed change to fourth preceding ordinary diary observation and dedicated regression on PR 360; protected production mechanics and all mandatory test suites remain enforced.",
+  "required_evidence": [
+    "ci_gate_lock",
+    "desktop_intake_contract",
+    "document_mechanics_guard",
+    "full_patient_replay",
+    "gender_generation_matrix",
+    "golden_docx",
+    "installer_uninstall_smoke",
+    "intake_lifecycle_regression",
+    "packaged_desktop_intake_e2e",
+    "patient_registry_regression",
+    "staff_profile_regression"
+  ],
+  "approved_blobs": {
+    "diary_service.py": "7ae4a4ffa977a65fdfc5b426e63e04ee3b7f446f",
+    "tests/four_previous_diaries_regression.py": "fa524d8cf0276f5c725389c9f3ee53b179dd3f94"
+  }
+}
