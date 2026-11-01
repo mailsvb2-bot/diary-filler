@@ -17,7 +17,7 @@
   ],
   "approved_blobs": {
     "diary_service.py": "7ae4a4ffa977a65fdfc5b426e63e04ee3b7f446f",
-    "tests/golden_docx_manifest.json": "ce6df4eb65d22fbee037d9b594e066ebbc8426dd",
+    "tests/golden_docx_manifest.json": "e95fa82809254546de354a6d5ef34ce9ab5b20c5",
     "dialog_expert.py": "d513007d5ef4ef7a9e0b3febfbda64a284cb81f7",
     "tests/four_previous_diaries_regression.py": "fa524d8cf0276f5c725389c9f3ee53b179dd3f94",
     "smoke_combined_part04_medical_generation.py": "19bf188efe7403f57e9658dd14690aa9468d07f8",
