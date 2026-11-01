@@ -403,7 +403,7 @@ class MedicalDocumentService:
         if "rvk" in selected_set and "primary" in selected_set:
             ref = normalize_yes_no(data.rvk_referral_present)
             source_ref, _ = parse_rvk_referral_value(data.rvk_referral)
-            if ref == "нет" or source_ref == "нет":
+            if (ref or source_ref) == "нет":
                 raise ValueError(
                     "Акт для РВК противоречит первичному осмотру: "
                     "указано отсутствие направления от РВК. Уточните ответ врача."
