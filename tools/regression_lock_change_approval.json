@@ -60,6 +60,7 @@
     "tests/oct17_clinical_safety_regression.py": "80e3640afbe3aebc3754d0154cdc381cbf0ff5bf",
     "tests/four_previous_diaries_regression.py": "fa524d8cf0276f5c725389c9f3ee53b179dd3f94",
     "medical_renderer_special.py": "8ffcfaa532bc8ab7784eccaa32fb83983a1c2999",
-    "diary_constants.py": "d55fcd0585e0838fe9fae77518fc794978366b38"
+    "diary_constants.py": "d55fcd0585e0838fe9fae77518fc794978366b38",
+    "smoke_combined_part06_diary_columns_settings.py": "30aeb3a39484389629f8c0ec96c066dd6f44eb0b"
   }
 }
