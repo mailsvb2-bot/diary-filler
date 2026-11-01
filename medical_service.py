@@ -594,16 +594,19 @@ class MedicalDocumentService:
                 suffix = OUTPUT_SUFFIXES[kind]
                 staged_path = tmp_root / f"{index:02d}.docx"
                 self.renderer.render(kind, template_path, staged_path, data)
-                if kind == "primary" and staged_path.is_file():
-                    # An explicit machine-generated marker distinguishes an
-                    # output DOCX from a real patient intake source.
-                    from docx import Document
-                    rendered = Document(str(staged_path))
-                    rendered.core_properties.keywords = (
-                        "diary-filler:generated-primary"
-                    )
-                    rendered.save(str(staged_path))
                 staged.append((staged_path, suffix))
+
+            # Mark generated primaries only after the entire set has rendered.
+            # A failed later renderer must not change the atomic rollback path.
+            for primary_staged_path, suffix in staged:
+                if suffix != OUTPUT_SUFFIXES["primary"]:
+                    continue
+                # An explicit machine-generated marker distinguishes output
+                # from a real patient intake source.
+                from docx import Document
+                rendered = Document(str(primary_staged_path))
+                rendered.core_properties.keywords = "diary-filler:generated-primary"
+                rendered.save(str(primary_staged_path))
 
             created: List[Path] = []
             try:
