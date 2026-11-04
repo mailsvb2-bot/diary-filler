@@ -340,10 +340,26 @@ class DialogDocumentDetailsMixin:
         else:
             work_org = values[4].strip()
             position = values[5].strip()
-            if not work_org or not position:
-                messagebox.showwarning("Не заполнено поле", "Укажите место работы и должность.")
+            if _is_nonworking_marker(work_org) or (not work_org and _is_nonworking_marker(position)):
+                if work_status_var is not None:
+                    work_status_var.set("нет")
+                self.vk_mse_work_org_var.set("")
+                self.vk_mse_position_var.set("")
+                for name in ("expert_work_org_var", "expert_position_var"):
+                    var = getattr(self, name, None)
+                    if var is not None:
+                        var.set("")
+            elif not work_org or not position:
+                messagebox.showwarning(
+                    "Не заполнено поле",
+                    "Укажите место работы и должность.\n\n"
+                    "Если пациент не работает, напишите в поле «Место работы»: не работает.",
+                )
                 return False
-            self._sync_shared_work_details(work_org, position)
+            else:
+                if work_status_var is not None and not str(work_status_var.get() or "").strip():
+                    work_status_var.set("да")
+                self._sync_shared_work_details(work_org, position)
         self._remember_committee_dates(committee_date=vk_date, protocol_date=vk_protocol_date)
         return True
 
@@ -575,3 +591,11 @@ class DialogDocumentDetailsMixin:
         if default_case_number and not self.case_number_var.get().strip():
             self.case_number_var.set(default_case_number)
         return self._prompt_missing_primary_treatment_if_needed(prompt_if_needed=True)
+
+
+_NONWORKING_MARKERS = {"не работает", "неработает", "не работающий", "неработающий", "не работающая", "неработающая", "нет", "-", "—"}
+
+
+def _is_nonworking_marker(value: str) -> bool:
+    text = " ".join(str(value or "").replace("ё", "е").lower().split()).strip(" .")
+    return text in _NONWORKING_MARKERS
