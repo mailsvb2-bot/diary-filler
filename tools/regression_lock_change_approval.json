@@ -56,7 +56,7 @@
     "diary_text_selection.py": "768d7711246548a02df14d23bc460e7f871698d7",
     "diary_service.py": "59c1317fd6dd60b989a36e403424d48d5e4b9f73",
     "release_check.py": "b564e480542f5754c57f38963d5316d2cffd00d8",
-    "tools/document_mechanics_change_approval.json": "6d0ee0cfd9a2385cf8613c5ee2be64305a4bfac3",
+    "tools/document_mechanics_change_approval.json": "956ea61d32974ec787a372506b54c304ee8f4db9",
     "tests/oct17_clinical_safety_regression.py": "80e3640afbe3aebc3754d0154cdc381cbf0ff5bf",
     "tests/four_previous_diaries_regression.py": "fa524d8cf0276f5c725389c9f3ee53b179dd3f94",
     "medical_renderer_special.py": "8ffcfaa532bc8ab7784eccaa32fb83983a1c2999",
