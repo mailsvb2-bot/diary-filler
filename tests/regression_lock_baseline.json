@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "8d5e2cc74c873ba211cf91b7c259ff5841a65ace",
-  "baseline_note": "Verified follow-up candidate 8d5e2cc74c873ba211cf91b7c259ff5841a65ace; Windows EXE Build 41875015424 and License Server CI 41875015377 succeeded; retire temporary regression approval.",
+  "baseline_ref": "30838039355830df36b431dca086a2378339291d",
+  "baseline_note": "Verified PR #368 candidate 30838039355830df36b431dca086a2378339291d; Windows EXE Build 41888699828 and License Server CI 41888699584 succeeded; retire temporary regression approval.",
   "required_approval_evidence": [
     "ci_gate_lock",
     "patient_registry_regression"
