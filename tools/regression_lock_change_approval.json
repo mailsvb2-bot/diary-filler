@@ -21,6 +21,7 @@
     "diary_batch.py": "77a973187679b8e2140f38d58af36866d2ead693",
     "tests/nov04_selective_audit_regression.py": "50d18505b8a601440f76c8ea2605e05868ef37ac",
     "tools/document_mechanics_change_approval.json": "4c51458d6faa490841211e75ee18d30ca35653e5",
-    "release_check.py": "0a9d4286221bea092c791a99a699019091ecb91d"
+    "release_check.py": "0a9d4286221bea092c791a99a699019091ecb91d",
+    "tests/golden_docx_manifest.json": "091d90d51453f182ade493e049a3e875f594afb7"
   }
 }
