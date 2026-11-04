@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "30e69209679f298c9243342a4c25187bfc63fad3",
+  "reason": "Selected original-branch improvements adapted for current main; tests for renamed DOCX provenance, clinician-authored diary evidence, and bounded observation dates; full required Windows release evidence",
+  "required_evidence": [
+    "ci_gate_lock",
+    "desktop_intake_contract",
+    "document_mechanics_guard",
+    "full_patient_replay",
+    "gender_generation_matrix",
+    "golden_docx",
+    "installer_uninstall_smoke",
+    "intake_lifecycle_regression",
+    "packaged_desktop_intake_e2e",
+    "patient_registry_regression",
+    "staff_profile_regression"
+  ],
+  "approved_blobs": {
+    "patient_registry.py": "bde911b1d6fdbbce61a97942298b7e434a102dc1",
+    "medical_service.py": "074b6a11223c91e39d5905075ac27d79e21978fd",
+    "diary_batch.py": "77a973187679b8e2140f38d58af36866d2ead693",
+    "tests/nov04_selective_audit_regression.py": "09ddf7180a0ae489496e240ec84a2e6a619d4748",
+    "tools/document_mechanics_change_approval.json": "967a0e4ebdb078448956cc18067c7fc5cce33c3c"
+  }
+}

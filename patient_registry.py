@@ -139,6 +139,24 @@ def _is_generated_primary_output(path: str | Path) -> bool:
     return len(words) >= 4 and words[-2:] == ["первичный", "осмотр"]
 
 
+def _has_generated_primary_provenance(path: Path) -> bool:
+    """Reject marked app output even if a user renamed it as an intake source.
+
+    Only DOCX files can contain the explicit marker; preserve existing filename
+    filtering for old generated documents without provenance metadata.
+    """
+    if path.suffix.lower() != ".docx":
+        return False
+    try:
+        from docx import Document
+        return "diary-filler:generated-primary" in (
+            Document(str(path)).core_properties.keywords or ""
+        )
+    except Exception:
+        # Corrupt or locked documents retain the existing parser/error path.
+        return False
+
+
 def primary_candidates(folder: str | Path) -> list[Path]:
     root = Path(folder)
     if not root.is_dir():
@@ -149,6 +167,7 @@ def primary_candidates(folder: str | Path) -> list[Path]:
         for path in root.iterdir()
         if path.is_file() and not _is_word_lock_file(path)
         and not _is_generated_primary_output(path)
+        and not _has_generated_primary_provenance(path)
         and is_primary_patient_filename(path)
     ]
     return sorted(result, key=lambda p: (rank.get(p.suffix.lower(), 9), p.name.casefold()))
@@ -175,6 +194,7 @@ def patient_source_candidates(folder: str | Path) -> list[Path]:
             path.is_file()
             and not path.name.startswith("~$")
             and not _is_generated_primary_output(path)
+            and not _has_generated_primary_provenance(path)
             and path.suffix.lower() in SUPPORTED_WORD_SUFFIXES
             and not is_discharge_patient_filename(path)
         )
