@@ -443,6 +443,7 @@ def main() -> None:
     _run([sys.executable, "tests/clinical_tables_episodes_regression.py"], timeout=60)
     _run([sys.executable, "tests/nov02_audit_regression.py"], timeout=90)
     _run([sys.executable, "tests/nov02_clinical_ui_regression.py"], timeout=60)
+    _run([sys.executable, "tests/nov04_selective_audit_regression.py"], timeout=90)
 
     _print_step("Monthly licensing and owner entitlement")
     _run([sys.executable, "tests/license_client_regression.py"], timeout=60)

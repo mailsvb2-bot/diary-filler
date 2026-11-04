@@ -20,6 +20,7 @@
     "medical_service.py": "ef2b17ffdd8c5a0243e4cd4121e61a754b13ac62",
     "diary_batch.py": "77a973187679b8e2140f38d58af36866d2ead693",
     "tests/nov04_selective_audit_regression.py": "09ddf7180a0ae489496e240ec84a2e6a619d4748",
-    "tools/document_mechanics_change_approval.json": "4c51458d6faa490841211e75ee18d30ca35653e5"
+    "tools/document_mechanics_change_approval.json": "4c51458d6faa490841211e75ee18d30ca35653e5",
+    "release_check.py": "0a9d4286221bea092c791a99a699019091ecb91d"
   }
 }
