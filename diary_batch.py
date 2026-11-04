@@ -230,7 +230,7 @@ def _text_diary_dates_from_sources(
         # Without a discharge date the observation period ends today, not at
         # an arbitrary one-week template horizon. Follow the established
         # twice-weekly cadence for the entire known interval.
-        horizon = discharge_date_value or max(date.today(), admission_date_value + timedelta(days=7))
+        horizon = discharge_date_value or max(date.today(), admission_date_value)
         if horizon > admission_date_value:
             max_offset = (horizon - admission_date_value).days
             return tuple(
@@ -333,7 +333,12 @@ def _build_text_diary_entries(
                          if other_date > moved),
                         len(ordered),
                     )
-                    ordered.insert(insert_at, (moved, text, False))
+                    # A new observation has no physician-authored findings.
+                    # Do not copy a dated clinical state from the holiday.
+                    ordered.insert(
+                        insert_at,
+                        (moved, "[Данные осмотра отсутствуют; заполнить врачу]", False),
+                    )
         index += 1
     raw_entries = ordered
     entries = [

@@ -1,10 +1,9 @@
 {
   "schema_version": 1,
-  "base_sha": "10684db8b8046fa43f3ec78635998ea453110d7e",
-  "reason": "Explicit clinician-requested VK MSE work-status corrections; preserve existing medical document behavior and validate via Windows regression tests",
+  "base_sha": "82a58c02644506cee451983a096f1b66cfce83ee",
+  "reason": "Explicit physician-safety task: source DOCX provenance marker and no fabricated shifted joint-exam observations; protected files are exact reviewed blobs",
   "approved_blobs": {
-    "actions_medical_flow.py": "af0c6d1bdeadd5ab701530f959183cad7f887d37",
-    "dialog_document_details.py": "039a7852d7bc50ee0f18a7c1f7b0622a0e1cfabf",
-    "dialog_expert.py": "49f03ade77b6a548ac9de1bcafc987694099ce6b"
+    "medical_service.py": "ef2b17ffdd8c5a0243e4cd4121e61a754b13ac62",
+    "diary_batch.py": "77a973187679b8e2140f38d58af36866d2ead693"
   }
 }
