@@ -354,6 +354,32 @@ def _registry_primaries(folder: Path, max_depth: int = 32) -> list[Path]:
     return found
 
 
+def _nested_generated_source_rejections(folder: Path, max_depth: int = 32) -> list[Path]:
+    """Provenance rejections inside patient document subfolders.
+
+    Mirrors the traversal of ``_registry_primaries`` (depth >= 1 only; the
+    patient folder itself is covered by ``generated_source_rejections``). Only
+    files passing the cheap primary-name filters are opened, via the cached
+    provenance check.
+    """
+    found: list[Path] = []
+
+    def walk(current: Path, depth: int) -> None:
+        try:
+            if depth > 0:
+                found.extend(generated_source_rejections(current, include_fallback=False))
+            if depth >= max_depth:
+                return
+            for child in sorted(current.iterdir(), key=lambda x: x.name.casefold()):
+                if child.is_dir() and not child.name.startswith((".", "~$")):
+                    walk(child, depth + 1)
+        except (OSError, PermissionError):
+            return
+
+    walk(folder, 0)
+    return found
+
+
 def _patient_folders(directory: Path, issues: list, *, max_depth: int = 32) -> list[Path]:
     """Select patient owners; unrelated Word files cannot hide nested patients."""
     result: list[Path] = []
@@ -619,6 +645,15 @@ def scan_patient_registry(
     parse = parser or _default_parser
     patients: list[PatientRegistryEntry] = []
     issues: list[PatientRegistryIssue] = []
+    rejected_seen: set[str] = set()
+
+    def report_rejected(paths) -> None:
+        for rejected in paths:
+            key = str(rejected)
+            if key in rejected_seen:
+                continue
+            rejected_seen.add(key)
+            issues.append(PatientRegistryIssue(rejected, GENERATED_SOURCE_REJECTED_MESSAGE))
 
     work_items: list[tuple[Path, list[Path] | None]] = []
     try:
@@ -627,8 +662,7 @@ def scan_patient_registry(
         root_primaries = []
         issues.append(PatientRegistryIssue(directory, f"Папка недоступна для чтения ({type(exc).__name__})."))
     try:
-        for rejected in generated_source_rejections(directory, include_fallback=False):
-            issues.append(PatientRegistryIssue(rejected, GENERATED_SOURCE_REJECTED_MESSAGE))
+        report_rejected(generated_source_rejections(directory, include_fallback=False))
     except OSError:
         pass
     for path in root_primaries:
@@ -670,8 +704,8 @@ def scan_patient_registry(
             try:
                 if _discharge_hides_patient(patient_folder, target_date, parse, issues):
                     continue
-                for rejected in generated_source_rejections(patient_folder):
-                    issues.append(PatientRegistryIssue(rejected, GENERATED_SOURCE_REJECTED_MESSAGE))
+                report_rejected(generated_source_rejections(patient_folder))
+                report_rejected(_nested_generated_source_rejections(patient_folder))
                 candidates = _registry_primaries(patient_folder) or patient_source_candidates(patient_folder)
                 if len(candidates) > 1:
                     # Multiple admissions: select the latest confirmed episode.
