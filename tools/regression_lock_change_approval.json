@@ -20,6 +20,6 @@
     "release_check.py": "c95b5270fd478681408eebd1ec0bb7f94c6bca6a",
     "tests/nov04_selective_audit_regression.py": "e382cf4c492df2cdec2989c3b14e4d5decdc5100",
     "tests/pr367_followup_regression.py": "f793513d545bf112cbb27df478fdbe329419e772",
-    "tools/script_runner_guard.py": "615783a65be255660ce59595c56145f17c2224d1"
+    "tools/script_runner_guard.py": "f76d9a80cd482f60623aaa2708119663a609ad33"
   }
 }

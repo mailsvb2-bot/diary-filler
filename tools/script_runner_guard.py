@@ -13,7 +13,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-_SCRIPT_RE = re.compile(r"(?<![\\w./-])((?:tests|tools)/[\\w/.-]+\\.py|[\\w-]+\\.py)")
+_SCRIPT_RE = re.compile(r"(?<![\w./-])((?:tests|tools)/[\w/.-]+\.py|[\w-]+\.py)")
 
 
 def invoked_scripts(root: Path = ROOT) -> list[Path]:
