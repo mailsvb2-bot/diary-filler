@@ -50,6 +50,8 @@ REQUIRED_FILES = [
     "tests/license_server_preflight_regression.py",
     "tools/license_server_preflight.py",
     "tests/patient_registry_regression.py",
+    "tests/pr367_followup_regression.py",
+    "tools/script_runner_guard.py",
     "tools/docx_block_boundary_regression.py",
     "safety_integrity_check.py",
     "gui_runtime_check.py",
@@ -415,6 +417,9 @@ def main() -> None:
     if not compileall.compile_dir(str(ROOT), quiet=1, maxlevels=10):
         raise SystemExit("compileall failed")
 
+    _print_step("Test script runner guard")
+    _run([sys.executable, "tools/script_runner_guard.py"], timeout=60)
+
     _print_step("Smoke entrypoints")
     _assert_smoke_entrypoints_contract()
 
@@ -445,6 +450,7 @@ def main() -> None:
     _run([sys.executable, "tests/nov02_clinical_ui_regression.py"], timeout=60)
     _run([sys.executable, "tests/nov04_selective_audit_regression.py"], timeout=90)
     _run([sys.executable, "tests/pr366_followup_regression.py"], timeout=90)
+    _run([sys.executable, "tests/pr367_followup_regression.py"], timeout=90)
 
     _print_step("Monthly licensing and owner entitlement")
     _run([sys.executable, "tests/license_client_regression.py"], timeout=60)

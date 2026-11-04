@@ -92,3 +92,11 @@ def test_root_discharge_requires_verified_patient_identity():
         snapshot = scan_patient_registry(root, as_of=date(2026, 10, 10), parser=parse)
         assert any(item.primary_path == primary for item in snapshot.patients)
         assert any("ФИО" in issue.message for issue in snapshot.issues)
+
+
+if __name__ == "__main__":
+    for name, fn in sorted(globals().items()):
+        if name.startswith("test_") and callable(fn):
+            fn()
+            print("OK", name)
+    print("NOV04 SELECTIVE AUDIT REGRESSION: PASS")
