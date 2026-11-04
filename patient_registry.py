@@ -567,16 +567,20 @@ def scan_patient_registry(
         issues.append(PatientRegistryIssue(directory, f"Папка недоступна для чтения ({type(exc).__name__})."))
     for path in root_primaries:
         def identity(document):
+            # A file name is not verified patient identity; only parsed FIO
+            # may authorize hiding an admission after a discharge.
             try:
                 fio = str(getattr(parse(document), "fio", "") or "").strip()
             except Exception:
                 fio = ""
-            if fio:
-                return " ".join(fio.casefold().replace("ё", "е").split())
-            stem = document.stem.casefold().replace("ё", "е")
-            words = stem.split()
-            return " ".join(words[:2]) if len(words) >= 2 else ""
+            return " ".join(fio.casefold().replace("ё", "е").split()) if fio else ""
+
         source_identity = identity(path)
+        if not source_identity:
+            issues.append(PatientRegistryIssue(
+                path,
+                "ФИО в первичном документе не подтверждено; выписка не скрывает пациента.",
+            ))
         matching_discharge = [
             other for other in discharge_patient_documents(directory)
             if source_identity and identity(other) == source_identity

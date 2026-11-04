@@ -67,3 +67,28 @@ def test_no_future_diaries_when_discharge_unknown():
             discharge_date_value=None,
         )
         assert all(day <= date.today() for day in dates)
+
+
+def test_root_discharge_requires_verified_patient_identity():
+    from types import SimpleNamespace
+    from patient_registry import scan_patient_registry
+
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        primary = root / "Иванов Петр первичный.docx"
+        discharge = root / "Иванов Петр выписной.docx"
+        Document().save(primary)
+        Document().save(discharge)
+
+        def parse(path):
+            if path == primary:
+                return SimpleNamespace(
+                    fio="", admission_date="01.10.2026", discharge_date="",
+                    sick_leave="нет", expert_sick_leave_needed="нет",
+                    rvk_referral="нет",
+                )
+            return SimpleNamespace(fio="", discharge_date="02.10.2026")
+
+        snapshot = scan_patient_registry(root, as_of=date(2026, 10, 10), parser=parse)
+        assert any(item.primary_path == primary for item in snapshot.patients)
+        assert any("ФИО" in issue.message for issue in snapshot.issues)

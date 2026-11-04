@@ -16,10 +16,10 @@
     "staff_profile_regression"
   ],
   "approved_blobs": {
-    "patient_registry.py": "bde911b1d6fdbbce61a97942298b7e434a102dc1",
+    "patient_registry.py": "f7515f05cfdc3016601735bee10288521894ccf8",
     "medical_service.py": "ef2b17ffdd8c5a0243e4cd4121e61a754b13ac62",
     "diary_batch.py": "77a973187679b8e2140f38d58af36866d2ead693",
-    "tests/nov04_selective_audit_regression.py": "b994463288eba52b5e0d0a6a4782dc2b941e936a",
+    "tests/nov04_selective_audit_regression.py": "50d18505b8a601440f76c8ea2605e05868ef37ac",
     "tools/document_mechanics_change_approval.json": "4c51458d6faa490841211e75ee18d30ca35653e5",
     "release_check.py": "0a9d4286221bea092c791a99a699019091ecb91d"
   }
