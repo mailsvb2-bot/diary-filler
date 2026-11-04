@@ -1930,6 +1930,13 @@ def _desktop_process_primary(app, source_path: str | Path) -> bool:
         )
         if applied is False:
             _desktop_agent_log("GUI intake primary was moved safely but rejected by application parsing")
+            _desktop_show_intake_warning(
+                app,
+                "Документ перенесён в папку пациента, но программа не смогла его применить, "
+                "поэтому документы в эту папку не созданы.\n\n"
+                f"Папка: {moved_primary.parent}\n\n"
+                "Откройте этот файл в программе вручную.",
+            )
             return False
         try:
             app.root.deiconify()
@@ -2033,6 +2040,32 @@ def _desktop_poll_intake(app, intake_root: Path) -> None:
             pass
 
 
+def _desktop_pending_backlog_key(current: dict[str, tuple[Path, str]]) -> str | None:
+    """Oldest unprocessed top-level Word file left in the intake root."""
+    best: tuple[float, str] | None = None
+    for key, (path, _signature) in current.items():
+        try:
+            mtime = path.stat().st_mtime
+        except OSError:
+            continue
+        if best is None or mtime < best[0]:
+            best = (mtime, key)
+    return best[1] if best is not None else None
+
+
+def _desktop_confirm_backlog(app, path: Path, total: int) -> bool:
+    extra = f"\n\nВсего необработанных файлов: {total}. Остальные будут предложены при следующем запуске." if total > 1 else ""
+    try:
+        return bool(messagebox.askyesno(
+            "Выписанные пациенты",
+            "В папке «Выписанные пациенты» лежит необработанный документ:\n"
+            f"{path.name}\n\nСоздать папку пациента и открыть его сейчас?{extra}",
+            parent=app.root,
+        ))
+    except Exception:
+        return False
+
+
 def start_desktop_intake_runtime(
     app,
     *,
@@ -2080,6 +2113,10 @@ def start_desktop_intake_runtime(
         if launch_observed is not None
         else {key: signature for key, (_path, signature) in current_snapshot.items()}
     )
+    if launch_observed is None and not initial_primary and not initial_direct_primary:
+        backlog_key = _desktop_pending_backlog_key(current_snapshot)
+        if backlog_key is not None and _desktop_confirm_backlog(app, current_snapshot[backlog_key][0], len(current_snapshot)):
+            app._desktop_intake_observed.pop(backlog_key, None)
     claim_desktop_gui_session()
     app.root.after(1200, lambda: _desktop_schedule_agent_health(app))
 

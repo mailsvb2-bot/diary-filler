@@ -126,6 +126,10 @@ class ActionsMedicalFlowMixin:
         data.vk_protocol_date = self.vk_protocol_date_var.get().strip() or data.vk_protocol_date
         data.vk_mse_work_org = self.vk_mse_work_org_var.get().strip() or data.vk_mse_work_org or shared_org
         data.vk_mse_position = self.vk_mse_position_var.get().strip() or data.vk_mse_position or shared_position
+        _work_status_var = getattr(self, "expert_work_status_var", None)
+        if _work_status_var is not None and str(_work_status_var.get() or "").strip().lower() == "нет":
+            data.vk_mse_work_org = ""
+            data.vk_mse_position = ""
         data.sick_leave_vk_date = self.sick_leave_vk_date_var.get().strip() or data.sick_leave_vk_date
         data.sick_leave_vk_protocol_number = (
             self.sick_leave_vk_protocol_number_var.get().strip()
