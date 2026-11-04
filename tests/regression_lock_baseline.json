@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "baseline_ref": "30e69209679f298c9243342a4c25187bfc63fad3",
-  "baseline_note": "Verified PR #365 candidate 30e69209679f298c9243342a4c25187bfc63fad3; Windows EXE Build 41840050039 and License Server CI 41840050048 succeeded; retire temporary regression approval.",
+  "baseline_ref": "3daa48dc5083dbf59247c13d8e5bd336a5bc795d",
+  "baseline_note": "Verified selective audit candidate 3daa48dc5083dbf59247c13d8e5bd336a5bc795d; Windows EXE Build 41857589670 and License Server CI 41857589367 passed; retire temporary approval.",
   "required_approval_evidence": [
     "ci_gate_lock",
     "patient_registry_regression"
