@@ -186,7 +186,7 @@ class DialogExpertMixin:
         if "vk_mse" in selected and self._normalize_yes_no(self.disability_needed_var.get()) != "да":
             self.disability_needed_var.set("да")
         disability_docs = {"primary", "admission_doctor_referral"}
-        expert_work_docs = {"primary", "discharge", "commission", "admission_doctor_referral"}
+        expert_work_docs = {"primary", "discharge", "commission", "admission_doctor_referral", "vk_mse"}
         epi_docs = {"discharge", "commission", "vk_mse", "sick_leave_vk", "rvk"}
         rvk_referral_docs = {"primary", "admission_doctor_referral"}
         # Freeze embedded source EPI before any popup/UI mutation. A doctor may
