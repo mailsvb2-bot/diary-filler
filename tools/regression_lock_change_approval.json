@@ -17,9 +17,9 @@
   ],
   "approved_blobs": {
     "patient_registry.py": "bde911b1d6fdbbce61a97942298b7e434a102dc1",
-    "medical_service.py": "074b6a11223c91e39d5905075ac27d79e21978fd",
+    "medical_service.py": "ef2b17ffdd8c5a0243e4cd4121e61a754b13ac62",
     "diary_batch.py": "77a973187679b8e2140f38d58af36866d2ead693",
     "tests/nov04_selective_audit_regression.py": "09ddf7180a0ae489496e240ec84a2e6a619d4748",
-    "tools/document_mechanics_change_approval.json": "967a0e4ebdb078448956cc18067c7fc5cce33c3c"
+    "tools/document_mechanics_change_approval.json": "4c51458d6faa490841211e75ee18d30ca35653e5"
   }
 }

@@ -3,7 +3,7 @@
   "base_sha": "82a58c02644506cee451983a096f1b66cfce83ee",
   "reason": "Explicit physician-safety task: source DOCX provenance marker and no fabricated shifted joint-exam observations; protected files are exact reviewed blobs",
   "approved_blobs": {
-    "medical_service.py": "074b6a11223c91e39d5905075ac27d79e21978fd",
+    "medical_service.py": "ef2b17ffdd8c5a0243e4cd4121e61a754b13ac62",
     "diary_batch.py": "77a973187679b8e2140f38d58af36866d2ead693"
   }
 }

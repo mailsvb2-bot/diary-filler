@@ -594,19 +594,23 @@ class MedicalDocumentService:
                 suffix = OUTPUT_SUFFIXES[kind]
                 staged_path = tmp_root / f"{index:02d}.docx"
                 self.renderer.render(kind, template_path, staged_path, data)
-                if kind == "primary":
-                    # Provenance is attached while staging, before any visible
-                    # commit. A failed write cannot leave partial patient output.
-                    from docx import Document
-                    primary_doc = Document(str(staged_path))
-                    existing = (primary_doc.core_properties.keywords or "").strip()
-                    marker = "diary-filler:generated-primary"
-                    primary_doc.core_properties.keywords = (
-                        f"{existing}; {marker}" if existing and marker not in existing
-                        else marker if not existing else existing
-                    )
-                    primary_doc.save(str(staged_path))
                 staged.append((staged_path, suffix))
+
+            # Only touch generated DOCX after every renderer has succeeded.
+            # Failed renderers may produce deliberately invalid staging files;
+            # the existing transaction rollback must stay authoritative.
+            for staged_path, suffix in staged:
+                if suffix != OUTPUT_SUFFIXES["primary"]:
+                    continue
+                from docx import Document
+                primary_doc = Document(str(staged_path))
+                marker = "diary-filler:generated-primary"
+                existing = (primary_doc.core_properties.keywords or "").strip()
+                primary_doc.core_properties.keywords = (
+                    f"{existing}; {marker}" if existing and marker not in existing
+                    else marker if not existing else existing
+                )
+                primary_doc.save(str(staged_path))
 
             created: List[Path] = []
             try:
