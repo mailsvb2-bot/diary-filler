@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "baseline_ref": "3daa48dc5083dbf59247c13d8e5bd336a5bc795d",
-  "reason": "PR #366 follow-ups: shifted joint-exam day uses existing DYNAMIC_OBSERVATION_TEMPLATE (golden diary fingerprint changes only by that placeholder text); provenance check after cheap filename filters with cache; provenance-only rejections surfaced as PatientRegistryIssue; new regression tests/pr366_followup_regression.py",
+  "reason": "PR #366 follow-ups: shifted joint-exam day uses existing DYNAMIC_OBSERVATION_TEMPLATE (golden diary fingerprint changes only by that placeholder text); provenance check after cheap filename filters with cache; provenance-only rejections surfaced as PatientRegistryIssue; new regression tests/pr366_followup_regression.py; synthetic test names comply with privacy diagnostics",
   "required_evidence": [
     "ci_gate_lock",
     "desktop_intake_contract",
@@ -20,7 +20,7 @@
     "patient_registry.py": "92cae0fef07c85dcb8002e096f42dedb16a4e7eb",
     "release_check.py": "403fa41d6281c8901c419ebe9f4c7a39f0cc06ec",
     "tests/golden_docx_manifest.json": "d95977e89b59c0905dc055472b76ae67517e5884",
-    "tests/pr366_followup_regression.py": "7a7ae920a2eec0177d3cd526121ad4033eb95270",
+    "tests/pr366_followup_regression.py": "84c00329edf7a071d594017cadcb40e703099cfe",
     "tools/document_mechanics_change_approval.json": "be195f78877910c75ad9b62eaa123ae9c4fb3d51"
   }
 }

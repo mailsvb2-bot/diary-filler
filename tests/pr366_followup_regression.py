@@ -49,7 +49,7 @@ def test_provenance_check_runs_only_after_name_filters():
         root = Path(tmp)
         Document().save(root / "Иванов первичный.docx")
         Document().save(root / "~$Иванов первичный.docx")
-        Document().save(root / "Иванов Иван Иванович Первичный осмотр.docx")
+        Document().save(root / "Маркер Тестовый Третий Первичный осмотр.docx")
         Document().save(root / "Расписание.docx")
         Document().save(root / "Иванов выписной.docx")
         (root / "notes.txt").write_text("x", encoding="utf-8")
