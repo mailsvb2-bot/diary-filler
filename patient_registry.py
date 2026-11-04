@@ -139,38 +139,94 @@ def _is_generated_primary_output(path: str | Path) -> bool:
     return len(words) >= 4 and words[-2:] == ["первичный", "осмотр"]
 
 
+_PROVENANCE_CACHE_MAX = 512
+_PROVENANCE_CACHE: dict[str, tuple[tuple[int, int], bool]] = {}
+_PROVENANCE_CACHE_LOCK = threading.Lock()
+GENERATED_SOURCE_REJECTED_MESSAGE = (
+    "Файл создан программой и не используется как исходный документ "
+    "(даже после переименования). Укажите исходный первичный документ пациента."
+)
+
+
 def _has_generated_primary_provenance(path: Path) -> bool:
     """Reject marked app output even if a user renamed it as an intake source.
 
     Only DOCX files can contain the explicit marker; preserve existing filename
-    filtering for old generated documents without provenance metadata.
+    filtering for old generated documents without provenance metadata.  The
+    result is cached by (mtime, size) so repeated scans do not reopen files.
     """
     if path.suffix.lower() != ".docx":
         return False
     try:
+        stat = path.stat()
+        signature = (stat.st_mtime_ns, stat.st_size)
+    except OSError:
+        signature = None
+    key = str(path)
+    if signature is not None:
+        with _PROVENANCE_CACHE_LOCK:
+            cached = _PROVENANCE_CACHE.get(key)
+        if cached is not None and cached[0] == signature:
+            return cached[1]
+    try:
         from docx import Document
-        return "diary-filler:generated-primary" in (
+        result = "diary-filler:generated-primary" in (
             Document(str(path)).core_properties.keywords or ""
         )
     except Exception:
         # Corrupt or locked documents retain the existing parser/error path.
-        return False
+        result = False
+    if signature is not None:
+        with _PROVENANCE_CACHE_LOCK:
+            if len(_PROVENANCE_CACHE) >= _PROVENANCE_CACHE_MAX:
+                _PROVENANCE_CACHE.clear()
+            _PROVENANCE_CACHE[key] = (signature, result)
+    return result
+
+
+_WORD_RANK = {".docx": 0, ".docm": 1, ".doc": 2}
+
+
+def _sorted_word(paths) -> list[Path]:
+    return sorted(paths, key=lambda p: (_WORD_RANK.get(p.suffix.lower(), 9), p.name.casefold()))
+
+
+def _primary_name_matches(root: Path) -> list[Path]:
+    """Cheap filename-only filters; never opens a document."""
+    return [
+        path
+        for path in root.iterdir()
+        if path.is_file() and not _is_word_lock_file(path)
+        and not _is_generated_primary_output(path)
+        and is_primary_patient_filename(path)
+    ]
+
+
+def _fallback_name_matches(root: Path) -> list[Path]:
+    """Cheap filename-only filters for fallback sources; never opens a document."""
+    return [
+        path
+        for path in root.iterdir()
+        if (
+            path.is_file()
+            and not path.name.startswith("~$")
+            and not _is_generated_primary_output(path)
+            and path.suffix.lower() in SUPPORTED_WORD_SUFFIXES
+            and not is_discharge_patient_filename(path)
+        )
+    ]
 
 
 def primary_candidates(folder: str | Path) -> list[Path]:
     root = Path(folder)
     if not root.is_dir():
         return []
-    rank = {".docx": 0, ".docm": 1, ".doc": 2}
-    result = [
-        path
-        for path in root.iterdir()
-        if path.is_file() and not _is_word_lock_file(path)
-        and not _is_generated_primary_output(path)
-        and not _has_generated_primary_provenance(path)
-        and is_primary_patient_filename(path)
-    ]
-    return sorted(result, key=lambda p: (rank.get(p.suffix.lower(), 9), p.name.casefold()))
+    # The provenance check opens the DOCX, so it runs only for files that
+    # already passed the cheap filename filters.
+    return _sorted_word(
+        path for path in _primary_name_matches(root)
+        if not _has_generated_primary_provenance(path)
+    )
 
 
 def patient_source_candidates(folder: str | Path) -> list[Path]:
@@ -186,20 +242,25 @@ def patient_source_candidates(folder: str | Path) -> list[Path]:
         return preferred
     if not root.is_dir():
         return []
-    rank = {".docx": 0, ".docm": 1, ".doc": 2}
-    fallback = [
-        path
-        for path in root.iterdir()
-        if (
-            path.is_file()
-            and not path.name.startswith("~$")
-            and not _is_generated_primary_output(path)
-            and not _has_generated_primary_provenance(path)
-            and path.suffix.lower() in SUPPORTED_WORD_SUFFIXES
-            and not is_discharge_patient_filename(path)
-        )
-    ]
-    return sorted(fallback, key=lambda p: (rank.get(p.suffix.lower(), 9), p.name.casefold()))
+    return _sorted_word(
+        path for path in _fallback_name_matches(root)
+        if not _has_generated_primary_provenance(path)
+    )
+
+
+def generated_source_rejections(folder: str | Path, *, include_fallback: bool = True) -> list[Path]:
+    """Files that passed every filename filter but carry the app provenance marker.
+
+    These are rejected solely because of the marker; callers surface them as
+    registry issues instead of skipping them silently.
+    """
+    root = Path(folder)
+    if not root.is_dir():
+        return []
+    names = {p: None for p in _primary_name_matches(root)}
+    if include_fallback:
+        names.update({p: None for p in _fallback_name_matches(root)})
+    return _sorted_word(p for p in names if _has_generated_primary_provenance(p))
 
 
 def _is_word_lock_file(path: str | Path) -> bool:
@@ -565,6 +626,11 @@ def scan_patient_registry(
     except OSError as exc:
         root_primaries = []
         issues.append(PatientRegistryIssue(directory, f"Папка недоступна для чтения ({type(exc).__name__})."))
+    try:
+        for rejected in generated_source_rejections(directory, include_fallback=False):
+            issues.append(PatientRegistryIssue(rejected, GENERATED_SOURCE_REJECTED_MESSAGE))
+    except OSError:
+        pass
     for path in root_primaries:
         def identity(document):
             # A file name is not verified patient identity; only parsed FIO
@@ -604,6 +670,8 @@ def scan_patient_registry(
             try:
                 if _discharge_hides_patient(patient_folder, target_date, parse, issues):
                     continue
+                for rejected in generated_source_rejections(patient_folder):
+                    issues.append(PatientRegistryIssue(rejected, GENERATED_SOURCE_REJECTED_MESSAGE))
                 candidates = _registry_primaries(patient_folder) or patient_source_candidates(patient_folder)
                 if len(candidates) > 1:
                     # Multiple admissions: select the latest confirmed episode.

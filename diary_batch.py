@@ -23,6 +23,7 @@ from diary_table_cells import apply_compact_diary_layout
 from diary_dates import parse_admission_month_year, parse_full_date, parse_optional_discharge_date
 from diary_calendar import is_non_working_day
 from diary_constants import (
+    DYNAMIC_OBSERVATION_TEMPLATE,
     DIARY_DEPARTMENT_HEAD_SIGNATURE,
     DIARY_JOINT_HEAD_EXAM_TITLE,
     DIARY_TREATING_DOCTOR_SIGNATURE,
@@ -334,10 +335,12 @@ def _build_text_diary_entries(
                         len(ordered),
                     )
                     # A new observation has no physician-authored findings.
-                    # Do not copy a dated clinical state from the holiday.
+                    # Do not copy a dated clinical state from the holiday;
+                    # use the project-wide «Динамическое наблюдение» template
+                    # for days without a diary entry (doctor decision 2026-10-17).
                     ordered.insert(
                         insert_at,
-                        (moved, "[Данные осмотра отсутствуют; заполнить врачу]", False),
+                        (moved, DYNAMIC_OBSERVATION_TEMPLATE, False),
                     )
         index += 1
     raw_entries = ordered

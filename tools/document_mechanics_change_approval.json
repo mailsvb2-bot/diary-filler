@@ -1,9 +1,8 @@
 {
   "schema_version": 1,
-  "base_sha": "82a58c02644506cee451983a096f1b66cfce83ee",
-  "reason": "Explicit physician-safety task: source DOCX provenance marker and no fabricated shifted joint-exam observations; protected files are exact reviewed blobs",
+  "base_sha": "be491c3ff5ea35523248b9ff5d68abf526cee30e",
+  "reason": "PR #366 follow-up (doctor decision 2026-10-17): shifted joint-exam day without a diary entry uses the existing DYNAMIC_OBSERVATION_TEMPLATE instead of an ad-hoc placeholder; no clinical text copied from other dates; protected file is the exact reviewed blob",
   "approved_blobs": {
-    "medical_service.py": "ef2b17ffdd8c5a0243e4cd4121e61a754b13ac62",
-    "diary_batch.py": "77a973187679b8e2140f38d58af36866d2ead693"
+    "diary_batch.py": "7a242adc096f9b7c426e32d68d77e9d6b8c4c579"
   }
 }
